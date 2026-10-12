@@ -974,6 +974,7 @@ include docs/adr/0544-prove-receiver-replay-across-synchronous-postgres-failover
 include .github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py
 include docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-08-22.json
 include docs/schemas/postgres_writeback_recovery_compensation_matrix.schema.json
+include docs/schemas/postgres_writeback_recovery_compensation_matrix.v2.schema.json
 include tests/test_postgres_writeback_recovery_compensation_matrix.py
 include docs/adr/0545-prove-writeback-recovery-compensation-parity.md
 include docs/adr/0546-reject-negative-provider-outcomes.md
@@ -1440,7 +1441,34 @@ include tests/test_stable_power_pair_controller.py
 include .github/scripts/verify_stable_power_environment.py
 include tests/test_stable_power_environment_verifier.py
 include docs/security/gitleaks-public-source-digests-wave4.v1.json
+include docs/security/gitleaks-public-source-digests-wave5.v1.json
 include .gitleaks.toml
 include .gitleaksignore
 include .github/scripts/validate_supply_chain_policy.py
 include docs/adr/0853-reviewed-public-digest-scanning-and-explicit-evidence-completion.md
+include .github/scripts/benchmark_wave5_engineering_pair.py
+include .github/scripts/validate_current_postgres_images.py
+include docs/security/postgres-current-images.wave5.v1.json
+include .github/scripts/verify_intercompany_cycle_oracle.py
+include docs/adr/0854-source-owned-production-intercompany-and-sourcing.md
+include docs/execution/WAVE5_CONTRACTS_2026-10-11.md
+include docs/execution/GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md
+include docs/architecture/PROCUREMENT_SOURCING.md
+include docs/operator/intercompany-operations.md
+recursive-include docs/execution/wave5-evidence *.json *.log *.xml *.zip
+include .github/scripts/verify_procurement_sourcing_oracle.py
+include .github/scripts/verify_manufacturing_cycle_oracle.py
+include .github/scripts/benchmark_native_api_runtime.py
+include .github/scripts/benchmark_intercompany_api.py
+include .github/scripts/benchmark_manufacturing_api.py
+include .github/scripts/benchmark_mixed_native_api.py
+include docs/operator/manufacturing-execution.md
+
+include docs/execution/WAVE5_ACCEPTANCE_CHECKPOINT_2026-10-12.md
+include .github/scripts/benchmark_wave5_profile_diagnostics.py
+include .github/scripts/verify_wave5_large_journal.py
+include tests/test_publication_diagnostic_dependencies.py
+include docs/execution/WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md
+include docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.json
+include docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.md
+include docs/execution/GLOBAL_ENTERPRISE_PROGRAM_CONTRACTS_2026-10-12.md

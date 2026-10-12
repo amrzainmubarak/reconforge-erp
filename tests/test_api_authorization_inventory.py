@@ -15,8 +15,9 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 459
-EXPECTED_DIGEST = "f41b3007bbcc9cc1285cc836be0cb2e81d2e2c4e03713f83f6d245db27fccc9a"
+EXPECTED_ROUTE_COUNT = 492
+EXPECTED_DIGEST = "14b516ccedc6622f05971c891af1ab1764ca1c31994aa5c22855b939c074cf83"
+WAVE5_PREFIXES = ("/api/v1/manufacturing-execution/", "/api/v1/intercompany-operations/", "/api/v1/procurement-sourcing/")
 WAVE4_PREFIXES = (
     "/api/v1/customer-returns/", "/api/v1/procurement-commitments/",
     "/api/v1/operational-fx-tax/", "/api/v1/supplier-returns/",
@@ -51,6 +52,9 @@ HANDLER_BOUNDARY_HELPERS = {
     "finance_posting.py": frozenset({"_authority"}),
     "durable_job_operations.py": frozenset({"_command"}),
     "inventory_receipt_posting.py": frozenset({"_execute"}),
+    "intercompany_operations.py": frozenset({"authority", "execute"}),
+    "manufacturing_execution.py": frozenset({"execute", "order_phase", "completion_phase"}),
+    "procurement_sourcing.py": frozenset({"_execute"}),
     "operational_finance.py": frozenset({"_authority", "_execute"}),
     "sales_revenue.py": frozenset({"_execute", "_transition"}),
     "procurement_operations.py": frozenset({"execute"}),
@@ -163,7 +167,7 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
 def test_wave3_routes_require_exact_authority_and_preserve_all_accepted_route_contracts(tmp_path: Path) -> None:
     """Bind the three added dependencies without weakening the retained 429 routes."""
     contracts = tuple(contract for contract in create_api_app(tmp_path / "unused.db").state.authorization_contracts
-                      if not contract.path.startswith(WAVE4_PREFIXES))
+                      if not contract.path.startswith(WAVE4_PREFIXES + WAVE5_PREFIXES))
     expected = (
         RouteAuthorizationContract(
             "GET", "/api/v1/fixed-assets/plans/{plan_id}/evidence", "all", ("finance_core.read",),
@@ -184,12 +188,13 @@ def test_wave3_routes_require_exact_authority_and_preserve_all_accepted_route_co
     retained = tuple(contract for contract in contracts if (contract.method, contract.path) not in added_keys)
     assert len(retained) == 429
     assert authorization_inventory_digest(retained) == "1c1581c2a7d8baf52e80253d5c5e8d026f09de431b250efdb4c89ea1bfd4232d"
-    validate_authorization_surface(contracts, require_critical_routes=True)
+    validate_authorization_surface(create_api_app(tmp_path / "complete.db").state.authorization_contracts,
+                                   require_critical_routes=True)
 
 
 def test_wave4_source_routes_preserve_accepted_authority_and_require_exact_permissions(tmp_path: Path) -> None:
     contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
-    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE4_PREFIXES))
+    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE4_PREFIXES + WAVE5_PREFIXES))
     assert len(retained) == 432
     assert authorization_inventory_digest(retained) == "1444692a691300fa3bd63fef6ab70f1c02d195a0b1b9b15b7673b58c847beb76"
     read = ("finance_core.read", "inventory.read", "receivables.read", "sales.read")
@@ -266,6 +271,13 @@ def test_mutating_route_modules_declare_a_server_boundary_or_explicit_protocol_c
         "Mutating route modules must either call/declare a server scope or be "
         f"added to the reviewed protocol allowlist: {violations}"
     )
+
+
+def test_wave5_additions_preserve_every_accepted_wave4_route(tmp_path: Path) -> None:
+    contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
+    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE5_PREFIXES))
+    assert len(retained) == 459
+    assert authorization_inventory_digest(retained) == "f41b3007bbcc9cc1285cc836be0cb2e81d2e2c4e03713f83f6d245db27fccc9a"
 
 
 def test_each_mutating_route_handler_reaches_a_reviewed_server_boundary() -> None:

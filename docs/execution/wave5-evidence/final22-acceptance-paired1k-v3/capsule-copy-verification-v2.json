@@ -1,0 +1,56 @@
+{
+  "schema_version": "wave5-raw-current-capsule-copy-v1",
+  "status": "passed_exact_original_byte_copy",
+  "index_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-handoff-22ebfd78-v3\\evidence-index-v3.json",
+  "index_sha256": "df4ac5c679b60ab49e09ef5349245bb3247c979a7838d18eddbd3045f338fda4",
+  "record_count": 481,
+  "archive_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-handoff-22ebfd78-v3\\wave5-final22-current-acceptance-and-paired1k-v2.zip",
+  "archive_sha256": "e0d82a65d0a4aa6e6bc410bdeede1f2c68ce9ca5d7a537eccebad8e06aed08ff",
+  "archive_bytes": 17332137,
+  "exact_original_raw_members": 478,
+  "total_zip_members": 479,
+  "excluded_binary_members": [
+    {
+      "id": "0006",
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-package-22ebfd78\\reconforge_erp-0.7.1.tar.gz",
+      "bytes": 42054366,
+      "sha256": "4d9eb3c6d098114ea9d15ef6ead01dcdaaeda25e19ce9614f30e676e1e743b60",
+      "groups": [
+        "previous_handoff_v1"
+      ],
+      "original_source_scope": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "included_in_capsule": false,
+      "archive_member": null
+    },
+    {
+      "id": "0007",
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-package-22ebfd78\\reconforge_erp-0.7.1-py3-none-any.whl",
+      "bytes": 2578900,
+      "sha256": "33c89556d97efeedb76fc957c0709809eb18c0a75a4897344e521ee3d69f1d19",
+      "groups": [
+        "previous_handoff_v1"
+      ],
+      "original_source_scope": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "included_in_capsule": false,
+      "archive_member": null
+    },
+    {
+      "id": "0481",
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\wave5-d3-actual-mixed-api-package-independent-v1.zip",
+      "bytes": 22268230,
+      "sha256": "90a5b1d7afad3cba8f955c3f90ceca36b1b77f1cb5ed2aac1fb97ce59f354113",
+      "groups": [
+        "microprobe_reference"
+      ],
+      "original_source_scope": "Exact immutable22MB allocation-microprobe input indexed separately",
+      "included_in_capsule": false,
+      "archive_member": null,
+      "exclusion_reason": "Already a tracked public source capsule; referenced exact22MB input, no duplicate recursive embedding"
+    }
+  ],
+  "limits": [
+    "Original runtime/source headers and failed/unverified statuses unchanged",
+    "A lossless raw copy does not establish financial or performance acceptance beyond named original reports",
+    "Not yet a tracked/published capsule"
+  ]
+}

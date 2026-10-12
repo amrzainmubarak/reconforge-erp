@@ -21,6 +21,9 @@ const FinancialReportingPage = lazy(() => import("./components/FinancialReportin
 const FixedAssetsPage = lazy(() => import("./components/FixedAssetsPage"));
 const CustomerReturnsPage = lazy(() => import("./components/CustomerReturnsPage"));
 const OperationalFxTaxPage = lazy(() => import("./components/OperationalFxTaxPage"));
+const ManufacturingExecutionPage = lazy(() => import("./components/ManufacturingExecutionPage").then((module) => ({ default: module.ManufacturingExecutionPage })));
+const IntercompanyOperationsPage = lazy(() => import("./components/IntercompanyOperationsPage"));
+const ProcurementSourcingPage = lazy(() => import("./components/ProcurementSourcingPage").then((module) => ({ default: module.ProcurementSourcingPage })));
 const Dashboard = lazy(() => import("./components/Dashboard").then((module) => ({ default: module.Dashboard })));
 const ExceptionQueue = lazy(() => import("./components/ExceptionQueue").then((module) => ({ default: module.ExceptionQueue })));
 const EvidenceBinder = lazy(() => import("./components/EvidenceBinder").then((module) => ({ default: module.EvidenceBinder })));
@@ -66,6 +69,9 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/fixed-assets")) return "fixedAssets";
   if (normalized.endsWith("/customer-returns")) return "customerReturns";
   if (normalized.endsWith("/operational-fx-tax")) return "operationalFxTax";
+  if (normalized.endsWith("/manufacturing-execution")) return "manufacturingExecution";
+  if (normalized.endsWith("/intercompany-operations")) return "intercompanyOperations";
+  if (normalized.endsWith("/procurement-sourcing")) return "procurementSourcing";
   if (normalized.endsWith("/procurement-operations")) return "procurementOperations";
   if (normalized.endsWith("/enterprise-finance") || normalized.endsWith("/erp")) return "enterpriseFinance";
   return "dashboard";
@@ -90,6 +96,9 @@ function pathForPage(page: StudioPage): string {
     fixedAssets: "fixed-assets",
     customerReturns: "customer-returns",
     operationalFxTax: "operational-fx-tax",
+    manufacturingExecution: "manufacturing-execution",
+    intercompanyOperations: "intercompany-operations",
+    procurementSourcing: "procurement-sourcing",
     procurementOperations: "procurement-operations",
     enterpriseFinance: "enterprise-finance",
   };
@@ -227,6 +236,9 @@ function StudioApp() {
         {activePage === "fixedAssets" ? <Suspense fallback={<LoadingView translate={t} />}><FixedAssetsPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "customerReturns" ? <Suspense fallback={<LoadingView translate={t} />}><CustomerReturnsPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "operationalFxTax" ? <Suspense fallback={<LoadingView translate={t} />}><OperationalFxTaxPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "manufacturingExecution" ? <Suspense fallback={<LoadingView translate={t} />}><ManufacturingExecutionPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "intercompanyOperations" ? <Suspense fallback={<LoadingView translate={t} />}><IntercompanyOperationsPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "procurementSourcing" ? <Suspense fallback={<LoadingView translate={t} />}><ProcurementSourcingPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "dashboard" && error ? <ErrorView translate={t} message={error} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
         {activePage === "dashboard" && !error && !data ? <LoadingView translate={t} /> : null}
         {activePage === "dashboard" && data ? (

@@ -1,0 +1,622 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-publication4c-failed-gate-manual-security-and-staged-repair-v1.zip",
+  "capture_for_root_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "failed_subject": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+    "ci_actual_merge": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+    "main_run_id": 38257659454,
+    "main_terminal": {
+      "success": 41,
+      "failure": 2,
+      "skipped": 1,
+      "jobs": 44
+    },
+    "general_py311": {
+      "passed": 5543,
+      "failed": 2,
+      "inherited_skips": 663
+    },
+    "general_py312": {
+      "passed": 5544,
+      "failed": 1,
+      "inherited_skips": 663
+    },
+    "mandatory_native_partitions": 18,
+    "native_sessions": 54,
+    "native_selected_completed_cases": 1528,
+    "native_skips_xfails_xpasses": 0,
+    "writeback_scripted_gate_separate": true,
+    "browser_jobs": 14,
+    "browser_original_reports": 15,
+    "browser_original_zips_not_duplicated": "All original14ZIPs/API/member hashes remainLOCAL; compact source-bound index/status only here.",
+    "manual_security_run": 38258765073,
+    "manual_security_all5": "success",
+    "security_residual": "9Medium/1Negligible;65/68license metadata; legal compatibility unassessed",
+    "fresh4c_archive": "Not executed: Build/Verify skipped after pytest failures; strict missing-report upload failure retained.",
+    "working_contract_fix": "Uncommitted test-only overlay;264pure developer cases with wrong-command failure separately preserved; no4c rebind.",
+    "public_log_policy": "Exact safe failure/admission spans+fullLOCALoriginalSHA/length; setup/dependency/environment/full logs omitted and retainedLOCAL.",
+    "performance_comparison_accepted": false,
+    "cost_per_transaction": null,
+    "old_capsules_mutated": false
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 62,
+  "raw_bytes": 2871402,
+  "records": [
+    {
+      "entry_name": "failed-publication4c/artifacts-20261012T143436614796Z-38257659454-65a68434.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\artifacts-20261012T143436614796Z-38257659454-65a68434.json",
+      "bytes": 18455,
+      "sha256": "9aeb68c215f51c47859b8bf4b0f54436a51992fd76fda3b9693fc09bc53ea88f",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/browser-original-download-custody-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\browser-original-download-custody-v1.json",
+      "bytes": 4559,
+      "sha256": "95f6f70bf75e2d92c6cf1296deab6a3977109122864b0023fa34b141ce60822b",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/browser-original-report-summary-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\browser-original-report-summary-v1.json",
+      "bytes": 18587,
+      "sha256": "9b9c4ee4759d8135d2d651b8cadc94b0c716f7418fae1406fe3b0b0232b37d3b",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/failure-log-span-index.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\failure-log-span-index.json",
+      "bytes": 5469,
+      "sha256": "ded9b35145753fe490003849c778ca35206cd2c5b5d1da4fabd7c23238ed1954",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source blob or byte-exact failure-span projection; whole logs stayLOCAL with SHA/length/omissions declared.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/job-114839805183-safe-span-1.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\job-114839805183-safe-span-1.log",
+      "bytes": 1751,
+      "sha256": "f6c4942a3affff71c4a60ced8cd92e8ed92b7f22396696dc6e7ddbf0fefe0c06",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Original4c source blob or byte-exact failure-span projection; whole logs stayLOCAL with SHA/length/omissions declared.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/job-114839805183-safe-span-2.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\job-114839805183-safe-span-2.log",
+      "bytes": 916,
+      "sha256": "88c87996d89e9ba57c44088e7556fc7f473a18ce9d534661a5bb12d9c17ebe9b",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Original4c source blob or byte-exact failure-span projection; whole logs stayLOCAL with SHA/length/omissions declared.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/job-114839805183-safe-span-3.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\job-114839805183-safe-span-3.log",
+      "bytes": 175,
+      "sha256": "da9e5d9c20866c340e22956d8adca8fe9616bbb95541890f0cda35e66799c232",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Original4c source blob or byte-exact failure-span projection; whole logs stayLOCAL with SHA/length/omissions declared.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/job-114839805277-safe-span-1.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\job-114839805277-safe-span-1.log",
+      "bytes": 2997,
+      "sha256": "143567dc84596218b4588667ca516cca440f4068cd018adaec40432f41dc62f2",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Original4c source blob or byte-exact failure-span projection; whole logs stayLOCAL with SHA/length/omissions declared.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/job-114839805277-safe-span-2.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\job-114839805277-safe-span-2.log",
+      "bytes": 1431,
+      "sha256": "03138fba209688754b26d3e091cf11486792ffbaf18d029aca16c303b8c3b785",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Original4c source blob or byte-exact failure-span projection; whole logs stayLOCAL with SHA/length/omissions declared.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/job-114839805277-safe-span-3.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\job-114839805277-safe-span-3.log",
+      "bytes": 175,
+      "sha256": "64ea7d286f32b84217a88bea1b70befb9845b20677a39c2bca8413b75bd018bf",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Original4c source blob or byte-exact failure-span projection; whole logs stayLOCAL with SHA/length/omissions declared.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/jobs-20261012T143436614796Z-38257659454-65a68434.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\jobs-20261012T143436614796Z-38257659454-65a68434.json",
+      "bytes": 193197,
+      "sha256": "2315ca7e8838be26e4be6fd2fc865b971c2e3c98aeef5698d9d2dc669b8cf98f",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/original4c-driver.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\original4c-driver.py",
+      "bytes": 74667,
+      "sha256": "d005e84654b412393c36c4fc2b7f81f25789a3bb8c6ce354e449bb6ef28cca76",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source blob or byte-exact failure-span projection; whole logs stayLOCAL with SHA/length/omissions declared.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/original4c-tests.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\original4c-tests.py",
+      "bytes": 42205,
+      "sha256": "a6fd9e7ef6263f5b5b73babfe95cb1250252981f93abf0003cc93f1ff2771353",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source blob or byte-exact failure-span projection; whole logs stayLOCAL with SHA/length/omissions declared.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/run-20261012T143436614796Z-38257659454-65a68434.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\run-20261012T143436614796Z-38257659454-65a68434.json",
+      "bytes": 14103,
+      "sha256": "becfae408a0d83c36cb6ea1d68a2b8b254bab293d4bf0cd0bab59731fe6a8b65",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/terminal-native-log-collection-v3.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\terminal-native-log-collection-v3.json",
+      "bytes": 21949,
+      "sha256": "932292775db89d0a997b3fb1f7a357d631871cdcf12996510b26d65d5a161578",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/terminal-original-closure-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\terminal-original-closure-v1.json",
+      "bytes": 17089,
+      "sha256": "24bb0c04e899af05cd934ca427dd2cfe906a234f317150770e1cd9126a9a9bf3",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "failed-publication4c/virtual-merge-source-binding-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\virtual-merge-source-binding-v1.json",
+      "bytes": 1615,
+      "sha256": "76ee847f1e5dd7092a2500e1be0e5a2fbcb7279ab950f58d381765f296ba33f4",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/original-4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\original-git-commit-4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91.json",
+      "bytes": 1253,
+      "sha256": "a1a11048c9a24dfe93f6d2f83526eb4a3356f35b9328dd0a97b5da3d7733fb5c",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "OriginalGit API object; actual CImerge andPRhead have equal trees, not relabelled original headers.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/original-ae521de43be855e90f60b1bf0abfb01c4ae06fc7.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\original-git-commit-ae521de43be855e90f60b1bf0abfb01c4ae06fc7.json",
+      "bytes": 2712,
+      "sha256": "52cb2fc270ea947a6a010fadfb741495022cc5355c66f75dc7e8201cc64f89d1",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "OriginalGit API object; actual CImerge andPRhead have equal trees, not relabelled original headers.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "manual-security-artifacts/11751461933-original-index.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\artifact-11751461933\\original-artifact-index.json",
+      "bytes": 1585,
+      "sha256": "6b6c44eac60c223822a540362be7a970f8ccf3ae0d36a79e7eec00bfd9a41837",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "manual-security-artifacts/11751461933-original.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\artifact-11751461933\\original.zip",
+      "bytes": 294,
+      "sha256": "9e5d99ae7a9a319420d6e19510be983da5f385bbb2c7551ab4ed8406d834eeb9",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "manual-security-artifacts/11751461933/gitleaks-history.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\artifact-11751461933\\members\\gitleaks-history.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "manual-security-artifacts/11751461933/gitleaks-tree.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\artifact-11751461933\\members\\gitleaks-tree.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "manual-security-artifacts/11751646610-original-index.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\artifact-11751646610\\original-artifact-index.json",
+      "bytes": 1768,
+      "sha256": "a5b9558176a7f45db448d57ee17690248ad58a6bf08ee3c27ed1f97be73643b0",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "manual-security-artifacts/11751646610-original.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\artifact-11751646610\\original.zip",
+      "bytes": 397291,
+      "sha256": "62093f37f9b73809285d0f8b8b18eac911379208c1421f018b433253bba96d52",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "manual-security-artifacts/11751646610/container-security-evidence.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\artifact-11751646610\\members\\container-security-evidence.json",
+      "bytes": 1981,
+      "sha256": "dd1e6edc4409992b7b685ceae4aebb4f86b381fe8dffeed725f0c4edbd555248",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "manual-security-artifacts/11751646610/image.grype.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\artifact-11751646610\\members\\image.grype.json",
+      "bytes": 59292,
+      "sha256": "7171ddb7d2171235d44acb4ab348a164324d7489f0032f03f8dd684399f41924",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "manual-security-artifacts/11751646610/image.syft.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\artifact-11751646610\\members\\image.syft.json",
+      "bytes": 1783655,
+      "sha256": "32dbd0033a230b2a7da0e2326ba34a1985c8c7ccf0af5b534ce86b4bcf839caf",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839805379-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839805379-exact-admission-lines.log",
+      "bytes": 200,
+      "sha256": "204964db052e80209cadd8dc5afc47b95ad2081b5f3997136c574a969178b7ae",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839805456-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839805456-exact-admission-lines.log",
+      "bytes": 201,
+      "sha256": "778f411a1b86a9dfa6034592807b8a6fb874457a1d161d857ea0f1a3a1db0068",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839805543-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839805543-exact-admission-lines.log",
+      "bytes": 400,
+      "sha256": "deabe11709aa4d995ddafb236a9ce38563e471edc7af434f4ba2d09f88d3e9d5",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839805547-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839805547-exact-admission-lines.log",
+      "bytes": 1196,
+      "sha256": "350be32af2721f734b45cb6c97f2a98ef2f150a0d03a1054e5ef16fb93599fbb",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839805609-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839805609-exact-admission-lines.log",
+      "bytes": 199,
+      "sha256": "b941c2360d4457cd40e4628ed1d376f4e1ff549ac37846e545416c0d59faca8d",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839805621-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839805621-exact-admission-lines.log",
+      "bytes": 400,
+      "sha256": "0e3340aec990a6c8b58f5eb379336d612b70eec23f1bc09d7186d02381ed183f",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839805649-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839805649-exact-admission-lines.log",
+      "bytes": 200,
+      "sha256": "006e6bc05daf9f80043150ef559a6e141229007a4b2e3bfc7f8591871b901c9c",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839805651-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839805651-exact-admission-lines.log",
+      "bytes": 199,
+      "sha256": "78b914d66b528a2742fedff6890566457af222932f5a3932ed9c8fe2a5c42d7a",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839805664-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839805664-exact-admission-lines.log",
+      "bytes": 200,
+      "sha256": "c0bf34c198c0703f299871cb92c4d32baa0b815b84238672a6f31f56ff2a4d24",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839805675-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839805675-exact-admission-lines.log",
+      "bytes": 597,
+      "sha256": "ed11f4281f87cc3bcbd8ed2d79087d727b9c85692f771374e81578d06e8f582c",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839805756-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839805756-exact-admission-lines.log",
+      "bytes": 796,
+      "sha256": "df10e119288ff64554467f052798eec9f7d4a6246d3b892c830bcfe6831bbf2b",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839805987-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839805987-exact-admission-lines.log",
+      "bytes": 2985,
+      "sha256": "370f32b953d4cb323bab6029716dcb68d19102ed1fe2866dae6d8eeec827bc5b",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839805991-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839805991-exact-admission-lines.log",
+      "bytes": 200,
+      "sha256": "caa54124011261c37f28698edfb9ca8c38d8292287a6be8a9f2b3b1ca9cd6b68",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839807902-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839807902-exact-admission-lines.log",
+      "bytes": 1197,
+      "sha256": "2222a0835284c1234441b4d80a6a5e74af17e5bc0b1c078d2eebe60f43006d67",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839808016-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839808016-exact-admission-lines.log",
+      "bytes": 200,
+      "sha256": "268063074d34326c25d85426377f88334940f811981c9de8e92b16f272413377",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839808025-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839808025-exact-admission-lines.log",
+      "bytes": 799,
+      "sha256": "23dc0ed274836705b91d1ba448d018264b409c00fd2e6c47098dc1ee950ad9d6",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839808099-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839808099-exact-admission-lines.log",
+      "bytes": 400,
+      "sha256": "1f3b30699233a06eaf14e5031e153af94c947fc127e90b343171496d7a71905a",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "native-original-admissions/native-114839808214-exact-admission-lines.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-20261012-v1\\staging\\native-114839808214-exact-admission-lines.log",
+      "bytes": 399,
+      "sha256": "786522d832ac047bc2db2efb0ff0b17511bef98be22c10e28f90fcb6b9c12e87",
+      "source_commit": "ae521de43be855e90f60b1bf0abfb01c4ae06fc7",
+      "source_attribution": "Exact original mandatory native admission lines only; whole log SHA/length/path in terminal-native-log-collection-v3.json. No invented passed summary.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "separate-security-docker-codeql4c/artifacts-20261012T140141689170Z-38258765073-27dee9e5.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\artifacts-20261012T140141689170Z-38258765073-27dee9e5.json",
+      "bytes": 1595,
+      "sha256": "ff316a8e25b418ed0a38e6c31089dc018ab675d7919d76d72558a46ec52f8e70",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "separate-security-docker-codeql4c/jobs-20261012T135132459132Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\jobs-20261012T135132459132Z.json",
+      "bytes": 2269,
+      "sha256": "3a947a18384c1d778e955b40fbc93b6069cad06124d3e906cd949a562696e63d",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "separate-security-docker-codeql4c/jobs-20261012T135132460132Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\jobs-20261012T135132460132Z.json",
+      "bytes": 11713,
+      "sha256": "1dd72e1e906501915180dc18f8243191f130298dcda15f938a931332519940b4",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "separate-security-docker-codeql4c/jobs-20261012T135212175568Z-38257659455-f5b3838d.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\jobs-20261012T135212175568Z-38257659455-f5b3838d.json",
+      "bytes": 1931,
+      "sha256": "77dac4d3a8ba21b8303ecbce47aad317c23d8b8a596a1c91de38e0da72294b3c",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "separate-security-docker-codeql4c/jobs-20261012T140141689170Z-38258765073-27dee9e5.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\jobs-20261012T140141689170Z-38258765073-27dee9e5.json",
+      "bytes": 13600,
+      "sha256": "a66b8e25ad8e7d80b8264faca3f54fddb48810b5d7d96fce1fa87a4ca4740590",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "separate-security-docker-codeql4c/manual-security-image-byte-binding-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\manual-security-image-byte-binding-v1.json",
+      "bytes": 638,
+      "sha256": "54d41fac8e66284481ca0c341dbe4acc5f27278b156fbe4723b649f6bdc62902",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "separate-security-docker-codeql4c/manual-security-original-custody-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\manual-security-original-custody-v1.json",
+      "bytes": 3301,
+      "sha256": "5de5f7333bd5c8c0c2b895d48588f35ad2232619e0dfca0e364f677b99f75f2c",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "separate-security-docker-codeql4c/run-20261012T135132459132Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\run-20261012T135132459132Z.json",
+      "bytes": 14111,
+      "sha256": "8997e2a1c3aaf90c1ce53d828f9e77758233bd1347388323184cfc12a4d1916b",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "separate-security-docker-codeql4c/run-20261012T135132460132Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\run-20261012T135132460132Z.json",
+      "bytes": 14115,
+      "sha256": "db57ad775a745d06a3b3bf429c9759fed42e15bced13d9bac1900005ccbc06ef",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "separate-security-docker-codeql4c/run-20261012T135212175568Z-38257659455-f5b3838d.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\run-20261012T135212175568Z-38257659455-f5b3838d.json",
+      "bytes": 14111,
+      "sha256": "7f2772c554576277c236980535bfd2a55b785e743404ecb4ef10f3d8f203d632",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "separate-security-docker-codeql4c/run-20261012T140141689170Z-38258765073-27dee9e5.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-final-ci-4c464b67-20261012\\run-20261012T140141689170Z-38258765073-27dee9e5.json",
+      "bytes": 14049,
+      "sha256": "e5bc378e63e974705a145d2bd2f81430383b3fc18477baed46774a3567daee87",
+      "source_commit": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+      "source_attribution": "Original4c source-bound evidence; failure or success headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "staged-before-commit-contract-repair/actual-targeted264.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-portable-contract-fix-independent-originals-v1\\actual-targeted264.xml",
+      "bytes": 44103,
+      "sha256": "ecac0a5493365d91ac9cb1afa7375675918173d4a160fd2b5d4e510aa87a763a",
+      "source_commit": null,
+      "source_attribution": "Uncommitted test-only repair overlay relative4c; original owner264pure development/XML and failed no-file command are separate from4c hosted execution. No clean-final hosted acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "staged-before-commit-contract-repair/audit_wave5_portable_contract_fix.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\audit_wave5_portable_contract_fix.py",
+      "bytes": 6620,
+      "sha256": "6e5d6b6d30acd3e191b30d3304b7299d58574fd84497a8216ec468643f6f4659",
+      "source_commit": null,
+      "source_attribution": "Independent file/Git/AST/XML review of staged repair; no reviewer test or workload. Its own original source hashes govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "staged-before-commit-contract-repair/developer-record.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-portable-contract-fix-independent-originals-v1\\developer-record.json",
+      "bytes": 986,
+      "sha256": "083100696057134e80f8bfbd7d54a7cc01810a9712e8fec636104a530ccfefbe",
+      "source_commit": null,
+      "source_attribution": "Uncommitted test-only repair overlay relative4c; original owner264pure development/XML and failed no-file command are separate from4c hosted execution. No clean-final hosted acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "staged-before-commit-contract-repair/fixed-tests.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-portable-contract-fix-independent-originals-v1\\fixed-tests.py",
+      "bytes": 44379,
+      "sha256": "1ea1f8e00397703cd8e1f65703e9e323ad98e768eda0d9ca980a7f29ef9414ae",
+      "source_commit": null,
+      "source_attribution": "Uncommitted test-only repair overlay relative4c; original owner264pure development/XML and failed no-file command are separate from4c hosted execution. No clean-final hosted acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "staged-before-commit-contract-repair/wave5-portable-contract-fix-independent-review-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-portable-contract-fix-independent-review-v1.json",
+      "bytes": 3936,
+      "sha256": "c0694a0bbd47a23c2bedd918566ef53497fdd712a98c1ef70ec1250e68920421",
+      "source_commit": null,
+      "source_attribution": "Independent file/Git/AST/XML review of staged repair; no reviewer test or workload. Its own original source hashes govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

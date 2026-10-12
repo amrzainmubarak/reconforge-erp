@@ -281,6 +281,55 @@ for _path, _permissions in {
 
 
 
+for _method, _path, _operation in (
+    ("GET", "/catalog", "read"), ("POST", "/sources", "prepare"), ("GET", "/sources", "read"),
+    ("GET", "/sources/{source_id}", "read"), ("POST", "/sources/{source_id}/settlements", "prepare"),
+    ("POST", "/sources/{source_id}/eliminations", "prepare"), ("GET", "/plans/{plan_id}", "read"),
+    ("POST", "/plans/{plan_id}/review", "review"), ("POST", "/plans/{plan_id}/post", "post"),
+    ("GET", "/plans/{plan_id}/evidence", "read"), ("GET", "/sources/{source_id}/report", "read"),
+):
+    _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/intercompany-operations" + _path)] = (
+        "all", tuple(sorted(("intercompany_operations." + _operation,
+            "finance_core." + {"read": "read", "prepare": "manage", "review": "validate", "post": "post"}[_operation]))))
+
+
+_MANUFACTURING_READ = frozenset({"manufacturing_execution.read", "inventory.read", "finance_core.read"})
+_MANUFACTURING_OPERATIONS = {
+    "read": _MANUFACTURING_READ,
+    "create": _MANUFACTURING_READ | {"manufacturing_execution.manage", "inventory.manage"},
+    "approve-bom": _MANUFACTURING_READ | {"manufacturing_execution.approve"},
+    "prepare": _MANUFACTURING_READ | {"manufacturing_execution.manage", "inventory.manage", "inventory.valuation.manage", "finance_core.manage"},
+    "review": _MANUFACTURING_READ | {"manufacturing_execution.approve", "inventory.post", "inventory.valuation.approve", "finance_core.validate"},
+    "post": _MANUFACTURING_READ | {"manufacturing_execution.post", "inventory.post", "inventory.valuation.approve", "finance_core.post"},
+    "cancel": _MANUFACTURING_READ | {"manufacturing_execution.approve"},
+}
+for _method, _path, _operation in (
+    ("GET", "/orders", "read"), ("POST", "/boms", "create"), ("POST", "/boms/{bom_id}/approve", "approve-bom"),
+    ("POST", "/orders", "create"), ("GET", "/orders/{order_id}", "read"),
+    ("GET", "/orders/{order_id}/requirements", "read"), ("POST", "/orders/{order_id}/prepare", "prepare"),
+    ("POST", "/orders/{order_id}/review", "review"), ("POST", "/orders/{order_id}/post", "post"),
+    ("POST", "/orders/{order_id}/cancel", "cancel"), ("POST", "/orders/{order_id}/completions", "prepare"),
+    ("POST", "/completions/{completion_id}/review", "review"), ("POST", "/completions/{completion_id}/post", "post"),
+    ("POST", "/completions/{completion_id}/cancel", "cancel"),
+):
+    _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/manufacturing-execution" + _path)] = (
+        "all", tuple(sorted(_MANUFACTURING_OPERATIONS[_operation])))
+
+
+_SOURCING_READ = frozenset({"procurement_sourcing.read", "budget_control.read", "payables.read", "inventory.read", "finance_core.read"})
+for _method, _path, _sourcing_permissions in (
+    ("GET", "/requisitions", frozenset()), ("GET", "/requisitions/{identifier}", frozenset()),
+    ("POST", "/requisitions", frozenset({"procurement_sourcing.manage"})),
+    ("POST", "/requisitions/{identifier}/quotes", frozenset({"procurement_sourcing.manage"})),
+    ("POST", "/requisitions/{identifier}/award", frozenset({"procurement_sourcing.award", "budget_control.manage", "payables.manage"})),
+    ("POST", "/requisitions/{identifier}/open-rfq", frozenset({"procurement_sourcing.approve"})),
+    ("POST", "/requisitions/{identifier}/review-selection", frozenset({"procurement_sourcing.approve"})),
+    ("POST", "/requisitions/{identifier}/cancel", frozenset({"procurement_sourcing.approve"})),
+):
+    _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/procurement-sourcing" + _path)] = (
+        "all", tuple(sorted(_SOURCING_READ | _sourcing_permissions)))
+
+
 def _dependency_contract(route: APIRoute) -> tuple[str, tuple[str, ...]] | None:
     found: set[tuple[str, tuple[str, ...]]] = set()
     pending = list(route.dependant.dependencies)

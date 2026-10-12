@@ -86,9 +86,9 @@ def test_matrix_subject_supply_chain_and_package_contracts_bind_current_sources(
 
 def test_ci_runs_and_preserves_the_closed_writeback_migration_matrix() -> None:
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
-    policy = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
+    current_policy = json.loads((ROOT / "docs/security/postgres-current-images.wave5.v1.json").read_text(encoding="utf-8"))
     job = workflow["jobs"]["server-boundaries"]
-    assert job["services"]["postgres"]["image"] == policy["container_resolution"]["service_images"]["postgres_16_ci"]
+    assert job["services"]["postgres"]["image"] == current_policy["current_images"]["server_boundaries"]
 
     steps = job["steps"]
     names = [str(step.get("name", "")) for step in steps]

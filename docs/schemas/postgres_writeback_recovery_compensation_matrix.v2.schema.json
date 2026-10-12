@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/postgres_writeback_recovery_compensation_matrix.v2.schema.json",
+  "title": "Current pinned PostgreSQL recovery and compensation matrix V2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "executed_at", "duration_seconds", "profile", "subject", "sqlite_reference", "runs", "parity", "limitations", "report_digest"],
+  "properties": {
+    "schema_version": {"const": "postgres-writeback-recovery-compensation-matrix-v2"},
+    "executed_at": {"type": "string", "format": "date-time"},
+    "duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+    "profile": {"const": "provider-neutral-writeback-recovery-compensation-parity"},
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_commit", "writeback_source_sha256", "postgres_persistence_source_sha256", "sqlite_persistence_source_sha256", "migration_source_sha256", "supply_chain_policy_sha256", "matrix_runner_source_sha256", "runtime_profile", "current_postgres_policy_sha256"],
+      "properties": {
+        "base_commit": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/git_commit"},
+        "writeback_source_sha256": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/sha256"},
+        "postgres_persistence_source_sha256": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/sha256"},
+        "sqlite_persistence_source_sha256": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/sha256"},
+        "migration_source_sha256": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/sha256"},
+        "supply_chain_policy_sha256": {"const": "8629e9c6d2f57eaf74da0dc20d54293241a97ce8c7fc6b5d10e2926048cf4992"},
+        "matrix_runner_source_sha256": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/sha256"},
+        "runtime_profile": {"const": "current-postgres-wave5-v1"},
+        "current_postgres_policy_sha256": {"const": "e1add5c92bb875e04e68e601cc9651c469c50a327e1c58912113df4c0a774fc4"}
+      }
+    },
+    "sqlite_reference": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/sqlite_result"},
+    "runs": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "prefixItems": [{"$ref": "#/$defs/postgres16_result"}, {"$ref": "#/$defs/postgres17_result"}],
+      "items": false
+    },
+    "parity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["history_sha256", "postgresql_versions", "all_checks_passed", "all_cleanup_complete"],
+      "properties": {
+        "history_sha256": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/sha256"},
+        "postgresql_versions": {"const": ["16.15", "17.11"]},
+        "all_checks_passed": {"const": true},
+        "all_cleanup_complete": {"const": true}
+      }
+    },
+    "limitations": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/properties/limitations"},
+    "report_digest": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/sha256"}
+  },
+  "$defs": {
+    "runtime16": {
+      "type": "object", "additionalProperties": false, "required": ["image", "postgresql", "docker_server"],
+      "properties": {
+        "image": {"const": "postgres:16.15-alpine@sha256:1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551"},
+        "postgresql": {"const": "16.15"},
+        "docker_server": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"}
+      }
+    },
+    "runtime17": {
+      "type": "object", "additionalProperties": false, "required": ["image", "postgresql", "docker_server"],
+      "properties": {
+        "image": {"const": "postgres:17.11-alpine@sha256:aa90e97ee862e558111d34cfb8b2c4bec768c2b039fb791341686928560263b3"},
+        "postgresql": {"const": "17.11"},
+        "docker_server": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"}
+      }
+    },
+    "postgres16_result": {
+      "type": "object", "additionalProperties": false,
+      "required": ["checks", "history", "history_sha256", "statuses", "runtime", "role_flags"],
+      "properties": {
+        "checks": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/postgres_checks"},
+        "history": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/history_entry"}},
+        "history_sha256": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/sha256"},
+        "statuses": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/statuses"},
+        "runtime": {"$ref": "#/$defs/runtime16"},
+        "role_flags": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/role_flags"}
+      }
+    },
+    "postgres17_result": {
+      "type": "object", "additionalProperties": false,
+      "required": ["checks", "history", "history_sha256", "statuses", "runtime", "role_flags"],
+      "properties": {
+        "checks": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/postgres_checks"},
+        "history": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/history_entry"}},
+        "history_sha256": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/sha256"},
+        "statuses": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/statuses"},
+        "runtime": {"$ref": "#/$defs/runtime17"},
+        "role_flags": {"$ref": "postgres_writeback_recovery_compensation_matrix.schema.json#/$defs/role_flags"}
+      }
+    }
+  }
+}

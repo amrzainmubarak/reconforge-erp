@@ -1,0 +1,160 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-root-security-1a40-38196678518-v1.zip",
+  "capture_for_root_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "run_id": 38196678518,
+    "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+    "all_five_jobs": "success",
+    "actual_history_findings": 0,
+    "actual_tree_findings": 0,
+    "final_overall_ci": "Pending other gates; web failure separately retained by root."
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 14,
+  "raw_bytes": 2504578,
+  "records": [
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-1a40/artifact-11723513589.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-1a40\\artifact-11723513589.zip",
+      "bytes": 397985,
+      "sha256": "12f092d19d178cd664b9942b8b0e0f0b0416cfac3273619e30b936924e4cdcff",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual root manual Security run38196678518 on exact1a40; not a rebind of older diagnostic results.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-1a40/artifact-11723747314.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-1a40\\artifact-11723747314.zip",
+      "bytes": 294,
+      "sha256": "6c128675f1e48a412cff7868337c90cd0019bc70dd6a6b78be7c901526bca690",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual root manual Security run38196678518 on exact1a40; not a rebind of older diagnostic results.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-1a40/artifact-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-1a40\\artifact-provenance.json",
+      "bytes": 2632,
+      "sha256": "23f7ed0dfc10af88554bb92155c65426db67dc6f9eb097ccc27122abfd3b01ab",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual root manual Security run38196678518 on exact1a40; not a rebind of older diagnostic results.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-1a40/container-security-evidence.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-1a40\\container-security-evidence.json",
+      "bytes": 1981,
+      "sha256": "4bb8a0b2ccde0595f5fb4d4140c7f08649304c3739074893143ebf5eabe4217b",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual root manual Security run38196678518 on exact1a40; not a rebind of older diagnostic results.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-1a40/gitleaks-history.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-1a40\\gitleaks-history.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual root manual Security run38196678518 on exact1a40; not a rebind of older diagnostic results.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-1a40/gitleaks-tree.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-1a40\\gitleaks-tree.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual root manual Security run38196678518 on exact1a40; not a rebind of older diagnostic results.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-1a40/image.grype.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-1a40\\image.grype.json",
+      "bytes": 59297,
+      "sha256": "4c5753fa5dd0df76bf2c57743f3420d20a16081d0d4c24ae81f5a3895b834a31",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual root manual Security run38196678518 on exact1a40; not a rebind of older diagnostic results.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-1a40/image.syft.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-1a40\\image.syft.json",
+      "bytes": 1783659,
+      "sha256": "6c56d96cfda7d74dbeebd72a7dc996952ee48eed664178ec71f6e26479880bc2",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual root manual Security run38196678518 on exact1a40; not a rebind of older diagnostic results.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-1a40/job-114640794049.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-1a40\\job-114640794049.log",
+      "bytes": 41252,
+      "sha256": "0d6e969e828df00da32a62bc93c5b7804ac74c1d9ddd918e87dc50c598c6899c",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual root manual Security run38196678518 on exact1a40; not a rebind of older diagnostic results.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-1a40/job-114640794278.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-1a40\\job-114640794278.log",
+      "bytes": 82986,
+      "sha256": "4e30d37089470370fd0d9b3353cb7ef72903e5ed2d7d85e4e273411ec946f870",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual root manual Security run38196678518 on exact1a40; not a rebind of older diagnostic results.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-1a40/job-114640794306.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-1a40\\job-114640794306.log",
+      "bytes": 82994,
+      "sha256": "c43dfc38007a2d199f31245cb1ef512f218535049cc369b99cff2459b6e092dd",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual root manual Security run38196678518 on exact1a40; not a rebind of older diagnostic results.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-1a40/job-114640794311.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-1a40\\job-114640794311.log",
+      "bytes": 48605,
+      "sha256": "b5d923c2f2606f4f45cfe1ef9bd1dea36e2d69e18f5ce2a83b6968cd6ffa38de",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual root manual Security run38196678518 on exact1a40; not a rebind of older diagnostic results.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-1a40/job-114641210817.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-1a40\\job-114641210817.log",
+      "bytes": 2473,
+      "sha256": "21dbd37b68ac7e972cf153e9dbe8c0d5ff7ade72c02569097c2a4e451f9e08e1",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual root manual Security run38196678518 on exact1a40; not a rebind of older diagnostic results.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-1a40/run-metadata.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-1a40\\run-metadata.json",
+      "bytes": 414,
+      "sha256": "6afa810f99220d1f89ea3674eb2f39ed675f15191661fbb66ff5ed72c0aa2bc9",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual root manual Security run38196678518 on exact1a40; not a rebind of older diagnostic results.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

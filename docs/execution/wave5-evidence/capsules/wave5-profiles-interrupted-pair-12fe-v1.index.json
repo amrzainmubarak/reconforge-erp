@@ -1,0 +1,250 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-profiles-interrupted-pair-12fe-v1.zip",
+  "capture_for_root_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "completed_financial_runs": 3,
+    "actual_bookend_files": 7,
+    "scheduled_bookends": 12,
+    "unperformed_bookends": 5,
+    "incomplete_run": "2-baseline; migration/partial artifacts preserved",
+    "fair_comparison_admitted": false
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 24,
+  "raw_bytes": 3738455,
+  "records": [
+    {
+      "entry_name": "root/docs/execution/wave5-evidence/baseline-profile-6362724f/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\docs\\execution\\wave5-evidence\\baseline-profile-6362724f\\migration.log",
+      "bytes": 22876,
+      "sha256": "b2f8b856f7d5850299991f692aa25ba1caab23ad6bbf43adb6429b88eca9584b",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Historical baseline profile on its recorded image; not same-image fair candidate acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/docs/execution/wave5-evidence/baseline-profile-6362724f/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\docs\\execution\\wave5-evidence\\baseline-profile-6362724f\\result.json",
+      "bytes": 1024150,
+      "sha256": "abbac3be6cc531732663c451c5aa6a6de831cb06a0c990070d4e1f3926af35fe",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Historical baseline profile on its recorded image; not same-image fair candidate acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/docs/execution/wave5-evidence/baseline-profile-6362724f/summary.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\docs\\execution\\wave5-evidence\\baseline-profile-6362724f\\summary.json",
+      "bytes": 2939,
+      "sha256": "93dbb924212b40b19c538d8620c44f4a9a9958cb9533bf19be65971042608893",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Historical baseline profile on its recorded image; not same-image fair candidate acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-candidate-profile-integrated/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-candidate-profile-integrated\\migration.log",
+      "bytes": 23436,
+      "sha256": "105b31d905533bc526acd18d2d4926184d0f422bc796a3e5a150958d35c9ba41",
+      "source_commit": "5686b6ea064ece2e033651166f0875cfefa7b112",
+      "source_attribution": "Adverse descriptive integrated profile; not a fair repeated comparison.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-candidate-profile-integrated/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-candidate-profile-integrated\\result.json",
+      "bytes": 1044931,
+      "sha256": "e0509a4b2411e31a7eee2596caa0f63ef841a95790c995af297c211f0c13f9ab",
+      "source_commit": "5686b6ea064ece2e033651166f0875cfefa7b112",
+      "source_attribution": "Adverse descriptive integrated profile; not a fair repeated comparison.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/1-baseline-power-after.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\1-baseline-power-after.json",
+      "bytes": 17821,
+      "sha256": "2bb09e9b59c4690dc62cc0f38260bff9492270d27dcce01832137f5f6c4fab9b",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/1-baseline-power-before.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\1-baseline-power-before.json",
+      "bytes": 17820,
+      "sha256": "39453c9c230308a0f9a82380971a812b005b8d52b6b5bb407410e60b35f02d5e",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/1-baseline.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\1-baseline.log",
+      "bytes": 196,
+      "sha256": "a3d520acc2d90f20d10b6465160644f13d211b22e9cabc2123412fca759bdc0f",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/1-baseline/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\1-baseline\\migration.log",
+      "bytes": 22876,
+      "sha256": "b2f8b856f7d5850299991f692aa25ba1caab23ad6bbf43adb6429b88eca9584b",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/1-baseline/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\1-baseline\\result.json",
+      "bytes": 427822,
+      "sha256": "0f4d1bfebc75c09f0fe737428a78fff76a6b0d60403b42a0526fc003aa4b801e",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/1-candidate-power-after.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\1-candidate-power-after.json",
+      "bytes": 17821,
+      "sha256": "42b0eda4978e8e092929cffda630c3ff9fa6930b008aae207f53abfc3340e8c6",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/1-candidate-power-before.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\1-candidate-power-before.json",
+      "bytes": 17820,
+      "sha256": "17fd413980e1981fb4184cde7a364cd40738900682723901c184079d93bf1194",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/1-candidate.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\1-candidate.log",
+      "bytes": 197,
+      "sha256": "426a8a7c234e6f044d10bccd5f55d4c357fd70d5ddc58b8e2f5678fa01b1fd94",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/1-candidate/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\1-candidate\\migration.log",
+      "bytes": 23616,
+      "sha256": "cbba54d8da1909bd5edb8c8279ef886e13f674a78fd06fc1268c1f945b4f76af",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/1-candidate/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\1-candidate\\result.json",
+      "bytes": 437571,
+      "sha256": "e136537c9749845c2fa92a61cd892d1fab06cc1c8318d34416a277ee30b347cc",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/2-baseline-power-before.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\2-baseline-power-before.json",
+      "bytes": 17822,
+      "sha256": "e543e3088247e26e798bca2218b51bf8f9f8ed6d3795a455fd56cdaafb642006",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/2-baseline/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\2-baseline\\migration.log",
+      "bytes": 22876,
+      "sha256": "b2f8b856f7d5850299991f692aa25ba1caab23ad6bbf43adb6429b88eca9584b",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/2-candidate-power-after.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\2-candidate-power-after.json",
+      "bytes": 17821,
+      "sha256": "601b86f864c6897c9a41d4efaf5549c06ab15bdb73fe9494c78df8f3c9f03e02",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/2-candidate-power-before.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\2-candidate-power-before.json",
+      "bytes": 17822,
+      "sha256": "b70e73f457b6dfede461940d47f5f9c91f3dfbd704ec2e33b9acf4a8d74b1540",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/2-candidate.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\2-candidate.log",
+      "bytes": 197,
+      "sha256": "f3ea42909eb63851a879e364d3476ebf36bb77f36b37d3fbb8229689515b13dd",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/2-candidate/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\2-candidate\\migration.log",
+      "bytes": 23616,
+      "sha256": "cbba54d8da1909bd5edb8c8279ef886e13f674a78fd06fc1268c1f945b4f76af",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/2-candidate/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\2-candidate\\result.json",
+      "bytes": 515309,
+      "sha256": "e2399c32acedb477921fcc32ff6561a70568162456e1707ef8b806bbefe2f223",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/interruption.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\interruption.json",
+      "bytes": 1844,
+      "sha256": "dee574e9ecacd9796965cfd14e94b9631115a3a7ce5b352918b3d5fc411c10a6",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-paired-1k-12fe5f2b/pair.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-paired-1k-12fe5f2b\\pair.json",
+      "bytes": 19256,
+      "sha256": "853f6d77db6f43da22a152c1358ae8a6683de7fbe03439afc6ca8c45fa17e171",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Interrupted mixed-source pair; each baseline/candidate result header governs source. Fair performance comparison not admitted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

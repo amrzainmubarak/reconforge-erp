@@ -1,0 +1,78 @@
+{
+  "schema_version": "reconforge-flat-evidence-capsule-extension-v1",
+  "unchanged_original_index": "capsule-index.json",
+  "unchanged_original_index_sha256": "1cf25cf6817ce991d5a0b479332b7a128ccb90fdb794d03e14d457576a066795",
+  "unchanged_prior_capsules": 6,
+  "capsules": [
+    {
+      "file_name": "wave5-fx-wire-oracle-b6fcf71d-v1.zip",
+      "sha256": "bdf88f3aece7eb90e5486fe5d549453debea76eb45a5d426178abbfc3c813e97",
+      "bytes": 477016,
+      "file_count": 51,
+      "raw_bytes": 942948,
+      "index_name": "wave5-fx-wire-oracle-b6fcf71d-v1.index.json",
+      "index_sha256": "69f4f1b78a5befdc0733d2b18210a65042048a557a03e3ae17bfa97ddc06a317",
+      "coverage": {
+        "actual_runtime_source": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+        "oracle_source_commit": "e5bdbeecc1431c60e1cedc6dc81d5896369ef853",
+        "browser_expected": 1,
+        "browser_skipped_unexpected_flaky": [
+          0,
+          0,
+          0
+        ],
+        "native_restore": "passed at exact0136 with original snapshot/checkpoint/probe evidence",
+        "actual_web": {
+          "files": 68,
+          "passed": 452,
+          "skipped": 0
+        },
+        "trusted_manifest_sha256": "d2a4e557da3da1b85016622f314a7fd41d8adccdca7e7c92b41599a7af2efd62",
+        "preserved_original_contract_failures": 2,
+        "actual_b6_stdlib_isolated_passes": 2,
+        "unchanged_wave4_stdlib_isolated_passes": 2,
+        "targeted_oracle_tests": {
+          "passed": 35,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "trust_boundary": "Local retained proof membership anchor, not an external audit attestation; synthetic EUR/USD tax fixture only."
+      }
+    },
+    {
+      "file_name": "wave5-ci-1a40-38195991061-v1.zip",
+      "sha256": "e8aaee5f2536d4ad07342fe83c38a258ecc625b1af1d2e6b933da96e90d6be4b",
+      "bytes": 528131,
+      "file_count": 49,
+      "raw_bytes": 634578,
+      "index_name": "wave5-ci-1a40-38195991061-v1.index.json",
+      "index_sha256": "0b067e2f92aea25ecf82fc113fe6cdb8f34a33a769cf70e3d5b382654b842ecb",
+      "coverage": {
+        "run_id": 38195991061,
+        "job_counts": {
+          "success": 24,
+          "failure": 2,
+          "cancelled": 3,
+          "skipped": 3
+        },
+        "ordinary_python_per_version": {
+          "passed": 5228,
+          "inherited_prerequisite_skips": 663
+        },
+        "mandatory_native": {
+          "successful_partitions": 15,
+          "sessions": 44,
+          "completed_selected": 1269,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0
+        },
+        "dedicated_writeback": "successful dedicated runner branch, no pytest invocation; five raw JSON artifacts retained",
+        "full_native_matrix_accepted": false,
+        "browser_and_docker_dependencies": "Skipped due web failure, not PASS",
+        "web_original_failure": "1 failed /448 passed; safe original byte spans and original full-log SHA retained, one auth-pattern setup line omitted explicitly."
+      }
+    }
+  ]
+}

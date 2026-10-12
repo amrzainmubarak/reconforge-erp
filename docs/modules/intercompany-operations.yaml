@@ -1,0 +1,48 @@
+id: intercompany-operations
+name: Atomic two-party native service charge and reviewed group adjustment
+version: 0.1.0
+maturity: experimental
+owner: Amr
+dependencies: [finance-core, finance-operational-posting, financial-reporting, currency-registry, identity, master-data, outbox, operational-fx-tax]
+incompatible_versions: []
+data_classification: confidential_financial
+retention_policy: immutable_financial_history
+permissions: [intercompany_operations.read, intercompany_operations.prepare, intercompany_operations.review, intercompany_operations.post, finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
+default_roles: [independent_preparer, independent_reviewer, independent_poster]
+migrations: [0134_pg_intercompany_operations]
+domain_invariants:
+  - Original seller and buyer native effects commit atomically
+  - Partial cash releases the same original receivable and payable exactly
+  - Three distinct active explicitly authorized scopes retain one original currency policy
+  - Three independent humans review and publish every whole native operation
+  - Group adjustment is an actual native reviewed posting and seals later source progression
+  - SQL independently closes source equations, snapshots, commands, audit, outbox and all native effects
+  - Current whole source and plan amount authority is repeated after parent locks and on historical retry
+  - All six immutable owner tables use FORCE RLS and source namespace admission
+domain_events: [intercompany_operation_prepared, intercompany_operation_reviewed, intercompany_operation_posted]
+api_routes: [/api/v1/intercompany-operations/catalog, /api/v1/intercompany-operations/sources, /api/v1/intercompany-operations/sources/{source_id}, /api/v1/intercompany-operations/sources/{source_id}/settlements, /api/v1/intercompany-operations/sources/{source_id}/eliminations, /api/v1/intercompany-operations/plans/{plan_id}, /api/v1/intercompany-operations/plans/{plan_id}/review, /api/v1/intercompany-operations/plans/{plan_id}/post, /api/v1/intercompany-operations/plans/{plan_id}/evidence, /api/v1/intercompany-operations/sources/{source_id}/report]
+cli_commands: []
+ui_routes: [/intercompany-operations]
+import_schemas: []
+export_schemas: [intercompany-native-evidence-v1, intercompany-native-group-report-v1]
+synthetic_fixtures: [tests/test_postgres_intercompany_operations.py, tests/intercompany_operations_browser_seed.py]
+threat_model: docs/operator/intercompany-operations.md
+benchmarks: [.github/scripts/benchmark_intercompany_api.py]
+rollback_plan: Empty additive owner tables may downgrade; retained financial sources refuse destructive downgrade and require populated restore.
+test_matrix:
+  exact_domain: tests/test_intercompany_operations.py
+  native_database: tests/test_postgres_intercompany_operations.py
+  api_contract: tests/test_api_intercompany_operations.py
+  native_http: tests/test_postgres_intercompany_operations_api.py
+  independent_integer_oracle: tests/test_intercompany_cycle_oracle.py
+  bounded_https_benchmark_contract: tests/test_intercompany_api_benchmark.py
+  studio_contract: apps/web/src/intercompany-operations-data.test.ts
+  studio_workflow: apps/web/src/components/IntercompanyOperationsPage.test.tsx
+  actual_https_restore: apps/web/live/intercompany-operations-cycles.spec.ts
+runtime_acceptance: Pending fixed-source native and actual HTTPS/Studio/restore acceptance. No inherited throughput or release claim.
+limitations:
+  - PostgreSQL-only bounded native service charges; no SQLite adapter
+  - Same captured functional and reporting currency; no FX translation or tax treatment
+  - Explicit configured group adjustment scope; no inferred legal ownership or statutory consolidation assertion
+  - At most32 posted installments before one final adjustment; original books remain immutable
+  - Native source inverse and external bank transfer instruction are unavailable

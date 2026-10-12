@@ -17,7 +17,7 @@ from defusedxml.ElementTree import fromstring
 from psycopg import sql
 
 ROOT = Path(__file__).resolve().parents[2]
-IMAGE = "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
+IMAGE = "postgres:17.11-alpine@sha256:aa90e97ee862e558111d34cfb8b2c4bec768c2b039fb791341686928560263b3"
 PYTEST_TIMEOUT_SECONDS = 1800
 
 

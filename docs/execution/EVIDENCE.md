@@ -1,5 +1,148 @@
 # ReconForge Execution Evidence Log
 
+## Source archive diagnostic dependency correction (2026-10-12)
+
+Original6ce3.12 hosted report79783871 checks3029 packaged tracked members
+and136 migrations; Git has3947 tracked paths. Packaging is a declared subset,
+not an assertion that every Git file is shipped. Both packaged diagnostic tests
+refer to missing scripts benchmark_wave5_profile_diagnostics.py and
+verify_wave5_large_journal.py; the new dependency guard closes this gap.
+Targeted265cases/5.667s passed0failures/errors/skips, including8new regressions
+and257 related contracts (145diagnostic+104oracle+8sharding). The earlier264-case XML/development proof13166be3 retain an extraneous
+PowerShell postscript failure after the tests
+and Ruff had passed; the corrected standalone Ruff/diff gate passed. No financial
+workload was rerun. Actual full fresh corrected-source/package acceptance is pending.
+
+
+## Corrective source publication: exact new evidence and pending full gate (2026-10-12)
+
+Actual10K59-input capsuleZIP18f27111/index61eb967e is independently verified,
+as are quiet2 four-profile116-input ZIP3dc3b141/index187460fe and failed V5
+80-input ZIPb2466af3/indexfaed5126. The public4c failure/staged-repair62-input
+ZIP15e65cfc/indexaff4d945 preserves41successful/2failed/1dependent skipped CI
+jobs and the actual5-job manual Security run. All earlier capsules remain intact.
+The corrected test1ea1f8e0 passed264 targeted cases/XMLecac0a54; independent
+reviewc0694a0b. ROOT byte-copy proof7f0a0bbc closes six new diagnostic/negative
+files plus raw inventory JSON85b6173b/MD51a11672. These facts are source-bound;
+fresh complete corrective-head CI/package/security acceptance remains pending.
+The raw inventory MD contains original doubled carriage returns. Preserve its
+exact51a11672 bytes and raw JSON in the three-member lossless original-inventory-v2
+ZIP7d2b978d/index5976e5e6. The readable MD9919e51e changes line endings only;
+its normal whitespace gate remains enabled. Only raw JSON has the narrow original
+CRLF preservation attribute. The initial copy proof refers to the raw MD before
+this documented presentation transform; raw custody remains the sealed ZIP.
+[Current closure and limits](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md)
+retains each source, oracle, comparison refusal and deferred measurement decision.
+
+
+## Actual10K capacity and additional authorized local diagnosis (2026-10-12)
+
+Corrected62/current22 run38252859442 passed10000native effects+20separate warmups,
+30300reads and independent5028151631minor-unit equality. Two independent `-I`/
+`-I -O` audits and new59-input/60-member lossless capsule close source/PID/CID/
+normal cleanup. Posting3578.904546sec/TPS2.794151 is standalone capacity; no fair
+comparison, new10K raw-journal export/isolation or monetary cost is inferred.
+Previous15capsules and original f04 zero-business failure remain unchanged.
+The additional local quiet window is now explicitly authorized. Root isolated
+accepted22, retained exact harness/wrappers/oracles and began bounded diagnosis
+following actual5.86/5.47/3.66percentCPU/AC admission. All earlier pending statements
+below retain their checkpoint subjects. Publication4c fullCI failed its new test
+contracts;264targeted corrected cases and independent review passed. Corrected
+source full hosted acceptance remains pending. See [actual closure](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md).
+
+## Publication4c gate failures and portable test correction (2026-10-12)
+
+The actual publication head `4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91`
+[CI38257659454](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38257659454)
+failed: Python3.11 reported5543passed/2failed/663inherited prerequisite skips;
+Python3.12 reported5544passed/1failed/663inherited prerequisite skips.
+The failures were in the newly published diagnostic controller test contracts:
+a shared-process `sys.modules` assertion depended on full-suite import order,
+and the historical AST digest included3.12's empty `type_params` field absent
+from3.11. Original failure logs remain retained; this gate is not a success.
+
+Correct only that test file: restore temporary diagnostic-module registration,
+verify import independence in a fresh `-I` subprocess, and deep-copy ASTs to add
+only an absent legacy empty generic field. Preserve all original0756 hash pins,
+nonempty generic parameters, body differences and original AST objects. Three
+adversarial function/async/class cases retain those refusal boundaries. No
+application, migration, API, Studio, controller or financial oracle bytes change.
+The exact combined targeted gate passed264cases/0failures/errors/skips, with Ruff
+and diff checks. Full corrected-source hosted acceptance remains pending.
+Actual4c Docker/CodeQL and manual Security38258765073 succeeded separately;
+manual Security executed all5jobs, with0Critical/0High/9Medium/1Negligible image
+findings and65/68 license metadata coverage; legal compatibility is unassessed.
+Actual corrected62/current22 10K run38252859442 is still in progress; no completed
+10K population or fair performance gain is inferred. Previous22 acceptance and
+all original negative measurements below keep their historical source subjects.
+
+## Actual22 hosted acceptance, raw1K comparison and isolated cloud experiment (2026-10-12)
+
+[Final22 closure](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md) links
+actual44-job CI38208811408, CodeQL/Docker/manual Security and exact package/current
+recovery evidence. Its481-record source-bound index/lossless478-original ZIP keeps
+all failures,6120 scoped native1K effects and unaccepted adverse resource results.
+Original indexdf4ac5c6/archivee0d82a65 bytes are copied unchanged; source executions
+are not relabelled as this publication commit. Separately completed clouda6
+61native/132pure/six diagnostic populations do not accept experimental137 into the
+application. Actual0756 nine-run/18 independently reproduced raw-SHA-pinned ledger CLIs passed
+9000 big-journal lines/6012 dimension links/1089 tenant-qualified effects; original
+ZIP0f482cf7.../129 members retained. Reject137 integration after mixed/negligible
+increment; LOCAL quiet retest and fair performance acceptance remain pending.
+
+## Wave5 source-bound business, restore and failed-gate publication (2026-10-12)
+
+[Checkpoint](WAVE5_ACCEPTANCE_CHECKPOINT_2026-10-12.md) records the actual8513
+ME/IC/SRC HTTPS/270-table populated restores, original/restored independent financial
+oracles, e8e73-case native gate with zero failures/errors/skips, and corrected b6fc
+FX HTTPS119.047s plus Studio68files/452cases/TypeScript/build. The local trust anchors
+and scope limits remain explicit. Thirteen lossless capsules/flat indexes retain702
+files, including failed reports, exact safe CI spans, interrupted profile/pair,
+original security/Git transport provenance and actual source archive verification.
+Root checked715 ZIP members; v3 copy-verification SHA256
+265b71652a768ba2968a8155f92c7b5d2c8334abee130bb7345658d6dc2a875c.
+The original v2 nine-capsule copy/index records remain unchanged.
+
+1a40 whole hosted CI failed (web race, cancelled native shards, blocked browsers),
+although both ordinary Python gates passed5228 with663 prerequisite skips each and
+mandatory native15pytest partitions/1269selected-completed cases had zero skips.
+Actual manual Security38196678518 ran all five jobs successfully on1a40, including
+image/SBOM. These packets do not prove a later head. New final-source hosted/archive
+checks and fresh mixed/fair performance repetitions remain pending. Three completed
+1K populations passed independent493671004minor-unit financial conservation but
+external load invalidated the comparison; seven actual power bookends/five unrun
+are retained. First b6fc mixed126HTTP requests/per-cycle proofs passed, but scoped
+receipt-ID aggregate refusal keeps its report failed. Three later independent
+frozen D3 runs each passed3 cohorts/126 actual HTTPS requests/33 scoped original
+effects/27 timed effects, original financial oracles and owned cleanup. Thirty-six
+isolated normal/optimized file-only oracle rechecks reproduced those financial
+outcomes. SourceSHA7bd6416813ce18f098bd7d312274df0dd31d86821eeb67e8060f0b01159c5487
+was independently reconstructed from original Git/archive bytes.
+
+Completed D3 CI38202432973 remains failed:44jobs,41success/two ordinary Python
+failures/one dependent Docker-parity skip. Both Python jobs recorded5258 passes,
+eight YAML parse failures and663 inherited prerequisite skips. One-line quoted
+scalar preserves728 tasks; actual a874 root22 affected cases passed. D3 CodeQL,
+Docker, all five manual Security38202724005 jobs and source archive/wheel/sdist
+inspection passed on their original source. D3 writeback recovery/owned cleanup
+passed16.14/17.10; current16.15/17.11 is a separately versioned V2 profile with62
+targeted passes and pending actual integrated execution. Original reports/policies/
+V1 schema and eight history/role/cleanup functions remain unchanged.
+
+Root e9dc bounded source hashing retains byte-exact source fingerprints;59
+development cases passed. Three warmed alternating observations per method on the
+original22268230-byte capsule measured median traced Python hashing allocations
+22276896→271537 bytes, with inputSHA unchanged. Original microprobe reportSHA
+c3dd2347f69f88e6482ecc20700e8f2b3b247eb560209a613e49ee300dc0fdc5 and all six
+observations are retained. This is hashing allocation evidence; financial posting,
+wall/CPU/RSS/monetary improvement and fair comparison remain unaccepted. Final
+corrected-source hosted/actual current-profile gates and quiet workload measurements
+remain separate required executions. No current Wave5 financial speed gain.
+
+## Wave5 actual636 profile and incremental gates (2026-10-11)
+
+Fresh rapidbaseline: Ruff passed;61 targeted Python tests passed without skips. Exact accepted636 hosted38-job acceptance is reused as historical full baseline, explicitly distinguished from fresh commands. New raw100cycle profile and migration log are copied byte-exact at wave5-evidence/baseline-profile-6362724f/ with SHA256 index in summary.json. Client50.34375CPU seconds, identity phases46.8125threadCPU seconds including5warmups;0errors/46669102minor measured oracle. This profile is descriptive, not an accepted improvement or a power-equivalent comparison. Initial owner-source sourcing and IC1 golden outcomes exist; all final-source gates and benchmarks remain pending.
+
 ## Wave4 source-bound runtime and portable proof publication (2026-10-10)
 
 [Incremental acceptance](WAVE4_ACCEPTANCE_2026-10-10.md) and its

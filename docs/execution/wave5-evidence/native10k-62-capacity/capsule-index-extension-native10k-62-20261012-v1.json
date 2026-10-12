@@ -1,0 +1,239 @@
+{
+  "schema_version": "reconforge-flat-evidence-capsule-extension-v1",
+  "original_controller_source": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+  "accepted_runtime_source": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+  "prior_fifteen_capsules_unchanged": true,
+  "prior_capsule_records": [
+    {
+      "entry_name": "wave5-fx-wire-oracle-b6fcf71d-v1.zip",
+      "bytes": 477016,
+      "sha256": "bdf88f3aece7eb90e5486fe5d549453debea76eb45a5d426178abbfc3c813e97",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-fx-wire-oracle-b6fcf71d-v1.zip"
+    },
+    {
+      "entry_name": "wave5-fx-wire-oracle-b6fcf71d-v1.index.json",
+      "bytes": 41707,
+      "sha256": "69f4f1b78a5befdc0733d2b18210a65042048a557a03e3ae17bfa97ddc06a317",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-fx-wire-oracle-b6fcf71d-v1.index.json"
+    },
+    {
+      "entry_name": "wave5-ci-1a40-38195991061-v1.zip",
+      "bytes": 528131,
+      "sha256": "e8aaee5f2536d4ad07342fe83c38a258ecc625b1af1d2e6b933da96e90d6be4b",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-ci-1a40-38195991061-v1.zip"
+    },
+    {
+      "entry_name": "wave5-ci-1a40-38195991061-v1.index.json",
+      "bytes": 43679,
+      "sha256": "0b067e2f92aea25ecf82fc113fe6cdb8f34a33a769cf70e3d5b382654b842ecb",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-ci-1a40-38195991061-v1.index.json"
+    },
+    {
+      "entry_name": "wave5-writeback-b6fc-failure-cleanup-fix-v1.zip",
+      "bytes": 473808,
+      "sha256": "0468b089af4c5d8614a114aa7a45446e79940ce9afb70c6f1bdbcb5b742033de",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-writeback-b6fc-failure-cleanup-fix-v1.zip"
+    },
+    {
+      "entry_name": "wave5-writeback-b6fc-failure-cleanup-fix-v1.index.json",
+      "bytes": 38832,
+      "sha256": "648b35ad47520701c5b0f46813bcc1c283d150af58bc0026f60ad79a3edc0215",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-writeback-b6fc-failure-cleanup-fix-v1.index.json"
+    },
+    {
+      "entry_name": "wave5-current-profile-d5-streamed-source-e9-review-v1.zip",
+      "bytes": 131090,
+      "sha256": "7dddb8228a4a2e1010417c09f093f79406761587619840b643fae65bc6eb1c83",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-current-profile-d5-streamed-source-e9-review-v1.zip"
+    },
+    {
+      "entry_name": "wave5-current-profile-d5-streamed-source-e9-review-v1.index.json",
+      "bytes": 21490,
+      "sha256": "e695fb43017407ba657a3e6e75a4dd0c90cee5421ff21ca980912605f529380b",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-current-profile-d5-streamed-source-e9-review-v1.index.json"
+    },
+    {
+      "entry_name": "wave5-d3-python-failure-yaml-fix-writeback-success-v1.zip",
+      "bytes": 595605,
+      "sha256": "d8bbf703907c9467692f08a5b4a97a42cb80b685c7eb2c0627d2cbb37d4697c9",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-d3-python-failure-yaml-fix-writeback-success-v1.zip"
+    },
+    {
+      "entry_name": "wave5-d3-python-failure-yaml-fix-writeback-success-v1.index.json",
+      "bytes": 16880,
+      "sha256": "7b790c8d88c9687b147f5b96855ee77cbeb461b7ab7d924cf9e8b7a70b07f2d9",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-d3-python-failure-yaml-fix-writeback-success-v1.index.json"
+    },
+    {
+      "entry_name": "wave5-frozen-security-d3e227b7-38202724005-v1.zip",
+      "bytes": 897885,
+      "sha256": "53309b4e347510e7bdc3227aec8f64b256c98fecc5b3146b4214b2d8f7867e85",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-frozen-security-d3e227b7-38202724005-v1.zip"
+    },
+    {
+      "entry_name": "wave5-frozen-security-d3e227b7-38202724005-v1.index.json",
+      "bytes": 18675,
+      "sha256": "59fc001b78bb8ab6daffc500b879628853e06fea6198b5d031d6ef42ef713c32",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-frozen-security-d3e227b7-38202724005-v1.index.json"
+    },
+    {
+      "entry_name": "wave5-fx-lifecycle-regression-34c92761-v1.zip",
+      "bytes": 17961,
+      "sha256": "13f1b533be762e845aa04cb5ffab1fd608770949f1f51551f9b4e7e0a777697e",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-fx-lifecycle-regression-34c92761-v1.zip"
+    },
+    {
+      "entry_name": "wave5-fx-lifecycle-regression-34c92761-v1.index.json",
+      "bytes": 7777,
+      "sha256": "998366b4b7bb00e1921d8985630fcfaaf1ad3a40b0ac4ff1b3edaba362eb2c69",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-fx-lifecycle-regression-34c92761-v1.index.json"
+    },
+    {
+      "entry_name": "wave5-wire-independent-native-retained-v1.zip",
+      "bytes": 4882321,
+      "sha256": "c37112e85881c1576755ff9c60223132e1d23e3cefb631020c743ff66b7c6be7",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-wire-independent-native-retained-v1.zip"
+    },
+    {
+      "entry_name": "wave5-wire-independent-native-retained-v1.index.json",
+      "bytes": 128607,
+      "sha256": "4c11e23ee0d45bf9ad037817f36a93e3d3fb187755e85fd4487b7a9b3899fb71",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-wire-independent-native-retained-v1.index.json"
+    },
+    {
+      "entry_name": "wave5-profiles-interrupted-pair-12fe-v1.zip",
+      "bytes": 588178,
+      "sha256": "4fc20313342188c5669ee1e883372b2cdd6c52ea4790b423bc9ef4ce75bd78e9",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-profiles-interrupted-pair-12fe-v1.zip"
+    },
+    {
+      "entry_name": "wave5-profiles-interrupted-pair-12fe-v1.index.json",
+      "bytes": 17553,
+      "sha256": "21cf55f2992899086dbaa0f290823192cff622ea12b44acb3ca7ac1be8d5afbf",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-profiles-interrupted-pair-12fe-v1.index.json"
+    },
+    {
+      "entry_name": "wave5-security-diagnostics-git-mirror-failures-v1.zip",
+      "bytes": 1267770,
+      "sha256": "3e331ee8d1376a791e4228022f5a2b7df7ca5f26eaa521f1fe229a37918ab72f",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-security-diagnostics-git-mirror-failures-v1.zip"
+    },
+    {
+      "entry_name": "wave5-security-diagnostics-git-mirror-failures-v1.index.json",
+      "bytes": 82894,
+      "sha256": "5f687f665b1938f946fba98f66f209dcd5f604d423decdd6641df7fd9c167e46",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-security-diagnostics-git-mirror-failures-v1.index.json"
+    },
+    {
+      "entry_name": "wave5-source-archive-verifications-8513-1a40-v1.zip",
+      "bytes": 614765,
+      "sha256": "90da9c492913be50ee0fb46fb43d56a8bf8d1d412dbd9c7c46071f5d33d0890d",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-source-archive-verifications-8513-1a40-v1.zip"
+    },
+    {
+      "entry_name": "wave5-source-archive-verifications-8513-1a40-v1.index.json",
+      "bytes": 3763,
+      "sha256": "466bd34cb4a3b504359c4b093e9979b7fd3e65e569eec3536c9f8a652499e8a4",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-source-archive-verifications-8513-1a40-v1.index.json"
+    },
+    {
+      "entry_name": "wave5-root-security-1a40-38196678518-v1.zip",
+      "bytes": 894578,
+      "sha256": "47235b63b71e3b8f18bfdb55a9acbea3d908abe66446c238252892636b74b73e",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-root-security-1a40-38196678518-v1.zip"
+    },
+    {
+      "entry_name": "wave5-root-security-1a40-38196678518-v1.index.json",
+      "bytes": 11712,
+      "sha256": "2e5a072a00a8e4db9269ea0dc5e195f577f976c472e138e6679bab1582bea629",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\wave5-root-security-1a40-38196678518-v1.index.json"
+    },
+    {
+      "entry_name": "wave5-d3-actual-mixed-api-package-independent-v1.zip",
+      "bytes": 22268230,
+      "sha256": "90a5b1d7afad3cba8f955c3f90ceca36b1b77f1cb5ed2aac1fb97ce59f354113",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\wave5-d3-actual-mixed-api-package-independent-v1.zip"
+    },
+    {
+      "entry_name": "wave5-d3-actual-mixed-api-package-independent-v1.index.json",
+      "bytes": 103683,
+      "sha256": "7fdb28cf36b0356e49ab3f291ceb0e613bc785d66e38b41738446dfef4d2cb3f",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\wave5-d3-actual-mixed-api-package-independent-v1.index.json"
+    },
+    {
+      "entry_name": "wave5-cloud-profile-a6e1-38236282564-v1.zip",
+      "bytes": 1436070,
+      "sha256": "aa8203aa3a8ecbcfae0775a0b177e8adc78f4a2c5fefb2a83d800335cbb26118",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\wave5-cloud-profile-a6e1-38236282564-v1.zip"
+    },
+    {
+      "entry_name": "wave5-cloud-profile-a6e1-38236282564-v1.index.json",
+      "bytes": 133940,
+      "sha256": "9e22fae22d4a7fb39bab8734f45ed0b8b26d5f9fa445a7688af263ca127dc3e2",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\wave5-cloud-profile-a6e1-38236282564-v1.index.json"
+    },
+    {
+      "entry_name": "wave5-large-journal-0756-38243117941-v1.zip",
+      "bytes": 2587121,
+      "sha256": "83bf9fca794c790a6beac6a61186857a11d6c9c098f2b7cd3aabc6631fa52b8e",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\wave5-large-journal-0756-38243117941-v1.zip"
+    },
+    {
+      "entry_name": "wave5-large-journal-0756-38243117941-v1.index.json",
+      "bytes": 195801,
+      "sha256": "8f8b7b29ebccd4ced270ddffe685c4b20710cfe5f5471a20ef37a445c361e3a3",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\wave5-large-journal-0756-38243117941-v1.index.json"
+    }
+  ],
+  "capsules": [
+    {
+      "file_name": "wave5-native10k-62-38252859442-v1.zip",
+      "sha256": "18f271117f6f88514ec4e73cc14ba0390dcf6653096b3d8cca24698e3f74cd9e",
+      "bytes": 1500461,
+      "file_count": 59,
+      "raw_bytes": 3862115,
+      "index_name": "wave5-native10k-62-38252859442-v1.index.json",
+      "index_sha256": "61eb967e91a52d99cfc12701dc68dff2d4bac078221c8fc9de49dcaa303403b2",
+      "coverage": {
+        "run_id": 38252859442,
+        "job_id": 114823309885,
+        "artifact_id": 11751937667,
+        "controller_source": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+        "runtime_source": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+        "publication_head_does_not_rebind_measurement": true,
+        "native_revision": "0136_pg_inventory_scope",
+        "original_complete_artifact_members": 15,
+        "original_complete_artifact_zip_sha256": "39bd08b84bf3867e2aba4661333a9e52681725b32a6d69f8418c6df6f6b5acee",
+        "actual_pure_contracts": {
+          "passed": 245,
+          "failure": 0,
+          "error": 0,
+          "skip": 0
+        },
+        "actual_native_completed_cycles": 10000,
+        "separate_disjoint_warmups": 20,
+        "actual_measured_read_requests": 30300,
+        "independent_minor_units_total": "5028151631",
+        "financial_verification": "Passed independent integer oracle and original native read/source custody; no separate10000 original journal-line export or new isolation proof.",
+        "observed_posting": {
+          "seconds": 3578.90454609,
+          "transactions_per_second": 2.7941510792527646,
+          "client_cpu_seconds": 3586.675165149,
+          "latency_p50": 1.4171186380000336,
+          "latency_p95": 1.6475488560000144,
+          "latency_p99": 1.7984461839996584
+        },
+        "owned_process_and_full_cid_cleanup": "Verified exited/absent; original pre-spawn/audit/response/config seals retained.",
+        "resource_windows": "Raw before/after containerCPU/I/O/network;369sampler points; separate clientCPU/lifetime RSS/container peak/PG/WAL scopes and limitations retained. No whole-host/process-tree resource sum or I/O peak.",
+        "full_job_log_publication": "Complete66994B original LOCAL only; public63129B exact spans plus3865byte explicit omissions/fullremote SHA.",
+        "original_read_transport_failure": "Initial ZIP API client nonzero retained as incomplete capture with missing initial stderr; one fresh read-only capture matched API pin. No workload retry.",
+        "original_f04_setup_failure": "Zero financial operations/artifacts remains separate; exact one approved upload-object repair.",
+        "performance_comparison_accepted": false,
+        "monetary_cost_per_transaction": null,
+        "100k_and_one_million_capacity_established": false
+      }
+    }
+  ],
+  "source_subjects_unchanged": true,
+  "performance_comparison_accepted": false
+}

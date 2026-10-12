@@ -18,6 +18,11 @@ HELPERS = (
     "fixed_assets_browser_seed", "erp_procurement_enterprise_browser", "enterprise_financial_snapshot_browser",
     "customer_returns_browser", "erp_procurement_commitments_browser",
     "operational_fx_tax_browser_seed", "erp_supplier_returns_browser",
+    "manufacturing_execution_browser", "intercompany_operations_browser_seed", "procurement_sourcing_browser",
+)
+DIAGNOSTIC_HELPERS = (
+    ".github/scripts/benchmark_wave5_profile_diagnostics.py",
+    ".github/scripts/verify_wave5_large_journal.py",
 )
 PREFIX20_SHA = "3f1ecffac62b7cc3cbea41264f2a61b7948d9875c87dd32f7eddf7f51238be41"
 INDEX_PATH = "docs/execution/benchmarks/INDEX.v1.json"
@@ -390,6 +395,47 @@ print(json.dumps({'helpers':origins,'all_loaded_reconforge_and_tests_modules_fro
     return isolated_json([sys.executable, "-I", "-c", code, str(extracted), json.dumps((*HELPERS, "mandatory_native_gate"))], extracted)
 
 
+def check_diagnostic_imports(extracted: Path) -> dict[str, object]:
+    """Admit packaged diagnostic dependencies without executing their workloads."""
+    require(all((extracted / name).is_file() for name in DIAGNOSTIC_HELPERS),
+            "Source archive misses diagnostic test dependencies")
+    code = """
+import hashlib,importlib.util,json,os,pathlib,socket,subprocess,sys
+sys.dont_write_bytecode=True
+root=pathlib.Path(sys.argv[1]).resolve()
+def deny_workload(*args,**kwargs):
+ raise ValueError('Diagnostic imports cannot launch processes or network workloads')
+subprocess.Popen=deny_workload
+os.system=deny_workload
+socket.create_connection=deny_workload
+socket.socket.connect=deny_workload
+socket.socket.connect_ex=deny_workload
+origins={}
+for index,name in enumerate(json.loads(sys.argv[2])):
+ location=(root/name).resolve()
+ location.relative_to(root)
+ before=location.read_bytes()
+ spec=importlib.util.spec_from_file_location('archive_diagnostic_'+str(index),location)
+ if spec is None or spec.loader is None:
+  raise ValueError('Diagnostic import loader absent')
+ module=importlib.util.module_from_spec(spec)
+ sys.modules[spec.name]=module
+ spec.loader.exec_module(module)
+ if pathlib.Path(module.__file__).resolve()!=location or location.read_bytes()!=before:
+  raise ValueError('Diagnostic helper source/origin changed')
+ origins[name]={'sha256':hashlib.sha256(before).hexdigest(),'source':str(location)}
+for name in sys.modules:
+ if any(name==prefix or name.startswith(prefix+'.') for prefix in ('reconforge','psycopg','psycopg2','psutil')):
+  raise ValueError('Diagnostic import loaded application/database/profiler code')
+print(json.dumps({'helpers':origins,'workload_executed':False,'application_database_profiler_imports':False}))
+"""
+    result = isolated_json([sys.executable, "-I", "-c", code, str(extracted), json.dumps(DIAGNOSTIC_HELPERS)], extracted)
+    require(set(result["helpers"]) == set(DIAGNOSTIC_HELPERS)
+            and result["workload_executed"] is False and result["application_database_profiler_imports"] is False,
+            "Diagnostic dependency import admission failed")
+    return result
+
+
 def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
     require(hasattr(tarfile, "data_filter"), "Safe archive inspection requires tarfile.data_filter (Python 3.11.4+)")
     root = args.root.resolve()
@@ -402,12 +448,47 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
     require(sha(json.dumps(index["entries"][:20], sort_keys=True, separators=(",", ":")).encode("utf-8")) == PREFIX20_SHA, "Twenty retained index entries changed")
     pair = ("docs/execution/benchmarks/" + args.baseline_wrapper, "docs/execution/benchmarks/" + args.candidate_wrapper)
     required = {
+        *DIAGNOSTIC_HELPERS, "tests/test_wave5_profile_diagnostics.py", "tests/test_wave5_large_journal_oracle.py",
+        "tests/test_publication_diagnostic_dependencies.py",
+        "docs/execution/WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md",
+        "docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.json",
+        "docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.md",
+        "docs/execution/GLOBAL_ENTERPRISE_PROGRAM_CONTRACTS_2026-10-12.md",
         "LICENSE", "README.md", "MANIFEST.in", "pyproject.toml", "alembic.ini", "reconforge_migration_sql.py",
         "alembic/env.py", "alembic/script.py.mako", "tests/__init__.py", INDEX_PATH,
         "tests/mandatory_native_gate.py", "tests/test_mandatory_native_gate.py",
         "tests/test_benchmark_evidence_index.py", "tests/test_alembic_postgres.py",
         ".github/scripts/verify_benchmark_index.py", ".github/scripts/verify_commercial_collections.py",
         ".github/scripts/benchmark_enterprise_finance.py", "tests/fixtures/landed_cost_owner_0123_69951414.sql",
+        ".github/scripts/benchmark_wave5_engineering_pair.py", "tests/test_wave5_engineering_pair_controller.py",
+        ".github/scripts/validate_current_postgres_images.py", "tests/test_current_postgres_images.py",
+        "docs/security/postgres-current-images.wave5.v1.json",
+        "docs/schemas/postgres_writeback_recovery_compensation_matrix.v2.schema.json",
+        "tests/test_wave5_permission_contract.py", "tests/test_postgres_wave5_migrations.py",
+        "alembic/versions/0136_postgres_inventory_scope.py", "reconforge/infrastructure/postgres_inventory_scope.py",
+        "tests/test_postgres_inventory_scope.py",
+        "tests/test_manufacturing_execution.py", "tests/test_postgres_manufacturing_execution.py",
+        "tests/manufacturing_execution_browser.py", "tests/intercompany_operations_browser_seed.py",
+        "tests/procurement_sourcing_browser.py", "tests/test_intercompany_cycle_oracle.py",
+        "tests/test_erp_expansion_browser_restore_contract.py", "tests/test_intercompany_browser_restore_actor.py",
+        ".github/scripts/verify_intercompany_cycle_oracle.py",
+        ".github/scripts/verify_procurement_sourcing_oracle.py", "tests/procurement_sourcing_oracle.py",
+        "tests/test_procurement_sourcing_oracle.py",
+        ".github/scripts/verify_manufacturing_cycle_oracle.py", "tests/test_manufacturing_cycle_oracle.py",
+        "docs/modules/intercompany-operations.yaml", "docs/modules/procurement-sourcing.yaml",
+        "docs/modules/manufacturing-execution.yaml", "docs/operator/manufacturing-execution.md",
+        ".github/scripts/benchmark_intercompany_api.py", "tests/test_intercompany_api_benchmark.py",
+        ".github/scripts/benchmark_native_api_runtime.py",
+        ".github/scripts/benchmark_manufacturing_api.py", "tests/test_manufacturing_api_benchmark.py",
+        ".github/scripts/benchmark_mixed_native_api.py", "tests/test_mixed_native_api_benchmark.py",
+        "docs/operator/intercompany-operations.md", "docs/adr/0854-source-owned-production-intercompany-and-sourcing.md",
+        "docs/execution/WAVE5_CONTRACTS_2026-10-11.md",
+        "docs/execution/GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md",
+        *("apps/web/src/components/" + name + ".tsx" for name in
+          ("ManufacturingExecutionPage", "IntercompanyOperationsPage", "ProcurementSourcingPage")),
+        *("apps/web/live/" + name + ".playwright.config.ts" for name in
+          ("manufacturing-execution", "intercompany-operations", "procurement-sourcing")),
+        *(name for name in tracked if name.startswith("docs/execution/wave5-evidence/")),
         ".github/scripts/verify_global_integrity_archive.py", ".github/scripts/verify_native_posting_pair.py",
         "tests/test_native_posting_pair_verifier.py",
         "tests/test_container_resource_counters.py", "tests/test_postgres_financial_read_plans.py",
@@ -432,7 +513,8 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         ".github/scripts/benchmark_stable_power_pair.py", "tests/test_stable_power_pair_controller.py",
         ".github/scripts/verify_stable_power_environment.py", "tests/test_stable_power_environment_verifier.py",
         ".github/scripts/validate_supply_chain_policy.py", ".gitleaks.toml", ".gitleaksignore",
-        "docs/security/gitleaks-public-source-digests-wave4.v1.json", "tests/test_supply_chain_policy.py",
+        "docs/security/gitleaks-public-source-digests-wave4.v1.json",
+        "docs/security/gitleaks-public-source-digests-wave5.v1.json", "tests/test_supply_chain_policy.py",
         *(WAVE4_POSTING_EVIDENCE + "/" + name + ".json" for name in
           ("1-baseline", "1-candidate", "2-candidate", "2-baseline", "3-baseline", "3-candidate")),
         *(FX_EVIDENCE + "/" + name for name in FX_RETAINED_SHA),
@@ -504,6 +586,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         report["wave4_independent_scale_10k"] = check_wave4_scale(extracted)
         report["reviewed_source_digest_ignores"] = check_reviewed_source_digest_ignores(extracted)
         report["browser_helper_imports"] = check_imports(extracted)
+        report["diagnostic_helper_imports"] = check_diagnostic_imports(extracted)
         report["acceptance_packet_keys"] = sorted(json.loads((extracted / "docs/execution" / (args.acceptance_stem + ".json")).read_text(encoding="utf-8")))
         with zipfile.ZipFile(args.wheel) as wheel:
             names = wheel.namelist()
@@ -534,8 +617,8 @@ def main() -> int:
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--index-count", type=int, default=22)
-    parser.add_argument("--migration-count", type=int, default=132)
-    parser.add_argument("--migration-head", default="0132_pg_stock_inverse_dispatch")
+    parser.add_argument("--migration-count", type=int, default=136)
+    parser.add_argument("--migration-head", default="0136_pg_inventory_scope")
     parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
     parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
     parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")

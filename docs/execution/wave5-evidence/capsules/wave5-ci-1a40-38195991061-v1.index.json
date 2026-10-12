@@ -1,0 +1,492 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-ci-1a40-38195991061-v1.zip",
+  "capture_for_root_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "run_id": 38195991061,
+    "job_counts": {
+      "success": 24,
+      "failure": 2,
+      "cancelled": 3,
+      "skipped": 3
+    },
+    "ordinary_python_per_version": {
+      "passed": 5228,
+      "inherited_prerequisite_skips": 663
+    },
+    "mandatory_native": {
+      "successful_partitions": 15,
+      "sessions": 44,
+      "completed_selected": 1269,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0
+    },
+    "dedicated_writeback": "successful dedicated runner branch, no pytest invocation; five raw JSON artifacts retained",
+    "full_native_matrix_accepted": false,
+    "browser_and_docker_dependencies": "Skipped due web failure, not PASS",
+    "web_original_failure": "1 failed /448 passed; safe original byte spans and original full-log SHA retained, one auth-pattern setup line omitted explicitly."
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 49,
+  "raw_bytes": 634578,
+  "records": [
+    {
+      "entry_name": "operations-source/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/native-gate-original-1a40.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\native-gate-original-1a40.py",
+      "bytes": 1322,
+      "sha256": "5d5684124c981351e868a2191ebd166a2fc8c5b7adde9b65194cdfec0f9aadc8",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Exact CI native gate source from original Git blob; no app runtime edit.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/artifact-11722779538.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\artifact-11722779538.zip",
+      "bytes": 1869,
+      "sha256": "780ac0b4ea211d2cb8212757ac78662f6f812d770a71bcbf331c5bbe708325ab",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/artifact-11723097921.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\artifact-11723097921.zip",
+      "bytes": 739,
+      "sha256": "9621eb39d49ff3b7cd779af2ebf9f082ddcb4b1e3cd61e30718a58f5dc11a7b3",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/artifact-11723289951.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\artifact-11723289951.zip",
+      "bytes": 23019,
+      "sha256": "14132a1573b3d5f09efa979eb89574a8fc075628b1bcbb367abc0b95b3834b48",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/artifact-11723329783.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\artifact-11723329783.zip",
+      "bytes": 1403,
+      "sha256": "6a6083d48354be139e6d3f5e39aea36f6b3976b2a7a6a83f3b4a81fa35778462",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/artifact-11723509183.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\artifact-11723509183.zip",
+      "bytes": 2026,
+      "sha256": "18b83f85d080bbe6a6a4c2e6b8fdbf2e9b13703a8d1748e4fbc8fde59fab9c2c",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/artifact-11723657801.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\artifact-11723657801.zip",
+      "bytes": 218270,
+      "sha256": "b40c12b0cbcd2450cbfeaa429f760b6a86149112e0f25bd151851029aef14b0d",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/artifact-11723981220.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\artifact-11723981220.zip",
+      "bytes": 2871,
+      "sha256": "e8bf9c507147e37f60361cb819df181124ab07a2f562d08c583480be3503f74d",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/artifact-11724200446.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\artifact-11724200446.zip",
+      "bytes": 218270,
+      "sha256": "0a662a932690b0dbd46ab9ae7e5ca380d10db8eac8aeff9b9817949879001a82",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/artifact-11724355711.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\artifact-11724355711.zip",
+      "bytes": 661,
+      "sha256": "56dcb6abe07335345adcb498dc96bf478d0d80086f491b05fac6bcf42f76fdaf",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/artifact-11724425054.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\artifact-11724425054.zip",
+      "bytes": 1434,
+      "sha256": "e0e30c01fdc34ee9dde28ddb46363fdc69425f86bb6e0a31d5fce89c5e298b88",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/artifact-11724430236.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\artifact-11724430236.zip",
+      "bytes": 2322,
+      "sha256": "aaa02c3396f386ca4a9f3fc1eee9cfe2527e70bae9b0bc24c712289e2e9a6872",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/artifact-11724585564.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\artifact-11724585564.zip",
+      "bytes": 536,
+      "sha256": "f8ce8e548c818ef1b59a7f16ba2b91ff7a9f4b55f865923e3d71280e53ccd8ee",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/artifact-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\artifact-provenance.json",
+      "bytes": 9889,
+      "sha256": "1cd437437cc5a3f93631af989c9fbb1a730df9ce5dedadf5b6538981b6e9a5b3",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/artifacts-projection.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\artifacts-projection.json",
+      "bytes": 5337,
+      "sha256": "ab5df3c6e08495ee39e1d036f17dc66a1e590c0f5ba06dbbcaa2cdef5b125f2c",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/ci-1a40-policy-safe-byte-spans.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\ci-1a40-policy-safe-byte-spans.log",
+      "bytes": 313,
+      "sha256": "17396c93a56c2f63c8a1f4be10c49ba8f444869c6a3ce84fb673dffed2bb7a23",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/ci-native-derived-admission-v2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\ci-native-derived-admission-v2.json",
+      "bytes": 796,
+      "sha256": "f3b64e944777bbb454a99f832ad93fcf072d6ba041edf385ec7c2a0c718c5469",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/ci-native-interpretation.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\ci-native-interpretation.json",
+      "bytes": 4342,
+      "sha256": "70e6b2537a41bddee7e94900926c817f6df9122b3d4aaee703986f30def1df54",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/ci-policy-source-binding.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\ci-policy-source-binding.json",
+      "bytes": 513,
+      "sha256": "2c6da34e52d5fef206e51ab672f9e939fd292b51d71aed32761aa7e5e30d6182",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/ci-summary.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\ci-summary.json",
+      "bytes": 2126,
+      "sha256": "6a0ac7e1968ed7a28bde5ee6cb1d3baf3fc4ce985a2ec7c4ed25f8e274aacfb6",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729365-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729365-summary.log",
+      "bytes": 88,
+      "sha256": "2de057745131c7d22df14d2f0c62636c06e4eb4d671c6028a3171651898227b2",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729564-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729564-summary.log",
+      "bytes": 199,
+      "sha256": "d0b0cf4db7980885fd4442883c85e1ad5f485117196a4621ade0ba0b88bda329",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729572-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729572-summary.log",
+      "bytes": 88,
+      "sha256": "ff551a7787050757b4f21b2ad584586ccfc283f457509cd20e31278e4f5d26e9",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729626-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729626-summary.log",
+      "bytes": 597,
+      "sha256": "abefb4759156cf9984c443b3c1fd021afb7024a02e6966cffefc872d0a79491f",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729631-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729631-summary.log",
+      "bytes": 200,
+      "sha256": "b294c8c31bbeeb6e12deb7c2072f12b0b3d13c4997215352306620b7ca21451b",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729641-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729641-summary.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729641-web-failed-safe-spans.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729641-web-failed-safe-spans.log",
+      "bytes": 89629,
+      "sha256": "8fcc088b60e70600723f56209643040b465ac44913a341b5f35cfdd51aa1c01d",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729671-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729671-summary.log",
+      "bytes": 1196,
+      "sha256": "57d9c0e23682cb5fcbeee570e8d0ee037a48fd7362331c5d613e576d772f1767",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729674-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729674-summary.log",
+      "bytes": 200,
+      "sha256": "d8a34a5a98dce151c91b0ad1628d3cfb9c1b8211b6334fed72582364f0b2969a",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729680-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729680-summary.log",
+      "bytes": 400,
+      "sha256": "f7cfef6d068818416ed089fc3d03ba141c20772d26e4545f3d7622b32b420fb5",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729690-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729690-summary.log",
+      "bytes": 796,
+      "sha256": "151161864866ca187490fa8d94c879ca00eaca283f3584893b41c1c90553efe8",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729694-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729694-summary.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729697-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729697-summary.log",
+      "bytes": 400,
+      "sha256": "802118076aa778318f487cdaa367e5922336512b3a78885e903676873c68d96e",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729704-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729704-summary.log",
+      "bytes": 200,
+      "sha256": "7830ddf01b0d3b36f407a82ef6cf188efa3d72f9267cdaa8ed672676860a1742",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729713-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729713-summary.log",
+      "bytes": 2985,
+      "sha256": "2749d0f7331099bc4c98fe3026143a52e31390e8066593d818ba0f54aff8f481",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729722-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729722-summary.log",
+      "bytes": 199,
+      "sha256": "9eb52c9b305a25e9a7d9abf2017232490ee1234dc939c45f9e807c078f948ccc",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638729726-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638729726-summary.log",
+      "bytes": 201,
+      "sha256": "ebd769609a920763d55238da3e59260ca9cf554eb8a71be30c4dd4f64f3491fe",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638730221-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638730221-summary.log",
+      "bytes": 200,
+      "sha256": "ce074367c95a7a38d9fd1a60329e64629e36280cde742be364be28d36f030e2d",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638731011-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638731011-summary.log",
+      "bytes": 66,
+      "sha256": "a07567506b7b89f9b0aad76b5e3dda6f46535bbb4790f1b9257c929949dc08bf",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638731021-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638731021-summary.log",
+      "bytes": 266,
+      "sha256": "24d5fd9322ab8325e636af99d0ace5eab7c1a48cbec0e14f2c501a94ad60cb8f",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638731044-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638731044-summary.log",
+      "bytes": 799,
+      "sha256": "59690a2f53ae800547c2736d701a8a2476b16d039c92aca58faf308de75315cf",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638731066-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638731066-summary.log",
+      "bytes": 266,
+      "sha256": "bcf6b0a031916d78684b9fc70e91d91603c30971368ac0cc5a37ce9f05b32b7e",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114638731086-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114638731086-summary.log",
+      "bytes": 200,
+      "sha256": "1a4615a6c095240e9b6acd5fbbccd82db0b309242f8f3cf3916a1cdd5c3dacb1",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/job-114647940240-summary.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\job-114647940240-summary.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/jobs-projection.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\jobs-projection.json",
+      "bytes": 10687,
+      "sha256": "c0481e70a13cc930ee26c129606d31d4c50d87ebfb566f061b03fb2ca3635e13",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/log-summary-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\log-summary-provenance.json",
+      "bytes": 22819,
+      "sha256": "a7853ff0f9425895afb7a7679b0734b5572e1a3a1507ba95036c510c9c17355a",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/run-projection.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\run-projection.json",
+      "bytes": 427,
+      "sha256": "090e2d72906e86383433f66bd80a1736600fe10c0b7377a62ba58a65b6efafbb",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/security-1a40-capsule-reference.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\security-1a40-capsule-reference.json",
+      "bytes": 670,
+      "sha256": "f32bbf66ebde6a4ac86138269e33429ffa7f02d8a01cd8e20529f6d0c6369da7",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/ci-1a40-38195991061/web-failed-safe-spans-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\ci-1a40-38195991061\\web-failed-safe-spans-provenance.json",
+      "bytes": 2742,
+      "sha256": "d30d7d767ba8c79b6343fcc45ba8e182101893aa2bc7376f7819ecf872bc88b7",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Actual completed1a40 PR CI metadata and original artifact ZIPs; safe byte-span log projections explicitly retain original remote hashes/omissions. Virtual merge fields remain original.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

@@ -1,0 +1,796 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-v5-paired1k-636-22-power-stop-negative-v1.zip",
+  "capture_for_root_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "owner_original_sha256": "3135177c777cf2e6023630551f212e4781e851cf06529fa9f2e81cd8e1133818",
+    "owner_status": "failed",
+    "primary_failure": "Observed AC/saver-off required",
+    "power_breach_at": "2026-10-12T15:32:48.230589+00:00",
+    "raw_ac": 0,
+    "battery_percent": 98,
+    "saver_on": false,
+    "completed_positive_children": [
+      "1-baseline",
+      "1-candidate",
+      "2-candidate"
+    ],
+    "completed_positive_measured_cycles": 3000,
+    "completed_positive_separate_warmups": 60,
+    "completed_positive_verified_read_requests": 9999,
+    "independent_minor_per_complete_child": "493671004",
+    "aborted_child": "2-baseline",
+    "aborted_raw_sha256": "2869d101a5eca762c3817a677791ab277c977234ae61a6eb9e804b74cc3afe7a",
+    "aborted_reported_posting_completed": 1000,
+    "aborted_reported_posting_errors": 0,
+    "aborted_successful_request_duration_entries": 2489,
+    "aborted_retained_effect_visits": 4766,
+    "aborted_last_read_sample_status": "running166effects",
+    "aborted_failed_request_markers": 0,
+    "aborted_source_after_present": false,
+    "aborted_secondary_exception": "OutOfOrderTransactionNesting",
+    "aborted_complete_financial_acceptance": false,
+    "secondary_error_cause_proven": false,
+    "unperformed_children": [
+      "3-baseline",
+      "3-candidate"
+    ],
+    "four_exact_owned_cleanup_closures": true,
+    "aborted_process_cleanup": "gracefully_stopped_without_force",
+    "all_four_acknowledged_CIDs": "verified_absent",
+    "baseline_source": "6362724f2337a79c3d7569574f7bf9591a018524",
+    "accepted_candidate_source": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+    "current_candidate_physical_source_sha256": "dfdf4296eb27e088ae91790af2d2d280880fb70e4edb151e50f2b9f2940a4535",
+    "historical_cf9_populations_combined": false,
+    "readiness_sha256": "7b904ff39d3db18634b581e83dde73d928d1e9d8783466749f9e42e3fbff33ca",
+    "normal_optimized_negative_pairs": 2,
+    "complete_six_run_population": false,
+    "six_complete_comparator_or_replay_executed": false,
+    "comparative_medians_computed": false,
+    "performance_comparison_accepted": false,
+    "RPO_RTO_claimed": false,
+    "workload_retry": false,
+    "partial_raw_or_prior_capsules_rewritten": false
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 80,
+  "raw_bytes": 4055725,
+  "records": [
+    {
+      "entry_name": "finite-runtime-input-classification.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-power-negative-public-capsule-20261012-v1\\finite-runtime-input-classification.json",
+      "bytes": 15875,
+      "sha256": "68a594bff4bb9285851c06a4395720d2da0a7c3ac821401729fb23ceef661bb0",
+      "source_commit": null,
+      "source_attribution": "Closed finite synthetic input classification; no global policy/scanner changes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-common-source/benchmark_enterprise_finance.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-wave5-profile-accepted22\\reconforge-erp\\.github\\scripts\\benchmark_enterprise_finance.py",
+      "bytes": 29481,
+      "sha256": "7bce2382df24d439d39386f0e02c07bf362c4f451649dbd8d7f225c8a920396b",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Exact common final22 harness source; B/C runs use it unchanged. Literal source protocol/config strings are public Git source, not runtime credentials.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/launcher-bindings-development-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\launcher-bindings-development-v1.json",
+      "bytes": 854,
+      "sha256": "3c7c15b0dc6378fa03d3d1fac4f6ace6e695d5e12594d331198eb4958d40de07",
+      "source_commit": null,
+      "source_attribution": "Original quiet2 relocation/prelaunch source and power metadata retained; not new financial acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/actual-docker-smoke-1/smoke.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\actual-docker-smoke-1\\smoke.json",
+      "bytes": 49099,
+      "sha256": "683eb823aaa5193b8dbc8f25773c735a4fa7c73742d7dd79c92191a562326512",
+      "source_commit": null,
+      "source_attribution": "Original relocated readiness7b904/std-control/preflight/smoke bytes; no new launch or six-complete acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/final22_pair.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\final22_pair.py",
+      "bytes": 45760,
+      "sha256": "f8c61b96b8bdfe29800f44dfe1ada879f540fa33ae932a0c3f4e0b7296f4daf4",
+      "source_commit": null,
+      "source_attribution": "Original relocated readiness7b904/std-control/preflight/smoke bytes; no new launch or six-complete acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/identity_probe.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\identity_probe.py",
+      "bytes": 2410,
+      "sha256": "196b6a5a0f5f98f74bf93df8dd9f92871a9f9d7cba9e95e4bf95b8637e2228e3",
+      "source_commit": null,
+      "source_attribution": "Original relocated readiness7b904/std-control/preflight/smoke bytes; no new launch or six-complete acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/live-physical-preflight-baseline-readiness-v4/admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\live-physical-preflight-baseline-readiness-v4\\admission.json",
+      "bytes": 278,
+      "sha256": "17544ac1c60a170a58b5330c14cc5a07260d62616568ed0db1f56078987b9876",
+      "source_commit": null,
+      "source_attribution": "Original relocated readiness7b904/std-control/preflight/smoke bytes; no new launch or six-complete acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/live-physical-preflight-baseline-readiness-v4/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\live-physical-preflight-baseline-readiness-v4\\result.json",
+      "bytes": 1942,
+      "sha256": "96eedab3448c474683c5fbddc5d095dec66a3da580b28f1ed67dfa1eba38abc4",
+      "source_commit": null,
+      "source_attribution": "Original relocated readiness7b904/std-control/preflight/smoke bytes; no new launch or six-complete acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/live-physical-preflight-candidate-readiness-v4/admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\live-physical-preflight-candidate-readiness-v4\\admission.json",
+      "bytes": 278,
+      "sha256": "1512c3c7afbe383f0f3e36e0b0e9bbc18e9f53c902d0153f001ce9c8d6b9d2eb",
+      "source_commit": null,
+      "source_attribution": "Original relocated readiness7b904/std-control/preflight/smoke bytes; no new launch or six-complete acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/live-physical-preflight-candidate-readiness-v4/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\live-physical-preflight-candidate-readiness-v4\\result.json",
+      "bytes": 1970,
+      "sha256": "8b357e7de38465bae2ee12cb6aa40f1afd46d452630a2e2f245648d3388e3287",
+      "source_commit": null,
+      "source_attribution": "Original relocated readiness7b904/std-control/preflight/smoke bytes; no new launch or six-complete acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/native_observations.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\native_observations.py",
+      "bytes": 11146,
+      "sha256": "26ef301ed52c94aa50308830eb4d8ed7fadb45c61010d0a903b9639cfa2259ed",
+      "source_commit": null,
+      "source_attribution": "Original relocated readiness7b904/std-control/preflight/smoke bytes; no new launch or six-complete acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/original-verifiers/benchmark_global_engineering_pair.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\original-verifiers\\benchmark_global_engineering_pair.py",
+      "bytes": 15886,
+      "sha256": "5086ee51416636d34c080da155a9980092d2876eb97b4c00ed517b4391086e63",
+      "source_commit": null,
+      "source_attribution": "Original relocated readiness7b904/std-control/preflight/smoke bytes; no new launch or six-complete acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/original-verifiers/verify_native_posting_pair.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\original-verifiers\\verify_native_posting_pair.py",
+      "bytes": 18876,
+      "sha256": "b09575672dd79997e42afb1ade898a6e7b2448af3674ec5fc746f0120c167e58",
+      "source_commit": null,
+      "source_attribution": "Original relocated readiness7b904/std-control/preflight/smoke bytes; no new launch or six-complete acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/owned_child.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\owned_child.py",
+      "bytes": 10559,
+      "sha256": "834b7634513ca813c808dd18b34645cb8d8f1a86149bc29161cdfc6cc1bdcf71",
+      "source_commit": null,
+      "source_attribution": "Original relocated readiness7b904/std-control/preflight/smoke bytes; no new launch or six-complete acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/readiness-v4.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\readiness-v4.json",
+      "bytes": 15007,
+      "sha256": "7b904ff39d3db18634b581e83dde73d928d1e9d8783466749f9e42e3fbff33ca",
+      "source_commit": null,
+      "source_attribution": "Original relocated readiness7b904/std-control/preflight/smoke bytes; no new launch or six-complete acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/test_final22_pair.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\test_final22_pair.py",
+      "bytes": 10492,
+      "sha256": "580a82eab7066eae5cd708c8e06c50cc9df918d8183c111d5ce35df0607cb04f",
+      "source_commit": null,
+      "source_attribution": "Original relocated readiness7b904/std-control/preflight/smoke bytes; no new launch or six-complete acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/prelaunch-load-power-v2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\prelaunch-load-power-v2.json",
+      "bytes": 7478,
+      "sha256": "05a2856f5ece2381890d97760555e15d8a57a682c44b31361bec6f4885cfe3dc",
+      "source_commit": null,
+      "source_attribution": "Original quiet2 relocation/prelaunch source and power metadata retained; not new financial acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-controls/relocation-development-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\relocation-development-v1.json",
+      "bytes": 2190,
+      "sha256": "f668c7bd33c4f43b0dcdaed5b201b36e9e28e206fefc9005460ec9e22075b7a9",
+      "source_commit": null,
+      "source_attribution": "Original quiet2 relocation/prelaunch source and power metadata retained; not new financial acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-baseline-admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-baseline-admission.json",
+      "bytes": 278,
+      "sha256": "cecb3e983c1dc3bf02ca6660b5e0ff3e62c1001eb41d5c654df6e7f5410cedee",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-baseline-origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-baseline-origins.json",
+      "bytes": 41631,
+      "sha256": "ad96f28a5275ec0d51e8fe90eb9713da4a0da8294cd7319442bba8a1759eece6",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-baseline-ownership.audit-crosscheck.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-baseline-ownership.audit-crosscheck.json",
+      "bytes": 500,
+      "sha256": "50d697b18468eec094cdf4b907c9f34222c4b13fb6c3b73cacd798e14326f24c",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-baseline-ownership.created.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-baseline-ownership.created.json",
+      "bytes": 663,
+      "sha256": "22c5ad8f05a1df3766b6d46133db3fa35cebbcabc582b9aba666056f983b6209",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-baseline-ownership.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-baseline-ownership.json",
+      "bytes": 819,
+      "sha256": "2914616fa7ab64fc0c28e8d91c9d8b2817c8f6e55bdfd1819a0728e776d89e78",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-baseline-power-after.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-baseline-power-after.json",
+      "bytes": 3005,
+      "sha256": "e0d09b913e3f45aea67b9b35b1354ac59eafb055836262546c631ecf87b4ee31",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-baseline-power-before.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-baseline-power-before.json",
+      "bytes": 3005,
+      "sha256": "2c5b8d4b87436a2386029d10e67255d1d7174757039816b425836717a46e83a5",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-baseline.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-baseline.log",
+      "bytes": 212,
+      "sha256": "9f43ab2d5e4f7ac8a7004498c415b5e83543fb7b4c51dff026d006078781b733",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-baseline/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-baseline\\migration.log",
+      "bytes": 22876,
+      "sha256": "b2f8b856f7d5850299991f692aa25ba1caab23ad6bbf43adb6429b88eca9584b",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-baseline/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-baseline\\result.json",
+      "bytes": 444167,
+      "sha256": "44dd2baba23271e69ad40f43984b40fa994d20cd4f55c5d1355d62101a705b4e",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-candidate-admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-candidate-admission.json",
+      "bytes": 277,
+      "sha256": "923e039bf728a6f1f9a421b9c9c6ef95e46077fb279cac855145e4390c2b83f5",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-candidate-origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-candidate-origins.json",
+      "bytes": 43023,
+      "sha256": "f3385aca922cf1ea8ae2bc1e189f08b24bef6588955aab178182074e5e0afd92",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-candidate-ownership.audit-crosscheck.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-candidate-ownership.audit-crosscheck.json",
+      "bytes": 499,
+      "sha256": "8976d826087d133d35df2ae8b9c921fec0d7015edfc0fa0a90b26012d776fc88",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-candidate-ownership.created.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-candidate-ownership.created.json",
+      "bytes": 662,
+      "sha256": "958f82e79b82be788d63b37f75b73d97e8aa1b5714568737265ff7aed38a83ac",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-candidate-ownership.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-candidate-ownership.json",
+      "bytes": 818,
+      "sha256": "0d03edfce771a31ded22669761ea5d2d033c4104867747a0799b3d3397ebc170",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-candidate-power-after.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-candidate-power-after.json",
+      "bytes": 3005,
+      "sha256": "ec8f272810528cb36d51ce19a4f8da7a1b92c7e5e1d261db63048aa888d93296",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-candidate-power-before.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-candidate-power-before.json",
+      "bytes": 3005,
+      "sha256": "701b1587f2fe4954f2dc310d8956114cc122da18914d93cb7ba0e179e444e8f5",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-candidate.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-candidate.log",
+      "bytes": 214,
+      "sha256": "e63c039fc00f015b243b236518972e805a2f28b34850d97de2695b144558f778",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-candidate/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-candidate\\migration.log",
+      "bytes": 23616,
+      "sha256": "cbba54d8da1909bd5edb8c8279ef886e13f674a78fd06fc1268c1f945b4f76af",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/1-candidate/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\1-candidate\\result.json",
+      "bytes": 447164,
+      "sha256": "85b3b53e695d7f6f0e3354eb7d97249571df9d9d977933bd80010b74ad0dcec2",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-baseline-admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-baseline-admission.json",
+      "bytes": 277,
+      "sha256": "310a6f2f8cb3906b919f71e112dd62ef948bf4b2ce499f5151c88053fb32abae",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-baseline-origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-baseline-origins.json",
+      "bytes": 41630,
+      "sha256": "22f30fb8bc01ee023b584cc016ed806a452df8491654bcb75596d00ad0ca7c7b",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-baseline-ownership.audit-crosscheck.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-baseline-ownership.audit-crosscheck.json",
+      "bytes": 499,
+      "sha256": "6de70440b61acf5e49b14fd88ff35327e752d2c0af2f7b83e9c913f49ed32afa",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-baseline-ownership.created.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-baseline-ownership.created.json",
+      "bytes": 662,
+      "sha256": "e1870a81855f30ad1fbadb2a0599659dd5e07577cee8db7d79071173209bbc8f",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-baseline-ownership.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-baseline-ownership.json",
+      "bytes": 818,
+      "sha256": "b814704a6ffed1e3a9d6d5160ec95c076bdcdf508a678e96192231c502dd7943",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-baseline-power-after-failure.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-baseline-power-after-failure.json",
+      "bytes": 3006,
+      "sha256": "57f013e9f6d595a104446161dca756ffd0dd909d4ded36b498e510a5ea99908d",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-baseline-power-before.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-baseline-power-before.json",
+      "bytes": 3005,
+      "sha256": "7215f2f6197c0a87c4fc8eb13e1b9ca99fbbb53f3bf823df3bd4a58f57d652e8",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-baseline.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-baseline.log",
+      "bytes": 202,
+      "sha256": "96d0f397d9c295909109adb9dfea8fb9b4019ab128c542f2b175fd8223d73479",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-baseline/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-baseline\\migration.log",
+      "bytes": 22876,
+      "sha256": "b2f8b856f7d5850299991f692aa25ba1caab23ad6bbf43adb6429b88eca9584b",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-baseline/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-baseline\\result.json",
+      "bytes": 405017,
+      "sha256": "2869d101a5eca762c3817a677791ab277c977234ae61a6eb9e804b74cc3afe7a",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-candidate-admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-candidate-admission.json",
+      "bytes": 278,
+      "sha256": "ec766a87ef1101b018582840f58972a2215f6cdd86028dc3e1054c8fc836f570",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-candidate-origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-candidate-origins.json",
+      "bytes": 43024,
+      "sha256": "253345653be6058cc0641804e2bf46f1e23f29a5462acd8af918a1b6b863f38a",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-candidate-ownership.audit-crosscheck.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-candidate-ownership.audit-crosscheck.json",
+      "bytes": 500,
+      "sha256": "aadfb536fd1070fafd9ff9a416e48ba902b866a2856d7fe7026e4961bae6c892",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-candidate-ownership.created.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-candidate-ownership.created.json",
+      "bytes": 663,
+      "sha256": "ac8a233a32911ead75ec9762d35d8042f26624fe0d5eaf3397d47682d96f64ac",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-candidate-ownership.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-candidate-ownership.json",
+      "bytes": 819,
+      "sha256": "b1f64ae08dee2b5c3bf6fa8eb70681952855d6664dc0480871dfa22e09f4e329",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-candidate-power-after.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-candidate-power-after.json",
+      "bytes": 3005,
+      "sha256": "edfc5809e13bd0e5ce13f7e871e5a8d44c0c255af2e91d3c0780abcf98c86164",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-candidate-power-before.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-candidate-power-before.json",
+      "bytes": 3005,
+      "sha256": "1f35ac995407975b42d39f321be977544c0536ab7c7e21fa09ee3d49693b9b87",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-candidate.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-candidate.log",
+      "bytes": 214,
+      "sha256": "9831edbbc6482067f74106cd30b167998802c9af4da8d6c2b7d29a8b59e9cd80",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-candidate/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-candidate\\migration.log",
+      "bytes": 23616,
+      "sha256": "cbba54d8da1909bd5edb8c8279ef886e13f674a78fd06fc1268c1f945b4f76af",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/2-candidate/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\2-candidate\\result.json",
+      "bytes": 450398,
+      "sha256": "6953990ff3dee2432a8a12c01bfd59701317ee9c933d4f2117ab4ec6ebc8d65d",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-v5/pair.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-final22-paired1k-v5-20261012\\pair.json",
+      "bytes": 332303,
+      "sha256": "3135177c777cf2e6023630551f212e4781e851cf06529fa9f2e81cd8e1133818",
+      "source_commit": null,
+      "source_attribution": "Original terminal negative V5 bytes; B1/C1/C2 complete, B2 aborted/unaccepted, B3/C3 unperformed. Per-file source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "own-negative-proofs/negative-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-negative-independent\\negative-I.json",
+      "bytes": 22595,
+      "sha256": "cd4dfac24375bc536df9d0eea4bd2e9679fa820a53621bdcc1b6227ede84a334",
+      "source_commit": null,
+      "source_attribution": "Actual file-only negative I/IO closure plus original checker-assumption failure/source; not a native workload retry.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "own-negative-proofs/negative-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-negative-independent\\negative-IO.json",
+      "bytes": 22595,
+      "sha256": "cd4dfac24375bc536df9d0eea4bd2e9679fa820a53621bdcc1b6227ede84a334",
+      "source_commit": null,
+      "source_attribution": "Actual file-only negative I/IO closure plus original checker-assumption failure/source; not a native workload retry.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "own-negative-proofs/provisional-assumption-failure.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-negative-independent\\provisional-assumption-failure.json",
+      "bytes": 847,
+      "sha256": "3e811db3051b0b871101f311db97bda00957abc8d3c846db6ca7157eb7910958",
+      "source_commit": null,
+      "source_attribution": "Actual file-only negative I/IO closure plus original checker-assumption failure/source; not a native workload retry.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "own-negative-proofs/provisional-executed-auditor.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-negative-independent\\provisional-executed-auditor.py",
+      "bytes": 19129,
+      "sha256": "1fead016622b9b100c80189097c3932c62d0be031b4cb09557ebc3efd3d0aa26",
+      "source_commit": null,
+      "source_attribution": "Actual file-only negative I/IO closure plus original checker-assumption failure/source; not a native workload retry.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "own-read-only-tools/audit_wave5_v5_negative.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\audit_wave5_v5_negative.py",
+      "bytes": 19624,
+      "sha256": "50b2ae28ff5cb18562b82752f67e141d303198fe936e98fb19df270dc98575ac",
+      "source_commit": null,
+      "source_attribution": "Executed negative/watch/capsule tool source; no six-complete auditor/replay executed or included.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "own-read-only-tools/build_wave5_v5_negative_capsule.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\build_wave5_v5_negative_capsule.py",
+      "bytes": 11652,
+      "sha256": "a822f971605f6d6da1005c5ecc09484d976de9098876e7f2310d889bfe021601",
+      "source_commit": null,
+      "source_attribution": "Executed negative/watch/capsule tool source; no six-complete auditor/replay executed or included.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "own-read-only-tools/watch_wave5_v5_completed.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\watch_wave5_v5_completed.py",
+      "bytes": 10096,
+      "sha256": "b19c6e201af5dec49e5447e98a7cab2f9d2d825f61af41dd2a014a508330c1ec",
+      "source_commit": null,
+      "source_attribution": "Executed negative/watch/capsule tool source; no six-complete auditor/replay executed or included.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer-negative-proof/audit_wave5_v5_negative_originals.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\audit_wave5_v5_negative_originals.py",
+      "bytes": 14358,
+      "sha256": "cfc56eebf7da86e4ac80a3d31f1e8679f6a1a770d8d2313ad870f410fbb65f2c",
+      "source_commit": null,
+      "source_attribution": "Independently executed file-only original negative closure; normal/optimized outputs identical; no app/controller/DB/network imports/calls.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer-negative-proof/wave5-v5-negative-originals-independent-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-v5-negative-originals-independent-I.json",
+      "bytes": 16215,
+      "sha256": "4e7f20934c83ecaa4713882e5e04b4736f845c3ab43ef5b1a4c249409fe390c1",
+      "source_commit": null,
+      "source_attribution": "Independently executed file-only original negative closure; normal/optimized outputs identical; no app/controller/DB/network imports/calls.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer-negative-proof/wave5-v5-negative-originals-independent-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-v5-negative-originals-independent-IO.json",
+      "bytes": 16215,
+      "sha256": "4e7f20934c83ecaa4713882e5e04b4736f845c3ab43ef5b1a4c249409fe390c1",
+      "source_commit": null,
+      "source_attribution": "Independently executed file-only original negative closure; normal/optimized outputs identical; no app/controller/DB/network imports/calls.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "reference-only/prior-quiet2-native10k.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-power-negative-public-capsule-20261012-v1\\prior-quiet2-native10k-reference-only.json",
+      "bytes": 1310,
+      "sha256": "433436a1a2da39dbefb38bd168a6961c3654e8a2fc8390c338a5edb1b99a8e5d",
+      "source_commit": null,
+      "source_attribution": "Existing archives referenced by exact trusted bytes/hashes only.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "sparse-watch-originals/watch-01/completed-custody-review.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-sparse-custody\\watch-01\\completed-custody-review.json",
+      "bytes": 14084,
+      "sha256": "11ff7ae229c6234e6b36ee6b32d1901b199fe902cc2f67c0aa340e4538d0e113",
+      "source_commit": null,
+      "source_attribution": "Earlier original owner captures/read-only completed-child checks; their actual running/failed headers retained without relabeling.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "sparse-watch-originals/watch-01/owner-original-20261012T151214577936Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-sparse-custody\\watch-01\\owner-original-20261012T151214577936Z.json",
+      "bytes": 174580,
+      "sha256": "0d23639d74113a6fb72c32eb54b453499cf4b2604410ee6138dc32da11da9953",
+      "source_commit": null,
+      "source_attribution": "Earlier original owner captures/read-only completed-child checks; their actual running/failed headers retained without relabeling.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "sparse-watch-originals/watch-02/completed-custody-review.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-sparse-custody\\watch-02\\completed-custody-review.json",
+      "bytes": 14084,
+      "sha256": "c66afe4f659d8a065c464d85de669d4539df03a6b8f24e99c484baed7984b4e5",
+      "source_commit": null,
+      "source_attribution": "Earlier original owner captures/read-only completed-child checks; their actual running/failed headers retained without relabeling.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "sparse-watch-originals/watch-02/owner-original-20261012T151742598935Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-sparse-custody\\watch-02\\owner-original-20261012T151742598935Z.json",
+      "bytes": 174580,
+      "sha256": "0d23639d74113a6fb72c32eb54b453499cf4b2604410ee6138dc32da11da9953",
+      "source_commit": null,
+      "source_attribution": "Earlier original owner captures/read-only completed-child checks; their actual running/failed headers retained without relabeling.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "sparse-watch-originals/watch-03/completed-custody-review.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-sparse-custody\\watch-03\\completed-custody-review.json",
+      "bytes": 20026,
+      "sha256": "f433335e945e6b006c7108b7bc870c8174aa9da60449089ad8769d6441a411bf",
+      "source_commit": null,
+      "source_attribution": "Earlier original owner captures/read-only completed-child checks; their actual running/failed headers retained without relabeling.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "sparse-watch-originals/watch-03/owner-original-20261012T152456439757Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-sparse-custody\\watch-03\\owner-original-20261012T152456439757Z.json",
+      "bytes": 258272,
+      "sha256": "768c099ec5ad0542dacdb1f299d463629496700bffc8e075774b728049d0d40b",
+      "source_commit": null,
+      "source_attribution": "Earlier original owner captures/read-only completed-child checks; their actual running/failed headers retained without relabeling.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "sparse-watch-originals/watch-04/completed-custody-review.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-sparse-custody\\watch-04\\completed-custody-review.json",
+      "bytes": 20026,
+      "sha256": "a7dc39eab8f5bf0d5a3bb85a8f3502985978652a5e333d6719f6255e275aa1f6",
+      "source_commit": null,
+      "source_attribution": "Earlier original owner captures/read-only completed-child checks; their actual running/failed headers retained without relabeling.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "sparse-watch-originals/watch-04/owner-original-20261012T153019564930Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-sparse-custody\\watch-04\\owner-original-20261012T153019564930Z.json",
+      "bytes": 258272,
+      "sha256": "768c099ec5ad0542dacdb1f299d463629496700bffc8e075774b728049d0d40b",
+      "source_commit": null,
+      "source_attribution": "Earlier original owner captures/read-only completed-child checks; their actual running/failed headers retained without relabeling.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "sparse-watch-originals/watch-05/completed-custody-review.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-sparse-custody\\watch-05\\completed-custody-review.json",
+      "bytes": 20025,
+      "sha256": "03a085eed27aa01515cc3629c0b2bd472c786d10d7beaa3ecb9bb7ee64d2c8c0",
+      "source_commit": null,
+      "source_attribution": "Earlier original owner captures/read-only completed-child checks; their actual running/failed headers retained without relabeling.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "sparse-watch-originals/watch-05/owner-original-20261012T153658514293Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-v5-sparse-custody\\watch-05\\owner-original-20261012T153658514293Z.json",
+      "bytes": 332303,
+      "sha256": "3135177c777cf2e6023630551f212e4781e851cf06529fa9f2e81cd8e1133818",
+      "source_commit": null,
+      "source_attribution": "Earlier original owner captures/read-only completed-child checks; their actual running/failed headers retained without relabeling.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

@@ -1,0 +1,226 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-frozen-security-d3e227b7-38202724005-v1.zip",
+  "capture_for_root_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+    "run_id": 38202724005,
+    "all_five_security_jobs": "success",
+    "history_findings": 0,
+    "tree_findings": 0,
+    "image_counts": {
+      "critical": 0,
+      "high": 0,
+      "low": 0,
+      "medium": 9,
+      "negligible": 1,
+      "unknown": 0
+    },
+    "license_metadata": {
+      "coverage_basis_points": 9558,
+      "legal_compatibility_assessed": false,
+      "licensed_packages": 65,
+      "minimum_coverage_basis_points": 9000,
+      "missing_license_packages": [
+        ".python-rundeps@20261001.214925",
+        "markdown-it-py@4.2.0",
+        "python@3.12.15"
+      ],
+      "total_packages": 68
+    },
+    "complete_ci_acceptance": "Separate mainCI snapshot only; final gate evidence remains required.",
+    "performance_acceptance": "No benchmark or global superiority assertion from security evidence."
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 19,
+  "raw_bytes": 2512171,
+  "records": [
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/artifact-11725529869.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\artifact-11725529869.zip",
+      "bytes": 396934,
+      "sha256": "910d5625a4014b52fb546e8450244ca570bc376450e8ac00489ebafeb16d9524",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/artifact-11726335365.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\artifact-11726335365.zip",
+      "bytes": 294,
+      "sha256": "36d049ecb7aa114ece02b0ef6a5307b93d7278c8690baba7933f50a4241e23dc",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/artifact-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\artifact-provenance.json",
+      "bytes": 2305,
+      "sha256": "37aa057ab463dbfa86263320275f525ee97072e25f4b708d44eede7cee0615d6",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/artifacts-projection.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\artifacts-projection.json",
+      "bytes": 911,
+      "sha256": "f9db7f4044ba846d4fd95bdbcba53663290cb8db1ac2d5eaf87ab4abd7f798d1",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/container-security-evidence.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\container-security-evidence.json",
+      "bytes": 1981,
+      "sha256": "16647c431d2e8c338a76e3cf17c233046d52ea0c92c233dd3159a7f71dea8cfb",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/gitleaks-history.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\gitleaks-history.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/gitleaks-tree.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\gitleaks-tree.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/image.grype.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\image.grype.json",
+      "bytes": 59297,
+      "sha256": "c1e4ef5c4f6848dce7d2cdb3a685654af4fd07bd1da80a4e799d495a59323519",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/image.syft.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\image.syft.json",
+      "bytes": 1783659,
+      "sha256": "d35404603be336473a73bb6afbe1fb2da291c826b91d17833e9707044c031292",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/job-114659424759-safe-spans.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\job-114659424759-safe-spans.log",
+      "bytes": 81821,
+      "sha256": "6a643402f4e8adedaa8b04e857f998159d1ba4a3e58822a75f12c644986c4cef",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/job-114659424880-safe-spans.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\job-114659424880-safe-spans.log",
+      "bytes": 41426,
+      "sha256": "4f248444bd5d28632ecb5f99a01d56fa35e4cf2740718119e0d27a22038d32b1",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/job-114659424887-safe-spans.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\job-114659424887-safe-spans.log",
+      "bytes": 48532,
+      "sha256": "89e6bac2d2708894ce120641cbe1c3fe9a237a7c4f33b7ef5320713f9ff56e9b",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/job-114659424982-safe-spans.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\job-114659424982-safe-spans.log",
+      "bytes": 81820,
+      "sha256": "f182946716812f5059251602ed722ac59c15f135328cbc275f0c7cb9b71f3d8f",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/job-114659825705-safe-spans.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\job-114659825705-safe-spans.log",
+      "bytes": 2480,
+      "sha256": "d412dbb9d608528e81a263c117e258f32f96c05e99888c456169fb5b8c3a5564",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/jobs-projection.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\jobs-projection.json",
+      "bytes": 1646,
+      "sha256": "e1cc11634f42904fcb5f6252e6344fcac0913efbbe2f9f444512b9286685ddd2",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/log-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\log-provenance.json",
+      "bytes": 5577,
+      "sha256": "e889372dcd8dac2a44fe711664f2b297d7c2bc9145f5e24e169f6657ebfec8fa",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/related-current-runs-projection.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\related-current-runs-projection.json",
+      "bytes": 1359,
+      "sha256": "967af0f82f02e6bc975fef58bb89095c845263e65585431c335fcf24a2b4b17e",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/run-projection.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\run-projection.json",
+      "bytes": 436,
+      "sha256": "7ce0395b79ee9f151f6363d13635eeb64eb230b4e5fdd9b9e92bdb41b68911d0",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/security-final-d3e227b7-38202724005/security-summary.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\security-final-d3e227b7-38202724005\\security-summary.json",
+      "bytes": 1687,
+      "sha256": "81783a9a9a276ea93cebc97c1a469fbf73f38ad21c205c21d21b55a5076f6182",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual final frozenD3 manualSecurity38202724005; original archive/report/log-span bytes and precise source identity retained. RelatedCI projection is a snapshot, not a final acceptance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

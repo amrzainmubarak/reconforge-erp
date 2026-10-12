@@ -1,0 +1,134 @@
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001_postgres_tenant_boundary, Create the PostgreSQL tenant/RLS foundation.
+INFO  [alembic.runtime.migration] Running upgrade 0001_postgres_tenant_boundary -> 0002_postgres_master_data, Add tenant-scoped PostgreSQL master-data tables.
+INFO  [alembic.runtime.migration] Running upgrade 0002_postgres_master_data -> 0003_postgres_ledger, Add the tenant-scoped PostgreSQL ledger-control boundary.
+INFO  [alembic.runtime.migration] Running upgrade 0003_postgres_ledger -> 0004_postgres_identity, Add tenant-scoped PostgreSQL identity and session storage.
+INFO  [alembic.runtime.migration] Running upgrade 0004_postgres_identity -> 0005_postgres_fiscal_periods, Add tenant-scoped PostgreSQL fiscal-period metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0005_postgres_fiscal_periods -> 0006_postgres_close, Add tenant-scoped PostgreSQL close-control metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0006_postgres_close -> 0007_postgres_outbox_delivery, Add PostgreSQL outbox worker ownership metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0007_postgres_outbox_delivery -> 0008_postgres_evidence_registry, Add the tenant-scoped PostgreSQL evidence registry.
+INFO  [alembic.runtime.migration] Running upgrade 0008_postgres_evidence_registry -> 0009_postgres_recon_results, Add tenant-scoped reconciliation input, result, and exception persistence.
+INFO  [alembic.runtime.migration] Running upgrade 0009_postgres_recon_results -> 0010_postgres_recon_exec, Add durable reconciliation execution claims and cancellation state.
+INFO  [alembic.runtime.migration] Running upgrade 0010_postgres_recon_exec -> 0011_postgres_recon_ckpts, Add durable, idempotent reconciliation partition checkpoints.
+INFO  [alembic.runtime.migration] Running upgrade 0011_postgres_recon_ckpts -> 0012_postgres_jobs, Add tenant-scoped durable-job aggregate persistence.
+INFO  [alembic.runtime.migration] Running upgrade 0012_postgres_jobs -> 0013_postgres_domain_uow, Add the tenant-scoped local-domain PostgreSQL unit-of-work schema.
+INFO  [alembic.runtime.migration] Running upgrade 0013_postgres_domain_uow -> 0014_postgres_operations, Add tenant-scoped operational diagnostic records.
+INFO  [alembic.runtime.migration] Running upgrade 0014_postgres_operations -> 0015_postgres_idempotency, Add tenant-scoped generic idempotency records.
+INFO  [alembic.runtime.migration] Running upgrade 0015_postgres_idempotency -> 0016_postgres_journals, Add tenant-scoped journal-control persistence.
+INFO  [alembic.runtime.migration] Running upgrade 0016_postgres_journals -> 0017_postgres_control_testing, Add tenant-scoped control-testing persistence.
+INFO  [alembic.runtime.migration] Running upgrade 0017_postgres_control_testing -> 0018_postgres_intercompany, Add tenant-scoped exact intercompany persistence.
+INFO  [alembic.runtime.migration] Running upgrade 0018_postgres_intercompany -> 0019_postgres_finance_core, Add tenant-scoped governed Finance Core persistence.
+INFO  [alembic.runtime.migration] Running upgrade 0019_postgres_finance_core -> 0020_postgres_master_data_app, Add workspace ownership for the complete Master Data application port.
+INFO  [alembic.runtime.migration] Running upgrade 0020_postgres_master_data_app -> 0021_postgres_payables, Add tenant-scoped governed Payables application storage.
+INFO  [alembic.runtime.migration] Running upgrade 0021_postgres_payables -> 0022_postgres_receivables, Add tenant-scoped governed Receivables storage.
+INFO  [alembic.runtime.migration] Running upgrade 0022_postgres_receivables -> 0023_postgres_matching_app, Bind deterministic matching runs to tenant workspaces.
+INFO  [alembic.runtime.migration] Running upgrade 0023_postgres_matching_app -> 0024_postgres_inventory_core, Add tenant-scoped governed Inventory Core storage.
+INFO  [alembic.runtime.migration] Running upgrade 0024_postgres_inventory_core -> 0025_postgres_inventory_value, PostgreSQL governed FIFO inventory valuation aggregate.
+INFO  [alembic.runtime.migration] Running upgrade 0025_postgres_inventory_value -> 0026_postgres_inventory_reverse, PostgreSQL governed FIFO inventory valuation reversal aggregate.
+INFO  [alembic.runtime.migration] Running upgrade 0026_postgres_inventory_reverse -> 0027_postgres_inventory_planning, PostgreSQL governed inventory planning aggregate.
+INFO  [alembic.runtime.migration] Running upgrade 0027_postgres_inventory_planning -> 0028_postgres_accounts, PostgreSQL account-reconciliation aggregate.
+INFO  [alembic.runtime.migration] Running upgrade 0028_postgres_accounts -> 0029_postgres_approvals, PostgreSQL approval and certification metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0029_postgres_approvals -> 0030_postgres_close_app, Contract-compatible PostgreSQL close-management aggregate.
+INFO  [alembic.runtime.migration] Running upgrade 0030_postgres_close_app -> 0031_postgres_evidence_app, Contract-compatible PostgreSQL evidence-registry aggregate.
+INFO  [alembic.runtime.migration] Running upgrade 0031_postgres_evidence_app -> 0032_postgres_exceptions, Contract-compatible PostgreSQL exception queue.
+INFO  [alembic.runtime.migration] Running upgrade 0032_postgres_exceptions -> 0033_postgres_outbox_app, Complete PostgreSQL outbox Application delivery metadata and guards.
+INFO  [alembic.runtime.migration] Running upgrade 0033_postgres_outbox_app -> 0034_postgres_federation, Add durable PostgreSQL federation replay, links, and audit events.
+INFO  [alembic.runtime.migration] Running upgrade 0034_postgres_federation -> 0035_postgres_scim, Add forced-RLS SCIM provisioning lifecycle storage.
+INFO  [alembic.runtime.migration] Running upgrade 0035_postgres_scim -> 0036_postgres_scim_auth, Add hash-only SCIM client credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0036_postgres_scim_auth -> 0037_postgres_service_accounts, Add tenant-scoped service accounts and hash-only credentials.
+INFO  [alembic.runtime.migration] Running upgrade 0037_postgres_service_accounts -> 0038_postgres_step_up, Add immutable, session-bound human step-up assertions.
+INFO  [alembic.runtime.migration] Running upgrade 0038_postgres_step_up -> 0039_postgres_emergency_access, Add governed temporary emergency access and append-only evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0039_postgres_emergency_access -> 0040_postgres_webauthn_mfa, Add WebAuthn MFA challenges, public credentials, and assurance evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0040_postgres_webauthn_mfa -> 0041_postgres_execution_scope, Add explicit workspace, organization, and legal-entity RLS scope.
+INFO  [alembic.runtime.migration] Running upgrade 0041_postgres_execution_scope -> 0042_postgres_job_scope, Bind durable jobs and worker evidence to workspace/entity RLS scope.
+INFO  [alembic.runtime.migration] Running upgrade 0042_postgres_job_scope -> 0043_postgres_export_scope, Bind Evidence export sources to workspace RLS scope.
+INFO  [alembic.runtime.migration] Running upgrade 0043_postgres_export_scope -> 0044_postgres_business_scope, Compose direct business scope columns into PostgreSQL RLS policies.
+INFO  [alembic.runtime.migration] Running upgrade 0044_postgres_business_scope -> 0045_postgres_workspace_scope, Attribute legacy business aggregates to transaction workspace scope.
+INFO  [alembic.runtime.migration] Running upgrade 0045_postgres_workspace_scope -> 0046_postgres_scope_authority, Add durable principal authority over execution scopes.
+INFO  [alembic.runtime.migration] Running upgrade 0046_postgres_scope_authority -> 0047_postgres_scheduler, Add timezone-aware durable schedules and atomic job dispatch evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0047_postgres_scheduler -> 0048_postgres_notifications, Add allowlisted notification routes and append-only delivery evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0048_postgres_notifications -> 0049_security_center_acl, Keep the administration security overview human-only in PostgreSQL.
+INFO  [alembic.runtime.migration] Running upgrade 0049_security_center_acl -> 0050_identity_admin_lifecycle, Add optimistic, attributable identity and session lifecycle state.
+INFO  [alembic.runtime.migration] Running upgrade 0050_identity_admin_lifecycle -> 0051_access_policy_lifecycle, Add governed role, policy, and user-role lifecycle metadata.
+INFO  [alembic.runtime.migration] Running upgrade 0051_access_policy_lifecycle -> 0052_security_governance, Add governed integration administration and evidence-retention policy.
+INFO  [alembic.runtime.migration] Running upgrade 0052_security_governance -> 0053_audit_administration_acl, Keep sensitive PostgreSQL audit administration human-governed.
+INFO  [alembic.runtime.migration] Running upgrade 0053_audit_administration_acl -> 0054_pg_consol_ownership, Add tenant-scoped PostgreSQL consolidation ownership masters.
+INFO  [alembic.runtime.migration] Running upgrade 0054_pg_consol_ownership -> 0055_pg_consol_close, Add tenant-scoped PostgreSQL consolidation close control journal.
+INFO  [alembic.runtime.migration] Running upgrade 0055_pg_consol_close -> 0056_pg_policy_delegations, Add tenant-scoped immutable PostgreSQL policy delegations.
+INFO  [alembic.runtime.migration] Running upgrade 0056_pg_policy_delegations -> 0057_pg_consol_journal_lines, Persist PostgreSQL consolidation journal and effect lines.
+INFO  [alembic.runtime.migration] Running upgrade 0057_pg_consol_journal_lines -> 0058_pg_policy_permission_scopes, Add immutable entity and period scopes for role permissions.
+INFO  [alembic.runtime.migration] Running upgrade 0058_pg_policy_permission_scopes -> 0059_pg_policy_amt_bounds, Persist exact amount bounds for role-permission scopes.
+INFO  [alembic.runtime.migration] Running upgrade 0059_pg_policy_amt_bounds -> 0060_pg_consolidation_ppa, Persist replayable, non-posting acquisition PPA evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0060_pg_consolidation_ppa -> 0061_pg_writeback_intents, Persist governed write-back intent history under tenant/workspace RLS.
+INFO  [alembic.runtime.migration] Running upgrade 0061_pg_writeback_intents -> 0062_pg_outbox_consumer, Add immutable tenant-scoped idempotent outbox-consumer receipts.
+INFO  [alembic.runtime.migration] Running upgrade 0062_pg_outbox_consumer -> 0063_pg_ic_elimination, Add immutable PostgreSQL intercompany elimination evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0063_pg_ic_elimination -> 0064_pg_close_ic_links, Bind replay-verified intercompany evidence to PostgreSQL close runs.
+INFO  [alembic.runtime.migration] Running upgrade 0064_pg_close_ic_links -> 0065_pg_deferred_tax, Persist replayable, non-posting acquisition deferred-tax evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0065_pg_deferred_tax -> 0066_pg_impairment, Persist replayable, non-posting consolidation impairment evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0066_pg_impairment -> 0067_pg_close_impairment_links, Bind replay-verified impairment evidence to PostgreSQL close runs.
+INFO  [alembic.runtime.migration] Running upgrade 0067_pg_close_impairment_links -> 0068_pg_close_deferred_tax_links, Bind replay-verified deferred-tax evidence to PostgreSQL close runs.
+INFO  [alembic.runtime.migration] Running upgrade 0068_pg_close_deferred_tax_links -> 0069_pg_close_ppa_links, Bind replay-verified PPA evidence to PostgreSQL close runs.
+INFO  [alembic.runtime.migration] Running upgrade 0069_pg_close_ppa_links -> 0070_pg_ownership_change, Persist replayable, non-posting ownership-change evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0070_pg_ownership_change -> 0071_pg_close_ownchg_links, Bind replay-verified ownership-change evidence to PostgreSQL close runs.
+INFO  [alembic.runtime.migration] Running upgrade 0071_pg_close_ownchg_links -> 0072_pg_recon_entity_scope, Add legal-entity attribution to PostgreSQL reconciliation runs.
+INFO  [alembic.runtime.migration] Running upgrade 0072_pg_recon_entity_scope -> 0073_pg_outbox_scope, Add hierarchy attribution to PostgreSQL transactional outbox events.
+INFO  [alembic.runtime.migration] Running upgrade 0073_pg_outbox_scope -> 0074_pg_outbox_consumer_scope, Add hierarchy attribution to immutable PostgreSQL outbox receipts.
+INFO  [alembic.runtime.migration] Running upgrade 0074_pg_outbox_consumer_scope -> 0075_pg_job_organization_scope, Add organization attribution to durable PostgreSQL jobs.
+INFO  [alembic.runtime.migration] Running upgrade 0075_pg_job_organization_scope -> 0076_pg_consolidation_ppa_scope, Add hierarchy attribution to PostgreSQL PPA evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0076_pg_consolidation_ppa_scope -> 0077_pg_imp_tax_scope, Add hierarchy attribution to impairment and deferred-tax evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0077_pg_imp_tax_scope -> 0078_pg_close_scope, Add hierarchy attribution to PostgreSQL consolidation-close records.
+INFO  [alembic.runtime.migration] Running upgrade 0078_pg_close_scope -> 0079_pg_job_cursor, Add tenant-scoped durable-job scheduler cursor coordination.
+INFO  [alembic.runtime.migration] Running upgrade 0079_pg_job_cursor -> 0080_pg_retail_settlement, Persist replay-verifiable retail settlement evidence under PostgreSQL RLS.
+INFO  [alembic.runtime.migration] Running upgrade 0080_pg_retail_settlement -> 0081_pg_prof_invoice, Persist replay-verifiable professional invoice-to-payment evidence under PostgreSQL RLS.
+INFO  [alembic.runtime.migration] Running upgrade 0081_pg_prof_invoice -> 0082_pg_cert_evidence, Bind close certifications to a replay-verified evidence bundle digest.
+INFO  [alembic.runtime.migration] Running upgrade 0082_pg_cert_evidence -> 0083_pg_manufacturing, Persist replay-verifiable manufacturing cost-control evidence under PostgreSQL RLS.
+INFO  [alembic.runtime.migration] Running upgrade 0083_pg_manufacturing -> 0084_pg_bank_statement, Persist replay-verifiable bank-statement control evidence under PostgreSQL RLS.
+INFO  [alembic.runtime.migration] Running upgrade 0084_pg_bank_statement -> 0085_pg_reversal_definer, Run inventory reversal guards with their schema owner privileges.
+INFO  [alembic.runtime.migration] Running upgrade 0085_pg_reversal_definer -> 0086_pg_close_reopened, Align PostgreSQL consolidation-close period reopen state with the API contract.
+INFO  [alembic.runtime.migration] Running upgrade 0086_pg_close_reopened -> 0087_pg_currency_binding, Persist tenant/workspace currency-registry snapshot bindings.
+INFO  [alembic.runtime.migration] Running upgrade 0087_pg_currency_binding -> 0088_pg_currency_snapshot, Persist immutable tenant-scoped currency-registry snapshots.
+INFO  [alembic.runtime.migration] Running upgrade 0088_pg_currency_snapshot -> 0089_pg_writeback_identity, Bind every write-back version to one immutable proposal identity.
+INFO  [alembic.runtime.migration] Running upgrade 0089_pg_writeback_identity -> 0090_pg_writeback_observations, Persist immutable, tenant-scoped provider recovery observations.
+INFO  [alembic.runtime.migration] Running upgrade 0090_pg_writeback_observations -> 0091_pg_close_period_sod, Require an independent actor to reopen a locked close period.
+INFO  [alembic.runtime.migration] Running upgrade 0091_pg_close_period_sod -> 0092_pg_close_lock_evidence, Make generic PostgreSQL close lock evidence immutable after locking.
+INFO  [alembic.runtime.migration] Running upgrade 0092_pg_close_lock_evidence -> 0093_pg_metrics, Install the dashboard metrics omitted from the PostgreSQL migration chain.
+INFO  [alembic.runtime.migration] Running upgrade 0093_pg_metrics -> 0094_pg_finance_policy, Retain new ledger monetary policy without guessing legacy interpretation.
+INFO  [alembic.runtime.migration] Running upgrade 0094_pg_finance_policy -> 0095_pg_finance_scope, Restrict Finance natural keys to canonical workspace and entity authority.
+INFO  [alembic.runtime.migration] Running upgrade 0095_pg_finance_scope -> 0096_pg_master_authority, Deny shared master-data writes from narrower selected authority.
+INFO  [alembic.runtime.migration] Running upgrade 0096_pg_master_authority -> 0097_pg_reconciliation_seal, Seal reconciliation child writes without guessing or repairing old manifests.
+INFO  [alembic.runtime.migration] Running upgrade 0097_pg_reconciliation_seal -> 0098_pg_finance_posting, Explicit immutable operational postings with forward-only human review provenance.
+INFO  [alembic.runtime.migration] Running upgrade 0098_pg_finance_posting -> 0099_pg_receivables_policy, Retain new AR monetary policy without inferring historical precision.
+INFO  [alembic.runtime.migration] Running upgrade 0099_pg_receivables_policy -> 0100_pg_inventory_receipt, Freeze reviewed Inventory receipt ownership and complete-source posting.
+INFO  [alembic.runtime.migration] Running upgrade 0100_pg_inventory_receipt -> 0101_pg_notification_inbox, Add immutable recipient-scoped notification evidence after the retained receipt schema.
+INFO  [alembic.runtime.migration] Running upgrade 0101_pg_notification_inbox -> 0102_pg_budget_control, Add governed budget envelopes and retained commitment evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0102_pg_budget_control -> 0103_pg_outbox_fencing, Freeze outbox lease fencing and immutable delivery evidence after budget control.
+INFO  [alembic.runtime.migration] Running upgrade 0103_pg_outbox_fencing -> 0104_pg_exception_review_api, Scope PostgreSQL exception review and retain governed decision evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0104_pg_exception_review_api -> 0105_pg_payables_payment_link, Add immutable evidence-bound supplier payment links.
+INFO  [alembic.runtime.migration] Running upgrade 0105_pg_payables_payment_link -> 0106_pg_ap_link_reversal, Add immutable Finance-evidenced reversals for supplier payment links.
+INFO  [alembic.runtime.migration] Running upgrade 0106_pg_ap_link_reversal -> 0107_pg_job_operations, Least-privilege operator access and bounded durable-job inspection indexes.
+INFO  [alembic.runtime.migration] Running upgrade 0107_pg_job_operations -> 0108_pg_receipt_admission, Preserve receipt admission and serialize the first workspace currency binding.
+INFO  [alembic.runtime.migration] Running upgrade 0108_pg_receipt_admission -> 0109_pg_operational_finance, Bind reviewed native AR/AP sources to atomic immutable manual postings.
+INFO  [alembic.runtime.migration] Running upgrade 0109_pg_operational_finance -> 0110_pg_sales_revenue, Governed service sales through native AR and operational GL.
+INFO  [alembic.runtime.migration] Running upgrade 0110_pg_sales_revenue -> 0111_pg_procurement_operations, Compose reviewed stock purchase-to-pay with retained source and command evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0111_pg_procurement_operations -> 0112_pg_financial_reporting, Reviewed account classification, initial balances and source-bound financial statements.
+INFO  [alembic.runtime.migration] Running upgrade 0112_pg_financial_reporting -> 0113_pg_stock_sales, Governed stock reservations, FIFO issue, COGS and customer settlement.
+INFO  [alembic.runtime.migration] Running upgrade 0113_pg_stock_sales -> 0114_pg_procurement_partial, Partial stock receiving and exact payable tranches share a governed owner.
+INFO  [alembic.runtime.migration] Running upgrade 0114_pg_procurement_partial -> 0115_pg_financial_installments, Compose reviewed partial AP payments with immutable native allocations.
+INFO  [alembic.runtime.migration] Running upgrade 0115_pg_financial_installments -> 0116_pg_stock_commerce, Conserved multi-line commercial orders over governed native stock tranches.
+INFO  [alembic.runtime.migration] Running upgrade 0116_pg_stock_commerce -> 0117_pg_procurement_multiline, Retained multiline purchase and supplier invoice ownership.
+INFO  [alembic.runtime.migration] Running upgrade 0117_pg_procurement_multiline -> 0118_pg_financial_report_capture, Database-owned native evidence captures and scalable exact report snapshots.
+INFO  [alembic.runtime.migration] Running upgrade 0118_pg_financial_report_capture -> 0119_pg_receipt_fifo_chronology, Scope receipt chronology to its actual immutable FIFO item pool.
+INFO  [alembic.runtime.migration] Running upgrade 0119_pg_receipt_fifo_chronology -> 0120_pg_commercial_collections, Reviewed partial native AR collections with conserved stock-sale evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0120_pg_commercial_collections -> 0121_pg_landed_cost, Paid landed costs and atomic multi-line capitalized receiving.
+INFO  [alembic.runtime.migration] Running upgrade 0121_pg_landed_cost -> 0122_pg_fixed_assets, Retain source-owned native acquisition, depreciation and disposal.
+INFO  [alembic.runtime.migration] Running upgrade 0122_pg_fixed_assets -> 0123_pg_native_event_dispatch, Refresh invoker owner dispatch without modifying retained financial history.
+INFO  [alembic.runtime.migration] Running upgrade 0123_pg_native_event_dispatch -> 0124_pg_collection_cancellation, Release unposted native collections without discarding source evidence.
+INFO  [alembic.runtime.migration] Running upgrade 0124_pg_collection_cancellation -> 0125_pg_landed_cost_cancellation, Retain unreceived charge cancellation and release its exact reservations.
+INFO  [alembic.runtime.migration] Running upgrade 0125_pg_landed_cost_cancellation -> 0126_pg_customer_returns, Original-source whole stock credits and governed partial customer refunds.
+INFO  [alembic.runtime.migration] Running upgrade 0126_pg_customer_returns -> 0127_pg_procurement_commitments, Bind native purchase obligations and AP accruals to approved appropriations.
+INFO  [alembic.runtime.migration] Running upgrade 0127_pg_procurement_commitments -> 0128_pg_operational_fx_tax, Native foreign receivables, retained tax policies and realized FX closure.
+INFO  [alembic.runtime.migration] Running upgrade 0128_pg_operational_fx_tax -> 0129_pg_financial_read_plans, Bound financial RLS read planning with invoker visibility predicates.
+INFO  [alembic.runtime.migration] Running upgrade 0129_pg_financial_read_plans -> 0130_pg_supplier_returns, Close original unissued receipt removal with supplier debit and retained costs.
+INFO  [alembic.runtime.migration] Running upgrade 0130_pg_supplier_returns -> 0131_pg_fx_revaluation, Historical foreign monetary closing valuation and exact reviewed inverse.
+INFO  [alembic.runtime.migration] Running upgrade 0131_pg_fx_revaluation -> 0132_pg_stock_inverse_dispatch, Scope native original stock-sale revenue inverse owner discovery.

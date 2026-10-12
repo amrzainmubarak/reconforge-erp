@@ -141,6 +141,41 @@ def test_explicit_integer_fixture_and_original_native_inverse_pass() -> None:
     assert verified["unique_audit_events"] == verified["unique_outbox_events"] == 20
 
 
+@pytest.mark.parametrize("revision", ["0131_pg_fx_revaluation", "0136_pg_inventory_scope"])
+def test_versioned_restore_heads_preserve_financial_catalog_contract(revision: str) -> None:
+    proofs = fixture_proofs()
+    report = fixture_report(proofs)
+    report["revision"] = revision
+    for key in ("snapshot", "probe_checkpoint"):
+        report["native_restore"][key]["head"] = revision
+    ORACLE["verify_report"](report, ORACLE["verify_proofs"](proofs), fixture_manifest(proofs, report))
+    assert ORACLE["RESTORE_HEAD_CONTRACT"] == "operational-fx-restore-head-v2"
+    assert ORACLE["RESTORE_HEADS"] == frozenset(("0131_pg_fx_revaluation", "0136_pg_inventory_scope"))
+
+
+@pytest.mark.parametrize("attack", ["unknown_head", "snapshot_head", "checkpoint_head", "catalog", "rls"])
+def test_current_restore_head_does_not_relax_snapshot_or_scope_binding(attack: str) -> None:
+    proofs = fixture_proofs()
+    report = fixture_report(proofs)
+    report["revision"] = "0136_pg_inventory_scope"
+    for key in ("snapshot", "probe_checkpoint"):
+        report["native_restore"][key]["head"] = report["revision"]
+    if attack == "unknown_head":
+        report["revision"] = "0137_unreviewed"
+        for key in ("snapshot", "probe_checkpoint"):
+            report["native_restore"][key]["head"] = report["revision"]
+    elif attack in ("snapshot_head", "checkpoint_head"):
+        key = "snapshot" if attack == "snapshot_head" else "probe_checkpoint"
+        report["native_restore"][key]["head"] = "0131_pg_fx_revaluation"
+    elif attack == "catalog":
+        report["native_restore"]["probe_checkpoint"]["objects"]["functions"]["sha256"] = "f" * 64
+    else:
+        for key in ("snapshot", "probe_checkpoint"):
+            report["native_restore"][key]["forced_rls_financial_tables"] = 44
+    with pytest.raises(ERROR, match="Restored schema/RLS/catalog changed"):
+        ORACLE["verify_report"](report, ORACLE["verify_proofs"](proofs), fixture_manifest(proofs, report))
+
+
 @pytest.mark.parametrize("value,expected", [(Fraction(5, 2), 3), (Fraction(-5, 2), -3), (Fraction(249, 100), 2)])
 def test_independent_rounding_has_exact_positive_and_negative_ties(value: Fraction, expected: int) -> None:
     assert ORACLE["half_up"](value) == expected
@@ -219,9 +254,13 @@ def test_post_restore_authentication_allows_only_identity_digest_with_same_popul
         ORACLE["verify_report"](report, ORACLE["verify_proofs"](proofs), manifest)
 
 
-def test_unique_substituted_runtime_effect_cannot_escape_trusted_original_membership() -> None:
+@pytest.mark.parametrize("revision", ["0131_pg_fx_revaluation", "0136_pg_inventory_scope"])
+def test_unique_substituted_runtime_effect_cannot_escape_trusted_original_membership(revision: str) -> None:
     proofs = fixture_proofs()
     report = fixture_report(proofs)
+    report["revision"] = revision
+    for key in ("snapshot", "probe_checkpoint"):
+        report["native_restore"][key]["head"] = revision
     manifest = fixture_manifest(proofs, report)
     manifest_blob = json.dumps(manifest).encode()
     original_plan_digest = proofs[4]["plan"]["plan_digest"]
@@ -258,11 +297,15 @@ def test_duplicate_json_key_is_rejected_even_if_a_hash_could_be_recomputed() -> 
 
 
 @pytest.mark.parametrize("optimized", [False, True])
-def test_standalone_cli_keeps_financial_checks_under_python_optimization(tmp_path: Path, optimized: bool) -> None:
+@pytest.mark.parametrize("revision", ["0131_pg_fx_revaluation", "0136_pg_inventory_scope"])
+def test_standalone_cli_keeps_financial_checks_under_python_optimization(tmp_path: Path, optimized: bool, revision: str) -> None:
     proofs = fixture_proofs()
     for index, proof in enumerate(proofs):
         (tmp_path / f"fx-proof-{index}.json").write_text(json.dumps(proof), encoding="utf-8")
     report = fixture_report(proofs)
+    report["revision"] = revision
+    for key in ("snapshot", "probe_checkpoint"):
+        report["native_restore"][key]["head"] = revision
     (tmp_path / "cycle.json").write_text(json.dumps(report), encoding="utf-8")
     manifest_blob = json.dumps(fixture_manifest(proofs, report)).encode()
     (tmp_path / "manifest.json").write_bytes(manifest_blob)

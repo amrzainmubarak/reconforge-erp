@@ -18,8 +18,10 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 import psycopg
@@ -35,7 +37,7 @@ from tests.erp_expansion_browser_restore import (  # noqa: E402
 )
 from tests.erp_expansion_browser_seed import seed_expansion_browser  # noqa: E402
 
-IMAGE = "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
+IMAGE = "postgres:17.11-alpine@sha256:aa90e97ee862e558111d34cfb8b2c4bec768c2b039fb791341686928560263b3"
 
 
 def source_digest(directory: Path = ROOT) -> str:
@@ -74,7 +76,7 @@ def require_browser_acceptance(stats: object) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-native-restore", action="store_true")
-    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax"), default="expansion")
+    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax", "manufacturing-execution", "intercompany-operations", "procurement-sourcing"), default="expansion")
     parser.add_argument("--runtime-root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "output/erp-expansion-20261009/browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
@@ -83,6 +85,8 @@ def main() -> int:
     verify_cycles = verify_expansion_cycles
     configuration = "apps/web/live/erp-expansion.playwright.config.ts"
     extension_tables = EXPANSION_TABLES
+    tamper_actor: Callable[..., Any] | None = None
+    workspace_probe_tables: tuple[str, ...] | None = None
     tamper_statements = (
         "UPDATE reconforge.stock_sales_orders SET total_minor=total_minor+1,row_version=row_version+1 WHERE tenant_id=%s",
         "UPDATE reconforge.financial_installment_links SET posted_actor_id='maker' WHERE tenant_id=%s",
@@ -125,6 +129,46 @@ def main() -> int:
             "UPDATE reconforge.procurement_commitment_plans SET plan_digest=repeat('0',64) WHERE tenant_id=%s",
             "DELETE FROM reconforge.procurement_commitment_commands WHERE tenant_id=%s",
             "UPDATE reconforge.procurement_partial_orders SET total_minor=total_minor+1 WHERE tenant_id=%s",
+        )
+    elif args.scenario == "manufacturing-execution":
+        from tests.manufacturing_execution_browser import (
+            MANUFACTURING_EXECUTION_TABLES,
+            MANUFACTURING_EXECUTION_TAMPER,
+            MANUFACTURING_EXECUTION_WORKSPACE_PROBE_TABLES,
+            seed_manufacturing_execution_browser,
+            verify_manufacturing_execution_browser,
+        )
+        seed, verify_cycles = seed_manufacturing_execution_browser, verify_manufacturing_execution_browser
+        configuration = "apps/web/live/manufacturing-execution.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + MANUFACTURING_EXECUTION_TABLES))
+        tamper_statements = MANUFACTURING_EXECUTION_TAMPER
+        workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + MANUFACTURING_EXECUTION_WORKSPACE_PROBE_TABLES))
+    elif args.scenario == "intercompany-operations":
+        from tests.intercompany_operations_browser_seed import (
+            INTERCOMPANY_BROWSER_TABLES,
+            INTERCOMPANY_RESTORE_TAMPER,
+            intercompany_restore_tamper_actor,
+            seed_intercompany_browser,
+            verify_intercompany_browser,
+        )
+        seed, verify_cycles = seed_intercompany_browser, verify_intercompany_browser
+        configuration = "apps/web/live/intercompany-operations.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + INTERCOMPANY_BROWSER_TABLES))
+        tamper_statements = INTERCOMPANY_RESTORE_TAMPER
+        tamper_actor = intercompany_restore_tamper_actor
+    elif args.scenario == "procurement-sourcing":
+        from tests.procurement_sourcing_browser import (
+            PROCUREMENT_SOURCING_BROWSER_TABLES,
+            seed_procurement_sourcing_browser,
+            verify_procurement_sourcing_browser,
+        )
+        seed, verify_cycles = seed_procurement_sourcing_browser, verify_procurement_sourcing_browser
+        configuration = "apps/web/live/procurement-sourcing.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + PROCUREMENT_SOURCING_BROWSER_TABLES))
+        tamper_statements = (
+            "UPDATE reconforge.procurement_sourcing_requisitions SET payload=jsonb_set(payload,'{reason}','\"forged\"') WHERE tenant_id=%s",
+            "UPDATE reconforge.procurement_sourcing_quotes SET total_minor=total_minor+1 WHERE tenant_id=%s",
+            "UPDATE reconforge.procurement_sourcing_commands SET response_json='{}'::jsonb WHERE tenant_id=%s",
         )
     elif args.scenario == "supplier-returns":
         from tests.erp_supplier_returns_browser import (
@@ -260,6 +304,13 @@ def main() -> int:
         if not origin.is_relative_to(runtime_root):
             raise ValueError("Expansion module origin is outside the integrated runtime checkout.")
         module_origins[module_name] = {"path": str(origin), "sha256": hashlib.sha256(origin.read_bytes()).hexdigest()}
+    if args.scenario in {"manufacturing-execution", "intercompany-operations", "procurement-sourcing"}:
+        owner_module = "reconforge.infrastructure.postgres_" + args.scenario.replace("-", "_")
+        for module_name in dict.fromkeys((owner_module, seed.__module__, verify_cycles.__module__)):
+            origin = Path(importlib.import_module(module_name).__file__).resolve()
+            if not origin.is_relative_to(runtime_root):
+                raise ValueError("New enterprise module origin is outside the integrated runtime checkout.")
+            module_origins[module_name] = {"path": str(origin), "sha256": hashlib.sha256(origin.read_bytes()).hexdigest()}
     report["module_origins"] = module_origins
     started = time.monotonic()
     def run(argv: list[str], *, environment: dict[str, str] | None = None, check: bool = True, directory: Path = ROOT) -> subprocess.CompletedProcess[str]:
@@ -364,7 +415,8 @@ def main() -> int:
             report["persisted_effects"] = verify_cycles(runtime)
             if args.verify_native_restore:
                 report["native_restore"] = verify_expansion_native_restore(runtime, container,
-                    verify_cycles=verify_cycles, extension_tables=extension_tables, tamper_statements=tamper_statements)
+                    verify_cycles=verify_cycles, extension_tables=extension_tables, tamper_statements=tamper_statements,
+                    tamper_actor=tamper_actor, workspace_probe_tables=workspace_probe_tables)
         report["built_web_unchanged"] = built_web_digest(args.web_root.resolve()) == report["built_web_sha256"]
         report["source_unchanged"] = source_digest(runtime_root) == report["source_sha256"]
         report["source_commit_after"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=runtime_root, text=True).strip()

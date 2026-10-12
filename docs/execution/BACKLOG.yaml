@@ -1,16 +1,44 @@
 schema_version: 2
-updated_at: "2026-10-10"
+updated_at: "2026-10-12"
 phase: "Phase 4 — Global Capability Expansion"
-active_sprint: "Wave4 Original Returns, Native Appropriations, Historical FX/Tax and Measured Posting — ADR0847-0851"
+active_sprint: "Wave5 Native Manufacturing, Intercompany and Sourcing with Strict Performance Acceptance"
 snapshot:
-  evidence_base_commit: "34b9e7a5b2a7c4d8ae49b641a36de030a878d507"
+  evidence_base_commit: "6362724f2337a79c3d7569574f7bf9591a018524"
   policy_change_commit: "the commit containing this file"
   published: true
-  publication: "Successor draft above PR128; source-bound local packet precedes final hosted checks"
+  publication: "Draft PR131 above accepted PR130 and preserved PR129-124; final22 hosted/security/restore gates passed; performance acceptance remains false and original headers retained"
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-WAVE5-001
+    priority: P0
+    area: native-manufacturing
+    title: Versioned BOM and reserved FIFO component issue to WIP and partial finished goods
+    status: completed
+    depends_on: [AMR-GLOBAL-001]
+    exit_evidence: "Bounded ME1 accepted in e8e native73 zero-skip gate, actual8513 Studio-to-GL HTTPS/270-table restore and final22 CI38208811408 manufacturing/enterprise partitions. Independent original/restored2900=2610+290+0. Labor, routing, conversions, fullMRP and broad manufacturing remain gaps."
+  - id: AMR-WAVE5-002
+    priority: P0
+    area: native-intercompany
+    title: Atomic paired books and settlement with native group elimination and reviewed report maps
+    status: completed
+    depends_on: [AMR-WAVE4-003]
+    exit_evidence: "Bounded IC1 accepted in e8e native73, actual8513 HTTPS/270-table restore and final22 CI38208811408 native/enterprise partitions; paired10001/cash3000/residual7001/elimination17002/five native effects/group nets zero. ReportingFX, NCI and correction governance remain gaps."
+  - id: AMR-WAVE5-003
+    priority: P0
+    area: procurement-sourcing
+    title: Frozen RFQ quotations and independent selection to native budget purchase award
+    status: completed
+    depends_on: [AMR-WAVE4-002]
+    exit_evidence: "Bounded SRC5 accepted in native73, actual8513 HTTPS/270-table restore and final22 CI38208811408 native/enterprise partitions. Independent17000=7400+9600, debit=credit22200. BPC partial/paid/foreign-tax return restitution remains a dependency."
+  - id: AMR-WAVE5-004
+    priority: P0
+    area: measured-native-throughput
+    title: Optimize profiled native posting under unchanged financial and identity controls
+    status: in_progress
+    depends_on: [AMR-WAVE4-004]
+    exit_evidence: "Final22 three baseline and three candidate1K populations financially passed6000 measured+120 warmups; original medianTPS -11.80%, clientCPU +1.55%, DBcgroupCPU +7.44% remain descriptive under100%CPU/98%RAM outlier and2547-3100MHz. No outlier removed or causal regression/gain accepted. Clouda6 six diagnostic runs and61native/132pure passed; typed137 guard isolated/unintegrated; Actual0759-run GL financial/custody passed9000 lines/6012 dimensions/1089 scoped effects/18 reproduced isolated ledger proofs; observed current large-stage time -6.65% and stageclientCPU -26.13% coexist with primaryTPS -7.15%. Reject137 integration after mixed/negligible incremental ratios; no fair performance gain accepted. Source-hash allocation22276896 to271537 bytes is bounded hashing evidence, not ERP throughput/RSS. LOCAL further quiet window and final1K/10K/100K/1M acceptance remain pending."
   - id: AMR-WAVE4-001
     priority: P0
     area: original-customer-returns

@@ -1,0 +1,1363 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-d3-actual-mixed-api-package-independent-v1.zip",
+  "capture_for_root_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "original_runtime_source": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+    "repeats": 3,
+    "successful_cohorts": 9,
+    "actual_https_requests": 378,
+    "tenant_qualified_original_effects": 99,
+    "tenant_qualified_timed_effects": 81,
+    "financial_reproduction": "passed",
+    "fair_performance_comparison_accepted": false,
+    "cost_per_transaction": null,
+    "source_archive": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+    "separate_yaml_contract_source": "a8742d1cbe855aa7d58748267ce22323bf0ce0bb",
+    "separate_resource_description_source": "53b6495ccb1fb687095ad7631297631116561041"
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 147,
+  "raw_bytes": 30457308,
+  "records": [
+    {
+      "entry_name": "a874-yaml-contract/wave5-backlog-scalar-root.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-backlog-scalar-root.log",
+      "bytes": 81,
+      "sha256": "005660608b2669367e8019f3f36a0242baa6203f014ce6bff8ce1fa75bdb4ab1",
+      "source_commit": "a8742d1cbe855aa7d58748267ce22323bf0ce0bb",
+      "source_attribution": "Original22-case YAML scalar contract after quoted BACKLOG repair; separate from D3 runtime.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "a874-yaml-contract/wave5-backlog-scalar-root.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-backlog-scalar-root.xml",
+      "bytes": 3461,
+      "sha256": "d05a585da221f3582af27511a71692871e6b4701cb8228c9807465a3b7081113",
+      "source_commit": "a8742d1cbe855aa7d58748267ce22323bf0ce0bb",
+      "source_attribution": "Original22-case YAML scalar contract after quoted BACKLOG repair; separate from D3 runtime.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3-ci/wave5-d3-final-ci-projection.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-d3-final-ci-projection.json",
+      "bytes": 162036,
+      "sha256": "80e56633775c92dc2560865e1da36ff19028a4e4b3217fce99cb938f0900b846",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Original gh --json final job projection; not full raw API/job logs,44jobs41success2YAMLfail1dependentSkipped.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3-package/archive-verification.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-package-d3e227b7\\archive-verification.json",
+      "bytes": 709858,
+      "sha256": "88b2ba6bbcdacab3eb65e4afc40ec644af0753db0934d94185cf0663e30bc460",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Original D3 package/build verification, original product bytes and source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3-package/reconforge_erp-0.7.1-py3-none-any.whl",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-package-d3e227b7\\reconforge_erp-0.7.1-py3-none-any.whl",
+      "bytes": 2578900,
+      "sha256": "596ee33d9df27ccf68993609bd7fe737c125c8a297e645df301ecdd97ba7ffee",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Original D3 package/build verification, original product bytes and source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3-package/reconforge_erp-0.7.1.tar.gz",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-package-d3e227b7\\reconforge_erp-0.7.1.tar.gz",
+      "bytes": 18170509,
+      "sha256": "2fa66992bcc5686450b1461d480730f392c837c7aff5aa2cedb2ea28f47690a3",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Original D3 package/build verification, original product bytes and source headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0000/intercompany/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0000\\intercompany\\ic-group-report.json",
+      "bytes": 39422,
+      "sha256": "567923cc899ad4528f49679ab0e2ab79328903c96048844251f85f6e4e5f973d",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0000/intercompany/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0000\\intercompany\\ic-proof-0.json",
+      "bytes": 22859,
+      "sha256": "bb73880186aa040f85ad9bb35d3e7cc011abc61305db74a579045190cafcd09e",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0000/intercompany/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0000\\intercompany\\ic-proof-1.json",
+      "bytes": 21406,
+      "sha256": "ab0306be4ee192033eea323aff3b9b9fccc7b196a345afbff37c9c5d89735686",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0000/intercompany/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0000\\intercompany\\ic-proof-2.json",
+      "bytes": 16203,
+      "sha256": "510fdbf398ed409195591792afac7738f54869eb84e14daf7c1f0e183fce288c",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0000/intercompany/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0000\\intercompany\\independent-oracle.json",
+      "bytes": 2747,
+      "sha256": "af565c01a77a4262892f8831021078653c9efb2852e0bd17646ec2c3fb1a8253",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0000/manufacturing/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0000\\manufacturing\\independent-oracle.json",
+      "bytes": 996,
+      "sha256": "18427d216254f58367e91f7052a34bbb6a279c5c0d8e334a8d3641740dd9fd89",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0000/manufacturing/manufacturing-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0000\\manufacturing\\manufacturing-proof.json",
+      "bytes": 697479,
+      "sha256": "8ae48cbfb7a3d66a9c3eb9bdaec0acbf7d4aeb2592217bc79ba0ab4c6c822317",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0000/manufacturing/public-order.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0000\\manufacturing\\public-order.json",
+      "bytes": 42222,
+      "sha256": "baf86d4d5e0b251a52978c825a737e52b72ba1824999dd57fb76e71c3e5652f6",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0001/intercompany/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0001\\intercompany\\ic-group-report.json",
+      "bytes": 39422,
+      "sha256": "be83e993d2f6dff313da74b5020aef28226998e017a54ddd77eab12fbd8884dd",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0001/intercompany/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0001\\intercompany\\ic-proof-0.json",
+      "bytes": 22859,
+      "sha256": "6811fc7716a19162f5b63849af4a1b995a14eb875f29d62a2c73733ad9dbb116",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0001/intercompany/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0001\\intercompany\\ic-proof-1.json",
+      "bytes": 21406,
+      "sha256": "ae3eb825a9642a776f59900e349126a4b869abd95ded305b33b994dbac023b0e",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0001/intercompany/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0001\\intercompany\\ic-proof-2.json",
+      "bytes": 16203,
+      "sha256": "92affb92121c2c811a3f8653d01d331b25eb6f204e945c2c0570383926036015",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0001/intercompany/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0001\\intercompany\\independent-oracle.json",
+      "bytes": 2747,
+      "sha256": "d6b364ba8d26e0da8b0e3e0cea473e77b243d14096758c7920453d5acb819237",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0001/manufacturing/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0001\\manufacturing\\independent-oracle.json",
+      "bytes": 996,
+      "sha256": "3bb2aaa7279860d55b78295b14daa6b71be12d9aefcf249a299bb9ff76e687fa",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0001/manufacturing/manufacturing-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0001\\manufacturing\\manufacturing-proof.json",
+      "bytes": 697488,
+      "sha256": "6c68b5e607c1957ed20c033e4898f10bc40f8b179e4d377abee46a898548d292",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0001/manufacturing/public-order.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0001\\manufacturing\\public-order.json",
+      "bytes": 42222,
+      "sha256": "5c1ee787ff7224648bf186403dec55cdff889cb6aecb7b2ce38ead44511f1e8d",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0002/intercompany/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0002\\intercompany\\ic-group-report.json",
+      "bytes": 39422,
+      "sha256": "a8267ac1662ce0ee29c336ed39991a2ecf6654ec479b68d51c0904d9347f56d4",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0002/intercompany/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0002\\intercompany\\ic-proof-0.json",
+      "bytes": 22859,
+      "sha256": "6668ce0485d9bd7186f9011c7f47bc95f22e91c980e57acfdb25be530146c874",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0002/intercompany/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0002\\intercompany\\ic-proof-1.json",
+      "bytes": 21406,
+      "sha256": "2bc3d2bcfab41b9ae7ccdfebaf3dec66598166f3cd7377aab57c191f446ad69f",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0002/intercompany/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0002\\intercompany\\ic-proof-2.json",
+      "bytes": 16203,
+      "sha256": "aaaa72e59d8a97a916679aff991ec1e1b8abc73f733e864d406098e7bf96f320",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0002/intercompany/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0002\\intercompany\\independent-oracle.json",
+      "bytes": 2747,
+      "sha256": "f69f01d20e23b8a5253a25a2c590dea19e202dd5bbdcc3d7c9339386a2897c55",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0002/manufacturing/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0002\\manufacturing\\independent-oracle.json",
+      "bytes": 996,
+      "sha256": "078e2dc9985d8d6c45466a5c533bbb6dc75ecae76d07eff849464d96add43bbe",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0002/manufacturing/manufacturing-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0002\\manufacturing\\manufacturing-proof.json",
+      "bytes": 697505,
+      "sha256": "7c392060b732f5bb111ceec9cab45558675eadc9a77937edd590decfc5c7e106",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/cycle-0002/manufacturing/public-order.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\cycle-0002\\manufacturing\\public-order.json",
+      "bytes": 42222,
+      "sha256": "32e698488cb3b9586ded1e3dd694bb057699e3e720943b42bd915a86d06fa325",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\https-runtime.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\migration.log",
+      "bytes": 23616,
+      "sha256": "cbba54d8da1909bd5edb8c8279ef886e13f674a78fd06fc1268c1f945b4f76af",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/progress.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\progress.json",
+      "bytes": 50895,
+      "sha256": "d0c65bb3d9f269f13f10bb587aa221e9fbfd042a5e3381b705ac0212de4f4c28",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\result.json",
+      "bytes": 267498,
+      "sha256": "f334e5c877b5ca79eaf81e35543a85f162de03fb26bc183cb782ac4bc1e75982",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r1/server-identity.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r1\\server-identity.json",
+      "bytes": 530,
+      "sha256": "489cb94b7ba8931860c4f02c27c20cc720d4bc1f58c598135eda6d8e8ac8cc62",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0000/intercompany/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0000\\intercompany\\ic-group-report.json",
+      "bytes": 39422,
+      "sha256": "ebb0b8020830313ac2e496e2fec35f42a146be2ab729656eceff4e65ac7d5cbe",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0000/intercompany/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0000\\intercompany\\ic-proof-0.json",
+      "bytes": 22859,
+      "sha256": "e5425ea9143de0725e7940c5eede6ea2203b6a484ef834d9af1b75d3c0159c23",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0000/intercompany/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0000\\intercompany\\ic-proof-1.json",
+      "bytes": 21406,
+      "sha256": "b1422a2d38c00ae1532b4908aca9f15172398b638e5d907e9c6c5b39a84096f6",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0000/intercompany/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0000\\intercompany\\ic-proof-2.json",
+      "bytes": 16203,
+      "sha256": "99c4e07f4063b15fd750a28bb0fccbe99e76a9e22b64d99b088a66eb5c0975d0",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0000/intercompany/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0000\\intercompany\\independent-oracle.json",
+      "bytes": 2747,
+      "sha256": "8e2f50ae44c1626a251c20bc13d011492ac6d8fa939ae966eeb44de4a0043428",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0000/manufacturing/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0000\\manufacturing\\independent-oracle.json",
+      "bytes": 996,
+      "sha256": "3ad1c86f465960c2b5d6767f04474738e1509dbb5af7b90d3fd94c7a24954072",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0000/manufacturing/manufacturing-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0000\\manufacturing\\manufacturing-proof.json",
+      "bytes": 697495,
+      "sha256": "8e8bbc7c86b4457fde034bd2750a5bc223a18754fac4cd402c546472e1f7456d",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0000/manufacturing/public-order.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0000\\manufacturing\\public-order.json",
+      "bytes": 42222,
+      "sha256": "6af24d1b1645b53c9d73f213d42cc06111b6c7d61b4ad6a981939035f891b3f2",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0001/intercompany/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0001\\intercompany\\ic-group-report.json",
+      "bytes": 39422,
+      "sha256": "05c5a00fd699c002aecab0ea7a5ab0cbe342732e5a4dd19d7a41caada75056b6",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0001/intercompany/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0001\\intercompany\\ic-proof-0.json",
+      "bytes": 22859,
+      "sha256": "5931b012c8a775613d50e9826fec88a7f24374b7ec16c3c4c8f8f1ba60c6e07e",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0001/intercompany/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0001\\intercompany\\ic-proof-1.json",
+      "bytes": 21406,
+      "sha256": "37f8ba4582f6ecdcaeecf60532b8e1718621477886fb90b973de694fd69e3fa6",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0001/intercompany/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0001\\intercompany\\ic-proof-2.json",
+      "bytes": 16203,
+      "sha256": "c1c323360d206dd6eb2987e751d2c96e7acea81df78c8cee6b376e1f9e0cc339",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0001/intercompany/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0001\\intercompany\\independent-oracle.json",
+      "bytes": 2747,
+      "sha256": "579784cebb989c78d23644e7c1c7ce0e9df68b43db22632f324539f9043f2682",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0001/manufacturing/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0001\\manufacturing\\independent-oracle.json",
+      "bytes": 996,
+      "sha256": "e92b1c99ef2dff262592a644792897a15f49e2ad2eaa1e2b3918f99cd58f34b3",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0001/manufacturing/manufacturing-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0001\\manufacturing\\manufacturing-proof.json",
+      "bytes": 697493,
+      "sha256": "f3eff7b9bce7fcbf3f2ca8bec7e791f1185ebc45a714bc290babd9c3a6248be0",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0001/manufacturing/public-order.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0001\\manufacturing\\public-order.json",
+      "bytes": 42222,
+      "sha256": "61b1423547de96b392fe904ed9b7ff8d98aca26abb1bd65b5100af42b76eb5b2",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0002/intercompany/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0002\\intercompany\\ic-group-report.json",
+      "bytes": 39422,
+      "sha256": "567d60455a5bfb88684a76d49101d1d7de1ece83e520c30f4a285b6a6693e56f",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0002/intercompany/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0002\\intercompany\\ic-proof-0.json",
+      "bytes": 22859,
+      "sha256": "bdfe3fc1eee9d0ebaf014918046a34f36a10c6cd5d60581efaa48cc9f7ffcb01",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0002/intercompany/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0002\\intercompany\\ic-proof-1.json",
+      "bytes": 21406,
+      "sha256": "0df926fefa51c91134d5e26bb391a95def96bcdb4c12ac23fd628ba2954a90f3",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0002/intercompany/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0002\\intercompany\\ic-proof-2.json",
+      "bytes": 16203,
+      "sha256": "84935c3f271895c4c8a3d18ce55a55d5ec5a671b0a060d1914eeab22d779b775",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0002/intercompany/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0002\\intercompany\\independent-oracle.json",
+      "bytes": 2747,
+      "sha256": "4986d78dc48af251b2107c7f8102ab578b03d88052cab48fe46e71cd4a88b6ec",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0002/manufacturing/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0002\\manufacturing\\independent-oracle.json",
+      "bytes": 996,
+      "sha256": "c5cd1465f5301f017917a31ffd36bcc1a0e55b254e640c35458ab7803495136a",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0002/manufacturing/manufacturing-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0002\\manufacturing\\manufacturing-proof.json",
+      "bytes": 697501,
+      "sha256": "32ed0f39095188b3efbbb6257635049f510c78ad2e3ed07c4163f9aaf48bf6ea",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/cycle-0002/manufacturing/public-order.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\cycle-0002\\manufacturing\\public-order.json",
+      "bytes": 42222,
+      "sha256": "4d7fae683ea7850832d28f62807e865f8b58520e8ed3d044cc302ab9565bbd7f",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\https-runtime.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\migration.log",
+      "bytes": 23616,
+      "sha256": "cbba54d8da1909bd5edb8c8279ef886e13f674a78fd06fc1268c1f945b4f76af",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/progress.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\progress.json",
+      "bytes": 50896,
+      "sha256": "b80eb06468f85650f76dba2f41ef7f164c084d1eb4d0a7d30d96d9cd5edf3b7e",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\result.json",
+      "bytes": 262438,
+      "sha256": "9bb9f1add57095b4241e8edf459535b7fdb6a6fad7ecb0886382f2e51499133b",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r2/server-identity.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r2\\server-identity.json",
+      "bytes": 530,
+      "sha256": "aacc45cb50dc148a1e40430aab80f1c5035fc0b9054c4cbd6332e9373b14f559",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0000/intercompany/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0000\\intercompany\\ic-group-report.json",
+      "bytes": 39422,
+      "sha256": "c3c3fa693a7651e1798c936158d01771ea6156a17fbbbd76e8bffb41db857c76",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0000/intercompany/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0000\\intercompany\\ic-proof-0.json",
+      "bytes": 22859,
+      "sha256": "2ac9b94674a1dde0dd74fa7f61d7a6f29e4797f4ea9da818afadf1e61b1a26a5",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0000/intercompany/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0000\\intercompany\\ic-proof-1.json",
+      "bytes": 21406,
+      "sha256": "021a6c5b2dfaa8ab335dba8a7a6cc955b34655b0be28158bf3bb6c6a5a149731",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0000/intercompany/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0000\\intercompany\\ic-proof-2.json",
+      "bytes": 16203,
+      "sha256": "f6f3fd372f10f7d97bde6abb81fb07d8abd0fadcd534db03b268c0cbb5193536",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0000/intercompany/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0000\\intercompany\\independent-oracle.json",
+      "bytes": 2747,
+      "sha256": "fd2476c17af0117f817c98f38676d2d8b1826d0145e17ef196c9dff2cf76bd17",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0000/manufacturing/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0000\\manufacturing\\independent-oracle.json",
+      "bytes": 996,
+      "sha256": "212efa6abbb9a8c42e5fc2fc5f99eaa012a4f7a8e1ad54e2a7af8f7e3e38e74f",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0000/manufacturing/manufacturing-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0000\\manufacturing\\manufacturing-proof.json",
+      "bytes": 697501,
+      "sha256": "b6f7d05521d0bcb4d226bed13af63fe2e7c9b606f850b96d3641569ff6a54884",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0000/manufacturing/public-order.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0000\\manufacturing\\public-order.json",
+      "bytes": 42222,
+      "sha256": "a0ab65e15ada95f0147e601bc0a769b67fe09a08864a46a4db99ee256bf55ee9",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0001/intercompany/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0001\\intercompany\\ic-group-report.json",
+      "bytes": 39422,
+      "sha256": "3ffbc9e8eda47e32cf8c87ef5657a26241eea5538071dbd6e70ad604f50dd4d2",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0001/intercompany/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0001\\intercompany\\ic-proof-0.json",
+      "bytes": 22859,
+      "sha256": "5222b605574ce27ef90ca0f9c9b9bf98e2640051614102b3e9abb61742850227",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0001/intercompany/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0001\\intercompany\\ic-proof-1.json",
+      "bytes": 21406,
+      "sha256": "7480740c1830a74a26a4623d69137c490cc9361558c9b6270e34ef3363ff6dd1",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0001/intercompany/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0001\\intercompany\\ic-proof-2.json",
+      "bytes": 16203,
+      "sha256": "501831b4f4f115f1806ed537cbfd67db1c644a55cfcaea1e200d7d1af3ee0f48",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0001/intercompany/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0001\\intercompany\\independent-oracle.json",
+      "bytes": 2747,
+      "sha256": "47a88dfc991b379ad5a8ae152bfb629c924466a22d088648bf8453ff44604fd9",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0001/manufacturing/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0001\\manufacturing\\independent-oracle.json",
+      "bytes": 996,
+      "sha256": "0300a5ef30bfc0de357cd2e29aeda6d010c1da8244db4ee625c5959d43131e97",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0001/manufacturing/manufacturing-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0001\\manufacturing\\manufacturing-proof.json",
+      "bytes": 697505,
+      "sha256": "8a5423074660bf0ee11551cda2dd45a5fce5041988862daf154999026e8f7827",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0001/manufacturing/public-order.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0001\\manufacturing\\public-order.json",
+      "bytes": 42222,
+      "sha256": "0c7f9c8d44637b6769c9b0cfca8cf88dbc416da107f0373aa60c5eb5edb92e82",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0002/intercompany/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0002\\intercompany\\ic-group-report.json",
+      "bytes": 39422,
+      "sha256": "4e9eeef04ee6b1a04e8f955a931625e61a35b5b6ec4b7e99898344f77d61b5e4",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0002/intercompany/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0002\\intercompany\\ic-proof-0.json",
+      "bytes": 22859,
+      "sha256": "d3a0f2570d348381588be809520408841e03f17a6d117d1600aca017fe38957e",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0002/intercompany/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0002\\intercompany\\ic-proof-1.json",
+      "bytes": 21406,
+      "sha256": "ebc9abb8830c2d94ec76c045d44bee8cab4e55fb03e61b6be4cede6f761e6c4a",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0002/intercompany/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0002\\intercompany\\ic-proof-2.json",
+      "bytes": 16203,
+      "sha256": "4504022b38ff33e3d89832d6001f82e3c45462d7829acb1eb4597dbdc4e7301a",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0002/intercompany/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0002\\intercompany\\independent-oracle.json",
+      "bytes": 2747,
+      "sha256": "332492ddf37f89e6c40facd0ca85e26fee50cbbbcdfa6aaae1b50c0fe5f03882",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0002/manufacturing/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0002\\manufacturing\\independent-oracle.json",
+      "bytes": 996,
+      "sha256": "252671ccee4b98fe92328942b63cd5b9d66000fca3c9e0dc0d948651070bbefa",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0002/manufacturing/manufacturing-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0002\\manufacturing\\manufacturing-proof.json",
+      "bytes": 697495,
+      "sha256": "760fb9c5122712fd3aa6bb4e0c796281743bfcc82d4259f9ac926df9d0f4a70f",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/cycle-0002/manufacturing/public-order.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\cycle-0002\\manufacturing\\public-order.json",
+      "bytes": 42222,
+      "sha256": "681178e6e7961c5c21c16e4d92e39504662ac5e88dd560231498cfaa11983d66",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\https-runtime.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\migration.log",
+      "bytes": 23616,
+      "sha256": "cbba54d8da1909bd5edb8c8279ef886e13f674a78fd06fc1268c1f945b4f76af",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/progress.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\progress.json",
+      "bytes": 50900,
+      "sha256": "ade868360255fa23566cdf963ce57bdb635af2935de483d0f13a7c586d23a11b",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\result.json",
+      "bytes": 267584,
+      "sha256": "9d977cd30aef9ee5c1a55dbef4e1b86eacc6d3f5a135f79e5650196806002bc4",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "actual-d3/wave5-mixed-api-frozen-r3/server-identity.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-frozen-r3\\server-identity.json",
+      "bytes": 530,
+      "sha256": "24ae62b84450c9203701261fdd545e82609a234b7e9b05fc62c83634559b1b53",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Actual original D3 synthetic HTTPS observation; original bytes/source/timing/status retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "frozen-d3-source/benchmark_intercompany_api.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\frozen-source\\benchmark_intercompany_api.py",
+      "bytes": 7367,
+      "sha256": "a81dd35960fbbb27cf8bcf4892de31f69e6dd4cda710c04dd7ac366f72ec2846",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Exact public original Git blob independently hashed against original runtime declared tool fingerprints.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "frozen-d3-source/benchmark_manufacturing_api.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\frozen-source\\benchmark_manufacturing_api.py",
+      "bytes": 12956,
+      "sha256": "92ab6ff52b7bfb80b433771b2df65e97ba65c1abf50132aa43e048fab6238700",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Exact public original Git blob independently hashed against original runtime declared tool fingerprints.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "frozen-d3-source/benchmark_mixed_native_api.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\frozen-source\\benchmark_mixed_native_api.py",
+      "bytes": 8287,
+      "sha256": "a909e7d54db3fd4dfd8424e75f03dd484e005caa9890ba4b6089cd2af58e2001",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Exact public original Git blob independently hashed against original runtime declared tool fingerprints.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "frozen-d3-source/benchmark_native_api_runtime.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\frozen-source\\benchmark_native_api_runtime.py",
+      "bytes": 34348,
+      "sha256": "5106623c768bc1bfdf25bef0d4f23647b64c956841c83bcaa39ca9b4ead13e06",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Exact public original Git blob independently hashed against original runtime declared tool fingerprints.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "frozen-d3-source/verify_intercompany_cycle_oracle.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\frozen-source\\verify_intercompany_cycle_oracle.py",
+      "bytes": 20489,
+      "sha256": "b8b34dc00f4d027f95d17f9540ff176ddd3ed257e975c534b7e5b49ffbf99530",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Exact public original Git blob independently hashed against original runtime declared tool fingerprints.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "frozen-d3-source/verify_manufacturing_cycle_oracle.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\frozen-source\\verify_manufacturing_cycle_oracle.py",
+      "bytes": 34882,
+      "sha256": "38a61b41b6832a89dd26084f98588e31a28dc9f33a14ab2f8d961969f0de30a1",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Exact public original Git blob independently hashed against original runtime declared tool fingerprints.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/acceptance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\acceptance.json",
+      "bytes": 23033,
+      "sha256": "a350729e6f109333756dc4bfbb20def0b3ae8cd0821728cb4ed468627ad6faca",
+      "source_commit": null,
+      "source_attribution": "File-only independent source/hash/native-population/oracle reproduction review of recorded D3 artifacts.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c0-ic-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c0-ic-i.json",
+      "bytes": 2922,
+      "sha256": "6ad4143c54b98493e2e00d0b0d256168d93fc31ee8cce62cb25ec68dd1bbc929",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c0-ic-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c0-ic-io.json",
+      "bytes": 2922,
+      "sha256": "6ad4143c54b98493e2e00d0b0d256168d93fc31ee8cce62cb25ec68dd1bbc929",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c0-ic-trusted-inputs.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c0-ic-trusted-inputs.json",
+      "bytes": 364,
+      "sha256": "f7db1c26d30e1eb93ec7c53c8e07868c1cf47d459ded4fe3eb3689e1fa9ab50a",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c0-me-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c0-me-i.json",
+      "bytes": 996,
+      "sha256": "18427d216254f58367e91f7052a34bbb6a279c5c0d8e334a8d3641740dd9fd89",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c0-me-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c0-me-io.json",
+      "bytes": 996,
+      "sha256": "18427d216254f58367e91f7052a34bbb6a279c5c0d8e334a8d3641740dd9fd89",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c1-ic-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c1-ic-i.json",
+      "bytes": 2922,
+      "sha256": "c90918b17af7f5de7d7bf3a80c17f5a52f14825b313ce68161dd9a6ce6f57566",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c1-ic-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c1-ic-io.json",
+      "bytes": 2922,
+      "sha256": "c90918b17af7f5de7d7bf3a80c17f5a52f14825b313ce68161dd9a6ce6f57566",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c1-ic-trusted-inputs.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c1-ic-trusted-inputs.json",
+      "bytes": 364,
+      "sha256": "c9de6fdb95ce0c3ab51f9bf7705944e491ccdfd7c7dd1c86f60af2905f67d675",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c1-me-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c1-me-i.json",
+      "bytes": 996,
+      "sha256": "3bb2aaa7279860d55b78295b14daa6b71be12d9aefcf249a299bb9ff76e687fa",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c1-me-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c1-me-io.json",
+      "bytes": 996,
+      "sha256": "3bb2aaa7279860d55b78295b14daa6b71be12d9aefcf249a299bb9ff76e687fa",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c2-ic-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c2-ic-i.json",
+      "bytes": 2922,
+      "sha256": "5e1e4f054c7f1e581e65e10e0ed9db9060981c2c6988f52fe1e1ab7d6a9ef003",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c2-ic-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c2-ic-io.json",
+      "bytes": 2922,
+      "sha256": "5e1e4f054c7f1e581e65e10e0ed9db9060981c2c6988f52fe1e1ab7d6a9ef003",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c2-ic-trusted-inputs.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c2-ic-trusted-inputs.json",
+      "bytes": 364,
+      "sha256": "d79612b809b65da9ad21e750bb6a977404384389999abd2a58ac5e301fb75b51",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c2-me-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c2-me-i.json",
+      "bytes": 996,
+      "sha256": "078e2dc9985d8d6c45466a5c533bbb6dc75ecae76d07eff849464d96add43bbe",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r1-c2-me-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r1-c2-me-io.json",
+      "bytes": 996,
+      "sha256": "078e2dc9985d8d6c45466a5c533bbb6dc75ecae76d07eff849464d96add43bbe",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c0-ic-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c0-ic-i.json",
+      "bytes": 2922,
+      "sha256": "fe6361237ded614424f7dc3e0d212dad4c48f114e6e7c13bf73f3315087e37c9",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c0-ic-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c0-ic-io.json",
+      "bytes": 2922,
+      "sha256": "fe6361237ded614424f7dc3e0d212dad4c48f114e6e7c13bf73f3315087e37c9",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c0-ic-trusted-inputs.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c0-ic-trusted-inputs.json",
+      "bytes": 364,
+      "sha256": "e8684c450085d53272f4438a4dcf186dfad283a635c1de9ef9100cddf68d779a",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c0-me-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c0-me-i.json",
+      "bytes": 996,
+      "sha256": "3ad1c86f465960c2b5d6767f04474738e1509dbb5af7b90d3fd94c7a24954072",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c0-me-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c0-me-io.json",
+      "bytes": 996,
+      "sha256": "3ad1c86f465960c2b5d6767f04474738e1509dbb5af7b90d3fd94c7a24954072",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c1-ic-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c1-ic-i.json",
+      "bytes": 2922,
+      "sha256": "bf75cf20efc0c485e76ce8afc5f29fbfb864efe214119e131389c0a65be47fc0",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c1-ic-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c1-ic-io.json",
+      "bytes": 2922,
+      "sha256": "bf75cf20efc0c485e76ce8afc5f29fbfb864efe214119e131389c0a65be47fc0",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c1-ic-trusted-inputs.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c1-ic-trusted-inputs.json",
+      "bytes": 364,
+      "sha256": "64349d24a7bac482498cacfc106ccee8a3afb2bb68cf15f349ec8f9fa3aad87d",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c1-me-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c1-me-i.json",
+      "bytes": 996,
+      "sha256": "e92b1c99ef2dff262592a644792897a15f49e2ad2eaa1e2b3918f99cd58f34b3",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c1-me-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c1-me-io.json",
+      "bytes": 996,
+      "sha256": "e92b1c99ef2dff262592a644792897a15f49e2ad2eaa1e2b3918f99cd58f34b3",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c2-ic-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c2-ic-i.json",
+      "bytes": 2922,
+      "sha256": "5369b653aeb8a4b93f53c5a46534aa0a0da5e33ccbcd208063a2ca53854fe687",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c2-ic-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c2-ic-io.json",
+      "bytes": 2922,
+      "sha256": "5369b653aeb8a4b93f53c5a46534aa0a0da5e33ccbcd208063a2ca53854fe687",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c2-ic-trusted-inputs.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c2-ic-trusted-inputs.json",
+      "bytes": 364,
+      "sha256": "073c1b593a67bb30fb4398dba0cf30848e04cd06fc819db40d36c58e6e655b3b",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c2-me-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c2-me-i.json",
+      "bytes": 996,
+      "sha256": "c5cd1465f5301f017917a31ffd36bcc1a0e55b254e640c35458ab7803495136a",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r2-c2-me-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r2-c2-me-io.json",
+      "bytes": 996,
+      "sha256": "c5cd1465f5301f017917a31ffd36bcc1a0e55b254e640c35458ab7803495136a",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c0-ic-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c0-ic-i.json",
+      "bytes": 2922,
+      "sha256": "bfbf348da11120fe167bb897a74313de36d5606cd0d7713c99480af86325cbca",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c0-ic-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c0-ic-io.json",
+      "bytes": 2922,
+      "sha256": "bfbf348da11120fe167bb897a74313de36d5606cd0d7713c99480af86325cbca",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c0-ic-trusted-inputs.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c0-ic-trusted-inputs.json",
+      "bytes": 364,
+      "sha256": "8164259498a719a9f974311081a6fef431a69ab174a7dd4f771f44afed13c78e",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c0-me-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c0-me-i.json",
+      "bytes": 996,
+      "sha256": "212efa6abbb9a8c42e5fc2fc5f99eaa012a4f7a8e1ad54e2a7af8f7e3e38e74f",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c0-me-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c0-me-io.json",
+      "bytes": 996,
+      "sha256": "212efa6abbb9a8c42e5fc2fc5f99eaa012a4f7a8e1ad54e2a7af8f7e3e38e74f",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c1-ic-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c1-ic-i.json",
+      "bytes": 2922,
+      "sha256": "34cd81e05ad46439b94277a103a20834accb7eec54d07a009b9c018a921e32df",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c1-ic-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c1-ic-io.json",
+      "bytes": 2922,
+      "sha256": "34cd81e05ad46439b94277a103a20834accb7eec54d07a009b9c018a921e32df",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c1-ic-trusted-inputs.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c1-ic-trusted-inputs.json",
+      "bytes": 364,
+      "sha256": "96bb6a57b418bfb05de7a687fd0d6c631b07f36e2c21844bdbee22d85b652366",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c1-me-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c1-me-i.json",
+      "bytes": 996,
+      "sha256": "0300a5ef30bfc0de357cd2e29aeda6d010c1da8244db4ee625c5959d43131e97",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c1-me-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c1-me-io.json",
+      "bytes": 996,
+      "sha256": "0300a5ef30bfc0de357cd2e29aeda6d010c1da8244db4ee625c5959d43131e97",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c2-ic-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c2-ic-i.json",
+      "bytes": 2922,
+      "sha256": "4e8948f539d9d9f86376e294c767d8c6b0001ec4d9c783fa54c398e3a568126d",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c2-ic-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c2-ic-io.json",
+      "bytes": 2922,
+      "sha256": "4e8948f539d9d9f86376e294c767d8c6b0001ec4d9c783fa54c398e3a568126d",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c2-ic-trusted-inputs.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c2-ic-trusted-inputs.json",
+      "bytes": 364,
+      "sha256": "00e3102e8371bcaaed1c8d2d855b65bdc8035f4ed727f64301dcf12ba8a5c090",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c2-me-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c2-me-i.json",
+      "bytes": 996,
+      "sha256": "252671ccee4b98fe92328942b63cd5b9d66000fca3c9e0dc0d948651070bbefa",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "independent-review/oracles/r3-c2-me-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-d3-independent-acceptance-20261012\\independent-oracles\\r3-c2-me-io.json",
+      "bytes": 996,
+      "sha256": "252671ccee4b98fe92328942b63cd5b9d66000fca3c9e0dc0d948651070bbefa",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "New file-only -I/-I-O reproduction over the original D3 byte-pinned proof inputs; not a new API/PG/benchmark execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "resource-scope-53b/wave5-resource-scope-static-review.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-resource-scope-static-review.json",
+      "bytes": 693,
+      "sha256": "ac1b82fc4bfed99b9b8626efcfd7e9d58fd2368496a7e7cddebd6f10d9800167",
+      "source_commit": "53b6495ccb1fb687095ad7631297631116561041",
+      "source_attribution": "Separate source-inspected descriptions/AST-only equivalence clarification; no rebinding of original D3 runtime.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "resource-scope-53b/wave5-resource-scope-targeted.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-resource-scope-targeted.xml",
+      "bytes": 3802,
+      "sha256": "a6c03ba9fd1ab03f51b7b27fbb8331751612191e161f1232bb58c5e3959162ca",
+      "source_commit": "53b6495ccb1fb687095ad7631297631116561041",
+      "source_attribution": "Separate source-inspected descriptions/AST-only equivalence clarification; no rebinding of original D3 runtime.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

@@ -1,0 +1,230 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-d3-python-failure-yaml-fix-writeback-success-v1.zip",
+  "capture_for_root_commit": "770b380a12a791a7d1a019168add6be5a485afa5",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "original_source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+    "original_run_id": 38202432973,
+    "ordinary_python": "Both versions8failed/5258passed/663inherited prerequisites skipped; failure retained.",
+    "fixed_source_commit": "770b380a12a791a7d1a019168add6be5a485afa5",
+    "fix_scope": "Only one scalar quoting change; runtime trees identical.",
+    "targeted_tests": {
+      "tests": 22,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "actual_current_writeback": "D3 job114658522852 successful; original report and exact ZIP preserve both version checks/cleanup=true.",
+    "corrected_whole_ci": "Still required; no retry or final acceptance claimed by operations."
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 21,
+  "raw_bytes": 1994606,
+  "records": [
+    {
+      "entry_name": "fixed-source/docs/execution/BACKLOG.yaml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\docs\\execution\\BACKLOG.yaml",
+      "bytes": 783677,
+      "sha256": "6b7b4b150f21ff697bf93ee81fae11f80f4cfde073b988a76543c2badb8538df",
+      "source_commit": "770b380a12a791a7d1a019168add6be5a485afa5",
+      "source_attribution": "Exact one-file Amr correction; quoted scalar text and task statuses unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/artifact-11726252810.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\artifact-11726252810.zip",
+      "bytes": 2869,
+      "sha256": "f37c391507db17dee8b794a9b9585e072ad708f25328a0ae2f627dd4393c029a",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/artifact-projection.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\artifact-projection.json",
+      "bytes": 10128,
+      "sha256": "82524f4cf2a06368bd03a4d09a1f6b6cf2b5422b0c15b92a8b61c920dee75961",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/backlog-before-parse.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\backlog-before-parse.json",
+      "bytes": 466,
+      "sha256": "37bafc5e906c4a3a43c2d65df2174fd81151058ca66fea61bd775045eeb1a463",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/backlog-candidate-parse.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\backlog-candidate-parse.json",
+      "bytes": 301,
+      "sha256": "dd503ee2a38ba5dc2849580b23ddaf8401ad7adb14e8b8c7d47f9c6fb14be270",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/backlog-targeted.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\backlog-targeted.log",
+      "bytes": 81,
+      "sha256": "005660608b2669367e8019f3f36a0242baa6203f014ce6bff8ce1fa75bdb4ab1",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/backlog-targeted.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\backlog-targeted.xml",
+      "bytes": 3461,
+      "sha256": "4ea21888386c6a76d809043c91671ba46b6b852c98a332358881c242cef1ca99",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/d3-writeback-recovery-compensation-success-step.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\d3-writeback-recovery-compensation-success-step.log",
+      "bytes": 57116,
+      "sha256": "4f4ecfa71c81e3579509f07bd6041fda73b7b19ab3cbedeff5fa6c9dc2400f37",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/d3-writeback-success-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\d3-writeback-success-provenance.json",
+      "bytes": 2140,
+      "sha256": "d20fff94e10e85287b226c44fb853c90f931fd95c6cac190a6c7281c5baa6572",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/doc-fix-runtime-equivalence.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\doc-fix-runtime-equivalence.json",
+      "bytes": 1800,
+      "sha256": "dd924ec20a2dabfcaf5f2405c5830e2f14a6eb41206e991b612d9ef1d1e9e71d",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/job-114658522578-metadata.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\job-114658522578-metadata.json",
+      "bytes": 4765,
+      "sha256": "0eb95a91848ab65faf1be0defbc1972ac48fe1178841eb4958f3cc2af35e4739",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/job-114658522578-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\job-114658522578-provenance.json",
+      "bytes": 8110,
+      "sha256": "986d8edd85036e2a70aec2badf9c344ac0a90d35aaefc6af173b402f5eb9a049",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/job-114658522578-safe-original-spans.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\job-114658522578-safe-original-spans.log",
+      "bytes": 141568,
+      "sha256": "7bfc61922d39de2146feb1c68705ed76fff07025548cd070b80e01c6fb152f71",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/job-114658522650-metadata.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\job-114658522650-metadata.json",
+      "bytes": 4765,
+      "sha256": "be7cfd2d6adabe2e1848f520ea85fc67de90509f5673ba6849d272d4def19bf2",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/job-114658522650-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\job-114658522650-provenance.json",
+      "bytes": 8110,
+      "sha256": "14c3395aeb7782635ebf76ee6027ffd01ac93b3036c7fa3df7c3ea805d9db366",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/job-114658522650-safe-original-spans.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\job-114658522650-safe-original-spans.log",
+      "bytes": 142170,
+      "sha256": "8ffbf1316138e8535a339ddb72b3d4fb75bf369d76fc41e038c47cef89b642bc",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/python-failure-and-scalar-fix.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\python-failure-and-scalar-fix.json",
+      "bytes": 4135,
+      "sha256": "c1609ce553c2f36e42ff1db7cdc0c414a00ba79b253daad65812245405549a30",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/reconforge-writeback-recovery-compensation.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\reconforge-writeback-recovery-compensation.json",
+      "bytes": 30361,
+      "sha256": "eaa028cbecaa9909a431cb8f11af7f5afe5eae741800ffe628567a2b874318bb",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/run-projection.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\run-projection.json",
+      "bytes": 381,
+      "sha256": "c87471b428c6c42b3c7ecfc8819f0fd85f98b7ed59322283ff69be5baa2f87a4",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-d3-python-ci-failures-38202432973/writeback-success-job-projection.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\writeback-success-job-projection.json",
+      "bytes": 4527,
+      "sha256": "ddf73807d35d8c946f497c94f0590a47f481c05bb06c195d9e529830b5dd3a38",
+      "source_commit": null,
+      "source_attribution": "OriginalD3 failing Python logs, source-specific current writeback success, baseline/candidate parse evidence and exact one-file fix attribution remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-source/output/wave5-d3-python-ci-failures-38202432973/original-d3-BACKLOG.yaml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-d3-python-ci-failures-38202432973\\original-d3-BACKLOG.yaml",
+      "bytes": 783675,
+      "sha256": "6e1fe9b341e657c8d4f597a24fc277ca7ead0a7685f34e45ca9122e2609f781f",
+      "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+      "source_attribution": "Byte-exact original Git blob causing both CI failures; retained unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

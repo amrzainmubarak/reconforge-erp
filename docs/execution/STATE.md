@@ -1,5 +1,240 @@
 # Execution State
 
+## Source archive diagnostic dependency correction (2026-10-12)
+
+Independent inspection of the original6ce3.12 source-closure report found both
+diagnostic tests packaged but their two .github script dependencies absent. The
+existing selected-member archive gate passed; it does not establish this missing
+dependency closure. Add the exact scripts/current closure inventory to MANIFEST
+and require fresh isolated imports from extracted source without application,
+DB or profiling imports/workloads. Eight regressions and257 related contracts including8 sharding contracts
+passed265cases/0failures/errors/skips; Ruff/diff passed. Fresh corrected source
+package and full hosted acceptance remain pending.6ce actual CI outcomes stay
+original and are not silently reclassified. Runtime/migration/Studio remain22.
+Measurement is deferred by the human; next program activation stays conditional.
+
+
+## Current corrective publication and deferred measurement (2026-10-12)
+
+Four quiet2 profiles completed and independently closed. The later V5 six-run
+attempt failed on AC loss: three complete populations, one interrupted after
+posting during reads, two unperformed. The secondary transaction shutdown error
+remains visible; no comparative acceptance or six-run medians. The human requests
+Wave5 gates now and measurement later. No further local benchmark is launched.
+Corrective source changes only portable test contracts and additive evidence/docs;
+application, migration and Studio trees retain accepted22 exactly.264 targeted
+cases passed; fresh full hosted acceptance on the corrective head remains pending.
+The all-countries program inventory is conditional on that actual quality gate.
+[Current source-bound closure](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md)
+records actual10K, diagnostic and failed attempts with their separate sources.
+Earlier checkpoints below retain historical status and are superseded explicitly.
+
+
+## Actual10K capacity and additional authorized local diagnosis (2026-10-12)
+
+Corrected62/current22 run38252859442 passed10000native effects+20separate warmups,
+30300reads and independent5028151631minor-unit equality. Two independent `-I`/
+`-I -O` audits and new59-input/60-member lossless capsule close source/PID/CID/
+normal cleanup. Posting3578.904546sec/TPS2.794151 is standalone capacity; no fair
+comparison, new10K raw-journal export/isolation or monetary cost is inferred.
+Previous15capsules and original f04 zero-business failure remain unchanged.
+The additional local quiet window is now explicitly authorized. Root isolated
+accepted22, retained exact harness/wrappers/oracles and began bounded diagnosis
+following actual5.86/5.47/3.66percentCPU/AC admission. All earlier pending statements
+below retain their checkpoint subjects. Publication4c fullCI failed its new test
+contracts;264targeted corrected cases and independent review passed. Corrected
+source full hosted acceptance remains pending. See [actual closure](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md).
+
+## Publication4c gate failures and portable test correction (2026-10-12)
+
+The actual publication head `4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91`
+[CI38257659454](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38257659454)
+failed: Python3.11 reported5543passed/2failed/663inherited prerequisite skips;
+Python3.12 reported5544passed/1failed/663inherited prerequisite skips.
+The failures were in the newly published diagnostic controller test contracts:
+a shared-process `sys.modules` assertion depended on full-suite import order,
+and the historical AST digest included3.12's empty `type_params` field absent
+from3.11. Original failure logs remain retained; this gate is not a success.
+
+Correct only that test file: restore temporary diagnostic-module registration,
+verify import independence in a fresh `-I` subprocess, and deep-copy ASTs to add
+only an absent legacy empty generic field. Preserve all original0756 hash pins,
+nonempty generic parameters, body differences and original AST objects. Three
+adversarial function/async/class cases retain those refusal boundaries. No
+application, migration, API, Studio, controller or financial oracle bytes change.
+The exact combined targeted gate passed264cases/0failures/errors/skips, with Ruff
+and diff checks. Full corrected-source hosted acceptance remains pending.
+Actual4c Docker/CodeQL and manual Security38258765073 succeeded separately;
+manual Security executed all5jobs, with0Critical/0High/9Medium/1Negligible image
+findings and65/68 license metadata coverage; legal compatibility is unassessed.
+Actual corrected62/current22 10K run38252859442 is still in progress; no completed
+10K population or fair performance gain is inferred. Previous22 acceptance and
+all original negative measurements below keep their historical source subjects.
+
+## Wave5 actual22 acceptance and retained negative comparison (2026-10-12)
+
+Accepted application subject22ebfd78 now has actual44/44 successful CI jobs,
+current security/CodeQL/Docker/package checks and current16.15/17.11 synthetic
+recovery. ME1/IC1/SRC5 bounded Studio-to-GL cycles are completed; their limits
+remain in the backlog. Three baseline636 and three current22 real1K populations
+passed independent financial oracles, but medianTPS fell11.80% and DBcgroupCPU
+rose7.44% under unresolved host load/frequency variation. Performance acceptance
+remains false; the tail outlier and earlier controller failures are retained.
+Cloud experimental a6 passed61 native/132 pure cases and six diagnostic runs;
+additive137 is isolated/unintegrated. Actual0756 nine-run large-journal financial/custody proof passed9000 lines/6012
+dimension links/1089 tenant-qualified effects; observed current22 whole stages
+51.589313→48.156226sec and clientCPU1.240840→0.916604sec coexist with primary
+throughput−7.15%. Reject137 integration: mixed block ratios/no convincing gain.
+Additional LOCAL quiet-window/fair performance acceptance remain pending. See
+[actual source/measurement closure](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md).
+Original final22 raw closure is published unchanged; older checkpoints below
+retain their actual historical pending/failure statements.
+
+## Wave5 integration and acceptance checkpoint (2026-10-12)
+
+Draft [PR131](https://github.com/amrzainmubarak/reconforge-erp/pull/131) remains
+stacked on accepted PR130 `6362724f2337a79c3d7569574f7bf9591a018524` and the
+129→124 dependency chain. Main and the primary checkout's two original dirty
+schema files remain unchanged. All new commits use Amr's author/committer identity.
+
+Implemented bounded cycles now have actual Studio/API/native financial and
+populated restore evidence: ME1 approved BOM→reservation→original FIFO issue→WIP→
+partial finished receipt/scrap; IC1 paired company books→partial settlement→native
+group elimination/report; SRC5 requisition→RFQ→quotation/selection→BPC purchase→
+partial receipt/AP/payments/release. The three complete original HTTPS/restore
+packets remain bound to `8513a9e2`; the cohesive PostgreSQL17.11 native gate at
+`e8e2de24` passed 73 cases with zero failures/errors/skips. Additive0136 restricts
+nine original inventory/FIFO tables; it does not rewrite financial history. The
+original tenant-global audit chain is explicitly disclosed as a workspace exception.
+
+The newer FX proof-lifecycle race was reproduced and fixed without bypassing
+actual cryptographic verification. On `b6fcf71d`, all68 Studio files/452 tests,
+TypeScript/build and actual five-stage FX HTTPS/populated restore passed. An
+independent Fraction reader admits exactly reviewed restore heads0131/0136 while
+retaining original catalog/RLS/population/effect/source-seal checks. The original
+reader's0136 refusal and both corrected/legacy isolated-Python outcomes remain
+retained. These results are source-bound, not relabelled as later HEAD executions.
+
+Actual `1a40bda0` hosted Python3.11/3.12 each passed5228 tests with663 inherited
+prerequisite skips; mandatory native pytest15 partitions/44 sessions completed1269
+selected tests with zero skip/xfail/xpass. Its web race failed, three other native
+partitions were cancelled, and dependent browsers/Docker did not execute. That
+whole CI run is failed. Actual manual Security38196678518 ran all five jobs,
+including image/SBOM, successfully on1a40. Subsequent D3 CodeQL, Docker, all five
+manual Security38202724005 jobs and local sdist/wheel/source-archive inspection
+passed with their original source identity. D3 ordinary Python jobs each failed
+eight execution-contract tests on one unquoted BACKLOG scalar, with5258 passes
+and663 inherited prerequisite skips. The one-line quoting repair retains the
+scalar/tasks; reciprocal review and22 affected cases passed on a8742d1c. Whole
+corrected-source hosted acceptance remains required. Actual D3 writeback recovery
+and owned cleanup passed on16.14/17.10; current16.15/17.11 execution is a separate gate.
+Completed D3 CI has44 jobs:41 success, two ordinary-Python failures and one dependent
+Docker-parity skip. The failed aggregate is retained despite successful native and
+enterprise browser/recovery partitions.
+
+Thirteen lossless evidence capsules preserve702 files with flat SHA256 indexes;
+715 ZIP members including their embedded indexes were checked during copying.
+Native/failed-web log indexes explicitly identify safe retained byte spans and
+omitted authentication/DSN setup; complete remote log hashes/lengths remain pinned.
+No result, raw financial report, source header or earlier failed packet is rewritten.
+The prior nine-capsule copy record remains intact; v3 records all thirteen additions.
+See [evidence checkpoint](WAVE5_ACCEPTANCE_CHECKPOINT_2026-10-12.md) and the
+[official capability matrix](GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md).
+
+Performance acceptance remains false. Three actual1K financial runs completed
+before the user confirmed external load; the six-run pair was stopped and retained,
+including seven actual power bookends and five unperformed bookends. The user
+requested completion of gates before agreeing on a quiet measurement window.
+The new three-cohort mixed API discovery completed126 successful requests and
+all per-cycle financial proofs, but its completion contract rejected legitimate
+local seeded-effect IDs reused across distinct tenants. Benchmark adapters now
+use the native `(tenant_id, id)` identity. Three actual fresh D3 repetitions each
+passed three cohorts/126 HTTPS requests/33 original effects/27 timed effects,
+both original owner oracles, unchanged clean source and verified owned cleanup.
+The resource-scope descriptions now explicitly distinguish client process CPU,
+actual server PID CPU and dedicated PostgreSQL cgroup CPU, with different windows.
+Both owner oracles run in-process; their CPU is included. Descriptive clarification
+preserves executable ASTs and does not relabel D3 packets as later-head executions.
+Root e9dc source verification uses bounded binary hashing and preserves exact
+raw-byte/name-order fingerprints. Fifty-nine development cases passed; an8MiB
+regression detects tail changes at the same size/mtime. Three warmed alternating
+observations per method on one22.27MB original capsule measured Python hashing
+allocations22276896→271537 bytes. This is source-verification allocation evidence;
+CPU/wall, business throughput, whole-host RSS and monetary gains are unaccepted.
+The current recovery V2 profile is separately reviewed with62 zero-skip cases and
+defaults to16.15/17.11; actual integrated lifecycle acceptance remains required.
+No Wave5 throughput/resource gain, monetary transaction cost,100K/1M capacity,
+country-tax compliance or competitor superiority is established.
+
+The older Wave5 entries below are historical development checkpoints; this section
+supersedes their pending local statements without erasing prior failures.
+
+## Wave5 active implementation (2026-10-11)
+
+2026-10-12 correction checkpoint: root5da0c4c1 passed66 actual native cases
+without failures/errors/skips, including both original finance-scope races and
+the two IC namespace mutation regressions. Root23778af1 passed actual IC1 and
+SRC5 HTTPS/RTL/Axe/full populated native restoration; Studio449 tests,
+TypeScript, Ruff and production mypy727 pass at the later correction checkpoint.
+Manufacturing's actual financial proof independently passes isolated stdlib
+and optimized-Python verification, but its sibling-workspace restoration probe
+exposed original tenant-only native FIFO policies. Additive0136 now restricts
+nine native inventory tables to their original hierarchy without rewriting rows;
+its native execution and final-source restoration remain pending. The tenant-wide
+audit chain is explicitly disclosed and retained in full-row/catalog/FORCE-RLS
+and unbound-tenant checks. New mixed HTTPS discovery passed42 requests and11
+original financial effects; it is one descriptive sample, not scale acceptance.
+Exact-object GitHub API transfer preserved236 original Git objects through23778
+after ordinary push transport failures; no branch reference was changed by that
+transfer. Final quiet comparisons, higher tiers, archive and hosted acceptance
+remain pending. No prior throughput percentage is rebound to this source.
+
+Actual accepted base is DraftPR130 `6362724f2337a79c3d7569574f7bf9591a018524`.
+The primary checkout, main and original uncommitted edits are preserved. Four new
+managed worktrees separate root integration from manufacturing, intercompany
+finance and procurement sourcing. Fresh targeted baseline61/0skip and Ruff pass;
+exact-source full hosted38-job Wave4 acceptance is reused explicitly. Native ME1
+production/WIP/FG, paired IC1 and native group eliminations, and sourcing→BPC1
+are in implementation, not accepted capability claims. Root owns shared migrations
+133–135, permissions, dispatch, API/UI integration, CI and measured resource work.
+See [Wave5 contracts](WAVE5_CONTRACTS_2026-10-11.md). Prior Wave4 raw evidence,
+failures and false resource/program acceptance remain unchanged and source-bound.
+
+Integration checkpoint: native133–135 ordered migrations,12 least-privilege
+catalog permissions and492 exact API route contracts are integrated. Native
+17.11 empty migration roundtrip and retained-grant atomic downgrade refusal
+passed2/0skip. IC1 current persisted five-scope grants passed8 actual owner/HTTP
+cases at21404b78; ME1→SRC5→BPC1 six native linking cases passed at the owner's
+fixed source. These owner packets remain source-bound and precede final gates.
+Integrated Studio typecheck and444 tests pass. Current PostgreSQL16.15/17.11
+image policy is additive; historical v1 policy and report source fingerprints
+remain unchanged.19 native CI partitions and13 enterprise HTTPS scenarios retain
+all previous coverage. Actual new HTTPS/populated restoration and final-source
+concurrency acceptance are pending. Common external benchmark controller passes
+its adversarial financial/power/failure tests; no Wave5 improvement is claimed
+until six fresh alternating final-source populations and resource review finish.
+
+Correction checkpoint: [DraftPR131](https://github.com/amrzainmubarak/reconforge-erp/pull/131)
+is stacked directly on130. Initial hosted source3e34a1a9 failed exact application
+inventory, asynchronous UI verification, ordinary deferred finance-to-IC dispatch
+and two SQL-composition security findings. Original failed logs remain retained;
+dependent browser jobs did not execute. Those causes are corrected without
+blanket grants, weakened financial assertions or test skips. Root Studio447 tests,
+TypeScript/build, Ruff and production mypy726 passed before the final two UI
+corrections; targeted current UI regressions pass. Native ME15/0skip at the owner
+and SRC34/0skip in initial hosted CI remain historical source-bound packets.
+
+Root ca7f891f actual sourcing HTTPS/RTL/Axe and native populated restore passed on
+immutable PostgreSQL17.11:270-table snapshot, five original effects, independent
+isolated sourcing oracle, three direct tamper refusals and owned cleanup. The same
+source's manufacturing browser passed but its nested authenticated proof export
+self-blocked; IC completed financial actions but failed the missing main landmark.
+Both failures remain preserved and their causes are corrected. Standalone stdlib
+manufacturing verification now binds original BOM/FIFO/native layer custody,
+historical acknowledgements and complete command/event membership; reciprocal
+file-only counterexamples were repaired. Final integrated native, HTTPS/restore,
+package, security and measured performance acceptance is still pending.
+
 ## Wave4 active integration (2026-10-10)
 
 Actual start is DraftPR129 e07bff2a2e8197b052d53454ea85c727f7c7518e.

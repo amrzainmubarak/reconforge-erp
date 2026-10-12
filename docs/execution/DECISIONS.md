@@ -1,5 +1,136 @@
 # ReconForge Execution Decisions Log
 
+## Source archive diagnostic dependency correction (2026-10-12)
+
+Preserve the explicit source-distribution policy; do not infer all Git files are
+packaged. Every packaged diagnostic test must carry its actual script dependency.
+Add both immutable diagnostic/oracle helpers plus current completion/measurement
+contracts and require extracted-source isolated import admission. Existing byte
+parity, financial oracles, migration, licenses and source-clean gates stay strict.
+A passed old selected-member verifier cannot override a newly discovered missing
+dependency. Freeze and test the corrected publication source separately.
+
+
+## Corrective publication: preserve negative attempts and defer comparison (2026-10-12)
+
+Keep accepted22 application/migration/Studio trees unchanged. Correct only new
+portable diagnostic tests, preserving historical AST pins and financial guards.
+Publish independently byte-closed actual10K, four-profile and power-stopped V5
+capsules separately; never upgrade a posting-stage completion into a completed
+read/source/financial proof. Preserve the secondary shutdown error and unknown
+last-request outcome. Follow the human instruction to finish Wave5 hosted gates
+and schedule fair measurement later. Unrun CurrencyMemo and rejected137 stay
+outside this source. The all-countries completion inventory is a conditional
+program contract, not statutory support or authorization to bypass Wave5 acceptance.
+
+
+## Publication4c gate failures and portable test correction (2026-10-12)
+
+The actual publication head `4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91`
+[CI38257659454](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38257659454)
+failed: Python3.11 reported5543passed/2failed/663inherited prerequisite skips;
+Python3.12 reported5544passed/1failed/663inherited prerequisite skips.
+The failures were in the newly published diagnostic controller test contracts:
+a shared-process `sys.modules` assertion depended on full-suite import order,
+and the historical AST digest included3.12's empty `type_params` field absent
+from3.11. Original failure logs remain retained; this gate is not a success.
+
+Correct only that test file: restore temporary diagnostic-module registration,
+verify import independence in a fresh `-I` subprocess, and deep-copy ASTs to add
+only an absent legacy empty generic field. Preserve all original0756 hash pins,
+nonempty generic parameters, body differences and original AST objects. Three
+adversarial function/async/class cases retain those refusal boundaries. No
+application, migration, API, Studio, controller or financial oracle bytes change.
+The exact combined targeted gate passed264cases/0failures/errors/skips, with Ruff
+and diff checks. Full corrected-source hosted acceptance remains pending.
+Actual4c Docker/CodeQL and manual Security38258765073 succeeded separately;
+manual Security executed all5jobs, with0Critical/0High/9Medium/1Negligible image
+findings and65/68 license metadata coverage; legal compatibility is unassessed.
+Actual corrected62/current22 10K run38252859442 is still in progress; no completed
+10K population or fair performance gain is inferred. Previous22 acceptance and
+all original negative measurements below keep their historical source subjects.
+
+## Preserve actual subjects and reject unproven performance changes (2026-10-12)
+
+Accept the bounded ME1/IC1/SRC5 operational contracts after actual final22 hosted
+and restore gates, with missing broader cycles explicit. Retain the negative1K
+comparison and100%CPU/98%RAM tail run in all medians; matching AC is insufficient
+for frequency/thermal/load equivalence. Use authorized independent cloud runners
+for diagnosis while additional LOCAL quiet admission is pending. Do not weaken
+KDF, permissions, RLS, original parent relevance checks or financial triggers.
+Reject experimental137 integration after the repeated0756 probe: whole-stage
+median−0.18% from22 and mixed block ratios1.02410/0.984494/0.998185 do not justify
+extra migration/rollback complexity; retain successful safety tests and all raw data. SQL rows use(query_id,toplevel,statement_sha256), native effects
+use(tenant_id,id); never collapse legitimate owners or distinct statistics rows.
+Publish exact original capsule bytes and explicit missing/external dependencies,
+without reassigning historical source headers to a later docs commit.
+
+## Wave5 additive isolation, proof lifecycle and namespace contracts (2026-10-12)
+
+0136 adds nine restrictive original inventory/FIFO scope policies with pure invoker
+helpers. Preserve original tenant-only compatibility when unbound and retain
+FORCE RLS/current parent hierarchy on bound workspace/entity reads and mutations;
+no history rewrite, parallel GL or authorization cache. Document the original
+tenant-global audit chain separately rather than pretending workspace concealment.
+
+Bind browser proof lifecycle to committed scope/session/source/plan/phase/native
+seals before rendered actions become interactive. Exact equivalent read refreshes
+retain proof; changed subjects and late old results do not. Keep actual WebCrypto,
+corrupt-digest refusal and human financial mutation controls. The independent FX
+reader version admits only0131 and0136; future migrations need reviewed contracts.
+
+Benchmark identities follow original native PK(tenant_id,id), including repeated
+synthetic seed IDs in distinct tenants. Retain each owner oracle and reject repeated
+identities within one tenant, forged membership and cross-tenant reuse of a source.
+A per-cycle financial success cannot override an aggregate refusal. Retain raw failed
+attempts; run fresh populations after correction. Monetary cost needs a price model.
+
+Publish lossless ZIP evidence capsules with flat indexes and original source headers.
+Separately record safe log spans and omitted setup bytes with complete remote hash/
+length; do not expose authentication/DSN setup. Check embedded index/member/source
+fingerprints and package every tracked capsule. These are local reproducible anchors,
+not independent external attestations. No broad secret-scan allowlist is introduced.
+
+Disposable Docker cleanup must confirm captured64hex ownership, stop only that ID,
+then allow bounded removal polling. Only exact same-ID NoSuchContainer responses
+with the expected exit code and empty stdout prove absence; daemon/permission/
+ambiguous errors do not. Preserve the original immediate-probe failure and bind
+historical runner reports to their original Git bytes rather than today's helper.
+
+Complete code/restore/security gates before requesting the quiet benchmark window,
+as the user directed. Keep all existing3 genuine1K results descriptive/unaccepted;
+never infer stable resources from AC alone or turn old Wave4 gains into new claims.
+
+The three corrected mixed API executions are bound to frozen D3. Owner stdlib
+oracles run inside the client interpreter; include their CPU in process_time but
+exclude external child CPU and waits. Observe only the actual API PID for server
+CPU and the dedicated PostgreSQL cgroup for database CPU. Describe distinct sample
+windows, observer overhead and lifetime peaks; never add these into an alleged
+whole-host cost. Clarify descriptions without rewriting original raw reports.
+
+Preserve both failed D3 Python jobs and their secondary missing archive-upload
+report. Repair only the unquoted BACKLOG scalar, keep its decoded meaning/task
+statuses and verify affected contracts before the next full source acceptance.
+Successful D3 recovery on16.14/17.10 remains compatibility evidence; introduce a
+versioned current16.15/17.11 schema/profile rather than broadening the immutable
+historical report contract or portraying old pins as current security acceptance.
+
+Default current recovery uses a separately closed V2 schema; explicit legacy keeps
+V1. Hash and parse one captured normalized policy source, compare constants and
+selected pairs to those approved values before any disposable effects, retain
+captured policy digests in the subject and deny unknown schema retrieval. Reuse
+the original lifecycle/history/role/cleanup functions without changing their ASTs.
+
+Stream tracked-source file hashing in both benchmark guards with Python3.11+
+file_digest. Preserve sorted filename bytes and the raw content SHA256 sequence;
+no text normalization or stat cache. Large evidence should not require whole-file
+Python allocation to verify source custody. Keep hashing-allocation measurements
+separate from ERP throughput/RSS/whole-host cost and retain original D3 reports.
+
+## Wave5 source-owned industrial and group transactions (2026-10-11)
+
+Start exact accepted636 in four managed worktrees; preserve primary dirty files and main. Migrations133–135 are additive. ME1 reuses native inventory/FIFO/IRP and GL; IC1 pairs original books and places eliminations in an explicit third authorized adjustment scope; sourcing awards into BPC1. No parallel ledger or implicit foreign/tax/statutory support. New permission catalogs grant no existing role automatically; sensitive mutations are human-only and require step-up. Draft batching candidate4102b039 retains each native row and deferred guard. See WAVE5_CONTRACTS_2026-10-11.md.
+
 ## Wave4 native ownership and measured planning (2026-10-10)
 
 Retain e07bff2a and the accepted PR chain without changing main or the primary's

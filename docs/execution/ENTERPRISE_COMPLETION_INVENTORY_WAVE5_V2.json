@@ -1,0 +1,625 @@
+{
+  "schema_version": "reconforge-future-enterprise-completion-evidence-inventory-v2",
+  "purpose": "Dependency/evidence audit before a separately activated next program; no feature implementation or approval implied.",
+  "accepted_runtime": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+  "observed_publication_head": "4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91",
+  "no_completion_percentages": true,
+  "domains": [
+    {
+      "id": "finance_treasury_group",
+      "name": "Finance, tax, treasury and group books",
+      "state": "bounded_native_cycles_and_retained_foundations",
+      "present": "Existing GL, currency policy, FX/tax/revaluation/reporting/period foundations; IC1 two trading entities plus distinct group adjustment entity, same captured functional/reporting currency, reviewed paired recognition/partial settlement/elimination.",
+      "proven": "IC original+restore stdlib proofs:10001 per party,3000 cash,7001 residual,17002 elimination,five effects/group net0. Actual10K single USD book arithmetic/read/source proof; original FX subject repair/current restore retained.",
+      "gaps": "Group FX/ownership-NCI/investment/profit-in-stock/post-elimination correction/external bank settlement/statutory country tax/advanced treasury are separate uncompleted cycles.",
+      "dependencies": [
+        "current currency policy and financial periods",
+        "entity-specific authority and reviewed report maps",
+        "source-owned original/reversal effects"
+      ]
+    },
+    {
+      "id": "commercial_customer",
+      "name": "Commercial and customer operations",
+      "state": "retained_bounded_native_operations",
+      "present": "Stock-commerce sales/AR/collection foundations and original whole eligible customer return/refund retained from Wave4; existing PostgreSQL/domain/API/Studio implementation.",
+      "proven": "Prior accepted130/22 contracts and native/browser partitions retained; no new Wave5 partial-return acceptance is inferred from sourcing/manufacturing.",
+      "gaps": "Cumulative partial/paid foreign-tax-aware returns, advanced pricing/contracts/credit-risk/multi-level policies, complete CRM/forecasting and1000-line commercial orders need complete scenarios.",
+      "dependencies": [
+        "original FIFO/COGS/tax/FX residual accounting",
+        "AR/cash and source-owned refund custody",
+        "shared stock reservation locks and current authority"
+      ]
+    },
+    {
+      "id": "procurement_supply",
+      "name": "Procurement and supply operations",
+      "state": "bounded_SRC5_cycle_proven",
+      "present": "PR→RFQ→immutable complete quotes→deterministic third-human award→existing budget-reserved PO/partial receipt/AP/payment; original functional currency/zero tax,128lines/32suppliers/one appropriation. Eligible original supplier return foundation retained.",
+      "proven": "SRC original+restore independent oracle:17000 reserve=7400 consume+9600 release;0remaining reserve;12600 budget available;five native effects and22200 balanced turnover.",
+      "gaps": "Contracts/amendments/split-weighted awards/multi-level approval/foreign-tax procurement/landed charges/paid supplier-return budget restitution and demand optimization.",
+      "dependencies": [
+        "original quote/award/PO provenance",
+        "budget commitment/consumption/reversal closure",
+        "AP/cash/inventory original source effects"
+      ]
+    },
+    {
+      "id": "manufacturing_inventory",
+      "name": "Manufacturing and inventory",
+      "state": "bounded_ME1_cycle_proven",
+      "present": "Approved versioned base-UOM BOM, whole component reservation/FIFO issue→WIP→reviewed partial FG receiving and abnormal scrap; one finished item/same currency,100components/200output attempts. Sourcing references demand provenance.",
+      "proven": "ME original+restore independent integer/Fraction proof:2900 material=2610FG+290abnormal scrap+0WIP;9FG/1scrap;six effects. Current inventory restrictive hierarchy gate retains original tenant behavior.",
+      "gaps": "Partial issues/cross-UOM/lots-serials/labor/overhead/routing/rework/normal yield/quality/capacity planning/full MRP;4096same-date receipt identity ceiling.",
+      "dependencies": [
+        "shared reservation/FIFO locks",
+        "source-owned WIP/receipt/scrap financial conservation",
+        "monotonic receipt identity and net supply shortage contract"
+      ]
+    },
+    {
+      "id": "people_payroll",
+      "name": "People and payroll",
+      "state": "operational_domain_absent_in_scoped_source_audit",
+      "present": "Identity/users/roles provide authorization foundations; they are not an employee/HCM/payroll operating lifecycle. No HCM/payroll source or dedicated route/test/page was found in the recorded scoped searches.",
+      "proven": "No HCM/payroll financial/runtime completeness evidence identified; absence search is source inventory only.",
+      "gaps": "Employee/contract/time/leave/payroll calculations/statutory deductions/payslips/payment/posting/approval/privacy cycles.",
+      "dependencies": [
+        "country-specific documented rules and expert verification",
+        "personnel privacy and effective-dated masters",
+        "source-owned payroll expense/liability/payment effects"
+      ]
+    },
+    {
+      "id": "projects_services_assets",
+      "name": "Projects, services and assets",
+      "state": "mixed_asset_cycle_and_analytic_project_foundation",
+      "present": "Project is an existing finance dimension alongside Cost Center/Department/Custom; not project lifecycle management. Fixed assets have domain/application/PostgreSQL/API/Studio acquisition/depreciation/disposal and evidence tests. No dedicated project or service-management lifecycle source was identified.",
+      "proven": "Fixed-asset prior native/browser evidence retained; new Wave5 completion claim not broadened. Project type is confirmed in finance_core.py:28; no WBS/timesheet/project billing or service execution acceptance.",
+      "gaps": "Project/WBS/budget/resource/time/billing lifecycle and service orders/entitlements/dispatch/SLAs; asset maintenance/industry lifecycle and broader depreciation policy need separate proof.",
+      "dependencies": [
+        "canonical dimension/customer/asset ownership",
+        "budgets, expenses and original financial effects",
+        "operating calendar/approval/current authority"
+      ]
+    }
+  ],
+  "guarantees": [
+    {
+      "id": "financial_operational_integrity",
+      "name": "Exact financial and operational consistency",
+      "evidence": "Existing exact minor/Decimal/Fraction types and native double-entry/source-owned GL; bounded ME/IC/SRC independent original+restore proofs;10K seeded/read arithmetic.",
+      "boundary": "Not every country/currency/industry/lifecycle;10K packet has no separate full journal-line export. Every expansion requires its own independent source/residual oracle."
+    },
+    {
+      "id": "authority_isolation",
+      "name": "Current authority, isolation and duties",
+      "evidence": "FORCE RLS/current grants/three-person scope contracts; migration136 nine inventory relations with INVOKER acyclic parent custody; scoped direct SQL/revocation/native tests.",
+      "boundary": "Claim only enumerated tenant/workspace/entity/source gates, preserving documented tenant-global audit chain and legacy metadata behavior; no universal IAM certification."
+    },
+    {
+      "id": "immutable_explainable_evidence",
+      "name": "Immutable history and explainable evidence",
+      "evidence": "Original source/effects, reversible history, audit/outbox, strict raw hashes/capsule membership, original/restored proof equality and report drilldown.",
+      "boundary": "Application-native evidence and source-bound exports do not establish legal admissibility, complete external lineage/WORM timestamping or uniqueness versus competitors."
+    },
+    {
+      "id": "atomic_replay_concurrency",
+      "name": "Atomic commands, replay and concurrency",
+      "evidence": "Existing transactions, idempotent/versioned source commands, shared stock locks, racing command/revocation/lost-response/direct-SQL tests and preserved source guards.",
+      "boundary": "Only executed synthetic workload/source scopes; no global exactly-once transport, unrestricted distributed workflows or untested partial-return restitution."
+    },
+    {
+      "id": "verified_engineering_recovery",
+      "name": "Verified lifecycle, recovery and resource evidence",
+      "evidence": "Accepted22 CI/package/security/current16.15-17.11 synthetic recovery and populated restore; current4c partial gate/failure preserved;1K/10K/large GL raw metrics/profiling/capsules.",
+      "boundary": "Current corrected publication full acceptance pending;9Medium/1Negligible and65/68license metadata/legal gap retained. No production HA/DR/RPO/RTO, banking-grade/global superiority,100K/1M or accepted fair resource improvement."
+    }
+  ],
+  "evidence_files": [
+    {
+      "repository_path": "reconforge/domain/finance_posting.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\domain\\finance_posting.py",
+      "sha256": "bc574f47416abc01b5a2b00ce3ab9021ea5a6ad177f68d6b9fe10becdf70e933",
+      "bytes": 10349,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/domain/finance_policy.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\domain\\finance_policy.py",
+      "sha256": "644f8210d71525387005b354256baff59741d27d345165aeb699e3cade0c8949",
+      "bytes": 3737,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/infrastructure/postgres_finance_core.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\infrastructure\\postgres_finance_core.py",
+      "sha256": "911214c5290fa0549fa7204001ce3e6bf47b604c056e9406920abd19a1bd4cae",
+      "bytes": 102118,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/infrastructure/postgres_finance_posting.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\infrastructure\\postgres_finance_posting.py",
+      "sha256": "113e6893e182dfa303fcac90ddc66e0cb2dddb7971d18cd37859c8fc7866c706",
+      "bytes": 45648,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/api/routes/finance_posting.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\api\\routes\\finance_posting.py",
+      "sha256": "3aa7348dbb764bddcb4782849d11bfb84942f7df8d910504458481378a8626e8",
+      "bytes": 11959,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/domain/operational_fx_tax.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\domain\\operational_fx_tax.py",
+      "sha256": "868e59c10aac9c22a0e5c2cbbf665bf9d4ab06f2ba256874a6a84deb134b1f14",
+      "bytes": 12548,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/infrastructure/postgres_operational_fx_tax.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\infrastructure\\postgres_operational_fx_tax.py",
+      "sha256": "568725fb4594868e4d17891ead6c58253f4052fcc77fc6d06f0aad47f464d365",
+      "bytes": 40026,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/infrastructure/postgres_operational_fx_revaluation_schema.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\infrastructure\\postgres_operational_fx_revaluation_schema.py",
+      "sha256": "518c6b8b219b7e09b36a286304511b0ae61d941bc7870ea6b2ad50992587193b",
+      "bytes": 12944,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/domain/intercompany_operations.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\domain\\intercompany_operations.py",
+      "sha256": "6f0ce54b2e89a06602f41eaf950c2863227d219614fef90e15f6835bfb6d0a03",
+      "bytes": 9105,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/application/intercompany_operations.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\application\\intercompany_operations.py",
+      "sha256": "bd29358a42b658b72c509f7cb2161c25af4fe13cf8a621b68fa7971322b449ba",
+      "bytes": 1993,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/infrastructure/postgres_intercompany_operations.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\infrastructure\\postgres_intercompany_operations.py",
+      "sha256": "cf00b712015c29816165894741bb3ae44b2aa210878f38bac34dd693fffdaf9e",
+      "bytes": 30787,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/api/routes/intercompany_operations.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\api\\routes\\intercompany_operations.py",
+      "sha256": "55beed555a8f8fd501dcd9b614c8ad75ca1ff0b0ca5a6c7968adb33f4589724f",
+      "bytes": 12832,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "apps/web/src/components/IntercompanyOperationsPage.tsx",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\apps\\web\\src\\components\\IntercompanyOperationsPage.tsx",
+      "sha256": "5c33e38fcfb429aad7ad8327a1f47b960bfc3110ea930354840814c16171a69e",
+      "bytes": 22145,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "tests/test_postgres_intercompany_operations.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\tests\\test_postgres_intercompany_operations.py",
+      "sha256": "f110d93db51841f4a5e5766a55067799a468bf74a5e6095a844bf3e8f751c011",
+      "bytes": 21033,
+      "classification": "test_source_not_new_execution"
+    },
+    {
+      "repository_path": "reconforge/application/stock_commerce.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\application\\stock_commerce.py",
+      "sha256": "b9a8ff7eb04544cb192f8da017ce558a1dee83dc2650336ead925b45cbe9865f",
+      "bytes": 2171,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/infrastructure/postgres_stock_commerce.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\infrastructure\\postgres_stock_commerce.py",
+      "sha256": "ffeaad01bf1aeb9af2d33a1c7d661cea164ada259ce155bd78dedc35a4a0fbda",
+      "bytes": 20755,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/domain/customer_returns.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\domain\\customer_returns.py",
+      "sha256": "d3d241019c39a1f9a8ef75311034a236e7796acd8dd0bfb5e1cd7904c8c727fd",
+      "bytes": 2821,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/infrastructure/postgres_customer_returns.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\infrastructure\\postgres_customer_returns.py",
+      "sha256": "97a35900b30ac977ff41dec6e779ba9dd8cb00974135cb32a8edc1ba14bc8427",
+      "bytes": 32303,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/api/routes/customer_returns.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\api\\routes\\customer_returns.py",
+      "sha256": "97a93fac0518927bebfca992721a20f8a4ccdbeea06dcdf841ea9542f5ac26bf",
+      "bytes": 6838,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "apps/web/src/components/StockCommercePanel.tsx",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\apps\\web\\src\\components\\StockCommercePanel.tsx",
+      "sha256": "6f10403fddf7fb115b9daf70f5e743ebc8f5839dd282f9c3030bd7b4a8c7198d",
+      "bytes": 25176,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "tests/test_postgres_customer_returns.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\tests\\test_postgres_customer_returns.py",
+      "sha256": "6d2da9b611aaf8b828c62d09e9cf231f3d8dedf865357427b9ebf3110fd82ff5",
+      "bytes": 44898,
+      "classification": "test_source_not_new_execution"
+    },
+    {
+      "repository_path": "reconforge/domain/procurement_sourcing.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\domain\\procurement_sourcing.py",
+      "sha256": "f31f2fad4e0456370ce02848bbff61b17c8af202b82f6fa93382a57cd59493fa",
+      "bytes": 5679,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/application/procurement_sourcing.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\application\\procurement_sourcing.py",
+      "sha256": "845b189a6d76bf2e92f0df58267a41544afbb9597949665867866f4774ce70f4",
+      "bytes": 1026,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/infrastructure/postgres_procurement_sourcing.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\infrastructure\\postgres_procurement_sourcing.py",
+      "sha256": "ba5e48a2b5c178e335caa4451529c3a4fab84261ea7620bc93c97ace5aa5170e",
+      "bytes": 25861,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/api/routes/procurement_sourcing.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\api\\routes\\procurement_sourcing.py",
+      "sha256": "c44036c88cc3fde365bbac91de811094bc9d6bbee42a27e3c9c75728f776b109",
+      "bytes": 7872,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/infrastructure/postgres_supplier_returns.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\infrastructure\\postgres_supplier_returns.py",
+      "sha256": "6320020032f8c7b588a9d4cccaf7e16a252ee6e9856056b0ca836117fdefc373",
+      "bytes": 25343,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/application/budget_control.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\application\\budget_control.py",
+      "sha256": "57fe7db7e69149f9340d9269459932d9d9f826689b7da6a001d103fde249e42d",
+      "bytes": 2224,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "tests/test_postgres_procurement_sourcing.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\tests\\test_postgres_procurement_sourcing.py",
+      "sha256": "0d2887c73f850c84fa71138598b773793db2860b5cbbd6478e35dfafd8ebed84",
+      "bytes": 23974,
+      "classification": "test_source_not_new_execution"
+    },
+    {
+      "repository_path": "reconforge/domain/manufacturing_execution.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\domain\\manufacturing_execution.py",
+      "sha256": "c7205e4dcacbed78011cbd18a79fb519ded2e23324259cdf10158da259ea9bbe",
+      "bytes": 8744,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/application/manufacturing_execution.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\application\\manufacturing_execution.py",
+      "sha256": "d95b5b4864a1ba9c9a51a42aec7b67cb25f32bd994e3a6a7c58c4aa27786442c",
+      "bytes": 2820,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/infrastructure/postgres_manufacturing_execution.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\infrastructure\\postgres_manufacturing_execution.py",
+      "sha256": "ac9933e08a4c15b76df3fbacd09eab3f5e3c33fc3d30519df910b75aaa234594",
+      "bytes": 56710,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/api/routes/manufacturing_execution.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\api\\routes\\manufacturing_execution.py",
+      "sha256": "a1b58c9800cf8b95a36db8407514ef536a90cbc6410543cf673b7d135c8213c5",
+      "bytes": 10097,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "apps/web/src/components/ManufacturingExecutionPage.tsx",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\apps\\web\\src\\components\\ManufacturingExecutionPage.tsx",
+      "sha256": "9e89b7bfde5b39f1c40c5386128f0770a65c4d710e661305a379935345467d62",
+      "bytes": 22180,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "tests/test_postgres_manufacturing_execution.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\tests\\test_postgres_manufacturing_execution.py",
+      "sha256": "6033683623b7ce4a417b746b5208facef7c890695b1bb87468d0da3da2caeb87",
+      "bytes": 33373,
+      "classification": "test_source_not_new_execution"
+    },
+    {
+      "repository_path": "reconforge/infrastructure/postgres_inventory_scope.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\infrastructure\\postgres_inventory_scope.py",
+      "sha256": "88715bbd57949c9dccb0c4d32d96f9b0d3e89dae2e6437b57a4f14b3d1bf56a5",
+      "bytes": 15885,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "tests/test_postgres_inventory_scope.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\tests\\test_postgres_inventory_scope.py",
+      "sha256": "ec6b640617c8463c8e9e5a7c205ba0757bc44d4f774770603d9a40d1e43d83d9",
+      "bytes": 23068,
+      "classification": "test_source_not_new_execution"
+    },
+    {
+      "repository_path": "tests/test_postgres_finance_scope.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\tests\\test_postgres_finance_scope.py",
+      "sha256": "51a06d78e918c3616304a33ef7c76fcf75e1589835600459aaf55febe2e71604",
+      "bytes": 32558,
+      "classification": "test_source_not_new_execution"
+    },
+    {
+      "repository_path": "reconforge/domain/fixed_assets.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\domain\\fixed_assets.py",
+      "sha256": "5089d55c8eb0cbb0afa1ff7a8bf76002db0d0005d15d2245c79c4db6a009ae2d",
+      "bytes": 5622,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/application/fixed_assets.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\application\\fixed_assets.py",
+      "sha256": "b10eec74214a7c1bff2cc29f60bedc2a18cd893a8b61d0c9a3a9749abee6c024",
+      "bytes": 1097,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/infrastructure/postgres_fixed_assets.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\infrastructure\\postgres_fixed_assets.py",
+      "sha256": "a81ebb1667edffb7bf1257800575377d50215aa57cba2b6ca51ff43efacd0519",
+      "bytes": 26894,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "reconforge/api/routes/fixed_assets.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\reconforge\\api\\routes\\fixed_assets.py",
+      "sha256": "2cdebed29e59b316eb38a9f7646f95683c85e7d4230ad6a49a540e6e7362415d",
+      "bytes": 8299,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "apps/web/src/components/FixedAssetsPage.tsx",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\apps\\web\\src\\components\\FixedAssetsPage.tsx",
+      "sha256": "5d15c746d11a18edd3e3b9ee5a58bea3b41e5cb431fe6bf64a7e41d578fa3a5a",
+      "bytes": 19648,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "tests/test_postgres_fixed_assets.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\tests\\test_postgres_fixed_assets.py",
+      "sha256": "d5d7c178d3e98642d0e0eb2635aa8414833c005fe62a9ffbff0f42919c026356",
+      "bytes": 28194,
+      "classification": "test_source_not_new_execution"
+    },
+    {
+      "repository_path": "tests/test_postgres_fixed_assets_evidence.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\tests\\test_postgres_fixed_assets_evidence.py",
+      "sha256": "3c3f21919778601e0320b30343386778b096426beb64c59feb6e31cdc3891fa0",
+      "bytes": 12874,
+      "classification": "test_source_not_new_execution"
+    },
+    {
+      "repository_path": "tests/test_postgres_finance_posting_concurrency.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\tests\\test_postgres_finance_posting_concurrency.py",
+      "sha256": "409f62d2ac7fd82085b8607d0168dd51047d4b8ac0aef6f8c13880d74edea6a3",
+      "bytes": 13585,
+      "classification": "test_source_not_new_execution"
+    },
+    {
+      "repository_path": "tests/test_postgres_finance_posting_restore.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\tests\\test_postgres_finance_posting_restore.py",
+      "sha256": "fb1c1656d3d1ed3df9322c48b8310b347916e764f6ae0205c2cecd28a36486b6",
+      "bytes": 15977,
+      "classification": "test_source_not_new_execution"
+    },
+    {
+      "repository_path": "tests/test_postgres_writeback_recovery_compensation_matrix.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\tests\\test_postgres_writeback_recovery_compensation_matrix.py",
+      "sha256": "b4f4beaf7dac375773e58061a974fd0b9492ce0a663b98b0d218940f52738211",
+      "bytes": 30071,
+      "classification": "test_source_not_new_execution"
+    },
+    {
+      "repository_path": ".github/scripts/verify_manufacturing_cycle_oracle.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\.github\\scripts\\verify_manufacturing_cycle_oracle.py",
+      "sha256": "38a61b41b6832a89dd26084f98588e31a28dc9f33a14ab2f8d961969f0de30a1",
+      "bytes": 34882,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": ".github/scripts/verify_intercompany_cycle_oracle.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\.github\\scripts\\verify_intercompany_cycle_oracle.py",
+      "sha256": "b8b34dc00f4d027f95d17f9540ff176ddd3ed257e975c534b7e5b49ffbf99530",
+      "bytes": 20489,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": ".github/scripts/verify_procurement_sourcing_oracle.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\.github\\scripts\\verify_procurement_sourcing_oracle.py",
+      "sha256": "933a19fcb72c6ede8857c9ada02db5dd3229bc84adf3eb3214977c9cd91152e5",
+      "bytes": 23395,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": ".github/scripts/verify_operational_fx_cycle_oracle.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\.github\\scripts\\verify_operational_fx_cycle_oracle.py",
+      "sha256": "220eb2ef4a6f0a249d56bd58eb738a1ab58e1d5e06f138bf61ccb5b0017a2089",
+      "bytes": 29815,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": ".github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\.github\\scripts\\verify_postgres_writeback_recovery_compensation_matrix.py",
+      "sha256": "01ec01b835240c0b871b346109ad44e1c205e28c96b04615e06b9d7db7b4acf3",
+      "bytes": 34635,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "docs/execution/WAVE5_CONTRACTS_2026-10-11.md",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\docs\\execution\\WAVE5_CONTRACTS_2026-10-11.md",
+      "sha256": "fa0d730f35bf0707b081fc053143c4021b2e142322e1f3103cb1d89acbebdb6d",
+      "bytes": 12653,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "docs/execution/GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\docs\\execution\\GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md",
+      "sha256": "b4d1a95bc1f5fc373075be8f9154f21f4700ab77a313e1319f87b06cb825083d",
+      "bytes": 19887,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "repository_path": "docs/execution/WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md",
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\docs\\execution\\WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md",
+      "sha256": "1207198515250b3df1fd11fe1eb4ed4bdee8df114f5096e019c7ddba854479d2",
+      "bytes": 25610,
+      "classification": "existing_source_or_document"
+    },
+    {
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-actual-native10k62-independent-I.json",
+      "sha256": "588745bb3e4b1b3c4b64278d5e823fef5dbbb9f2104f336ebadf95bb84b28b70",
+      "bytes": 21375,
+      "classification": "original_file_only_audit"
+    },
+    {
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-quiet2-public-capsule-independent-closure-v1.json",
+      "sha256": "cf3eed6493d956a769321beb1f49b5137cdd5d6cdeaa36e24192396cee5a513f",
+      "bytes": 85640,
+      "classification": "original_file_only_audit"
+    },
+    {
+      "absolute_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-publication4c-failure-capsule-independent-review-v1.json",
+      "sha256": "0d5693b7f462da10a345a204e3cc994b50effb94fe87372828de3c78a99676fc",
+      "bytes": 47524,
+      "classification": "original_file_only_audit"
+    }
+  ],
+  "scoped_absence_searches": [
+    {
+      "argv": [
+        "rg",
+        "-n",
+        "-i",
+        "\\b(hcm|payroll)\\b",
+        "reconforge",
+        "apps/web/src",
+        "tests"
+      ],
+      "returncode": 1,
+      "selected_match_bytes": 0,
+      "selected_match_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matches": []
+    },
+    {
+      "argv": [
+        "rg",
+        "--files",
+        "reconforge",
+        "apps/web/src",
+        "tests"
+      ],
+      "returncode": 0,
+      "selected_match_bytes": 0,
+      "selected_match_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matches": []
+    }
+  ],
+  "future_matrix_contract": [
+    "One row per bounded capability and source-owned end-to-end scenario, never module count or percentage.",
+    "Separately record Database/Domain/API/Authority/Audit/Studio/Posting/IndependentOracle/Concurrency/Restore/Performance evidence and its exact source/hash.",
+    "Use absent/foundation/bounded-proven/unverified/failed/deferred states; missing prerequisites and limits remain visible.",
+    "Carry cross-domain dependencies and independent acceptance before expanding country/currency/entity/volume.",
+    "New evidence is additive; do not rebind old source subjects or change original failed/negative records."
+  ],
+  "priority_dependencies": [
+    "Close corrected final publication/source acceptance and actual ongoingV5 custody independently.",
+    "Cumulative partial/paid tax-FX returns with original budget/FIFO/AR/AP/cash restitution.",
+    "Manufacturing labor/overhead/rework/quality and monotonic identity before net-shortageMRP/capacity.",
+    "Group FX/ownership/correction and governed bank settlement before universal group finance.",
+    "Project/service cycles and country-qualified HCM/payroll only with their original financial/information/privacy contracts."
+  ],
+  "limits": [
+    "File/source/document/evidence inventory only: no tests, product edits, imports, network, DB or workloads.",
+    "Existing test files are code evidence, not new execution; prior proof values retain their original source/capsule attribution.",
+    "CurrentV5 unfinished repetitions are excluded; rejected137 and unused transport fallback stay unintegrated/preparation-only.",
+    "Official competitor/security references are those already verified in the existing matrix, not new external research or superiority findings.",
+    "Broad absence classification is limited to the recorded repository paths and matches, not a universal absence proof."
+  ],
+  "previous_immutable_inventory": {
+    "json": {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\EnterpriseCompletionMatrix-evidence-inventory-wave5-v1.json",
+      "bytes": 35604,
+      "sha256": "2ec5aaeb95c889af958f3e0108371d32fdb071d0f39aadfa966cc58d2d88967d"
+    },
+    "markdown": {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\EnterpriseCompletionMatrix-evidence-inventory-wave5-v1.md",
+      "bytes": 7989,
+      "sha256": "663aaf91a6b653075f12585eaa679b43d6025c9c86dffd6b70d164b5b7723813"
+    },
+    "retained_evidence_scope": "All V1 source hashes, observed heads, searches and limits are the original audit snapshot; no new execution or current-head rebinding."
+  },
+  "global_jurisdiction_target": {
+    "target": "all countries",
+    "authorization": "Direct human answer reported by root on 2026-10-12: كل الدول.",
+    "program_activation": "Future program remains conditional until separately activated after Wave5; this inventory does not start feature implementation.",
+    "scope_rule": "Engineering priorities may sequence jurisdictions and dependencies without narrowing the all-countries end goal or asking the user to choose one country again.",
+    "currently_proven_activated_jurisdiction_pack_count": 0,
+    "count_scope": "No country-specific legally qualified and independently accepted activated pack is identified in the retained evidence inventory. This is an evidence inventory classification, not a fresh exhaustive implementation scan.",
+    "retained_foundations": "Existing generic currency registry, configurable FX/tax foundations, country codes and synthetic tax/FX cases retain their bounded source acceptance. They do not establish statutory country support.",
+    "not_automatic_support": [
+      "Country code presence",
+      "Configurable tax percentages",
+      "Generic functional/reporting currency",
+      "Synthetic financial examples",
+      "A translated Studio page"
+    ],
+    "per_jurisdiction_row_contract": [
+      "Stable jurisdiction ID and applicable legal subdivisions, transaction types, taxes, employment or reporting obligations; avoid treating a country as one universal tax rule.",
+      "Official primary-source URL, authority, publication and effective dates, captured retrieval date, raw source hash and supersession chain for every adopted rule.",
+      "Versioned effective-dated pack with currency precision, rounding, tax base, exemptions, credit/refund adjustments, exchange-rate source and reporting scope as applicable.",
+      "Independent calculator/golden cases reviewed separately from the production engine, including boundaries, historical dates, amendments and exact residual conservation.",
+      "Database→Domain→API→Authorization→Audit→Studio→Financial Posting→Independent Verification, with direct SQL, permission revocation, replay, concurrency and restored-original equality.",
+      "Explicit absent/researched/draft/implemented/unverified/bounded-accepted/failed/superseded status and source-bound evidence; country support is permitted only for the accepted named transaction scope.",
+      "Qualified human legal/domain review and documented applicability before any legal-compliance assertion; engineering tests and official references alone are not certification."
+    ],
+    "dependency_prioritization": [
+      "Exact currency/effective-date/rounding and historical-source policy primitives shared by all packs.",
+      "Original-owned tax/FX posting and partial-return/adjustment/reversal conservation across inventory, AR/AP and cash.",
+      "Country-specific reporting and bank/payment formats; jurisdiction-specific payroll/HCM only after personnel lifecycle/privacy and liability/payment contracts exist.",
+      "Prioritize implementation by shared primitives, operational impact and verifiable official-source availability; retain all remaining jurisdictions as explicit backlog rows."
+    ],
+    "claims_limit": "No worldwide statutory compliance, certification, full payroll or country-specific support is inferred. No new official-source research, tests, runtime, network or database activity occurred for this additive inventory."
+  },
+  "additive_changes": [
+    "Human-confirmed all-countries end goal and per-jurisdiction acceptance contract.",
+    "Evidence-qualified activated-pack count zero; generic synthetic foundations remain bounded.",
+    "Inventory-only transcription correction scap→scrap; V1 remains immutable."
+  ]
+}

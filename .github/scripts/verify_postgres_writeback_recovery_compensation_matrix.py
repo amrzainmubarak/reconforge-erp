@@ -2,8 +2,9 @@
 
 This is a disposable, provider-neutral lifecycle drill.  It exercises the
 append-only proposal/approval/dispatch/acknowledgement/compensation contract
-against exact PostgreSQL 16.14 and 17.10 images, then compares the canonical
-history with the SQLite reference.  Provider acceptance is represented by a
+against approved current PostgreSQL 16.15 and 17.11 images by default. Explicit
+``--runtime-profile legacy`` retains the original 16.14/17.10 V1 contract.
+Both compare canonical history with the SQLite reference. Provider acceptance is represented by a
 synthetic marker and no network call, payload, credential, or financial row is
 stored.
 """
@@ -26,8 +27,11 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from alembic.config import Config
+from jsonschema import Draft202012Validator
 from psycopg import Error as PsycopgError
 from psycopg import connect, sql
+from referencing import Registry, Resource
+from referencing.exceptions import NoSuchResource
 
 from alembic import command
 from reconforge.connectors.writeback import (
@@ -59,6 +63,12 @@ PROFILES = (
     {"postgresql": "16.14", "image": POSTGRES_16_IMAGE_REFERENCE, "prefix": "rf-wb-recovery-pg16"},
     {"postgresql": "17.10", "image": POSTGRES_17_IMAGE_REFERENCE, "prefix": "rf-wb-recovery-pg17"},
 )
+CURRENT_POSTGRES_16_IMAGE_REFERENCE = "postgres:16.15-alpine@sha256:1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551"
+CURRENT_POSTGRES_17_IMAGE_REFERENCE = "postgres:17.11-alpine@sha256:aa90e97ee862e558111d34cfb8b2c4bec768c2b039fb791341686928560263b3"
+CURRENT_PROFILES = (
+    {"postgresql": "16.15", "image": CURRENT_POSTGRES_16_IMAGE_REFERENCE, "prefix": "rf-wb-current-pg16"},
+    {"postgresql": "17.11", "image": CURRENT_POSTGRES_17_IMAGE_REFERENCE, "prefix": "rf-wb-current-pg17"},
+)
 DATABASE = "reconforge_wb_recovery"
 APP_ROLE = "reconforge_wb_recovery_app"
 PASSWORD = secrets.token_urlsafe(24)
@@ -79,6 +89,11 @@ WRITEBACK_SOURCE = ROOT / "reconforge/connectors/writeback.py"
 POSTGRES_SOURCE = ROOT / "reconforge/infrastructure/postgres_writeback.py"
 SQLITE_SOURCE = ROOT / "reconforge/infrastructure/sqlite_writeback.py"
 SUPPLY_CHAIN_POLICY_PATH = ROOT / "docs/security/supply-chain-policy.v1.json"
+CURRENT_POLICY_PATH = ROOT / "docs/security/postgres-current-images.wave5.v1.json"
+CURRENT_POLICY_SHA256 = "e1add5c92bb875e04e68e601cc9651c469c50a327e1c58912113df4c0a774fc4"
+HISTORICAL_POLICY_SHA256 = "8629e9c6d2f57eaf74da0dc20d54293241a97ce8c7fc6b5d10e2926048cf4992"
+SCHEMA_V1_PATH = ROOT / "docs/schemas/postgres_writeback_recovery_compensation_matrix.schema.json"
+SCHEMA_V2_PATH = ROOT / "docs/schemas/postgres_writeback_recovery_compensation_matrix.v2.schema.json"
 CLEANUP_TIMEOUT_SECONDS = 30.0
 CLEANUP_POLL_SECONDS = 0.25
 
@@ -178,6 +193,61 @@ def _canonical_digest(value: object) -> str:
 def _source_digest(path: Path) -> str:
     canonical = path.read_text(encoding="utf-8").replace("\r\n", "\n").encode("utf-8")
     return hashlib.sha256(canonical).hexdigest()
+
+
+def _approved_policy(path: Path, expected_source_sha256: str) -> tuple[dict[str, Any], str]:
+    normalized_source = path.read_bytes().replace(b"\r\n", b"\n")
+    source_sha256 = hashlib.sha256(normalized_source).hexdigest()
+    if source_sha256 != expected_source_sha256:
+        raise RecoveryCompensationMatrixError("approved PostgreSQL policy source drifted")
+    return json.loads(normalized_source), source_sha256
+
+
+def _runtime_profiles(runtime_profile: str) -> tuple[tuple[dict[str, str], ...], dict[str, str]]:
+    if runtime_profile not in {"current", "legacy"}:
+        raise RecoveryCompensationMatrixError("unknown exact recovery runtime profile")
+    historical_policy, historical_digest = _approved_policy(SUPPLY_CHAIN_POLICY_PATH, HISTORICAL_POLICY_SHA256)
+    historical = historical_policy["container_resolution"]["service_images"]
+    subject = {"supply_chain_policy_sha256": historical_digest}
+    if runtime_profile == "current":
+        current_policy, current_digest = _approved_policy(CURRENT_POLICY_PATH, CURRENT_POLICY_SHA256)
+        approved = current_policy["current_images"]
+        images = (approved["server_boundaries"], approved["native_acceptance"])
+        constants = (CURRENT_POSTGRES_16_IMAGE_REFERENCE, CURRENT_POSTGRES_17_IMAGE_REFERENCE)
+    else:
+        images = (historical["postgres_16_ci"], historical["postgres_drills"])
+        constants = (POSTGRES_16_IMAGE_REFERENCE, POSTGRES_17_IMAGE_REFERENCE)
+    if constants != images:
+        raise RecoveryCompensationMatrixError("runtime image constants differ from approved policy values")
+    profiles = CURRENT_PROFILES if runtime_profile == "current" else PROFILES
+    expected = (
+        ("16.15", images[0], "rf-wb-current-pg16"),
+        ("17.11", images[1], "rf-wb-current-pg17"),
+    ) if runtime_profile == "current" else (
+        ("16.14", images[0], "rf-wb-recovery-pg16"),
+        ("17.10", images[1], "rf-wb-recovery-pg17"),
+    )
+    if tuple((profile["postgresql"], profile["image"], profile["prefix"]) for profile in profiles) != expected:
+        raise RecoveryCompensationMatrixError("runtime profile image/version/order drifted")
+    if runtime_profile == "legacy":
+        return profiles, subject
+    return profiles, {**subject, "runtime_profile": "current-postgres-wave5-v1", "current_postgres_policy_sha256": current_digest}
+
+
+def _deny_schema_retrieval(uri: str) -> Resource[Any]:
+    raise NoSuchResource(ref=uri)
+
+
+def _report_validator(schema_version: str) -> Draft202012Validator:
+    if schema_version not in {"postgres-writeback-recovery-compensation-matrix-v1", "postgres-writeback-recovery-compensation-matrix-v2"}:
+        raise RecoveryCompensationMatrixError("unknown recovery report schema version")
+    paths = (SCHEMA_V1_PATH,) if schema_version.endswith("-v1") else (SCHEMA_V1_PATH, SCHEMA_V2_PATH)
+    schemas = [json.loads(path.read_text(encoding="utf-8")) for path in paths]
+    registry: Registry[Any] = Registry(retrieve=_deny_schema_retrieval)
+    for schema in schemas:
+        Draft202012Validator.check_schema(schema)
+        registry = registry.with_resource(schema["$id"], Resource.from_contents(schema))
+    return Draft202012Validator(schemas[-1], registry=registry, format_checker=Draft202012Validator.FORMAT_CHECKER)
 
 
 def _base_commit() -> str:
@@ -542,6 +612,12 @@ def _mutation_checks(admin_dsn: str) -> dict[str, bool]:
 def _run_postgres_cell(*, image_reference: str, expected_postgresql: str, container_prefix: str, temporary: Path) -> dict[str, Any]:
     if re.fullmatch(r"postgres:[a-z0-9.-]+@sha256:[0-9a-f]{64}", image_reference) is None:
         raise RecoveryCompensationMatrixError("PostgreSQL image is not digest-pinned")
+    if expected_postgresql not in {"16.14", "17.10", "16.15", "17.11"}:
+        raise RecoveryCompensationMatrixError("PostgreSQL image/version pair is not an approved exact profile")
+    mode = "current" if expected_postgresql in {"16.15", "17.11"} else "legacy"
+    approved_profiles, _ = _runtime_profiles(mode)
+    if (expected_postgresql, image_reference) not in {(profile["postgresql"], profile["image"]) for profile in approved_profiles}:
+        raise RecoveryCompensationMatrixError("PostgreSQL image/version pair is not an approved exact profile")
     container = container_prefix + "-" + secrets.token_hex(6)
     container_id = ""
     cleanup_complete = False
@@ -615,7 +691,10 @@ def _run_postgres_cell(*, image_reference: str, expected_postgresql: str, contai
     return result
 
 
-def run_matrix(output: Path) -> dict[str, Any]:
+def run_matrix(output: Path, *, runtime_profile: str = "current") -> dict[str, Any]:
+    profiles, profile_subject = _runtime_profiles(runtime_profile)
+    schema_version = "postgres-writeback-recovery-compensation-matrix-v2" if runtime_profile == "current" else "postgres-writeback-recovery-compensation-matrix-v1"
+    validator = _report_validator(schema_version)
     started = time.perf_counter()
     with tempfile.TemporaryDirectory(prefix="reconforge-e831-") as directory:
         temporary = Path(directory)
@@ -627,7 +706,7 @@ def run_matrix(output: Path) -> dict[str, Any]:
                 container_prefix=profile["prefix"],
                 temporary=temporary,
             )
-            for profile in PROFILES
+            for profile in profiles
         ]
     all_results = [sqlite_result, *postgres_results]
     digests = {str(result["history_sha256"]) for result in all_results}
@@ -636,7 +715,7 @@ def run_matrix(output: Path) -> dict[str, Any]:
     if any(not all(bool(value) for value in result["checks"].values()) for result in all_results):
         raise RecoveryCompensationMatrixError("recovery/compensation matrix contains a failed check")
     report = {
-        "schema_version": "postgres-writeback-recovery-compensation-matrix-v1",
+        "schema_version": schema_version,
         "executed_at": datetime.now(UTC).replace(microsecond=0).isoformat(),
         "duration_seconds": round(time.perf_counter() - started, 3),
         "profile": "provider-neutral-writeback-recovery-compensation-parity",
@@ -646,8 +725,8 @@ def run_matrix(output: Path) -> dict[str, Any]:
             "postgres_persistence_source_sha256": _source_digest(POSTGRES_SOURCE),
             "sqlite_persistence_source_sha256": _source_digest(SQLITE_SOURCE),
             "migration_source_sha256": _source_digest(MIGRATION_PATH),
-            "supply_chain_policy_sha256": _source_digest(SUPPLY_CHAIN_POLICY_PATH),
             "matrix_runner_source_sha256": _source_digest(Path(__file__)),
+            **profile_subject,
         },
         "sqlite_reference": sqlite_result,
         "runs": postgres_results,
@@ -668,6 +747,7 @@ def run_matrix(output: Path) -> dict[str, Any]:
         ],
     }
     report["report_digest"] = _canonical_digest(report)
+    validator.validate(report)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return report
@@ -676,8 +756,10 @@ def run_matrix(output: Path) -> dict[str, Any]:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--runtime-profile", choices=("current", "legacy"), default="current",
+                        help="current: approved16.15/17.11 V2 acceptance; legacy: explicit16.14/17.10 V1 compatibility")
     arguments = parser.parse_args(argv)
-    report = run_matrix(arguments.output.resolve(strict=False))
+    report = run_matrix(arguments.output.resolve(strict=False), runtime_profile=arguments.runtime_profile)
     print(
         "postgres_writeback_recovery_compensation_matrix=passed "
         f"versions={','.join(report['parity']['postgresql_versions'])} "

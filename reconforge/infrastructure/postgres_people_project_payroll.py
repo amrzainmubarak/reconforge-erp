@@ -25,6 +25,15 @@ from reconforge.infrastructure.postgres_operational_finance import PostgresOpera
 from reconforge.platform.common import current_server_principal
 
 
+def _table_sql(template: str, table: str, *, lock: bool = False, columns: str = "*") -> Any:
+    """Quote closed owner identifiers separately from all bound record values."""
+    from psycopg import sql
+
+    selected = sql.SQL("*") if columns == "*" else sql.SQL(",").join(sql.Identifier(name) for name in columns.split(","))
+    return sql.SQL(template).format(table=sql.Identifier(table), columns=selected,
+                                    lock=sql.SQL(" FOR UPDATE" if lock else ""))
+
+
 class _PeoplePayrollPostingParticipant:
     def __init__(self, owner: "PostgresPeopleProjectPayrollRepository", entry_id: str) -> None:
         self.owner, self.entry_id = owner, entry_id
@@ -86,8 +95,8 @@ class PostgresPeopleProjectPayrollRepository:
         if table not in {"hc_employees", "hc_projects", "hc_times", "hc_payruns", "hc_payments"}:
             fail("Unsupported workforce source.")
         # Both the table and lock clause are closed owner literals; identifiers bind.
-        rows = records(self.connection.execute(f"SELECT * FROM reconforge.{table} WHERE tenant_id=%s AND id=%s" + (" FOR UPDATE" if lock else ""),
-            (self.tenant_id, text(identifier, "Source ID"))))  # nosec B608
+        rows = records(self.connection.execute(_table_sql("SELECT * FROM reconforge.{table} WHERE tenant_id=%s AND id=%s{lock}", table, lock=lock),
+            (self.tenant_id, text(identifier, "Source ID"))))
         if not rows:
             fail("Source is absent or outside current scope.", "people_source_not_found")
         return rows[0]
@@ -230,8 +239,8 @@ class PostgresPeopleProjectPayrollRepository:
     def _private(self, table: str, identifier: str) -> dict[str, Any]:
         if table not in {"hc_payrun_private", "hc_payment_private"}:
             fail("Unknown private workforce source.")
-        rows = records(self.connection.execute(f"SELECT payload FROM reconforge.{table} WHERE tenant_id=%s AND plan_id=%s",
-            (self.tenant_id, identifier)))  # nosec B608
+        rows = records(self.connection.execute(_table_sql("SELECT payload FROM reconforge.{table} WHERE tenant_id=%s AND plan_id=%s", table),
+            (self.tenant_id, identifier)))
         if len(rows) != 1:
             fail("Private workforce source is unavailable under current authority.", "people_permission_denied")
         return dict(rows[0]["payload"])
@@ -394,8 +403,8 @@ class PostgresPeopleProjectPayrollRepository:
                 fail("Independent review requires the current prepared source.", "people_review_denied")
             self.owner.finance.validate_entry(source["entry_id"], reason="Independent workforce source review", actor_label=actor.username)
             audit, outbox = self._event(source, "plan_reviewed", actor, expected_plan_digest)
-            self.connection.execute(f"UPDATE reconforge.{table} SET phase=1,reviewer_id=%s,review_audit_id=%s,review_outbox_id=%s WHERE tenant_id=%s AND id=%s",
-                (actor.user_id, audit, outbox, self.tenant_id, plan_id))  # nosec B608
+            self.connection.execute(_table_sql("UPDATE reconforge.{table} SET phase=1,reviewer_id=%s,review_audit_id=%s,review_outbox_id=%s WHERE tenant_id=%s AND id=%s", table),
+                (actor.user_id, audit, outbox, self.tenant_id, plan_id))
             return self._remember(source, "review", command_id, actor, request, digest, self._view(table, self._row(table, plan_id)))
 
     def post(self, plan_id: str, *, expected_plan_digest: str, command_id: str, actor: PostingActor) -> dict[str, Any]:
@@ -421,8 +430,8 @@ class PostgresPeopleProjectPayrollRepository:
             finally:
                 self._participant = None
             audit, outbox = self._event(source, "plan_posted", actor, expected_plan_digest)
-            self.connection.execute(f"UPDATE reconforge.{table} SET phase=2,poster_id=%s,effect_id=%s,post_audit_id=%s,post_outbox_id=%s WHERE tenant_id=%s AND id=%s",
-                (actor.user_id, effect["id"], audit, outbox, self.tenant_id, plan_id))  # nosec B608
+            self.connection.execute(_table_sql("UPDATE reconforge.{table} SET phase=2,poster_id=%s,effect_id=%s,post_audit_id=%s,post_outbox_id=%s WHERE tenant_id=%s AND id=%s", table),
+                (actor.user_id, effect["id"], audit, outbox, self.tenant_id, plan_id))
             if table == "hc_payruns":
                 for time_id in payrun["payload"]["time_entry_ids"]:
                     self.connection.execute("SELECT reconforge.hc_claim(%s,%s,%s,%s,%s)", (self.tenant_id, time_id, plan_id, "Consume", actor.user_id))
@@ -497,8 +506,8 @@ class PostgresPeopleProjectPayrollRepository:
         table, columns = tables[kind]
         with self.owner._transaction():
             self._authorize(actor, "read", asdict(scope), mutation=False)
-            rows = records(self.connection.execute(f"SELECT {columns} FROM reconforge.{table} WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s AND id>%s ORDER BY id LIMIT %s",
-                (self.tenant_id, scope.workspace_id, scope.organization_id, scope.legal_entity_id, after, limit + 1)))  # nosec B608
+            rows = records(self.connection.execute(_table_sql("SELECT {columns} FROM reconforge.{table} WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s AND id>%s ORDER BY id LIMIT %s", table, columns=columns),
+                (self.tenant_id, scope.workspace_id, scope.organization_id, scope.legal_entity_id, after, limit + 1)))
             if kind in {"payruns", "payments"}:
                 for row in rows[:limit]:
                     self._authorize(actor, "read", row["payload"], mutation=False)

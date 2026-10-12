@@ -111,10 +111,14 @@ class PostgresIntercompanyFxRepository:
                     "currency_precision": source["policies"]["transaction"]["currency_precision"]}, mutation=operation != "read")
             if operation != "read" and plan and plan["kind"] == "reverse_revaluation":
                 self.owner._actor(actor, "finance_core.reverse", scope, mutation=True)
-        grants = records(self.connection.execute("""SELECT scope_type,scope_id FROM reconforge.principal_scope_grants
+        from psycopg import sql
+
+        grant_query = sql.SQL("""SELECT scope_type,scope_id FROM reconforge.principal_scope_grants
             WHERE tenant_id=%s AND principal_type='user' AND principal_id=%s AND revoked_at IS NULL
             AND((scope_type='workspace' AND scope_id=%s) OR(scope_type='organization' AND scope_id=%s)
-            OR(scope_type='legal_entity' AND scope_id=ANY(%s))) ORDER BY scope_type,scope_id""" + (" FOR SHARE" if lock else ""),
+            OR(scope_type='legal_entity' AND scope_id=ANY(%s))) ORDER BY scope_type,scope_id{lock}""").format(
+                lock=sql.SQL(" FOR SHARE" if lock else ""))
+        grants = records(self.connection.execute(grant_query,
             (self.tenant_id, actor.user_id, request["workspace_id"], request["organization_id"],
              [request[book]["legal_entity_id"] for book in BOOKS])))
         if len({(row["scope_type"], row["scope_id"]) for row in grants}) != 5:

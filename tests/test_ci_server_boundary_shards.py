@@ -38,7 +38,10 @@ INTEGRITY_FILES = {
     ),
     "supplier-returns": ("tests/test_postgres_supplier_returns.py", "tests/test_postgres_supplier_returns_api.py"),
     "fx-revaluation": ("tests/test_postgres_operational_fx_revaluation.py", "tests/test_postgres_operational_fx_revaluation_migration.py"),
-    "manufacturing-execution": ("tests/test_postgres_manufacturing_execution.py", "tests/test_postgres_wave5_migrations.py"),
+    "manufacturing-execution": (
+        "tests/test_postgres_manufacturing_execution.py", "tests/test_postgres_wave5_migrations.py",
+        "tests/test_postgres_inventory_scope.py",
+    ),
     "intercompany-operations": ("tests/test_postgres_intercompany_operations.py", "tests/test_postgres_intercompany_operations_api.py"),
     "procurement-sourcing": ("tests/test_postgres_procurement_sourcing.py", "tests/test_postgres_procurement_sourcing_api.py", "tests/test_postgres_manufacturing_sourcing.py"),
 }

@@ -44,3 +44,31 @@ it("renders Arabic RTL and explicit statutory-zero boundary", () => {
   expect(view.container.querySelector("main")).toHaveAttribute("dir", "rtl");
   expect(screen.getByText(/حزم الرواتب والضرائب القانونية المدعومة: صفر/)).toBeInTheDocument();
 });
+it("refuses linked employee self approval even when another human submitted time", async () => {
+  vi.mocked(loadBudgetIdentity).mockResolvedValue({ ...identity, permissions: [...identity.permissions, "people_project_payroll.approve_time"] });
+  vi.stubGlobal("fetch", vi.fn(async (url: unknown) => new Response(JSON.stringify({ items: String(url).includes("/employees?") ? [{ id: "employee", linked_user_id: "poster", employee_code: "E1" }] : String(url).includes("/times?") ? [{ id: "time", employee_id: "employee", submitter_id: "maker", approver_id: null, source_digest: "a".repeat(64) }] : [], has_more: false }))));
+  render(<PeopleProjectPayrollPage locale="en" />);
+  await waitFor(() => expect(screen.getByLabelText("Workspace ID")).toHaveValue("work"));
+  fireEvent.click(screen.getByRole("button", { name: "Apply scope" }));
+  const select=screen.getByRole("combobox", { name: "Approved-time source" });
+  await waitFor(() => expect(select.querySelectorAll("option")).toHaveLength(2));
+  fireEvent.change(select, { target: { value: "time" } });
+  expect(screen.getByRole("button", { name: "Approve exact time" })).toBeDisabled();
+});
+it("does not offer a financial source whose independent evidence read permission is missing", async () => {
+  vi.mocked(loadBudgetIdentity).mockResolvedValue({ ...identity, permissions: identity.permissions.filter(value => value !== "finance_core.read") });
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [], has_more: false }))));
+  render(<PeopleProjectPayrollPage locale="en" />);
+  await waitFor(() => expect(screen.getByLabelText("Workspace ID")).toHaveValue("work"));
+  fireEvent.click(screen.getByRole("button", { name: "Apply scope" }));
+  expect(screen.queryByRole("combobox", { name: "Financial source" })).not.toBeInTheDocument();
+});
+it("loads the next scoped catalog page without discarding the original source",async()=>{
+  vi.mocked(loadBudgetIdentity).mockResolvedValue(identity);
+  const fetcher=vi.fn(async(url:unknown)=>new Response(JSON.stringify(String(url).includes("/employees?")?String(url).includes("after=")?{items:[{id:"employee2",employee_code:"E2"}],has_more:false,after:""}:{items:[{id:"employee1",employee_code:"E1"}],has_more:true,after:"employee1"}:{items:[],has_more:false,after:""})));
+  vi.stubGlobal("fetch",fetcher);render(<PeopleProjectPayrollPage locale="en"/>);
+  await waitFor(()=>expect(screen.getByLabelText("Workspace ID")).toHaveValue("work"));fireEvent.click(screen.getByRole("button",{name:"Apply scope"}));
+  fireEvent.click(await screen.findByRole("button",{name:"Load more original sources · Employee source"}));
+  await waitFor(()=>expect(screen.getByRole("combobox",{name:"Employee source"}).querySelectorAll("option")).toHaveLength(3));
+  expect(fetcher.mock.calls.some(([url])=>String(url).includes("after=employee1"))).toBe(true);
+});

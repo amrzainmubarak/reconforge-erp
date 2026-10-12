@@ -27,6 +27,7 @@ function PeopleSession({ locale }: { locale: Locale }) {
   const [identity, setIdentity] = useState<BudgetIdentity | null>(null), [login, setLogin] = useState({ tenant: "local", username: "", password: "" });
   const [scopeInput, setScopeInput] = useState<FinanceScope>({ workspace_id: "", organization_id: "", legal_entity_id: "" }), [scope, setScope] = useState<FinanceScope | null>(null);
   const [catalog, setCatalog] = useState(emptyCatalog), [refresh, setRefresh] = useState(0), [employee, setEmployee] = useState(""), [time, setTime] = useState("");
+  const [cursors,setCursors]=useState<Record<Catalog,string>>({employees:"",projects:"",times:"",payruns:"",payments:""});
   const [plan, setPlan] = useState<PeoplePlan | null>(null), [selectedPlan, setSelectedPlan] = useState(""), [selectedTimes, setSelectedTimes] = useState<string[]>([]);
   const [person, setPerson] = useState({ employee_code: "", display_name: "", linked_user_id: "" });
   const [agreement, setAgreement] = useState({ valid_from: "", valid_through: "", hourly_rate_minor: "", currency_code: "", reason: "" });
@@ -38,8 +39,10 @@ function PeopleSession({ locale }: { locale: Locale }) {
   const [error, setError] = useState<"invalid" | "denied" | "unavailable" | "unknown" | null>(null), [saved, setSaved] = useState("");
   const lock = useRef(false), epoch = useRef(0), current = (captured = epoch.current) => auth.isCurrent(generation) && captured === epoch.current;
   const locked = busy || pending !== null, has = (permission: string) => Boolean(identity?.permissions.includes("people_project_payroll." + permission));
+  const proofRead = has("read") && has("read_sensitive") && Boolean(identity?.permissions.includes("finance_core.read"));
   const allowed = (permission: string, privatePhase = false) => Boolean(scope && identity?.human && identity.stepUp &&
-    phaseContracts[permission]?.every(value => identity.permissions.includes(value)) && (!privatePhase || has("read_sensitive")));
+    phaseContracts[permission]?.every(value => identity.permissions.includes(value)) && (!privatePhase || has("read_sensitive")) &&
+    (!["prepare", "review", "post", "pay"].includes(permission) || proofRead));
   const invalidate = () => { epoch.current++; setPlan(null); setSelectedPlan(""); setEvidence(null); setSaved(""); };
   function fail(caught: unknown) { if (current()) setError(caught instanceof AdminApiError && [401, 403].includes(caught.status) ? "denied" : caught instanceof AdminApiError ? "unavailable" : "invalid"); }
   useEffect(() => {
@@ -51,9 +54,9 @@ function PeopleSession({ locale }: { locale: Locale }) {
     if (!auth.session || !scope || !has("read")) return; const abort = new AbortController(), captured = epoch.current;
     Promise.all((Object.keys(emptyCatalog) as Catalog[]).map(async kind => {
       const raw = await peopleRequest(auth.session!, scope, `${peopleRoot}/catalog/${kind}?limit=100`, undefined, abort.signal);
-      if (!object(raw) || !Array.isArray(raw.items) || raw.items.length > 100 || raw.items.some(item => !object(item) || typeof item.id !== "string")) throw new Error("people_source_invalid");
-      return [kind, raw.items] as const;
-    })).then(rows => { if (current(captured) && !abort.signal.aborted) setCatalog(Object.fromEntries(rows) as Record<Catalog, Row[]>); }).catch(caught => { if (!abort.signal.aborted) fail(caught); });
+      if (!object(raw) || !Array.isArray(raw.items) || raw.items.length > 100 || raw.items.some(item => !object(item) || typeof item.id !== "string") || typeof raw.has_more!=="boolean" || (raw.has_more && (typeof raw.after!=="string" || !raw.after))) throw new Error("people_source_invalid");
+      return {kind,items:raw.items as Row[],after:raw.has_more?raw.after as string:""};
+    })).then(rows => { if (current(captured) && !abort.signal.aborted) {setCatalog(Object.fromEntries(rows.map(row=>[row.kind,row.items])) as Record<Catalog, Row[]>);setCursors(Object.fromEntries(rows.map(row=>[row.kind,row.after])) as Record<Catalog,string>);} }).catch(caught => { if (!abort.signal.aborted) fail(caught); });
     return () => abort.abort();
   }, [scope, refresh, auth.session]);
   async function authenticate(event: FormEvent, stepUp = false) {
@@ -63,10 +66,21 @@ function PeopleSession({ locale }: { locale: Locale }) {
     catch (caught) { fail(caught); } finally { if (current()) { setLogin(old => ({ ...old, password: "" })); setBusy(false); } }
   }
   async function loadPlan(id: string) {
-    if (!auth.session || !scope || !has("read_sensitive") || locked) return; invalidate(); setSelectedPlan(id); const captured = epoch.current; setBusy(true); setError(null);
+    if (!auth.session || !scope || !proofRead || locked) return; invalidate(); setSelectedPlan(id); const captured = epoch.current; setBusy(true); setError(null);
     try { const raw = await peopleRequest(auth.session, scope, `${peopleRoot}/plans/${id}/private`); if (!object(raw)) throw new Error("people_source_invalid"); const proof = await parsePeoplePlan(raw.plan, scope);
       if (current(captured) && proof.id === id) setPlan(proof); }
     catch (caught) { fail(caught); } finally { if (current(captured)) setBusy(false); }
+  }
+  async function loadMore(kind: Catalog) {
+    if(!auth.session || !scope || locked || !cursors[kind]) return;
+    const captured=epoch.current,after=cursors[kind];setBusy(true);setError(null);
+    try {
+      const raw=await peopleRequest(auth.session,scope,`${peopleRoot}/catalog/${kind}?limit=100&after=${encodeURIComponent(after)}`);
+      if(!object(raw)||!Array.isArray(raw.items)||raw.items.length>100||typeof raw.has_more!=="boolean"||raw.items.some(row=>!object(row)||typeof row.id!=="string")||(raw.has_more&&(typeof raw.after!=="string"||!raw.after||raw.after===after)))throw new Error("people_source_invalid");
+      const rows=[...catalog[kind],...raw.items] as Row[];
+      if(rows.length>5000||new Set(rows.map(row=>row.id)).size!==rows.length)throw new Error("people_source_invalid");
+      if(current(captured)){setCatalog(old=>({...old,[kind]:rows}));setCursors(old=>({...old,[kind]:raw.has_more?raw.after as string:""}));}
+    }catch(caught){if(current(captured))fail(caught);}finally{if(current(captured))setBusy(false);}
   }
   async function send(command: PreparedScopedCommand) {
     if (!auth.session || !scope || lock.current) return; lock.current = true; setPending(command); setBusy(true); setError(null); setSaved(""); const captured = epoch.current;
@@ -83,6 +97,8 @@ function PeopleSession({ locale }: { locale: Locale }) {
   const input = (key: Word, value: string, change: (value: string) => void, required = true) => <label>{t(key)}<input required={required} disabled={locked} value={value} type={key === "password" ? "password" : ["business_date", "valid_from", "valid_through", "posting_date"].includes(key) ? "date" : "text"} maxLength={key === "reason" ? 500 : 160} onChange={event => change(event.target.value)} /></label>;
   const select = (label: Word, value: string, change: (value: string) => void, rows: Row[]) => <label>{t(label)}<select required disabled={locked} value={value} onChange={event => change(event.target.value)}><option value="">—</option>{rows.map(row => <option key={row.id} value={row.id}>{String(row.employee_code ?? row.project_code ?? row.id)}</option>)}</select></label>;
   const approved = catalog.times.filter(row => row.approver_id), selectedTime = catalog.times.find(row => row.id === time);
+  const independentTimeApproval = selectedTime && identity?.id !== selectedTime.submitter_id &&
+    identity?.id !== catalog.employees.find(row => row.id === selectedTime.employee_id)?.linked_user_id;
   const independentReview = plan && identity?.id !== plan.preparer_id, independentPost = independentReview && identity?.id !== plan?.reviewer_id;
   return <main id="main-content" className="financial-reporting" dir={locale === "ar" ? "rtl" : "ltr"}>
     <header><h1>{t("title")}</h1><p>{t("boundary")}</p><p>{t("duties")}</p></header>
@@ -93,12 +109,13 @@ function PeopleSession({ locale }: { locale: Locale }) {
       {!identity?.stepUp && <form className="panel reporting-form" aria-label={t("stepUp")} onSubmit={event => void authenticate(event, true)}>{input("password", login.password, value => setLogin(old => ({ ...old, password: value })))}<button disabled={locked}>{t("stepUp")}</button></form>}
       <form className="panel reporting-form" aria-label={t("apply")} onSubmit={event => { event.preventDefault(); invalidate(); setCatalog(emptyCatalog); setSelectedTimes([]); setScope({ ...scopeInput }); }}>{(Object.keys(scopeInput) as (keyof FinanceScope)[]).map(key => <div key={key}>{input(key, scopeInput[key], value => { invalidate(); setScope(null); setScopeInput(old => ({ ...old, [key]: value })); })}</div>)}<button disabled={locked || !identity}>{t("apply")}</button></form>
       {scope && <>
-        <section className="panel"><button disabled={locked} onClick={() => setRefresh(old => old + 1)}>{t("refresh")}</button>{select("employee", employee, setEmployee, catalog.employees)}{has("read_sensitive") && select("plan", selectedPlan, id => void loadPlan(id), [...catalog.payruns, ...catalog.payments])}</section>
+        <section className="panel"><button disabled={locked} onClick={() => setRefresh(old => old + 1)}>{t("refresh")}</button>{select("employee", employee, setEmployee, catalog.employees)}{proofRead && select("plan", selectedPlan, id => void loadPlan(id), [...catalog.payruns, ...catalog.payments])}</section>
+        {(Object.keys(cursors) as Catalog[]).filter(kind=>cursors[kind]).map(kind=><button key={kind} disabled={locked} onClick={()=>void loadMore(kind)}>{t("loadMore")} · {t(({employees:"employee",projects:"project",times:"time",payruns:"plan",payments:"payment"} as const)[kind])}</button>)}
         {has("personnel") && <form className="panel reporting-form" aria-label={t("register")} onSubmit={event => { event.preventDefault(); if (allowed("personnel", true)) submit("/employees", { ...person, linked_user_id: person.linked_user_id || null }); }}>{(Object.keys(person) as (keyof typeof person)[]).map(key => <div key={key}>{input(key, person[key], value => setPerson(old => ({ ...old, [key]: value })), key !== "linked_user_id")}</div>)}<button disabled={locked || !allowed("personnel", true)}>{t("register")}</button></form>}
         {employee && has("personnel") && <form className="panel reporting-form" aria-label={t("employment")} onSubmit={event => { event.preventDefault(); if (allowed("personnel", true)) submit(`/employees/${employee}/employment`, agreement); }}>{(Object.keys(agreement) as (keyof typeof agreement)[]).map(key => <div key={key}>{input(key, agreement[key], value => setAgreement(old => ({ ...old, [key]: value })))}</div>)}<button disabled={locked || !allowed("personnel", true)}>{t("employment")}</button></form>}
         {has("manage") && <form className="panel reporting-form" aria-label={t("registerProject")} onSubmit={event => { event.preventDefault(); if (allowed("manage")) submit("/projects", project); }}>{(Object.keys(project) as (keyof typeof project)[]).map(key => <div key={key}>{input(key, project[key], value => setProject(old => ({ ...old, [key]: value })))}</div>)}<button disabled={locked || !allowed("manage")}>{t("registerProject")}</button></form>}
         {employee && has("manage") && <form className="panel reporting-form" aria-label={t("submitTime")} onSubmit={event => { event.preventDefault(); if (!allowed("manage") || intervals.some(line => !/^\d{1,4}$/.test(line.start_minute) || !/^\d{1,4}$/.test(line.end_minute))) return; submit("/times", { ...timeFields, employee_id: employee, lines: intervals.map(line => ({ project_id: line.project_id, start_minute: Number(line.start_minute), end_minute: Number(line.end_minute) })) }); }}>{(Object.keys(timeFields) as (keyof typeof timeFields)[]).map(key => <div key={key}>{input(key, timeFields[key], value => setTimeFields(old => ({ ...old, [key]: value })))}</div>)}{intervals.map((line, index) => <fieldset key={index}><legend>{index + 1}</legend>{select("project", line.project_id, value => setIntervals(old => old.map((row, i) => i === index ? { ...row, project_id: value } : row)), catalog.projects)}{(["start_minute", "end_minute"] as const).map(key => <div key={key}>{input(key, line[key], value => setIntervals(old => old.map((row, i) => i === index ? { ...row, [key]: value } : row)))}</div>)}</fieldset>)}<button type="button" disabled={locked || intervals.length >= 128} onClick={() => setIntervals(old => [...old, { project_id: "", start_minute: "", end_minute: "" }])}>{t("add")}</button><button disabled={locked || !allowed("manage")}>{t("submitTime")}</button></form>}
-        {has("approve_time") && <form className="panel reporting-form" aria-label={t("approveTime")} onSubmit={event => { event.preventDefault(); if (selectedTime && typeof selectedTime.source_digest === "string" && allowed("approve_time")) submit(`/times/${time}/approve`, { expected_digest: selectedTime.source_digest }); }}>{select("time", time, setTime, catalog.times.filter(row => !row.approver_id))}<button disabled={locked || !selectedTime || identity?.id === selectedTime.submitter_id || !allowed("approve_time")}>{t("approveTime")}</button></form>}
+        {has("approve_time") && <form className="panel reporting-form" aria-label={t("approveTime")} onSubmit={event => { event.preventDefault(); if (independentTimeApproval && selectedTime && typeof selectedTime.source_digest === "string" && allowed("approve_time")) submit(`/times/${time}/approve`, { expected_digest: selectedTime.source_digest }); }}>{select("time", time, setTime, catalog.times.filter(row => !row.approver_id))}<button disabled={locked || !independentTimeApproval || !allowed("approve_time")}>{t("approveTime")}</button></form>}
         {has("prepare") && <form className="panel reporting-form" aria-label={t("prepare")} onSubmit={event => { event.preventDefault(); if (!allowed("prepare", true) || !/^[1-9]\d{0,14}$/.test(accrual.expected_budget_version)) return; submit("/payruns", { ...accrual, expected_budget_version: Number(accrual.expected_budget_version), time_ids: selectedTimes }); }}><fieldset><legend>{t("selectTimes")}</legend>{approved.map(row => <label key={row.id}><input type="checkbox" disabled={locked} checked={selectedTimes.includes(row.id)} onChange={event => setSelectedTimes(old => event.target.checked ? [...old, row.id] : old.filter(id => id !== row.id))} /><code>{row.id}</code></label>)}</fieldset>{(Object.keys(accrual) as (keyof typeof accrual)[]).map(key => <div key={key}>{input(key, accrual[key], value => setAccrual(old => ({ ...old, [key]: value })))}</div>)}<button disabled={locked || !selectedTimes.length || !allowed("prepare", true)}>{t("prepare")}</button></form>}
         {plan && <section className="panel" aria-label={t("plan")}><h2>{t("plan")}</h2><code>{plan.id} · {plan.plan_digest}</code><p><bdi>{plan.amount_minor} {plan.monetary_policy.currency_code}</bdi> · {plan.phase}</p><pre dir="ltr">{JSON.stringify(plan, null, 2)}</pre>
           {plan.phase === 0 && <button disabled={locked || !allowed("review", true) || !independentReview} onClick={() => submit(`/plans/${plan.id}/review`, { expected_plan_digest: plan.plan_digest })}>{t("review")}</button>}

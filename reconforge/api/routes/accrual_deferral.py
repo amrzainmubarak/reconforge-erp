@@ -5,6 +5,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.responses import StreamingResponse
 
 from reconforge.api.dependencies import enforce_server_scoped_permissions
 from reconforge.api.errors import APIError
@@ -17,6 +18,7 @@ from reconforge.api.server_finance_core import (
     server_finance_core_enabled,
 )
 from reconforge.api.server_identity import request_execution_scope
+from reconforge.application.accrual_deferral_evidence import evidence_chunks, evidence_size
 from reconforge.auth.models import LocalUser
 from reconforge.domain.accrual_deferral import AccrualDeferralPreparation, ScheduleAccounts, ScheduleTranche
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor
@@ -120,7 +122,7 @@ def execute(request: Request, user: LocalUser,
         try:
             return project(operation(PostgresAccrualDeferralRepository(finance.connection, scope.tenant_id), actor, scope))
         except FinancePostingError as exc:
-            status = 403 if "denied" in exc.code else 404 if "not_found" in exc.code else 409 if "conflict" in exc.code else 400
+            status = 413 if "too_large" in exc.code else 403 if "denied" in exc.code else 404 if "not_found" in exc.code else 409 if "conflict" in exc.code else 400
             raise APIError(status_code=status, code=exc.code, message=str(exc)) from exc
         except PlatformError as exc:
             raise APIError(status_code=409, code="accrual_deferral_state_conflict", message=str(exc)) from exc
@@ -198,6 +200,31 @@ def evidence(source_id: str, request: Request, user: Read) -> dict[str, Any]:
 def plan(plan_id: str, request: Request, user: Read) -> dict[str, Any]:
     authority(request, "read")
     return execute(request, user, lambda repository, actor, _: {"plan": repository.get_plan(plan_id, actor=actor)})
+
+
+@router.get("/sources/{source_id}/evidence/export")
+def export_evidence(source_id: str, request: Request, user: Read) -> StreamingResponse:
+    authority(request, "read")
+    retained = execute(request, user, lambda repository, actor, _: repository.evidence(source_id, actor=actor))
+    return evidence_response(retained)
+
+
+def evidence_response(retained: dict[str, Any]) -> StreamingResponse:
+    try:
+        length = evidence_size(retained)
+    except FinancePostingError as exc:
+        raise APIError(status_code=413 if "too_large" in exc.code else 400, code=exc.code, message=str(exc)) from exc
+    # Authorized immutable capture completes while the scoped connection and
+    # source SHARE lock are live; no lazy database work escapes that context.
+    return StreamingResponse(evidence_chunks(retained), media_type="application/json",
+        headers={"Content-Length": str(length), "Content-Disposition": 'attachment; filename="accrual-deferral-evidence.json"'})
+
+
+@router.get("/plans/{plan_id}/evidence/export")
+def export_plan_evidence(plan_id: str, request: Request, user: Read) -> StreamingResponse:
+    authority(request, "read")
+    retained = execute(request, user, lambda repository, actor, _: repository.plan_evidence(plan_id, actor=actor))
+    return evidence_response(retained)
 
 
 @router.post("/sources/{source_id}/tranches")

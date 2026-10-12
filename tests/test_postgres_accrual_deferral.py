@@ -112,6 +112,10 @@ def write_catalog(value: dict[str, Any]) -> None:
 @pytest.fixture
 def runtime(accrual_deferral_database: tuple[str, str]) -> ScheduleRuntime:
     base = create_receipt_runtime(accrual_deferral_database)
+    return configure_runtime(base)
+
+
+def configure_runtime(base: ReceiptRuntime) -> ScheduleRuntime:
     with PostgresTenantBoundary(base.factory).transaction(base.tenant) as connection:
         # Source date and first release share an explicit actual October period;
         # later tranches remain distinct native fiscal periods.
@@ -134,8 +138,12 @@ def runtime(accrual_deferral_database: tuple[str, str]) -> ScheduleRuntime:
         authority = PostgresScopeAuthorityRepository(connection)
         for actor in ("maker", "checker", "poster"):
             for kind, identifier in (("workspace", "work"), ("organization", "org"), ("legal_entity", "entity")):
-                authority.grant(tenant_id=base.tenant, grant_id="ad1-" + actor + identifier, principal_type="user",
-                    principal_id=actor, scope_type=kind, scope_id=identifier, actor_id=actor)
+                existing = connection.execute("""SELECT 1 FROM reconforge.principal_scope_grants WHERE tenant_id=%s
+                    AND principal_type='user' AND principal_id=%s AND scope_type=%s AND scope_id=%s AND revoked_at IS NULL""",
+                    (base.tenant, actor, kind, identifier)).fetchone()
+                if existing is None:
+                    authority.grant(tenant_id=base.tenant, grant_id="ad1-" + actor + identifier, principal_type="user",
+                        principal_id=actor, scope_type=kind, scope_id=identifier, actor_id=actor)
         PostgresMasterDataRepository(connection).bind_currency_registry(tenant_id=base.tenant, workspace="work", actor_id="maker")
     return ScheduleRuntime(base)
 
@@ -245,12 +253,19 @@ def test_cash_source_separation_and_whole_transaction_rollback_on_same_actor(run
         assert connection.execute("SELECT count(*) AS n FROM reconforge.accrual_deferral_commands WHERE tenant_id=%s", (runtime.base.tenant,)).fetchone()["n"] == 1
 
 
-def paid_original(runtime: ScheduleRuntime, debit: str = "EXPENSE", number: str = "PAID-ORIGINAL-1") -> dict[str, Any]:
+def paid_original(runtime: ScheduleRuntime, debit: str = "EXPENSE", number: str = "PAID-ORIGINAL-1", *, dimensions: bool = False) -> dict[str, Any]:
+    if dimensions:
+        with PostgresTenantBoundary(runtime.base.factory).transaction(runtime.base.tenant, workspace_id="work", organization_id="org") as connection:
+            finance = PostgresFinanceCoreRepository(connection, runtime.base.tenant)
+            for dimension, kind, value in (("PROJECT", "Project", "SERVICE"), ("BRANCH", "Custom", "MAIN")):
+                finance.upsert_dimension(dimension_code=dimension, name=dimension, workspace="work", organization_code="ORG", dimension_type=kind)
+                finance.upsert_dimension_value(dimension_code=dimension, value_code=value, name=value, workspace="work")
     with runtime.actor("maker") as (_, repository, actor):
         draft = repository.owner.finance.create_entry(entry_number=number, organization_code="ORG", entity_code="ENTITY",
             journal_code="AD1_NATIVE", period_id="period", posting_date="2026-10-01", workspace="work",
             description="Approved original external paid service", external_reference="SUPPLIER-PAID-" + number, actor_label=actor.username,
-            lines=[{"account_code": debit, "debit": "100.01"}, {"account_code": "CASH", "credit": "100.01"}])
+            lines=[{"account_code": debit, "debit": "100.01", "dimensions": {"PROJECT": "SERVICE"} if dimensions else {}},
+                {"account_code": "CASH", "credit": "100.01", "dimensions": {"BRANCH": "MAIN"} if dimensions else {}}])
     with runtime.actor("checker") as (_, repository, actor):
         repository.owner.finance.validate_entry(draft["id"], reason="Independent original paid voucher review", actor_label=actor.username)
         preview = repository.owner.posting.preview(draft["id"], actor=actor)
@@ -282,6 +297,30 @@ def test_exact_paid_original_membership_and_three_tranches_never_charge_cash_twi
         assert proof["original_claims"][0]["state"] == "Consumed"
         assert len(proof["native_effects"]) == (5 if mode == "attach_paid_expense" else 4)
         write_original(proof, mode)
+
+
+@pytest.mark.parametrize("mode,debit", (("attach_paid_expense", "EXPENSE"), ("attach_prepaid_voucher", "PREPAID")))
+def test_paid_original_actual_project_and_cash_branch_dimensions_remain_exact(runtime: ScheduleRuntime, mode: str, debit: str) -> None:
+    original = paid_original(runtime, debit, dimensions=True)
+    with runtime.actor("maker") as (_, repository, actor):
+        plan = repository.prepare_source(replace(preparation(mode), original_effect_id=original["id"]), command_id="dimension-source", actor=actor)
+    source = publish(runtime, plan, "dimension-source")
+    for tranche in ("T1", "T2", "T3"):
+        with runtime.actor("maker") as (_, repository, actor):
+            prepared = repository.prepare_tranche(source["source_id"], tranche_id=tranche, command_id="dimension-" + tranche, actor=actor)
+        publish(runtime, prepared, "dimension-" + tranche)
+    with runtime.actor("maker") as (connection, repository, actor):
+        proof = repository.evidence(source["source_id"], actor=actor)
+        external = proof["source"]["equation"]["external_original_membership"]
+        native_dimensions = {row["dimension_code"]: {row["dimension_id"]: row["value_id"]} for row in connection.execute("""SELECT d.dimension_code,d.id AS dimension_id,v.id AS value_id
+            FROM reconforge.finance_dimensions d JOIN reconforge.finance_dimension_values v ON v.tenant_id=d.tenant_id AND v.dimension_id=d.id
+            WHERE d.tenant_id=%s AND d.workspace_id='work' AND d.dimension_code IN('PROJECT','BRANCH')""", (runtime.base.tenant,))}
+        assert external["basis_dimensions"] == native_dimensions["PROJECT"] == original["snapshot"]["lines"][0]["dimensions"]
+        assert external["original_cash_dimensions"] == native_dimensions["BRANCH"] == original["snapshot"]["lines"][1]["dimensions"]
+        assert repository.owner.posting._get_effect(original["id"]) == original
+        assert native_balances(connection, runtime.base.tenant) == {"PREPAID": 0, "EXPENSE": 10001, "CASH": -10001}
+        assert all(line["dimensions"] == native_dimensions["PROJECT"] for member in proof["source"]["plans"] for line in member["equation"]["lines"])
+        write_original(proof, mode + "-actual-project-cash-branch")
 
 
 def test_cancel_unconsumed_attachment_releases_single_directory_before_ordinary_original_inverse(runtime: ScheduleRuntime) -> None:

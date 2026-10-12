@@ -52,6 +52,8 @@ api_routes:
   - POST /api/v1/accrual-deferral/sources
   - GET /api/v1/accrual-deferral/sources/{source_id}
   - GET /api/v1/accrual-deferral/sources/{source_id}/evidence
+  - GET /api/v1/accrual-deferral/sources/{source_id}/evidence/export
+  - GET /api/v1/accrual-deferral/plans/{plan_id}/evidence/export
   - GET /api/v1/accrual-deferral/plans/{plan_id}
   - POST /api/v1/accrual-deferral/sources/{source_id}/tranches
   - POST /api/v1/accrual-deferral/sources/{source_id}/reversals
@@ -64,6 +66,7 @@ import_schemas:
   - accrual-deferral-source-v1
 export_schemas:
   - accrual-deferral-native-evidence-v1
+  - accrual-deferral-plan-evidence-v1
 synthetic_fixtures:
   - Actual synthetic development native prepaid10001 distributed3334,3334,3333 with exact second-tranche inverse and replacement
   - Exact existing paid expense attachment preserves original cash and Project dimensions
@@ -86,6 +89,8 @@ test_matrix:
   native_sql: 8 actual passing development cases on current140 plus manually installed owned schema/Core fragment; an additional current qualified-scope six-effect export target passed after additive tenant projection
   native_migration_restore: Actual complete logical empty down/reup catalog equality; ordered141 and populated restore acceptance pending
   api: 2 actual authenticated PostgreSQL TestClient contracts passed; central registration and real wire browser acceptance pending
+  artifact_followup: 18 additional pure artifact/canonical-dimension cases passed; full and partial export paths passed inside two actual native TestClient contracts
+  native_dimension_followup: 2 actual paid-expense/prepaid attachment cases preserve native Project and separate Cash BRANCH references; both full cycles passed without another Cash effect
   independent_oracle: 5 original native exports passed 10 isolated normal/optimized executions; current qualified-scope original six-effect export passed both modes; stdlib only
   browser: pending
 backends:

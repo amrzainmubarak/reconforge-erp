@@ -104,7 +104,11 @@ CREATE FUNCTION reconforge.ad1_line(account TEXT,debit NUMERIC,credit NUMERIC,di
 BEGIN
  PERFORM reconforge.ad1_assert(account~'^[A-Z0-9][A-Z0-9_.:/-]{0,63}$' AND debit IS NOT NULL AND credit IS NOT NULL
   AND debit=trunc(debit) AND credit=trunc(credit) AND debit BETWEEN 0 AND 9000000000000000000 AND credit BETWEEN 0 AND 9000000000000000000
-  AND (debit>0)<>(credit>0) AND jsonb_typeof(dimensions)='object','Native AD1 lines require exact bounded money one side and retained dimensions');
+  AND (debit>0)<>(credit>0) AND jsonb_typeof(dimensions)='object'
+  AND(SELECT count(*) FROM jsonb_each(dimensions))<=8
+  AND NOT EXISTS(SELECT 1 FROM jsonb_each(dimensions)d WHERE NOT reconforge.irp_text(d.key,160)
+   OR jsonb_typeof(d.value)<>'string' OR NOT reconforge.irp_text(d.value#>>'{}',160)),
+  'Native AD1 lines require exact bounded money one side and at most eight canonical dimension references');
  RETURN jsonb_build_object('account_code',account,'debit_minor',debit,'credit_minor',credit,'dimensions',dimensions);
 END $ad1$;
 CREATE FUNCTION reconforge.ad1_allocate(q JSONB) RETURNS JSONB LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog AS $ad1$
@@ -246,6 +250,8 @@ BEGIN
   SELECT x->'dimensions' INTO dimensions FROM jsonb_array_elements(original.snapshot_json->'lines')x
    WHERE x->>'account_id'=roles->CASE kind WHEN'attach_paid_expense' THEN'expense' ELSE'prepaid' END->>'id';
   SELECT x->'dimensions' INTO cash_dimensions FROM jsonb_array_elements(original.snapshot_json->'lines')x WHERE x->>'account_id'=roles->'cash'->>'id';
+  PERFORM reconforge.ad1_line(cfg->'accounts'->>'cash',0,amount,cash_dimensions);
+  PERFORM reconforge.ad1_line(cfg->'accounts'->>CASE kind WHEN'attach_paid_expense' THEN'expense' ELSE'prepaid' END,amount,0,dimensions);
   review:=jsonb_build_object('id',entry.id,'status',entry.status,'preparer_actor_id',entry.preparer_actor_id,'validator_actor_id',entry.validator_actor_id,
    'validation_digest',entry.validation_digest,'validation_contract_version',entry.validation_contract_version);
   membership:=jsonb_build_object('original_effect_id',original.id,'original_entry_id',original.entry_id,'original_validation_digest',original.validation_digest,

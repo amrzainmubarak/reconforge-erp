@@ -22,6 +22,7 @@ CONTRACT = "accrual-deferral-source-v1"
 ALLOCATION_POLICY = "native-hamilton-stable-id-v1"
 MAX_MINOR = 9_000_000_000_000_000_000
 MAX_TRANCHES = 36
+MAX_DIMENSIONS = 8
 SourceMode = Literal["new_prepaid_voucher", "attach_paid_expense", "attach_prepaid_voucher", "expense_accrual"]
 Operation = Literal["source", "release", "accrue", "reverse"]
 MODES = frozenset(("new_prepaid_voucher", "attach_paid_expense", "attach_prepaid_voucher", "expense_accrual"))
@@ -166,8 +167,13 @@ def line(account: str, debit: int, credit: int, dimensions: Mapping[str, str] | 
     if code(account, "account code") != account:
         fail("Schedule lines require canonical captured account codes.")
     return {"account_code": account, "debit_minor": debit, "credit_minor": credit,
-            "dimensions": dict(sorted((identity(key, "dimension_id"), identity(value, "dimension_value_id"))
-                                      for key, value in (dimensions or {}).items()))}
+            "dimensions": captured_dimensions(dimensions or {})}
+
+
+def captured_dimensions(values: Mapping[str, str]) -> dict[str, str]:
+    if not isinstance(values, Mapping) or len(values) > MAX_DIMENSIONS:
+        fail("Each original native AD1 line supports at most eight exact dimension references.")
+    return dict(sorted((identity(key, "dimension_id"), identity(value, "dimension_value_id")) for key, value in values.items()))
 
 
 def attach_original(request: Mapping[str, Any], effect: Mapping[str, Any],
@@ -214,8 +220,8 @@ def attach_original(request: Mapping[str, Any], effect: Mapping[str, Any],
             "original_validation_digest": digest, "original_snapshot": snapshot,
             "original_actor_ids": actors, "original_review": {field: reviewed_entry[field] for field in
                 ("id", "status", "preparer_actor_id", "validator_actor_id", "validation_digest", "validation_contract_version")},
-            "basis_dimensions": dict(debit[0]["dimensions"]),
-            "original_cash_dimensions": dict(cash[0]["dimensions"])}
+            "basis_dimensions": captured_dimensions(debit[0]["dimensions"]),
+            "original_cash_dimensions": captured_dimensions(cash[0]["dimensions"])}
 
 
 def source_equation(request: Mapping[str, Any], context: CurrencyRegistryContext,

@@ -23,6 +23,7 @@ class AccrualDeferralRepositoryProtocol(Protocol):
     def get_source(self, source_id: str, *, actor: PostingActor) -> dict[str, Any]: ...
     def get_plan(self, plan_id: str, *, actor: PostingActor) -> dict[str, Any]: ...
     def evidence(self, source_id: str, *, actor: PostingActor) -> dict[str, Any]: ...
+    def plan_evidence(self, plan_id: str, *, actor: PostingActor) -> dict[str, Any]: ...
     def list_sources(self, *, workspace_id: str, organization_id: str, legal_entity_id: str,
                      after: str, actor: PostingActor) -> dict[str, Any]: ...
 
@@ -69,6 +70,9 @@ class AccrualDeferralApplicationService:
 
     def evidence(self, source_id: str, *, actor: PostingActor) -> dict[str, Any]:
         return self.repository.evidence(source_id, actor=actor)
+
+    def plan_evidence(self, plan_id: str, *, actor: PostingActor) -> dict[str, Any]:
+        return self.repository.plan_evidence(plan_id, actor=actor)
 
     def list_sources(self, *, workspace_id: str, organization_id: str, legal_entity_id: str,
                      after: str, actor: PostingActor) -> dict[str, Any]:

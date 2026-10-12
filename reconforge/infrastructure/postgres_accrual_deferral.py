@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from typing import Any
 from uuid import uuid4
 
+from reconforge.application.accrual_deferral_evidence import evidence_digest
 from reconforge.domain.accrual_deferral import (
     AccrualDeferralPreparation,
     attach_original,
@@ -549,20 +550,47 @@ class PostgresAccrualDeferralRepository:
                 (self.tenant_id, source_id)))
             return {**source, "plans": plans, "claims": heads, "cancelled": any(plan["kind"] == "cancel" and plan["phase"] == 2 for plan in plans)}
 
-    def evidence(self, source_id: str, *, actor: PostingActor) -> dict[str, Any]:
+    def plan_evidence(self, plan_id: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():
-            source = self.get_source(source_id, actor=actor)
+            plan = self._view(plan_id)
+            return self.evidence(plan["source_id"], actor=actor, plan_id=plan_id)
+
+    def evidence(self, source_id: str, *, actor: PostingActor, plan_id: str | None = None) -> dict[str, Any]:
+        with self.owner._transaction():
+            if plan_id is None:
+                source = self.get_source(source_id, actor=actor)
+            else:
+                source = self._peek("source", source_id, share=True)
+                plan = self._view(plan_id)
+                if plan["source_id"] != source_id:
+                    fail("Evidence member does not belong to the original source.", "accrual_deferral_plan_not_found")
+                plans = [plan]
+                if plan.get("original_plan_id"):
+                    plans.append(self._view(plan["original_plan_id"]))
+                self._authorize(actor, "read", source, lock=True)
+                for member in plans:
+                    self._authorize(actor, "read", source, member, lock=True)
+                tranche_ids = [member["tranche_id"] for member in plans if member.get("tranche_id")]
+                heads = records(self.connection.execute("""SELECT tenant_id,source_id,tranche_id,sequence,plan_id,state
+                    FROM reconforge.accrual_deferral_claim_heads WHERE tenant_id=%s AND source_id=%s AND tranche_id=ANY(%s) ORDER BY tranche_id""",
+                    (self.tenant_id, source_id, tranche_ids)))
+                source = {**source, "plans": plans, "claims": heads}
+            member_ids = [plan["id"] for plan in source["plans"]]
+            tranche_filter = None if plan_id is None else [plan["tranche_id"] for plan in source["plans"] if plan.get("tranche_id")]
             identifiers = [plan["posting_effect_id"] for plan in source["plans"] if plan["posting_effect_id"]]
             attached = source["equation"]["external_original_membership"].get("original_effect_id")
             if attached:
                 identifiers.append(attached)
             effects = [{"tenant_id": self.tenant_id, **effect} for effect in self.owner.posting.iter_verified_posting_effects(effect_ids=identifiers, actor=actor)]
-            claims = records(self.connection.execute("SELECT tenant_id,source_id,tranche_id,sequence,plan_id,operation,state FROM reconforge.accrual_deferral_claim_events WHERE tenant_id=%s AND source_id=%s ORDER BY tranche_id,sequence",
-                (self.tenant_id, source_id)))
+            claims = records(self.connection.execute("""SELECT tenant_id,source_id,tranche_id,sequence,plan_id,operation,state
+                FROM reconforge.accrual_deferral_claim_events WHERE tenant_id=%s AND source_id=%s
+                AND (%s::text[] IS NULL OR tranche_id=ANY(%s)) ORDER BY tranche_id,sequence""",
+                (self.tenant_id, source_id, tranche_filter, tranche_filter)))
             phases = records(self.connection.execute("""SELECT e.* FROM reconforge.accrual_deferral_phase_events e
                 JOIN reconforge.accrual_deferral_plans p ON p.tenant_id=e.tenant_id AND p.id=e.plan_id
-                WHERE p.tenant_id=%s AND p.source_id=%s ORDER BY p.id,e.operation""", (self.tenant_id, source_id)))
-            value = {"schema_version": "accrual-deferral-native-evidence-v1", "qualified_scope": {"tenant_id": self.tenant_id, **self._scope(source)},
+                WHERE p.tenant_id=%s AND p.source_id=%s AND p.id=ANY(%s) ORDER BY p.id,e.operation""", (self.tenant_id, source_id, member_ids)))
+            value = {"schema_version": "accrual-deferral-native-evidence-v1" if plan_id is None else "accrual-deferral-plan-evidence-v1",
+                "qualified_scope": {"tenant_id": self.tenant_id, **self._scope(source)},
                 "source": source, "native_effects": effects,
                 "claims": claims, "phases": phases, "financial_directory": records(self.connection.execute("""SELECT g.* FROM reconforge.financial_effect_ownership_guards g
                     JOIN reconforge.accrual_deferral_original_claims c ON c.tenant_id=g.tenant_id AND c.id=g.owner_claim_id
@@ -577,8 +605,13 @@ class PostgresAccrualDeferralRepository:
                 "financial_directory_releases": records(self.connection.execute("""SELECT r.* FROM reconforge.financial_effect_ownership_releases r
                     JOIN reconforge.accrual_deferral_original_claims c ON c.tenant_id=r.tenant_id AND c.id=r.guard_id WHERE c.tenant_id=%s AND c.source_id=%s""", (self.tenant_id, source_id))),
                 "commands": records(self.connection.execute("""SELECT c.* FROM reconforge.accrual_deferral_commands c JOIN reconforge.accrual_deferral_plans p
-                    ON p.tenant_id=c.tenant_id AND p.id=c.plan_id WHERE p.tenant_id=%s AND p.source_id=%s ORDER BY c.plan_id,c.operation""", (self.tenant_id, source_id)))}
-            value["evidence_digest"] = digest_payload(value)
+                    ON p.tenant_id=c.tenant_id AND p.id=c.plan_id WHERE p.tenant_id=%s AND p.source_id=%s AND p.id=ANY(%s)
+                    ORDER BY c.plan_id,c.operation""", (self.tenant_id, source_id, member_ids)))}
+            if plan_id is not None:
+                value["member_manifest"] = {"selected_plan_id": plan_id, "whole_source": False,
+                    "source_digest": source["source_digest"],
+                    "plans": [{"id": plan["id"], "plan_digest": plan["plan_digest"]} for plan in source["plans"]]}
+            value["evidence_digest"] = evidence_digest(value)
             return value
 
     def list_sources(self, *, workspace_id: str, organization_id: str, legal_entity_id: str,

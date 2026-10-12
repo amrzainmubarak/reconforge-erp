@@ -44,6 +44,9 @@ def normalize(value: Any, field: str = "") -> Any:
 
 
 def line(account: str, debit: int, credit: int, dimensions: dict[str, str]) -> dict[str, Any]:
+    require(type(dimensions) is dict and len(dimensions) <= 8 and all(type(key) is str and type(value) is str
+        and 0 < len(key) <= 160 and 0 < len(value) <= 160 and key.strip() == key and value.strip() == value for key, value in dimensions.items()),
+        "At most eight canonical original dimension references are required")
     return {"account_code": account, "debit_minor": debit, "credit_minor": credit, "dimensions": dimensions}
 
 
@@ -298,7 +301,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     raw = args.evidence.read_bytes()
-    require(len(raw) <= 16_777_216 and hashlib.sha256(raw).hexdigest() == args.expected_evidence_sha256,
+    require(len(raw) <= 67_108_864 and hashlib.sha256(raw).hexdigest() == args.expected_evidence_sha256,
             "Evidence differs from the trusted original byte anchor")
     result = verify(json.loads(raw, object_pairs_hook=unique_pairs, parse_float=refuse, parse_constant=refuse))
     result.update(raw_evidence_sha256=hashlib.sha256(raw).hexdigest(), raw_anchor_verified=True)

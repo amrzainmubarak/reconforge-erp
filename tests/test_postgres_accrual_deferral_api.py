@@ -84,6 +84,22 @@ def test_actual_http_source_three_humans_tranche_exact_inverse_and_evidence(runt
         assert proof.status_code == 200, proof.text
         assert len(proof.json()["native_effects"]) == 3
         write_original(proof.json(), "actual-http-tranche-inverse")
+        from reconforge.application.accrual_deferral_evidence import evidence_chunks
+
+        exported = session.get(ROOT + "/sources/" + source["source_id"] + "/evidence/export", headers=headers)
+        assert exported.status_code == 200, exported.text
+        assert exported.content == b"".join(evidence_chunks(proof.json()))
+        assert int(exported.headers["content-length"]) == len(exported.content)
+        member = session.get(ROOT + "/plans/" + inverse["id"] + "/evidence/export", headers=headers)
+        assert member.status_code == 200, member.text
+        retained = member.json()
+        assert retained["schema_version"] == "accrual-deferral-plan-evidence-v1"
+        assert retained["qualified_scope"]["tenant_id"] == runtime.base.tenant
+        assert retained["member_manifest"]["whole_source"] is False
+        assert {plan["id"] for plan in retained["source"]["plans"]} == {inverse["id"], tranche["id"]}
+        assert {effect["id"] for effect in retained["native_effects"]} == {inverse["posting_effect_id"], tranche["posting_effect_id"]}
+        assert {command["plan_id"] for command in retained["commands"]} == {inverse["id"], tranche["id"]}
+        assert len(retained["phases"]) == 6
 
 
 def test_actual_http_strict_money_stepup_and_cached_grant_revocation_refuse_new_and_replayed_commands(runtime: ScheduleRuntime, accrual_deferral_database: tuple[str, str], tmp_path: Path) -> None:
@@ -97,4 +113,6 @@ def test_actual_http_strict_money_stepup_and_cached_grant_revocation_refuse_new_
         with PostgresTenantBoundary(runtime.base.factory).transaction(runtime.base.tenant) as connection:
             PostgresScopeAuthorityRepository(connection).revoke(tenant_id=runtime.base.tenant, grant_id="ad1-makerentity", actor_id="poster", reason="Withdraw current native entity source grant")
         assert session.get(ROOT + "/sources/" + source, headers=headers).status_code == 403
+        assert session.get(ROOT + "/sources/" + source + "/evidence/export", headers=headers).status_code == 403
+        assert session.get(ROOT + "/plans/" + result.json()["plan"]["id"] + "/evidence/export", headers=headers).status_code == 403
         assert session.post(ROOT + "/sources", headers=headers, json=body()).status_code == 403

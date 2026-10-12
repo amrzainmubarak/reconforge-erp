@@ -236,12 +236,14 @@ class PostgresPeopleProjectPayrollRepository:
             fail("Private workforce source is unavailable under current authority.", "people_permission_denied")
         return dict(rows[0]["payload"])
 
-    def _view(self, table: str, source: Mapping[str, Any], *, sensitive: bool = False) -> dict[str, Any]:
+    def _view(self, table: str, source: Mapping[str, Any], *, sensitive: bool = False, actor: PostingActor | None = None) -> dict[str, Any]:
         result = {**dict(source["payload"]), "phase": source["phase"],
             "status": {0: "Prepared", 1: "Reviewed", 2: "Posted", 3: "Cancelled"}[source["phase"]],
             "reviewer_id": source["reviewer_id"], "posted_actor_id": source["poster_id"], "posting_effect_id": source["effect_id"]}
         if sensitive:
             result["private"] = self._private("hc_payment_private" if table == "hc_payments" else "hc_payrun_private", source["id"])
+            if actor is not None:
+                result["native_effect"] = self.owner.posting.get_effect(source["effect_id"], actor=actor) if source["effect_id"] else None
         return result
 
     def _budget_lock(self, source: Mapping[str, Any]) -> dict[str, Any]:
@@ -453,12 +455,15 @@ class PostgresPeopleProjectPayrollRepository:
             self._authorize(actor, "read", source["payload"], mutation=False)
             if sensitive:
                 self._authorize(actor, "read_sensitive", source["payload"], mutation=False)
-            return self._view(table, source, sensitive=sensitive)
+                self.owner._actor(actor, "finance_core.read", source["payload"], mutation=False)
+            return self._view(table, source, sensitive=sensitive, actor=actor)
 
     def evidence(self, payrun_id: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():
             source = self._row("hc_payruns", payrun_id)
             self._authorize(actor, "read_sensitive", source["payload"], mutation=False)
+            self._authorize(actor, "read", source["payload"], mutation=False)
+            self.owner._actor(actor, "finance_core.read", source["payload"], mutation=False)
             self.connection.execute("SELECT reconforge.hc_close(%s,%s)", (self.tenant_id, payrun_id))
             effects = []
             all_sources = [source, *records(self.connection.execute("SELECT * FROM reconforge.hc_payments WHERE tenant_id=%s AND payrun_id=%s ORDER BY id",
@@ -466,15 +471,19 @@ class PostgresPeopleProjectPayrollRepository:
             for plan in all_sources:
                 if plan["effect_id"]:
                     effects.append(self.owner.posting.get_effect(plan["effect_id"], actor=actor))
-            return {"schema_version": "people-payroll-evidence-v1", "payrun": self._view("hc_payruns", source, sensitive=True),
+            return {"schema_version": "people-payroll-evidence-v1", "payrun": self._view("hc_payruns", source, sensitive=True, actor=actor),
                 "native_effects": effects, "times": records(self.connection.execute("""SELECT t.*,rate.hourly_rate_minor,e.currency_code,
                     e.currency_precision,e.currency_rounding_policy,e.currency_registry_version,e.currency_registry_digest
                     FROM reconforge.hc_times t JOIN reconforge.hc_employments e ON e.tenant_id=t.tenant_id AND e.id=t.employment_id
                     JOIN reconforge.hc_rates rate ON rate.tenant_id=e.tenant_id AND rate.employment_id=e.id
                     WHERE t.tenant_id=%s AND t.id=ANY(%s) ORDER BY t.id""", (self.tenant_id, source["payload"]["time_entry_ids"]))),
                 "claims": records(self.connection.execute("SELECT * FROM reconforge.hc_claim_events WHERE tenant_id=%s AND payrun_id=%s ORDER BY time_id,sequence", (self.tenant_id, payrun_id))),
+                "projects": records(self.connection.execute("SELECT id,dimension_id,value_id,dimension_code,value_code,workspace_id,organization_id,legal_entity_id FROM reconforge.hc_projects WHERE tenant_id=%s AND id=ANY(%s) ORDER BY id",
+                    (self.tenant_id, list(source["payload"]["project_minor"])))),
+                "accounts": records(self.connection.execute("SELECT id,account_code FROM reconforge.finance_accounts WHERE tenant_id=%s AND workspace_id=%s AND account_code=ANY(%s) ORDER BY account_code",
+                    (self.tenant_id, source["workspace_id"], [source["payload"]["expense_account_code"], source["payload"]["liability_account_code"], source["payload"]["cash_account_code"]]))),
                 "budget_events": records(self.connection.execute("SELECT * FROM reconforge.budget_commitment_events WHERE tenant_id=%s AND commitment_id=%s ORDER BY budget_version", (self.tenant_id, source["commitment_id"]))),
-                "payments": [self._view("hc_payments", plan, sensitive=True) for plan in all_sources[1:]],
+                "payments": [self._view("hc_payments", plan, sensitive=True, actor=actor) for plan in all_sources[1:]],
                 "limitations": ["Nonstatutory management wage/time accounting; statutory countries supported: zero.", "Recorded cash GL settlement; no external bank payment."]}
 
     def catalog(self, kind: str, scope: PeopleScope, *, after: str = "", limit: int = 25, actor: PostingActor) -> dict[str, Any]:

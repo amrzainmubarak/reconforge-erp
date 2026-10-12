@@ -6,10 +6,10 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.routes.finance_posting import _actor
 from reconforge.api.routes.operational_finance import _authority
+from reconforge.api.routes.procurement_operations import required
 from reconforge.api.server_finance_core import (
     FinanceCoreExecutionScope,
     execute_postgres_finance_core_scoped,
@@ -31,15 +31,26 @@ from reconforge.domain.people_project_payroll import (
 from reconforge.infrastructure.postgres_people_project_payroll import PostgresPeopleProjectPayrollRepository
 
 router = APIRouter(prefix="/people-project-payroll", tags=["people-project-payroll"])
-Read = Annotated[LocalUser, Depends(require_permission("people_project_payroll.read"))]
-Sensitive = Annotated[LocalUser, Depends(require_permission("people_project_payroll.read_sensitive"))]
-Personnel = Annotated[LocalUser, Depends(require_permission("people_project_payroll.personnel"))]
-Manage = Annotated[LocalUser, Depends(require_permission("people_project_payroll.manage"))]
-Approve = Annotated[LocalUser, Depends(require_permission("people_project_payroll.approve_time"))]
-Prepare = Annotated[LocalUser, Depends(require_permission("people_project_payroll.prepare"))]
-Review = Annotated[LocalUser, Depends(require_permission("people_project_payroll.review"))]
-Post = Annotated[LocalUser, Depends(require_permission("people_project_payroll.post"))]
-Pay = Annotated[LocalUser, Depends(require_permission("people_project_payroll.pay"))]
+PERMISSIONS = {
+    "read": frozenset({"people_project_payroll.read"}),
+    "sensitive": frozenset({"people_project_payroll.read", "people_project_payroll.read_sensitive", "finance_core.read"}),
+    "personnel": frozenset({"people_project_payroll.personnel", "people_project_payroll.read_sensitive"}),
+    "manage": frozenset({"people_project_payroll.manage"}),
+    "approve_time": frozenset({"people_project_payroll.approve_time"}),
+    "prepare": frozenset({"people_project_payroll.prepare", "people_project_payroll.read_sensitive", "finance_core.manage", "budget_control.read", "budget_control.manage"}),
+    "review": frozenset({"people_project_payroll.review", "people_project_payroll.read_sensitive", "finance_core.validate", "budget_control.read"}),
+    "post": frozenset({"people_project_payroll.post", "people_project_payroll.read_sensitive", "finance_core.post", "budget_control.read", "budget_control.manage"}),
+    "pay": frozenset({"people_project_payroll.pay", "people_project_payroll.read_sensitive", "finance_core.manage", "budget_control.read"}),
+}
+Read = Annotated[LocalUser, Depends(required(PERMISSIONS["read"]))]
+Sensitive = Annotated[LocalUser, Depends(required(PERMISSIONS["sensitive"]))]
+Personnel = Annotated[LocalUser, Depends(required(PERMISSIONS["personnel"]))]
+Manage = Annotated[LocalUser, Depends(required(PERMISSIONS["manage"]))]
+Approve = Annotated[LocalUser, Depends(required(PERMISSIONS["approve_time"]))]
+Prepare = Annotated[LocalUser, Depends(required(PERMISSIONS["prepare"]))]
+Review = Annotated[LocalUser, Depends(required(PERMISSIONS["review"]))]
+Post = Annotated[LocalUser, Depends(required(PERMISSIONS["post"]))]
+Pay = Annotated[LocalUser, Depends(required(PERMISSIONS["pay"]))]
 Minor = Annotated[str, Field(pattern=r"^[1-9][0-9]{0,18}$")]
 
 

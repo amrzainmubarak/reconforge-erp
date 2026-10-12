@@ -151,6 +151,10 @@ BEGIN
   PERFORM reconforge.hc_actor(NEW.tenant_id,NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id,
    current_actor,
    CASE permission WHEN 'review' THEN 'finance_core.validate' WHEN 'post' THEN 'finance_core.post' ELSE 'finance_core.manage' END);
+  PERFORM reconforge.hc_actor(NEW.tenant_id,NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id,current_actor,'budget_control.read');
+  IF TG_TABLE_NAME='hc_payruns' AND permission<>'review' THEN
+   PERFORM reconforge.hc_actor(NEW.tenant_id,NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id,current_actor,'budget_control.manage');
+  END IF;
  ELSIF TG_TABLE_NAME='hc_employments' THEN
   SELECT * INTO a FROM reconforge.hc_employees WHERE tenant_id=NEW.tenant_id AND id=NEW.employee_id FOR UPDATE;
   PERFORM reconforge.hc_assert(a.id IS NOT NULL AND (a.workspace_id,a.organization_id,a.legal_entity_id)=(NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id),'Employment scope differs from person');
@@ -174,7 +178,8 @@ BEGIN
   FOR line IN SELECT value FROM jsonb_array_elements(NEW.lines) ORDER BY (value->>'start_minute')::INTEGER LOOP
    PERFORM reconforge.hc_assert(jsonb_typeof(line)='object' AND (SELECT count(*) FROM jsonb_object_keys(line))=3
     AND line ?& ARRAY['project_id','start_minute','end_minute'] AND line->>'start_minute'~'^(0|[1-9][0-9]{0,3})$'
-    AND line->>'end_minute'~'^[1-9][0-9]{0,3}$','Time interval requires closed exact integer fields');
+    AND line->>'end_minute'~'^[1-9][0-9]{0,3}$' AND jsonb_typeof(line->'start_minute')='number' AND jsonb_typeof(line->'end_minute')='number',
+    'Time interval requires closed exact integer fields');
    start_m:=(line->>'start_minute')::INTEGER;end_m:=(line->>'end_minute')::INTEGER;
    PERFORM reconforge.hc_assert(start_m>=0 AND end_m>start_m AND end_m<=1440 AND start_m>=previous_end,'Employee intervals must not overlap');previous_end:=end_m;
    SELECT * INTO p FROM reconforge.hc_projects WHERE tenant_id=NEW.tenant_id AND id=line->>'project_id';
@@ -274,14 +279,19 @@ BEGIN
   <>(e.currency_code,e.currency_precision::text,e.currency_rounding_policy,e.currency_registry_version,e.currency_registry_digest))),'Accrual cannot reinterpret original rate policy or detach whole-time source claims');
  SELECT * INTO b FROM reconforge.budget_envelopes WHERE tenant_id=t AND id=p.budget_id;
  PERFORM reconforge.hc_assert(b.id IS NOT NULL AND (b.workspace_id,b.organization_id,b.legal_entity_id)=(p.workspace_id,p.organization_id,p.legal_entity_id)
- AND b.period_id=e.period_id AND b.currency_code=e.currency_code,'Payroll budget must retain canonical source scope/currency/period');
+ AND b.period_id=e.period_id AND (b.currency_code,b.currency_precision,b.currency_rounding_policy,b.currency_registry_version,b.currency_registry_digest)
+ =(e.currency_code,e.currency_precision,e.currency_rounding_policy,e.currency_registry_version,e.currency_registry_digest),
+ 'Payroll budget must retain canonical source scope/currency/period and captured monetary policy');
  PERFORM reconforge.hc_assert((SELECT count(*) FROM reconforge.budget_commitment_events WHERE tenant_id=t AND commitment_id=p.commitment_id AND operation='Reserve'
  AND source_reference=p.id AND amount_minor=p.amount_minor)=1,'Payrun needs exactly one native reserve event');
  PERFORM reconforge.hc_assert((SELECT count(*) FROM reconforge.budget_commitment_events WHERE tenant_id=t AND commitment_id=p.commitment_id AND operation='Consume')
  =CASE WHEN p.phase=2 THEN 1 ELSE 0 END AND (SELECT count(*) FROM reconforge.budget_commitment_events WHERE tenant_id=t AND commitment_id=p.commitment_id AND operation='Release')
  =CASE WHEN p.phase=3 THEN 1 ELSE 0 END,'Only posted accrual consumes, only unposted cancellation releases the original budget');
  PERFORM reconforge.hc_assert(NOT EXISTS(SELECT 1 FROM reconforge.budget_commitment_events WHERE tenant_id=t AND commitment_id=p.commitment_id
- AND (source_reference<>p.id OR amount_minor<>p.amount_minor OR (operation IN('Consume','Release') AND remaining_minor<>0))),'Payroll budget event amount and original source cannot diverge');
+ AND (budget_id<>p.budget_id OR source_reference<>p.id OR amount_minor<>p.amount_minor OR operation_date<>e.posting_date
+ OR actor_id<>CASE operation WHEN 'Reserve' THEN p.preparer_id WHEN 'Consume' THEN p.poster_id ELSE p.canceller_id END
+ OR (operation='Reserve' AND remaining_minor<>p.amount_minor) OR (operation IN('Consume','Release') AND remaining_minor<>0))),
+ 'Payroll budget event amount original envelope actor date and source cannot diverge');
  expected:='[]'::jsonb;
  FOR project IN SELECT key,value FROM jsonb_each(v->'project_minor') ORDER BY key COLLATE "C" LOOP
   amount:=project.value::TEXT::NUMERIC;
@@ -387,7 +397,7 @@ BEGIN
  AND payload=jsonb_build_object('source_digest',digest,'audit_event_id',aid)), 'Workforce outbox must retain original scoped audit relation');
 END $hc$;
 CREATE FUNCTION reconforge.hc_phases(t TEXT,p JSONB,payment BOOLEAN) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $hc$
-DECLARE phase INTEGER:=(p->>'phase')::INTEGER;v JSONB:=p->'payload';action TEXT;actor TEXT;aid TEXT;oid TEXT;op TEXT;
+DECLARE phase INTEGER:=(p->>'phase')::INTEGER;v JSONB:=p->'payload';action TEXT;actor TEXT;aid TEXT;oid TEXT;op TEXT;cmd RECORD;
 BEGIN
  PERFORM reconforge.hc_assert((p->>'id',p->>'workspace_id',p->>'organization_id',p->>'legal_entity_id',p->>'entry_id',p->>'amount_minor',p->>'preparer_id')
  =(v->>'id',v->>'workspace_id',v->>'organization_id',v->>'legal_entity_id',v->>'entry_id',v->>'amount_minor',v->>'preparer_id'), 'Public workforce source cannot detach from canonical native ownership');
@@ -405,6 +415,16 @@ BEGIN
     AND c.response_json->>'plan_digest'=v->>'plan_digest'
     AND (op IN('prepare','pay') OR c.request_json->>'expected_plan_digest'=v->>'plan_digest'))=1,
     'Completed workforce phase requires one exact immutable command acknowledgement');
+   FOR cmd IN SELECT * FROM reconforge.hc_commands c WHERE c.tenant_id=t AND c.workspace_id=p->>'workspace_id'
+    AND c.operation=op AND c.response_json->>'id'=p->>'id' LOOP
+    PERFORM reconforge.hc_assert((cmd.response_json-ARRAY['phase','status','reviewer_id','posted_actor_id','posting_effect_id'])=v
+     AND (cmd.organization_id,cmd.legal_entity_id)=(p->>'organization_id',p->>'legal_entity_id')
+     AND cmd.response_json->>'phase'=CASE op WHEN 'prepare' THEN '0' WHEN 'pay' THEN '0' WHEN 'review' THEN '1' WHEN 'post' THEN '2' ELSE '3' END
+     AND cmd.response_json->>'status'=CASE op WHEN 'prepare' THEN 'Prepared' WHEN 'pay' THEN 'Prepared' WHEN 'review' THEN 'Reviewed' WHEN 'post' THEN 'Posted' ELSE 'Cancelled' END,
+     'Immutable financial acknowledgement must retain complete original payload scope and phase');
+    IF op='prepare' THEN PERFORM reconforge.hc_assert(cmd.request_json=v->'command_request','Accrual request cannot detach from original source');
+    ELSIF op IN('review','post','cancel') THEN PERFORM reconforge.hc_assert(COALESCE(cmd.request_json->>'plan_id',cmd.request_json->>'payrun_id')=p->>'id','Phase command retains its original source');END IF;
+   END LOOP;
   ELSE PERFORM reconforge.hc_assert(actor IS NULL AND aid IS NULL AND oid IS NULL,'Unperformed phase cannot retain fabricated actor or evidence');END IF;
  END LOOP;
  IF phase IN(0,1,3) THEN PERFORM reconforge.hc_assert(p->>'effect_id' IS NULL,'Unposted workforce cannot retain a native effect');END IF;
@@ -469,6 +489,15 @@ END $hc$;
 CREATE FUNCTION reconforge.hc_reverse_close() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $hc$
 DECLARE changes JSONB[];changed JSONB;native_id TEXT;native_number TEXT;owner_id TEXT;source_id TEXT;p RECORD;
 BEGIN
+ -- Delivery leasing/acknowledgement changes do not reinterpret the immutable
+ -- source event. An ordinary worker must not acquire personnel credentials.
+ IF TG_OP='UPDATE' AND TG_TABLE_NAME='outbox_events' THEN
+  IF (to_jsonb(NEW)->'tenant_id',to_jsonb(NEW)->'event_id',to_jsonb(NEW)->'event_type',to_jsonb(NEW)->'aggregate_type',
+   to_jsonb(NEW)->'aggregate_id',to_jsonb(NEW)->'workspace_id',to_jsonb(NEW)->'organization_id',to_jsonb(NEW)->'legal_entity_id',to_jsonb(NEW)->'payload',to_jsonb(NEW)->'created_at')
+   IS NOT DISTINCT FROM (to_jsonb(OLD)->'tenant_id',to_jsonb(OLD)->'event_id',to_jsonb(OLD)->'event_type',to_jsonb(OLD)->'aggregate_type',
+   to_jsonb(OLD)->'aggregate_id',to_jsonb(OLD)->'workspace_id',to_jsonb(OLD)->'organization_id',to_jsonb(OLD)->'legal_entity_id',to_jsonb(OLD)->'payload',to_jsonb(OLD)->'created_at')
+   THEN RETURN NULL;END IF;
+ END IF;
  IF TG_OP='INSERT' THEN changes:=ARRAY[to_jsonb(NEW)];ELSIF TG_OP='DELETE' THEN changes:=ARRAY[to_jsonb(OLD)];
  ELSIF TG_OP='UPDATE' THEN changes:=ARRAY[to_jsonb(OLD),to_jsonb(NEW)];ELSE PERFORM reconforge.hc_assert(FALSE,'Unsupported workforce closure operation');END IF;
  FOREACH changed IN ARRAY changes LOOP

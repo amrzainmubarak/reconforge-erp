@@ -14,6 +14,7 @@ from typing import Any
 
 import pytest
 
+from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, PostgresTenantBoundary
 from reconforge.infrastructure.postgres_inventory_scope import (
     DOWNGRADE_SQL,
@@ -107,13 +108,16 @@ def _seed_graph(admin: Any, tenant: str, label: str, workspace: str, org: str, e
     admin.execute("INSERT INTO reconforge.finance_accounts(tenant_id,id,workspace_id,chart_id,account_code,name,account_type,normal_balance,allow_posting,allow_manual_posting,reconciliation_required,active,created_at,updated_at) VALUES(%s,%s,%s,%s,%s,'Synthetic','Asset','Debit',TRUE,TRUE,FALSE,TRUE,'2026-07-01','2026-07-01')", (tenant, f"account_{label}", workspace, f"chart_{label}", label.upper()))
     admin.execute("INSERT INTO reconforge.finance_journals(tenant_id,id,workspace_id,chart_id,organization_code,journal_code,name,currency_code,journal_type,active,created_at,updated_at) VALUES(%s,%s,%s,%s,%s,%s,'Synthetic','USD','General',TRUE,'2026-07-01','2026-07-01')", (tenant, f"journal_{label}", workspace, f"chart_{label}", org.upper(), label.upper()))
     admin.execute("INSERT INTO reconforge.inventory_valuation_policies(tenant_id,id,workspace_id,organization_id,legal_entity_id,policy_code,currency_code,finance_journal_id,receipt_clearing_account_id,cogs_account_id,adjustment_account_id,created_by) VALUES(%s,%s,%s,%s,%s,'FIFO','USD',%s,%s,%s,%s,'maker')", (tenant, f"policy_{label}", workspace, org, entity, f"journal_{label}", f"account_{label}", f"account_{label}", f"account_{label}"))
+    monetary_policy, _ = FinancePolicyStore(admin, tenant_id=tenant).capture(
+        workspace_id=workspace, currency_code="USD", minor_units=2, actor_label="fixture_policy_capture",
+    )
     for kind, direction in (("in", "Inbound"), ("out", "Outbound"), ("reverse", "Inbound")):
         movement = f"movement_{label}_{kind}"
         admin.execute("INSERT INTO reconforge.inventory_movements(tenant_id,id,workspace_id,organization_id,legal_entity_id,period_id,movement_number,movement_type,movement_date,description,created_by) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,'2026-07-02','Synthetic','maker')", (tenant, movement, workspace, org, entity, f"period_{workspace}", movement.upper(), "Delivery" if kind == "out" else "Receipt"))
         admin.execute("INSERT INTO reconforge.inventory_movement_lines(tenant_id,id,movement_id,line_number,item_id,uom_id,from_location_id,to_location_id,quantity_scaled,quantity_precision) VALUES(%s,%s,%s,1,%s,%s,%s,%s,100,0)", (tenant, f"movement_line_{label}_{kind}", movement, f"item_{label}", f"uom_{label}", f"location_{label}" if kind == "out" else None, None if kind == "out" else f"location_{label}"))
         if kind == "reverse":
             continue
-        admin.execute("INSERT INTO reconforge.inventory_valuation_documents(tenant_id,id,workspace_id,organization_id,legal_entity_id,period_id,movement_id,policy_id,valuation_number,valuation_date,currency_code,created_by) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,'2026-07-02','USD','maker')", (tenant, f"document_{label}_{kind}", workspace, org, entity, f"period_{workspace}", movement, f"policy_{label}", f"VALUE_{label}_{kind}".upper()))
+        admin.execute("INSERT INTO reconforge.inventory_valuation_documents(tenant_id,id,workspace_id,organization_id,legal_entity_id,period_id,movement_id,policy_id,valuation_number,valuation_date,currency_code,created_by,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,'2026-07-02','USD','maker',%s,%s,%s,%s)", (tenant, f"document_{label}_{kind}", workspace, org, entity, f"period_{workspace}", movement, f"policy_{label}", f"VALUE_{label}_{kind}".upper(), *monetary_policy.values()))
         if kind == "in":
             admin.execute("INSERT INTO reconforge.inventory_valuation_input_costs(tenant_id,id,valuation_document_id,movement_line_id,total_cost_minor) VALUES(%s,%s,%s,%s,1000)", (tenant, f"input_{label}", f"document_{label}_in", f"movement_line_{label}_in"))
         admin.execute("INSERT INTO reconforge.inventory_valuation_lines(tenant_id,id,valuation_document_id,movement_line_id,line_number,flow_direction,item_id,uom_id,quantity_scaled,quantity_precision,value_minor,inventory_account_id,offset_account_id) VALUES(%s,%s,%s,%s,1,%s,%s,%s,100,0,1000,%s,%s)", (tenant, f"valuation_line_{label}_{kind}", f"document_{label}_{kind}", f"movement_line_{label}_{kind}", direction, f"item_{label}", f"uom_{label}", f"account_{label}", f"account_{label}"))

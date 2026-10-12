@@ -45,7 +45,7 @@ api_routes:
   - POST /api/v1/manufacturing-execution-v2/inspections/{id}/post
   - POST /api/v1/manufacturing-execution-v2/inspections/{id}/cancel
 cli_commands: []
-ui_routes: []
+ui_routes: [/manufacturing-execution-v2]
 import_schemas: [manufacturing-workcenter-v2, manufacturing-routing-v2, manufacturing-order-v2, manufacturing-held-production-v2, manufacturing-inspection-v2]
 export_schemas: [manufacturing-execution-proof-v2]
 synthetic_fixtures:
@@ -63,9 +63,10 @@ test_matrix:
   pure: tests/test_manufacturing_execution_v2.py
   postgresql: tests/test_postgres_manufacturing_execution_v2.py
   api: tests/test_manufacturing_execution_v2_api_contract.py; actual-root-registration-and-native-http-pending
-  studio: pending-owned-studio-integration
+  studio: apps/web/src/components/ManufacturingExecutionV2Page.test.tsx; actual-https-restore-pending
   independent_oracle: tests/test_manufacturing_v2_cycle_oracle.py; standalone-original-native-checkpoints-passed-developmentally
 backend_support:
   postgres: native-owner-development
   sqlite: unavailable-native-ME1-dependency
 claim_boundary: Actual original cost/QC golden and independently pinned held/intermediate/final native proofs pass developmentally; integrated HTTP/Studio/restore/full-source acceptance remains pending.
+cancellation_boundary: Untouched reserved orders and reviewed costing or inspection may cancel; pending financial Draft requires independent review before native void, explicit gap.

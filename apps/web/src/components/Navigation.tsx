@@ -53,6 +53,8 @@ export const navigationGroups: NavigationGroup[] = [
       { key: "fixed-assets", label: "fixedAssets", icon: Landmark, page: "fixedAssets" },
       { key: "manufacturing-execution", label: "manufacturingExecution", icon: Factory, page: "manufacturingExecution" },
       { key: "intercompany-operations", label: "intercompanyOperations", icon: Landmark, page: "intercompanyOperations" },
+      { key: "intercompany-fx", label: "intercompanyFx", icon: Landmark, page: "intercompanyFx" },
+      { key: "people-project-payroll", label: "peopleProjectPayroll", icon: FileChartColumn, page: "peopleProjectPayroll" },
       { key: "procurement-sourcing", label: "procurementSourcing", icon: Boxes, page: "procurementSourcing" },
       { key: "customer-returns", label: "customerReturns", icon: Landmark, page: "customerReturns" },
       { key: "operational-fx-tax", label: "operationalFxTax", icon: Landmark, page: "operationalFxTax" },

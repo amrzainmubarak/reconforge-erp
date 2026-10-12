@@ -65,6 +65,7 @@ def main() -> None:
         certificate, key = create_localhost_certificate(directory)
         app = create_api_app(directory / "local.db", tenant_db_root=directory / "tenants",
                              postgres_dsn=os.environ["RECONFORGE_GFO_APP_DSN"], postgres_require_tls=False,
+                             postgres_personnel_dsn=os.environ.get("RECONFORGE_PERSONNEL_POSTGRES_DSN"),
                              web_root=Path(os.environ["RECONFORGE_GFO_WEB_ROOT"]),
                              allowed_hosts=("localhost",), secure_transport=True)
         uvicorn.run(app, host="127.0.0.1", port=int(os.environ["RECONFORGE_GFO_HTTPS_PORT"]),

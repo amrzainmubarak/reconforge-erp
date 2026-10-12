@@ -13,6 +13,8 @@ const operationalLabels: Partial<Record<StudioPage, MessageKey>> = {
   operationalFxTax: "operationalFxTax",
   manufacturingExecution: "manufacturingExecution",
   intercompanyOperations: "intercompanyOperations",
+  intercompanyFx: "intercompanyFx",
+  peopleProjectPayroll: "peopleProjectPayroll",
   procurementSourcing: "procurementSourcing",
   receivables: "receivables",
   notifications: "notifications",

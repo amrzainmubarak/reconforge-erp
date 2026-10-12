@@ -101,5 +101,7 @@ def execute_postgres_personnel_scoped(
             )
     except APIError:
         raise
-    except Exception:
+    except Exception as exc:
+        if getattr(exc, "sqlstate", None) in {"23503", "23505", "23514", "40001", "40P01"}:
+            raise APIError(status_code=409, code="personnel_source_conflict", message="The retained personnel source conflicts with this command; reload before retrying.") from None
         raise APIError(status_code=503, code="personnel_backend_unavailable", message="The personnel service is temporarily unavailable.") from None

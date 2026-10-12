@@ -31,6 +31,8 @@ const pageLabels: Record<StudioPage, MessageKey> = {
   operationalFxTax: "operationalFxTax",
   manufacturingExecution: "manufacturingExecution",
   intercompanyOperations: "intercompanyOperations",
+  intercompanyFx: "intercompanyFx",
+  peopleProjectPayroll: "peopleProjectPayroll",
   procurementSourcing: "procurementSourcing",
   exceptions: "exceptions",
   evidence: "evidence",

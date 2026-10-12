@@ -12,13 +12,14 @@ import pytest
 
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
+from reconforge.infrastructure.postgres_operations import POSTGRES_MIGRATION_REVISIONS
 from tests.postgres_seed_contract import CURRENT_TENANT_SEEDED_PERMISSIONS
 from tests.test_postgres_inventory_receipt_posting import create_receipt_runtime
 from tests.test_postgres_inventory_receipt_posting import receipt_database as wave5_database
 
 _ = wave5_database
 ROOT = Path(__file__).parents[1]
-HEAD = "0136_pg_inventory_scope"
+HEAD = POSTGRES_MIGRATION_REVISIONS[-1]
 PREFIXES = ("manufacturing_execution.", "intercompany_operations.", "procurement_sourcing.")
 TABLES = (
     "manufacturing_execution_boms", "manufacturing_execution_orders", "manufacturing_execution_requirements",

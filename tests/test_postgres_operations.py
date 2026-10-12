@@ -45,8 +45,11 @@ def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None
         "0133_pg_manufacturing_execution", "0134_pg_intercompany_operations",
         "0135_pg_procurement_sourcing",
         "0136_pg_inventory_scope",
+        "0138_pg_manufacturing_v2",
+        "0139_pg_intercompany_fx",
+        "0140_pg_people_project_payroll",
     )
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 136
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 139
 
 
 def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:
@@ -65,6 +68,7 @@ def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain(
         previous = str(assignments["revision"])
         discovered.append(previous)
     assert tuple(discovered) == POSTGRES_MIGRATION_REVISIONS
+    assert all(len(revision) <= 32 for revision in discovered), "Revision IDs must fit Alembic's installed version table"
 
 
 class _MigrationCursor:

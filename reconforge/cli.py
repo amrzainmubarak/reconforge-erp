@@ -175,6 +175,12 @@ from reconforge.modules import (
     registry_payload,
     validate_registry,
 )
+from reconforge.modules.postgres_registry import (
+    get_postgres_module,
+    list_postgres_modules,
+    postgres_registry_payload,
+    validate_postgres_registry,
+)
 from reconforge.observability import (
     ObservabilityConfigurationError,
     ObservabilityRuntime,
@@ -538,21 +544,31 @@ def _module_output_format(value: str) -> str:
     return normalized
 
 
+def _module_backend(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized not in {"sqlite", "postgresql"}:
+        raise ModuleRegistryError("Metadata backend must be 'sqlite' or 'postgresql'.")
+    return normalized
+
+
 @modules_app.command("list")
 def modules_list(
     output_format: Annotated[str, typer.Option("--format", help="Output format: table or json.")] = "table",
     maturity: Annotated[str | None, typer.Option(help="Filter by stable, beta, or experimental maturity.")] = None,
+    backend: Annotated[str, typer.Option(help="Metadata backend: sqlite or postgresql; does not activate a database.")] = "sqlite",
 ) -> None:
     """List runtime-visible modules without activating them."""
 
     try:
         selected_format = _module_output_format(output_format)
         selected_maturity = _module_maturity(maturity)
-        descriptors = list_modules(maturity=selected_maturity)
+        selected_backend = _module_backend(backend)
+        descriptors = (list_modules if selected_backend == "sqlite" else list_postgres_modules)(maturity=selected_maturity)
     except ModuleRegistryError as exc:
         _safe_cli_error(exc)
     if selected_format == "json":
-        typer.echo(json.dumps(registry_payload(maturity=selected_maturity), indent=2, sort_keys=True))
+        payload = (registry_payload if selected_backend == "sqlite" else postgres_registry_payload)(maturity=selected_maturity)
+        typer.echo(json.dumps(payload, indent=2, sort_keys=True))
         return
     table = Table(title="ReconForge Runtime Modules", show_lines=False)
     for column in ("Module", "Maturity", "Capability", "Default", "Interfaces", "Name"):
@@ -574,12 +590,14 @@ def modules_list(
 def modules_show(
     module_id: Annotated[str, typer.Argument(help="Exact registered module ID.")],
     output_format: Annotated[str, typer.Option("--format", help="Output format: table or json.")] = "table",
+    backend: Annotated[str, typer.Option(help="Metadata backend: sqlite or postgresql.")] = "sqlite",
 ) -> None:
     """Show one module's contracts, dependencies, permissions, and evidence."""
 
     try:
         selected_format = _module_output_format(output_format)
-        descriptor = get_module(module_id)
+        selected_backend = _module_backend(backend)
+        descriptor = (get_module if selected_backend == "sqlite" else get_postgres_module)(module_id)
     except ModuleRegistryError as exc:
         _safe_cli_error(exc)
     payload = descriptor.model_dump(mode="json")
@@ -596,15 +614,24 @@ def modules_show(
 
 
 @modules_app.command("validate")
-def modules_validate() -> None:
+def modules_validate(
+    backend: Annotated[str, typer.Option(help="Metadata backend: sqlite or postgresql.")] = "sqlite",
+) -> None:
     """Validate registry identity, dependency graph, and migration references."""
 
-    issues = validate_registry()
+    try:
+        selected_backend = _module_backend(backend)
+    except ModuleRegistryError as exc:
+        _safe_cli_error(exc)
+    issues = (validate_registry if selected_backend == "sqlite" else validate_postgres_registry)()
     if issues:
         for issue in issues:
             console.print(f"[red]{issue.code}[/red] {issue.module_id}: {issue.message}")
         raise typer.Exit(code=1)
-    console.print(f"[green]Module registry is valid.[/green] {len(list_modules())} runtime modules, schema v1.")
+    if selected_backend == "sqlite":
+        console.print(f"[green]Module registry is valid.[/green] {len(list_modules())} runtime modules, schema v1.")
+    else:
+        console.print(f"[green]PostgreSQL metadata registry is valid.[/green] {len(list_postgres_modules())} contracts, schema v2; deployment not inspected.")
 
 
 @connectors_app.command("verify-package")

@@ -107,6 +107,8 @@ class PostgresInventoryReceiptPostingRepository:
 
     def _manufacturing_source(self, identifier: str, number: str, participant: object | None) -> None:
         """Admit only the exact live completion owner, before receipt row locks."""
+        if number.upper().startswith(("ME2-", "ME2W-", "ME2R-", "ME2P-", "ME2K-", "ME2X-")):
+            fail("Engineering definitions and held production cannot become receipt sources.", "inventory_receipt_owner_required")
         if number.upper().startswith("ME2C-"):
             participant_type = source_participant_type("manufacturing-v2-receipt")
             if participant_type is None or not isinstance(participant, participant_type) or not participant.admits(

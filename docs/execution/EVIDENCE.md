@@ -1,5 +1,18 @@
 # ReconForge Execution Evidence Log
 
+## Actual Wave5 closure and M1 executed integration checkpoints (2026-10-13)
+
+Wave5 original final closure SHA07bc3fd44b6de8b52d77ed35a8624c97cdfecaa754fbafea666dee7aa82c7f98
+records actual542 hosted quality/source gates. It does not accept evolving M1.
+M1 actual native ordered migration roundtrip/catalog2cases0skips; private HTTP
+cycle2cases and deferred wrong-role rollback1case on140; unchanged492-route
+authorization digest plus45 new routes;42 focused React cases/typecheck;
+172 central policy cases and68 modules/money/owner pure cases executed. Actual
+ME2/ICFX2/HC1 development-source native/oracle/restore receipts retain separate
+source labels; no unit test duration is a throughput benchmark. See the
+[matrix](ENTERPRISE_M1_PROGRESS_2026-10-13.md). Final source freeze/full CI and
+socket-TLS browser acceptance remain pending. Earlier failed receipts stay visible.
+
 ## Source archive diagnostic dependency correction (2026-10-12)
 
 Original6ce3.12 hosted report79783871 checks3029 packaged tracked members

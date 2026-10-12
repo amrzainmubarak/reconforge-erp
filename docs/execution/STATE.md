@@ -1,5 +1,19 @@
 # Execution State
 
+## Enterprise program activated after actual Wave5 quality closure (2026-10-13)
+
+Wave5 accepted source542d4282 has actual CI44/44, Docker/CodeQL and manual image
+security5/5; PR131 stays Draft above PR130, with original chain/main/dirty files
+preserved. Local comparative performance remains deferred by the human and false.
+M1 three parallel owner cores are now implemented and integrated for targeted
+PostgreSQL/migration/API/Studio gates; final frozen-source hosted acceptance is
+pending. M2 pure accrual/deferral is separate; project billing and supply planning
+follow dependencies. [Current scoped matrix](ENTERPRISE_M1_PROGRESS_2026-10-13.md)
+records actual development versus ordered-head evidence and remaining gaps.
+All countries remain target; proven activated statutory packs0. The historical
+pending checkpoints below retain their original subjects and are superseded for
+Wave5 quality by the actual542 closure, never for unperformed benchmarks.
+
 ## Source archive diagnostic dependency correction (2026-10-12)
 
 Independent inspection of the original6ce3.12 source-closure report found both

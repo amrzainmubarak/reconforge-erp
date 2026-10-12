@@ -79,6 +79,8 @@ WRITEBACK_SOURCE = ROOT / "reconforge/connectors/writeback.py"
 POSTGRES_SOURCE = ROOT / "reconforge/infrastructure/postgres_writeback.py"
 SQLITE_SOURCE = ROOT / "reconforge/infrastructure/sqlite_writeback.py"
 SUPPLY_CHAIN_POLICY_PATH = ROOT / "docs/security/supply-chain-policy.v1.json"
+CLEANUP_TIMEOUT_SECONDS = 30.0
+CLEANUP_POLL_SECONDS = 0.25
 
 
 class RecoveryCompensationMatrixError(RuntimeError):
@@ -110,6 +112,62 @@ def _run(argv: Sequence[str], *, capture: bool = False, expected_exit: int = 0) 
     if completed.returncode != expected_exit:
         raise RecoveryCompensationMatrixError("disposable PostgreSQL command failed")
     return completed.stdout.strip() if capture else ""
+
+
+def _cleanup_owned_container(container: str, container_id: str) -> None:
+    """Stop only the captured owner and prove removal within a closed deadline."""
+    if re.fullmatch(r"[a-f0-9]{64}", container_id) is None:
+        raise RecoveryCompensationMatrixError("cleanup requires a full Docker container identity")
+    if re.fullmatch(r"[a-z0-9][a-z0-9_.-]{0,127}", container) is None:
+        raise RecoveryCompensationMatrixError("cleanup requires an exact disposable container name")
+    inspected = _run(("docker", "container", "inspect", "--format", "{{.Id}}", container), capture=True)
+    if inspected != container_id:
+        raise RecoveryCompensationMatrixError("refusing to stop an unexpected Docker container")
+    # Use the captured full ID, so a name replacement cannot redirect the stop.
+    _run(("docker", "stop", "--time", "10", container_id))
+    deadline = time.monotonic() + CLEANUP_TIMEOUT_SECONDS
+    attempts = 0
+    absent_messages = {
+        f"Error: No such container: {container_id}",
+        f"Error response from daemon: No such container: {container_id}",
+    }
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise RecoveryCompensationMatrixError("PostgreSQL disposable container cleanup was not verified before the deadline")
+        attempts += 1
+        try:
+            check = subprocess.run(  # nosec B603 - fixed container-only inspect vector
+                ("docker", "container", "inspect", "--format", "{{.Id}}", container_id),
+                cwd=ROOT,
+                shell=False,
+                check=False,
+                text=True,
+                capture_output=True,
+                timeout=min(remaining, 5.0),
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise RecoveryCompensationMatrixError("owned Docker removal probe failed; absence was not proven") from exc
+        if time.monotonic() > deadline:
+            raise RecoveryCompensationMatrixError("owned Docker removal probe exceeded the cleanup deadline")
+        # Hash decoded CLI responses without disclosing daemon endpoints or credentials.
+        observation = {"attempt": attempts, "returncode": check.returncode,
+                       "stdout_sha256": hashlib.sha256(check.stdout.encode()).hexdigest(),
+                       "stderr_sha256": hashlib.sha256(check.stderr.encode()).hexdigest()}
+        if check.returncode == 0:
+            if check.stdout.strip() != container_id or check.stderr.strip():
+                raise RecoveryCompensationMatrixError("owned Docker removal probe returned an unexpected identity or response")
+            observation["state"] = "still_present"
+        elif check.returncode == 1 and not check.stdout.strip() and check.stderr.strip() in absent_messages:
+            observation["state"] = "absent"
+            print(json.dumps({"owned_postgres_cleanup": observation}, sort_keys=True))
+            return
+        else:
+            observation["state"] = "probe_refused"
+            print(json.dumps({"owned_postgres_cleanup": observation}, sort_keys=True))
+            raise RecoveryCompensationMatrixError("owned Docker removal probe failed; absence was not proven")
+        print(json.dumps({"owned_postgres_cleanup": observation}, sort_keys=True))
+        time.sleep(min(CLEANUP_POLL_SECONDS, max(0.0, deadline - time.monotonic())))
 
 
 def _canonical_digest(value: object) -> str:
@@ -549,20 +607,8 @@ def _run_postgres_cell(*, image_reference: str, expected_postgresql: str, contai
         result["checks"]["cleanup_complete"] = False
     finally:
         if container_id:
-            inspected = _run(("docker", "inspect", "--format", "{{.Id}}", container), capture=True)
-            if inspected != container_id:
-                raise RecoveryCompensationMatrixError("refusing to stop an unexpected Docker container")
-            _run(("docker", "stop", container))
-            check = subprocess.run(  # nosec B603 - fixed Docker inspect vector
-                ("docker", "inspect", container),
-                cwd=ROOT,
-                shell=False,
-                check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=30,
-            )
-            cleanup_complete = check.returncode != 0
+            _cleanup_owned_container(container, container_id)
+            cleanup_complete = True
     if not cleanup_complete:
         raise RecoveryCompensationMatrixError("PostgreSQL disposable container cleanup was not verified")
     result["checks"]["cleanup_complete"] = True

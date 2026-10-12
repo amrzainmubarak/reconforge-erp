@@ -6,6 +6,7 @@ import runpy
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import jsonschema
@@ -61,7 +62,12 @@ def test_retained_recovery_compensation_report_is_schema_and_source_bound(report
         ).stdout
     policy_digest = hashlib.sha256(policy_source.replace("\r\n", "\n").encode("utf-8")).hexdigest()
     assert subject["supply_chain_policy_sha256"] == policy_digest
-    assert subject["matrix_runner_source_sha256"] == _source_digest(RUNNER_PATH)
+    # Retained evidence stays bound to the original runner, not a later cleanup fix.
+    runner_source = subprocess.run(
+        ("git", "show", f"{subject['base_commit']}:{RUNNER_PATH.relative_to(ROOT).as_posix()}"),
+        cwd=ROOT, check=True, capture_output=True, text=True,
+    ).stdout
+    assert subject["matrix_runner_source_sha256"] == hashlib.sha256(runner_source.replace("\r\n", "\n").encode()).hexdigest()
     subprocess.run(
         ("git", "cat-file", "-e", f"{subject['base_commit']}^{{commit}}"),
         cwd=ROOT,
@@ -159,3 +165,115 @@ def test_schema_refuses_false_drifted_or_undeclared_recovery_evidence(
     assert errors
     paths = {".".join(str(part) for part in error.path) for error in errors}
     assert any(path == expected_path or path.startswith(expected_path + ".") for path in paths)
+
+
+def _cleanup_fixture(monkeypatch: pytest.MonkeyPatch) -> tuple[dict[str, Any], list[tuple[str, ...]], list[float]]:
+    runner = runpy.run_path(str(RUNNER_PATH), run_name="test_recovery_cleanup_runner")
+    namespace = runner["_cleanup_owned_container"].__globals__
+    commands: list[tuple[str, ...]] = []
+    elapsed = [0.0]
+
+    def run(command: tuple[str, ...], *, capture: bool = False) -> str:
+        commands.append(command)
+        return "a" * 64 if capture else ""
+
+    def sleep(seconds: float) -> None:
+        elapsed[0] += seconds
+
+    monkeypatch.setitem(namespace, "_run", run)
+    monkeypatch.setitem(namespace, "time", SimpleNamespace(monotonic=lambda: elapsed[0], sleep=sleep))
+    return runner, commands, elapsed
+
+
+@pytest.mark.parametrize("delayed_probes", [0, 2])
+@pytest.mark.parametrize("error_prefix", ["Error: ", "Error response from daemon: "])
+def test_owned_cleanup_proves_delayed_removal_after_successful_stop(
+    monkeypatch: pytest.MonkeyPatch, delayed_probes: int, error_prefix: str,
+) -> None:
+    runner, commands, elapsed = _cleanup_fixture(monkeypatch)
+    probes = []
+
+    def probe(command: tuple[str, ...], **options: Any) -> SimpleNamespace:
+        probes.append(command)
+        assert command == ("docker", "container", "inspect", "--format", "{{.Id}}", "a" * 64)
+        assert options["shell"] is False and options["check"] is False
+        assert 0 < options["timeout"] <= 5.0
+        if len(probes) <= delayed_probes:
+            return SimpleNamespace(returncode=0, stdout="a" * 64 + "\n", stderr="")
+        return SimpleNamespace(returncode=1, stdout="", stderr=error_prefix + "No such container: " + "a" * 64 + "\n")
+
+    monkeypatch.setattr(runner["subprocess"], "run", probe)
+    runner["_cleanup_owned_container"]("reconforge-owned-fixture", "a" * 64)
+    assert commands == [
+        ("docker", "container", "inspect", "--format", "{{.Id}}", "reconforge-owned-fixture"),
+        ("docker", "stop", "--time", "10", "a" * 64),
+    ]
+    assert len(probes) == delayed_probes + 1
+    assert elapsed[0] == delayed_probes * runner["CLEANUP_POLL_SECONDS"]
+
+
+def test_owned_cleanup_refuses_permanent_presence_at_bounded_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
+    runner, _, elapsed = _cleanup_fixture(monkeypatch)
+    monkeypatch.setattr(runner["subprocess"], "run", lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout="a" * 64, stderr=""))
+    with pytest.raises(runner["RecoveryCompensationMatrixError"], match="cleanup was not verified before the deadline"):
+        runner["_cleanup_owned_container"]("reconforge-owned-fixture", "a" * 64)
+    assert elapsed[0] == runner["CLEANUP_TIMEOUT_SECONDS"]
+
+
+def test_owned_cleanup_refuses_an_absence_response_observed_after_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
+    runner, _, elapsed = _cleanup_fixture(monkeypatch)
+
+    def probe(*args: Any, **kwargs: Any) -> SimpleNamespace:
+        elapsed[0] = runner["CLEANUP_TIMEOUT_SECONDS"] + 0.001
+        return SimpleNamespace(returncode=1, stdout="", stderr="Error: No such container: " + "a" * 64)
+
+    monkeypatch.setattr(runner["subprocess"], "run", probe)
+    with pytest.raises(runner["RecoveryCompensationMatrixError"], match="exceeded the cleanup deadline"):
+        runner["_cleanup_owned_container"]("reconforge-owned-fixture", "a" * 64)
+
+
+@pytest.mark.parametrize("failure", ["daemon", "permission", "ambiguous", "wrong_absent_id", "wrong_present_id", "extra_stdout", "timeout", "os_error"])
+def test_owned_cleanup_never_accepts_failed_or_ambiguous_inspection(
+    monkeypatch: pytest.MonkeyPatch, failure: str,
+) -> None:
+    runner, _, elapsed = _cleanup_fixture(monkeypatch)
+
+    def probe(command: tuple[str, ...], **options: Any) -> SimpleNamespace:
+        if failure == "timeout":
+            raise subprocess.TimeoutExpired(command, options["timeout"])
+        if failure == "os_error":
+            raise OSError("synthetic unavailable Docker executable")
+        stdout, stderr, code = "", "", 1
+        if failure == "daemon":
+            stderr = "Cannot connect to the Docker daemon"
+        elif failure == "permission":
+            stderr = "permission denied"
+        elif failure == "ambiguous":
+            stderr = "Error: No such object: " + "a" * 64
+        elif failure == "wrong_absent_id":
+            stderr = "Error: No such container: " + "b" * 64
+        elif failure == "wrong_present_id":
+            stdout, code = "b" * 64, 0
+        else:
+            stdout, stderr = "unexpected output", "Error: No such container: " + "a" * 64
+        return SimpleNamespace(returncode=code, stdout=stdout, stderr=stderr)
+
+    monkeypatch.setattr(runner["subprocess"], "run", probe)
+    with pytest.raises(runner["RecoveryCompensationMatrixError"]):
+        runner["_cleanup_owned_container"]("reconforge-owned-fixture", "a" * 64)
+    assert elapsed[0] == 0.0
+
+
+def test_owned_cleanup_wrong_owner_never_stops_a_container(monkeypatch: pytest.MonkeyPatch) -> None:
+    runner, commands, _ = _cleanup_fixture(monkeypatch)
+    with pytest.raises(runner["RecoveryCompensationMatrixError"], match="unexpected Docker container"):
+        runner["_cleanup_owned_container"]("reconforge-owned-fixture", "b" * 64)
+    assert commands == [("docker", "container", "inspect", "--format", "{{.Id}}", "reconforge-owned-fixture")]
+
+
+@pytest.mark.parametrize("container_id", ["", "a" * 12, "a" * 63 + ";"])
+def test_owned_cleanup_requires_full_identity_before_docker(monkeypatch: pytest.MonkeyPatch, container_id: str) -> None:
+    runner, commands, _ = _cleanup_fixture(monkeypatch)
+    with pytest.raises(runner["RecoveryCompensationMatrixError"], match="full Docker container identity"):
+        runner["_cleanup_owned_container"]("reconforge-owned-fixture", container_id)
+    assert commands == []

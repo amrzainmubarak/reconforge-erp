@@ -183,7 +183,7 @@ def main() -> int:
         seed, verify_cycles = seed_people_project_payroll_browser, verify_people_project_payroll_browser
         configuration = "apps/web/live/people-project-payroll.playwright.config.ts"
         extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + PEOPLE_PROJECT_PAYROLL_TABLES))
-        workspace_probe_tables = PEOPLE_PROJECT_PAYROLL_WORKSPACE_PROBE_TABLES
+        workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + PEOPLE_PROJECT_PAYROLL_WORKSPACE_PROBE_TABLES))
         tamper_statements = PEOPLE_PROJECT_PAYROLL_TAMPER
         tamper_actor = people_project_payroll_restore_tamper_actor
         personnel_dsn = personnel_browser_dsn

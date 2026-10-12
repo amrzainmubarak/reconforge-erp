@@ -60,6 +60,7 @@ class PostgresManufacturingExecutionV2Repository:
         self.material = PostgresManufacturingExecutionRepository(connection, tenant_id)
         self.owner, self.receipts = self.material.owner, self.material.receipts
         self._active = False
+        self._rollback_only = False
         self._participant: _ManufacturingV2PostingParticipant | None = None
         self._material_participant: _ManufacturingV2MaterialParticipant | None = None
         self._receipt_participant: _ManufacturingV2ReceiptParticipant | None = None
@@ -70,8 +71,11 @@ class PostgresManufacturingExecutionV2Repository:
             fail("A complete ME2 command cannot reenter its owner.")
         with self.owner._transaction():
             self._active = True
+            self._rollback_only = False
             try:
                 yield
+                if self._rollback_only:
+                    fail("A failed native ME2 participant requires the complete command to roll back.")
             finally:
                 self._active = False
 
@@ -89,9 +93,9 @@ class PostgresManufacturingExecutionV2Repository:
         row = rows[0]
         return {**row["payload"], **{key: value for key, value in row.items() if key not in {"tenant_id", "payload", "created_at"}}}
 
-    def _actor(self, actor: PostingActor, operation: str, source: Mapping[str, Any]) -> None:
+    def _actor(self, actor: PostingActor, operation: str, source: Mapping[str, Any], *, lock: bool = False) -> None:
         if source.get("order_id"):
-            self._actor(actor, operation, self._source(str(source["order_id"])))
+            self._actor(actor, operation, self._source(str(source["order_id"])), lock=lock)
         financial = dict(source)
         if source.get("material_order_id"):
             original = self.material._order(str(source["material_order_id"]))
@@ -101,10 +105,13 @@ class PostgresManufacturingExecutionV2Repository:
             financial.update(amount_minor=amount, currency_precision=source["monetary_policy"]["precision"])
         for permission in sorted(PERMISSIONS.get(operation, READ)):
             self.owner._actor(actor, permission, financial, mutation=operation != "read")
-        rows = records(self.connection.execute("""SELECT scope_type,scope_id FROM reconforge.principal_scope_grants
+        scope_query = """SELECT scope_type,scope_id FROM reconforge.principal_scope_grants
             WHERE tenant_id=%s AND principal_type='user' AND principal_id=%s AND revoked_at IS NULL
             AND((scope_type='workspace' AND scope_id=%s) OR(scope_type='organization' AND scope_id=%s)
-                OR(scope_type='legal_entity' AND scope_id=%s)) FOR SHARE""", (self.tenant_id, actor.user_id,
+                OR(scope_type='legal_entity' AND scope_id=%s))"""
+        if lock:
+            scope_query += " FOR SHARE"
+        rows = records(self.connection.execute(scope_query, (self.tenant_id, actor.user_id,
                 source["workspace_id"], source["organization_id"], source["legal_entity_id"])))
         if len({(row["scope_type"], row["scope_id"]) for row in rows}) != 3:
             fail("ME2 requires every current persisted parent scope.", "manufacturing_execution_v2_scope_denied")
@@ -125,14 +132,14 @@ class PostgresManufacturingExecutionV2Repository:
         if retained["request_json"] != wire or retained["request_digest"] != digest_payload(wire):
             fail("ME2 command belongs to another exact actor or request.", "manufacturing_execution_v2_command_conflict")
         current = self._source(retained["object_id"], read_lock=True)
-        self._actor(actor, operation, current)
+        self._actor(actor, operation, current, lock=True)
         self.connection.execute("SELECT reconforge.me2_close(%s,%s)", (self.tenant_id, current["id"]))
         return wire, retained["response_json"]
 
     def _remember(self, identifier: str, operation: str, command: str, wire: Mapping[str, Any],
                   actor: PostingActor, reason: str) -> dict[str, Any]:
         source = self._source(identifier)
-        self._actor(actor, operation, source)
+        self._actor(actor, operation, source, lock=True)
         metadata = {"source_digest": source["source_digest"], "phase": source["phase"], "reason": reason}
         audit = PostgresAuditEventRepository(self.connection, self.tenant_id).append(actor_user_id=actor.user_id,
             actor_label=actor.username, object_type="manufacturing_execution_v2", object_id=identifier,
@@ -211,7 +218,7 @@ class PostgresManufacturingExecutionV2Repository:
                 return replay
             self.material._binding(source, period=False)
             source = self._source(identifier, lock=True)
-            self._actor(actor, "approve", source)
+            self._actor(actor, "approve", source, lock=True)
             if source["phase"] != 0 or source["source_digest"] != expected_digest or actor.user_id == source["creator_id"]:
                 fail("Approval requires an exact unapproved revision and independent current human.")
             self.connection.execute("UPDATE reconforge.manufacturing_execution_v2_definitions SET phase=1,reviewer_id=%s WHERE tenant_id=%s AND id=%s",
@@ -302,7 +309,7 @@ class PostgresManufacturingExecutionV2Repository:
         self.material._binding({**source, "period_id": period or source["period_id"], "posting_date": date or source["posting_date"]})
         self.material._order(source["material_order_id"], lock=True)
         order = self._source(source["id"], lock=True)
-        self._actor(actor, operation, order)
+        self._actor(actor, operation, order, lock=True)
         material = self.material._order(order["material_order_id"])
         self.material._admit(material)
         self.material._inventory_locks(material)
@@ -313,8 +320,20 @@ class PostgresManufacturingExecutionV2Repository:
         try:
             return self.owner.posting.post(entry["entry_id"], command_id=command, expected_validation_digest=entry["validation_digest"],
                 reason=reason, actor=actor, _source_owner=self._participant)
+        except BaseException:
+            self._rollback_only = True
+            raise
         finally:
             self._participant = None
+
+    def _draft(self, identifier: str, source: Mapping[str, Any], lines: list[dict[str, Any]], actor: PostingActor) -> dict[str, Any]:
+        entry = self.material._draft(identifier, source, lines, actor)
+        header = entry["snapshot"]["entry"]
+        original = source["monetary_policy"]
+        if header["currency_code"] != source["currency_code"] or any(header["currency_" + key] != original[key]
+                for key in ("precision", "rounding_policy", "registry_version", "registry_digest")):
+            fail("Manufacturing allocation must retain its exact original monetary policy; prepare a newly approved source after policy changes.")
+        return entry
 
     def act_order(self, identifier: str, operation: str, *, expected_digest: str, command_id: str,
                   reason: str, actor: PostingActor) -> dict[str, Any]:
@@ -343,7 +362,7 @@ class PostgresManufacturingExecutionV2Repository:
                     amount = minor_to_text(claim["amount_minor"], order["monetary_policy"]["precision"])
                     lines.extend([{"account_code": order["wip_account_code"], "debit": amount, "dimensions": claim["dimensions"]},
                                   {"account_code": claim["account_code"], "credit": amount, "dimensions": claim["dimensions"]}])
-                entry = self.material._draft(identifier, order, lines, actor)
+                entry = self._draft(identifier, order, lines, actor)
                 total = exact_integer(material_result["issue_plan"]["total_cost_minor"] + extra, positive=True)
                 self.connection.execute("UPDATE reconforge.manufacturing_execution_v2_orders SET phase=1,cost_entry=%s::jsonb,total_cost_minor=%s WHERE tenant_id=%s AND id=%s",
                     (canonical_json(entry), total, self.tenant_id, identifier))
@@ -411,7 +430,7 @@ class PostgresManufacturingExecutionV2Repository:
                 return replay
             order, _ = self._locked_order(self._source(source["order_id"]), actor, operation, period=source["period_id"], date=source["posting_date"])
             production = self._source(identifier, lock=True)
-            self._actor(actor, operation, production)
+            self._actor(actor, operation, production, lock=True)
             if production["source_digest"] != expected_digest or production["phase"] not in ({0, 1} if operation == "cancel" else {0} if operation == "review" else {1}):
                 fail("Production hold phase or digest changed.")
             if operation in {"review", "post"} and actor.user_id == production["preparer_id"] or operation == "post" and actor.user_id == production["reviewer_id"]:
@@ -433,6 +452,9 @@ class PostgresManufacturingExecutionV2Repository:
         self._receipt_participant = _ManufacturingV2ReceiptParticipant(self, identifier, plan)
         try:
             yield self._receipt_participant
+        except BaseException:
+            self._rollback_only = True
+            raise
         finally:
             self._receipt_participant = None
 
@@ -450,7 +472,7 @@ class PostgresManufacturingExecutionV2Repository:
                 return replay
             order, material = self._locked_order(order, actor, "prepare", period=period_id, date=posting_date)
             production = self._source(identifier, lock=True)
-            self._actor(actor, "prepare", production)
+            self._actor(actor, "prepare", production, lock=True)
             if production["phase"] != 2 or posting_date < production["posting_date"]:
                 fail("Inspection requires a posted complete quality hold and a later or equal date.")
             if self.connection.execute("SELECT 1 FROM reconforge.manufacturing_execution_v2_inspections WHERE tenant_id=%s AND production_id=%s AND phase IN(0,1,2)", (self.tenant_id, identifier)).fetchone():
@@ -474,7 +496,7 @@ class PostgresManufacturingExecutionV2Repository:
             loss = None
             if rejected:
                 amount = minor_to_text(allocation["rejected_cost_minor"], order["monetary_policy"]["precision"])
-                loss = self.material._draft(completion_id, source, [{"account_code": order["scrap_account_code"], "debit": amount}, {"account_code": order["wip_account_code"], "credit": amount}], actor)
+                loss = self._draft(completion_id, source, [{"account_code": order["scrap_account_code"], "debit": amount}, {"account_code": order["wip_account_code"], "credit": amount}], actor)
             source.update(receipt_plan=receipt, loss_entry=loss)
             self.connection.execute("""INSERT INTO reconforge.manufacturing_execution_v2_inspections
                 (tenant_id,id,order_id,production_id,workspace_id,organization_id,legal_entity_id,payload,source_digest)
@@ -511,7 +533,7 @@ class PostgresManufacturingExecutionV2Repository:
             order, material = self._locked_order(self._source(source["order_id"]), actor, operation, period=source["period_id"], date=source["posting_date"])
             production = self._source(source["production_id"], lock=True)
             inspection = self._source(identifier, lock=True)
-            self._actor(actor, operation, inspection)
+            self._actor(actor, operation, inspection, lock=True)
             if inspection["source_digest"] != expected_digest or inspection["phase"] not in ({0, 1} if operation == "cancel" else {0} if operation == "review" else {1}) or production["phase"] != 2:
                 fail("The complete held source, inspection phase or digest changed.")
             if operation in {"review", "post"} and actor.user_id == inspection["preparer_id"] or operation == "post" and actor.user_id == inspection["reviewer_id"]:
@@ -554,7 +576,7 @@ class PostgresManufacturingExecutionV2Repository:
             source = self._source(identifier)
             self.material._order(source["material_order_id"], read_lock=True)
             source = self._source(identifier, read_lock=True)
-            self._actor(actor, "read", source)
+            self._actor(actor, "read", source, lock=True)
             self.connection.execute("SELECT reconforge.me2_close(%s,%s)", (self.tenant_id, identifier))
             productions = records(self.connection.execute("SELECT id FROM reconforge.manufacturing_execution_v2_productions WHERE tenant_id=%s AND order_id=%s ORDER BY id", (self.tenant_id, identifier)))
             inspections = records(self.connection.execute("SELECT id FROM reconforge.manufacturing_execution_v2_inspections WHERE tenant_id=%s AND order_id=%s ORDER BY id", (self.tenant_id, identifier)))

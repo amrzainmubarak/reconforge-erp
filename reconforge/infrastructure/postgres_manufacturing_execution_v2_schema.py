@@ -95,6 +95,15 @@ DECLARE d JSONB:=reconforge.me2_object(t,i);
 BEGIN RETURN d IS NOT NULL AND reconforge.irp_scope(t,d->>'workspace_id',d->>'organization_id',d->>'legal_entity_id');END $me$;
 CREATE FUNCTION reconforge.me2_permission(op TEXT) RETURNS TEXT LANGUAGE sql IMMUTABLE SET search_path=pg_catalog AS $me$
  SELECT 'manufacturing_execution_v2.'||CASE WHEN op IN('approve','review','cancel') THEN 'approve' WHEN op='post' THEN 'post' ELSE 'manage' END $me$;
+CREATE FUNCTION reconforge.me2_integer(v JSONB) RETURNS BOOLEAN LANGUAGE sql IMMUTABLE SET search_path=pg_catalog AS $me$
+ SELECT jsonb_typeof(v)='number' AND v::text~'^(0|[1-9][0-9]*)$'
+ AND CASE WHEN v::text~'^(0|[1-9][0-9]*)$' THEN(v::text)::numeric<=9000000000000000000 ELSE FALSE END $me$;
+CREATE FUNCTION reconforge.me2_policy(entry JSONB,source JSONB) RETURNS BOOLEAN LANGUAGE sql IMMUTABLE SET search_path=pg_catalog AS $me$
+ SELECT entry->>'currency_code'=source->>'currency_code'
+ AND entry->'currency_precision'=source->'monetary_policy'->'precision'
+ AND entry->'currency_rounding_policy'=source->'monetary_policy'->'rounding_policy'
+ AND entry->'currency_registry_version'=source->'monetary_policy'->'registry_version'
+ AND entry->'currency_registry_digest'=source->'monetary_policy'->'registry_digest' $me$;
 CREATE FUNCTION reconforge.me2_claim_value(minutes BIGINT,rate BIGINT) RETURNS NUMERIC LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog AS $me$
 DECLARE value NUMERIC:=minutes::numeric*rate::numeric;whole NUMERIC;residual NUMERIC;
 BEGIN
@@ -102,7 +111,7 @@ BEGIN
  RETURN whole+CASE WHEN residual*2>60 OR(residual*2=60 AND mod(whole,2)=1) THEN 1 ELSE 0 END;
 END $me$;
 CREATE FUNCTION reconforge.me2_protect() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
-DECLARE a TEXT:=current_setting('app.manufacturing_execution_v2_actor_id',true);d JSONB;op TEXT;p TEXT;allowed TEXT[];g RECORD;
+DECLARE a TEXT:=current_setting('app.manufacturing_execution_v2_actor_id',true);d JSONB;op TEXT;p TEXT;allowed TEXT[];g RECORD;period TEXT;day TEXT;
 BEGIN
  IF TG_OP='DELETE' THEN PERFORM reconforge.me2_assert(FALSE,'Manufacturing v2 source and evidence history is immutable');END IF;
  IF TG_TABLE_NAME IN('manufacturing_execution_v2_events','manufacturing_execution_v2_commands') THEN d:=reconforge.me2_object(NEW.tenant_id,NEW.object_id);op:=NEW.operation;
@@ -119,6 +128,14 @@ BEGIN
  PERFORM reconforge.me2_assert((SELECT count(DISTINCT(scope_type,scope_id))=3 FROM reconforge.principal_scope_grants
   WHERE tenant_id=NEW.tenant_id AND principal_type='user' AND principal_id=a AND revoked_at IS NULL
   AND((scope_type='workspace' AND scope_id=d->>'workspace_id') OR(scope_type='organization' AND scope_id=d->>'organization_id') OR(scope_type='legal_entity' AND scope_id=d->>'legal_entity_id'))),'ME2 needs all current persisted parent scopes');
+ IF TG_TABLE_NAME IN('manufacturing_execution_v2_cost_claims','manufacturing_execution_v2_cost_releases') THEN d:=reconforge.me2_object(NEW.tenant_id,NEW.order_id);END IF;
+ period:=COALESCE(d->>'period_id',d->'payload'->>'period_id');day:=COALESCE(d->>'posting_date',d->'payload'->>'posting_date');
+ IF period IS NOT NULL THEN
+  PERFORM 1 FROM reconforge.fiscal_periods WHERE tenant_id=NEW.tenant_id AND id=period FOR SHARE;
+  PERFORM reconforge.me2_assert(EXISTS(SELECT 1 FROM reconforge.fiscal_periods WHERE tenant_id=NEW.tenant_id AND id=period
+   AND application_workspace_id=d->>'workspace_id' AND status='Open' AND day::date BETWEEN start_date AND end_date),
+   'Every new manufacturing command requires its current scoped open period and valid business date');
+ END IF;
  IF TG_OP='INSERT' THEN
   IF TG_TABLE_NAME IN('manufacturing_execution_v2_events','manufacturing_execution_v2_commands') THEN PERFORM reconforge.me2_assert(NEW.actor_id=a,'Evidence retains actual current human');
   ELSIF TG_TABLE_NAME='manufacturing_execution_v2_cost_releases' THEN PERFORM reconforge.me2_assert(NEW.actor_id=a,'Release retains current cancellation actor');
@@ -196,7 +213,7 @@ END $me$;
 
 _CLOSURE_SQL = r"""
 CREATE FUNCTION reconforge.me2_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
-DECLARE d JSONB:=reconforge.me2_object(t,i);r JSONB;m RECORD;c RECORD;p RECORD;f RECORD;a RECORD;z JSONB;line JSONB;
+DECLARE d JSONB:=reconforge.me2_object(t,i);r JSONB;m RECORD;c RECORD;p RECORD;f RECORD;a RECORD;z JSONB;line JSONB;field TEXT;
  maker TEXT;reviewer TEXT;poster TEXT;op TEXT;total NUMERIC:=0;produced NUMERIC:=0;held NUMERIC:=0;disposed NUMERIC:=0;released NUMERIC:=0;
 BEGIN
  PERFORM reconforge.me2_assert(d IS NOT NULL AND reconforge.irp_scope(t,d->>'workspace_id',d->>'organization_id',d->>'legal_entity_id'),'ME2 needs exact original hierarchy');
@@ -204,6 +221,7 @@ BEGIN
  PERFORM reconforge.me2_history(t,i);
  IF left(i,5) IN('ME2W-','ME2R-') THEN
   SELECT * INTO c FROM reconforge.manufacturing_execution_v2_definitions WHERE tenant_id=t AND id=i;
+  PERFORM reconforge.me2_assert(reconforge.me2_integer(c.payload->'version'),'Engineering revision uses an exact integer version');
   PERFORM reconforge.me2_assert(reconforge.irp_digest(c.payload)=c.source_digest AND c.payload->>'id'=i
    AND(c.payload->>'version')::bigint=c.version AND c.payload->>'creator_id'=c.creator_id
    AND c.creator_id=reconforge.me2_evidence(t,i,'create') AND(c.payload->>'effective_from')::date<=(c.payload->>'effective_until')::date,'Effective workcenter/routing requires canonical native source');
@@ -215,6 +233,7 @@ BEGIN
     AND(r->>'workspace_id',r->>'organization_id',r->>'legal_entity_id')=(c.workspace_id,c.organization_id,c.legal_entity_id)
     AND jsonb_array_length(c.payload->'operations') BETWEEN 1 AND 50,'Routing needs actual approved native BOM and bounded operations');
    FOR z IN SELECT value FROM jsonb_array_elements(c.payload->'operations') WITH ORDINALITY x(value,n) LOOP
+    PERFORM reconforge.me2_assert(reconforge.me2_integer(z->'sequence') AND reconforge.me2_integer(z->'minutes_per_batch'),'Routing sequence and actual work time require exact integers');
     SELECT * INTO a FROM reconforge.manufacturing_execution_v2_definitions WHERE tenant_id=t AND id=z->>'workcenter_id';
     PERFORM reconforge.me2_assert(a.id IS NOT NULL AND a.kind='Workcenter' AND a.phase=1 AND a.source_digest=z->>'workcenter_digest'
      AND(a.workspace_id,a.organization_id,a.legal_entity_id)=(c.workspace_id,c.organization_id,c.legal_entity_id)
@@ -240,6 +259,10 @@ BEGIN
  PERFORM reconforge.me2_assert((SELECT count(*) FROM reconforge.manufacturing_execution_v2_cost_claims WHERE tenant_id=t AND order_id=i)=jsonb_array_length(c.payload->'claims')
   AND jsonb_array_length(c.payload->'claims') BETWEEN 1 AND 100,'Complete original expense claim population is mandatory');
  FOR z IN SELECT value FROM jsonb_array_elements(c.payload->'claims') LOOP
+  FOREACH field IN ARRAY ARRAY['amount_minor','original_debit_minor','operation_sequence','minutes','rate_minor_per_hour'] LOOP
+   PERFORM reconforge.me2_assert(reconforge.me2_integer(z->field),'Original expense rate/time and financial claim require exact integer tokens');END LOOP;
+  FOREACH field IN ARRAY ARRAY['line_number','debit_minor','credit_minor'] LOOP
+   PERFORM reconforge.me2_assert(reconforge.me2_integer(z->'original_line'->field),'Original native expense snapshot requires exact integer amounts and line identity');END LOOP;
   SELECT * INTO f FROM reconforge.finance_posting_effects WHERE tenant_id=t AND id=z->>'effect_id';
   SELECT * INTO a FROM reconforge.finance_entry_lines WHERE tenant_id=t AND id=z->>'line_id';
   PERFORM pg_advisory_xact_lock(hashtextextended(jsonb_build_array(t,'me2-expense-line',z->>'effect_id',z->>'line_id')::text,0));
@@ -266,6 +289,8 @@ BEGIN
   maker:=reconforge.me2_evidence(t,i,'prepare');reviewer:=CASE WHEN c.reviewer_id IS NOT NULL THEN reconforge.me2_evidence(t,i,'review') END;
   PERFORM reconforge.me1_entry(t,c.cost_entry,reviewer,c.phase IN(3,4),c.phase=5);
   PERFORM reconforge.me2_assert(c.total_cost_minor=total+(m.issue_plan->>'total_cost_minor')::numeric
+   AND reconforge.me2_policy(c.cost_entry->'snapshot'->'entry',c.payload)
+   AND reconforge.me2_policy(m.issue_plan->'entry'->'snapshot'->'entry',c.payload)
    AND maker=c.cost_entry->'snapshot'->'entry'->>'preparer_actor_id' AND(c.reviewer_id IS NULL OR(c.reviewer_id=reviewer AND maker<>reviewer))
    AND jsonb_array_length(c.cost_entry->'snapshot'->'lines')=2*jsonb_array_length(c.payload->'claims')
    AND NOT EXISTS(WITH actual AS(SELECT x->>'account_id' account,(x->>'debit_minor')::numeric debit,(x->>'credit_minor')::numeric credit,x->'dimensions' dimensions FROM jsonb_array_elements(c.cost_entry->'snapshot'->'lines') x),
@@ -278,6 +303,11 @@ BEGIN
  ELSE PERFORM reconforge.me2_assert(c.phase IN(0,5) AND c.total_cost_minor=0 AND c.cost_effect_id IS NULL,'Unprepared ME2 order cannot invent WIP');END IF;
  IF c.phase=5 THEN PERFORM reconforge.me2_evidence(t,i,'cancel');END IF;
  FOR p IN SELECT * FROM reconforge.manufacturing_execution_v2_productions WHERE tenant_id=t AND order_id=i ORDER BY(payload->>'produced_before_scaled')::bigint,id LOOP
+  FOREACH field IN ARRAY ARRAY['quantity_scaled','held_cost_minor','produced_before_scaled','produced_cost_before_minor'] LOOP
+   PERFORM reconforge.me2_assert(reconforge.me2_integer(p.payload->field),'Held production must retain exact integer quantity and cost');END LOOP;
+  PERFORM reconforge.me2_assert((p.payload->>'quantity_scaled')::bigint>0 AND(p.payload->>'held_cost_minor')::bigint>0,'A real production tranche has positive held quantity and cost');
+  FOR z IN SELECT value FROM jsonb_array_elements(p.payload->'operations') LOOP
+   PERFORM reconforge.me2_assert(reconforge.me2_integer(z->'sequence') AND reconforge.me2_integer(z->'minutes'),'Actual ordered operation evidence requires exact integer execution metadata');END LOOP;
   PERFORM reconforge.me2_history(t,p.id);
   maker:=reconforge.me2_evidence(t,p.id,'create');reviewer:=CASE WHEN p.reviewer_id IS NOT NULL THEN reconforge.me2_evidence(t,p.id,'review') END;
   PERFORM reconforge.me2_assert(c.phase IN(3,4) AND reconforge.irp_digest(p.payload)=p.source_digest AND p.payload->>'order_digest'=c.source_digest
@@ -297,6 +327,8 @@ BEGIN
    produced:=produced+(p.payload->>'quantity_scaled')::numeric;held:=held+(p.payload->>'held_cost_minor')::numeric;
   ELSIF p.phase=4 THEN PERFORM reconforge.me2_evidence(t,p.id,'cancel');END IF;
   FOR a IN SELECT * FROM reconforge.manufacturing_execution_v2_inspections WHERE tenant_id=t AND production_id=p.id LOOP
+   FOREACH field IN ARRAY ARRAY['accepted_quantity_scaled','rejected_quantity_scaled','accepted_cost_minor','rejected_cost_minor','released_cost_minor'] LOOP
+    PERFORM reconforge.me2_assert(reconforge.me2_integer(a.payload->field),'Quality disposition retains exact integer quantities and money');END LOOP;
    PERFORM reconforge.me2_history(t,a.id);
    maker:=reconforge.me2_evidence(t,a.id,'create');reviewer:=CASE WHEN a.reviewer_id IS NOT NULL THEN reconforge.me2_evidence(t,a.id,'review') END;
    PERFORM reconforge.me2_assert(p.phase IN(2,3) AND reconforge.irp_digest(a.payload)=a.source_digest AND a.payload->>'production_digest'=p.source_digest
@@ -312,6 +344,7 @@ BEGIN
    IF a.payload->'loss_entry'<>'null'::jsonb THEN
     PERFORM reconforge.me1_entry(t,a.payload->'loss_entry',reviewer,a.phase=2,a.phase=3);
     PERFORM reconforge.me2_assert(jsonb_array_length(a.payload->'loss_entry'->'snapshot'->'lines')=2
+     AND reconforge.me2_policy(a.payload->'loss_entry'->'snapshot'->'entry',c.payload)
      AND EXISTS(SELECT 1 FROM jsonb_array_elements(a.payload->'loss_entry'->'snapshot'->'lines') x WHERE x->>'account_id'=m.payload->>'scrap_account_id'
       AND(x->>'debit_minor')::numeric=(a.payload->>'rejected_cost_minor')::numeric AND(x->>'credit_minor')::numeric=0)
      AND EXISTS(SELECT 1 FROM jsonb_array_elements(a.payload->'loss_entry'->'snapshot'->'lines') x WHERE x->>'account_id'=m.payload->>'wip_account_id'
@@ -323,6 +356,7 @@ BEGIN
      AND irp.quantity_scaled=(a.payload->>'accepted_quantity_scaled')::bigint AND irp.total_value_minor=(a.payload->>'accepted_cost_minor')::bigint
      AND irp.item_id=m.payload->>'output_item_id' AND irp.receipt_clearing_account_id=m.payload->>'wip_account_id'
      AND(irp.workspace_id,irp.organization_id,irp.legal_entity_id)=(c.workspace_id,c.organization_id,c.legal_entity_id)
+     AND reconforge.me2_policy(irp.plan_json->'currency_policy',c.payload)
      AND irp.preparer_actor_id=maker AND(a.phase=2)=EXISTS(SELECT 1 FROM reconforge.inventory_receipt_links l WHERE l.tenant_id=t AND l.plan_id=irp.id)),
      'Only accepted inspected units can create native saleable FIFO finished goods');
    END IF;
@@ -359,17 +393,46 @@ BEGIN
  PERFORM reconforge.me2_assert(FALSE,'Delegated ME2 material source cannot bypass cost pool and quality hold through a ME1 disposition');RETURN NEW;
 END $me$;
 CREATE TRIGGER manufacturing_v2_delegated_completion BEFORE INSERT ON reconforge.manufacturing_execution_completions FOR EACH ROW EXECUTE FUNCTION reconforge.me2_material_guard();
+CREATE FUNCTION reconforge.me2_native_immutable() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
+DECLARE entry TEXT;number TEXT;
+BEGIN
+ IF TG_TABLE_NAME='finance_entries' THEN entry:=OLD.id;number:=OLD.entry_number;
+ ELSIF TG_TABLE_NAME='finance_entry_lines' THEN entry:=OLD.entry_id;
+ ELSE SELECT entry_id INTO entry FROM reconforge.finance_entry_lines WHERE tenant_id=OLD.tenant_id AND id=OLD.entry_line_id;END IF;
+ IF number IS NULL THEN SELECT entry_number INTO number FROM reconforge.finance_entries WHERE tenant_id=OLD.tenant_id AND id=entry;END IF;
+ IF left(COALESCE(number,''),4)='ME2-' OR left(COALESCE(number,''),5)='ME2C-' THEN
+  PERFORM reconforge.me2_assert(FALSE,'Source-owned prepared manufacturing cost and loss lines remain immutable');END IF;RETURN OLD;
+END $me$;
 CREATE FUNCTION reconforge.me2_deferred() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
-DECLARE i TEXT;number TEXT;entry TEXT;d RECORD;
+DECLARE i TEXT;number TEXT;entry TEXT;d RECORD;reference TEXT;
 BEGIN
  IF TG_TABLE_NAME IN('manufacturing_execution_v2_events','manufacturing_execution_v2_commands') THEN i:=NEW.object_id;
  ELSIF TG_TABLE_NAME IN('manufacturing_execution_v2_cost_claims','manufacturing_execution_v2_cost_releases') THEN i:=NEW.order_id;
  ELSIF left(TG_TABLE_NAME,27)='manufacturing_execution_v2_' THEN i:=NEW.id;
  ELSE
-  IF TG_TABLE_NAME='finance_entries' THEN number:=NEW.entry_number;
+  IF TG_TABLE_NAME='finance_entries' THEN number:=NEW.entry_number;reference:=NEW.external_reference;
   ELSIF TG_TABLE_NAME IN('finance_entry_lines','finance_posting_effects') THEN SELECT entry_number INTO number FROM reconforge.finance_entries WHERE tenant_id=NEW.tenant_id AND id=NEW.entry_id;
-  ELSIF TG_TABLE_NAME='inventory_receipt_plans' THEN number:=NEW.source_number;
+  ELSIF TG_TABLE_NAME='finance_entry_line_dimensions' THEN SELECT e.entry_number INTO number FROM reconforge.finance_entries e
+   JOIN reconforge.finance_entry_lines detail ON detail.tenant_id=e.tenant_id AND detail.entry_id=e.id WHERE detail.tenant_id=NEW.tenant_id AND detail.id=NEW.entry_line_id;
+  ELSIF TG_TABLE_NAME='inventory_receipt_plans' THEN
+   number:=NEW.source_number;
+   PERFORM reconforge.me2_assert(upper(number)!~'^ME2(?:-|[WRPKX]-)' OR left(number,5)='ME2C-',
+    'Only exact inspected ME2C sources can use native FG receiving');
+  ELSIF TG_TABLE_NAME='inventory_movements' THEN
+   reference:=NEW.source_reference;
+   PERFORM reconforge.me2_assert(upper(COALESCE(reference,''))!~'^ME2(?:-|[WRPKXC]-)',
+    'Native manufacturing movements require the ME1 material or exact IRP inspected receipt engine');RETURN NEW;
+  ELSIF TG_TABLE_NAME='inventory_movement_lines' THEN
+   SELECT source_reference INTO reference FROM reconforge.inventory_movements WHERE tenant_id=NEW.tenant_id AND id=NEW.movement_id;
+   PERFORM reconforge.me2_assert(upper(COALESCE(reference,''))!~'^ME2(?:-|[WRPKXC]-)',
+    'Held manufacturing source cannot create a detached native stock line');RETURN NEW;
   ELSE SELECT source_number INTO number FROM reconforge.inventory_receipt_plans WHERE tenant_id=NEW.tenant_id AND id=NEW.plan_id;END IF;
+  IF upper(COALESCE(number,''))~'^ME2(?:-|[WRPKXC]-)' THEN
+   PERFORM reconforge.me2_assert(number=upper(number),'Reserved manufacturing source identifiers retain exact canonical casing');END IF;
+  PERFORM reconforge.me2_assert(upper(COALESCE(number,''))!~'^ME2[WRPKX]-','Nonfinancial engineering and held-source IDs cannot become native journals or FG receipts');
+  IF upper(COALESCE(reference,''))~'^ME2(?:-|[WRPKXC]-)' THEN
+   PERFORM reconforge.me2_assert(number=reference AND(left(number,4)='ME2-' OR left(number,5)='ME2C-'),
+    'A financial entry cannot attach another journal number to a frozen ME2 source reference');END IF;
   IF left(COALESCE(number,''),4)<>'ME2-' AND left(COALESCE(number,''),5)<>'ME2C-' THEN RETURN NEW;END IF;i:=number;
  END IF;
  PERFORM reconforge.me2_close(NEW.tenant_id,i);RETURN NEW;
@@ -383,9 +446,12 @@ DO $me$ DECLARE n TEXT;BEGIN
   EXECUTE format('CREATE TRIGGER manufacturing_v2_protect BEFORE INSERT OR UPDATE OR DELETE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.me2_protect()',n);
   EXECUTE format('CREATE CONSTRAINT TRIGGER manufacturing_v2_close AFTER INSERT OR UPDATE ON reconforge.%I DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.me2_deferred()',n);
  END LOOP;
- FOREACH n IN ARRAY ARRAY['finance_entries','finance_entry_lines','finance_posting_effects','inventory_receipt_plans','inventory_receipt_reviews','inventory_receipt_commands','inventory_receipt_links'] LOOP
+ FOREACH n IN ARRAY ARRAY['finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects','inventory_receipt_plans','inventory_receipt_reviews','inventory_receipt_commands','inventory_receipt_links','inventory_movements','inventory_movement_lines'] LOOP
   EXECUTE format('CREATE CONSTRAINT TRIGGER manufacturing_v2_native_close AFTER INSERT OR UPDATE ON reconforge.%I DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.me2_deferred()',n);
  END LOOP;
+ CREATE TRIGGER manufacturing_v2_native_immutable BEFORE DELETE ON reconforge.finance_entries FOR EACH ROW EXECUTE FUNCTION reconforge.me2_native_immutable();
+ FOREACH n IN ARRAY ARRAY['finance_entry_lines','finance_entry_line_dimensions'] LOOP
+  EXECUTE format('CREATE TRIGGER manufacturing_v2_native_immutable BEFORE UPDATE OR DELETE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.me2_native_immutable()',n);END LOOP;
 END $me$;
 """
 
@@ -396,9 +462,12 @@ DO $me$ BEGIN IF EXISTS(SELECT 1 FROM reconforge.manufacturing_execution_v2_defi
  OR EXISTS(SELECT 1 FROM reconforge.manufacturing_execution_v2_orders) OR EXISTS(SELECT 1 FROM reconforge.manufacturing_execution_v2_events)
  THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Populated manufacturing v2 source and evidence must be retained';END IF;END $me$;
 DO $me$ DECLARE n TEXT;BEGIN
- FOREACH n IN ARRAY ARRAY['finance_entries','finance_entry_lines','finance_posting_effects','inventory_receipt_plans','inventory_receipt_reviews','inventory_receipt_commands','inventory_receipt_links'] LOOP EXECUTE format('DROP TRIGGER manufacturing_v2_native_close ON reconforge.%I',n);END LOOP;
+ FOREACH n IN ARRAY ARRAY['finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects','inventory_receipt_plans','inventory_receipt_reviews','inventory_receipt_commands','inventory_receipt_links','inventory_movements','inventory_movement_lines'] LOOP EXECUTE format('DROP TRIGGER manufacturing_v2_native_close ON reconforge.%I',n);END LOOP;
 END $me$;
 DROP TRIGGER manufacturing_v2_delegated_completion ON reconforge.manufacturing_execution_completions;
+DROP TRIGGER manufacturing_v2_native_immutable ON reconforge.finance_entries;
+DROP TRIGGER manufacturing_v2_native_immutable ON reconforge.finance_entry_lines;
+DROP TRIGGER manufacturing_v2_native_immutable ON reconforge.finance_entry_line_dimensions;
 ALTER TABLE reconforge.manufacturing_execution_orders DROP CONSTRAINT manufacturing_v2_owner_fk;
 ALTER TABLE reconforge.manufacturing_execution_orders DROP COLUMN execution_owner_id;
 DROP TABLE reconforge.manufacturing_execution_v2_commands;DROP TABLE reconforge.manufacturing_execution_v2_events;
@@ -407,10 +476,13 @@ DROP TABLE reconforge.manufacturing_execution_v2_cost_releases;
 DROP TABLE reconforge.manufacturing_execution_v2_cost_claims;DROP TABLE reconforge.manufacturing_execution_v2_orders;DROP TABLE reconforge.manufacturing_execution_v2_definitions;
 DROP FUNCTION reconforge.me1_close(TEXT,TEXT);ALTER FUNCTION reconforge.me1_close_before_me2(TEXT,TEXT) RENAME TO me1_close;
 DROP FUNCTION reconforge.me2_deferred();DROP FUNCTION reconforge.me2_material_guard();DROP FUNCTION reconforge.me2_close(TEXT,TEXT);
+DROP FUNCTION reconforge.me2_native_immutable();
 DROP FUNCTION reconforge.me2_evidence(TEXT,TEXT,TEXT);DROP FUNCTION reconforge.me2_ack(TEXT,TEXT,TEXT);DROP FUNCTION reconforge.me2_protect();
 DROP FUNCTION reconforge.me2_history(TEXT,TEXT);
 DROP FUNCTION reconforge.me2_permission(TEXT);DROP FUNCTION reconforge.me2_visible(TEXT,TEXT);DROP FUNCTION reconforge.me2_object(TEXT,TEXT);DROP FUNCTION reconforge.me2_assert(BOOLEAN,TEXT);
 DROP FUNCTION reconforge.me2_claim_value(BIGINT,BIGINT);
+DROP FUNCTION reconforge.me2_integer(JSONB);
+DROP FUNCTION reconforge.me2_policy(JSONB,JSONB);
 """
 
 DOWNGRADE_SQL = OWNERSHIP_DOWNGRADE_SQL + _DOWNGRADE_SQL
@@ -421,3 +493,20 @@ def install_postgres_manufacturing_execution_v2_schema(connection: Any) -> None:
     installed = row["installed"] if isinstance(row, Mapping) else row[0]
     if installed is None:
         connection.execute(UPGRADE_SQL)
+        return
+    row = connection.execute("""SELECT
+        (SELECT count(*) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+         WHERE n.nspname='reconforge' AND c.relname=ANY(ARRAY[
+          'manufacturing_execution_v2_definitions','manufacturing_execution_v2_orders','manufacturing_execution_v2_cost_claims',
+          'manufacturing_execution_v2_cost_releases','manufacturing_execution_v2_productions','manufacturing_execution_v2_inspections',
+          'manufacturing_execution_v2_events','manufacturing_execution_v2_commands','financial_effect_claim_gates',
+          'financial_effect_ownership_guards','financial_effect_ownership_releases']) AND c.relrowsecurity AND c.relforcerowsecurity)=11
+        AND to_regprocedure('reconforge.me2_close(text,text)') IS NOT NULL
+        AND to_regprocedure('reconforge.me2_history(text,text)') IS NOT NULL
+        AND to_regprocedure('reconforge.me1_close_before_me2(text,text)') IS NOT NULL
+        AND to_regprocedure('reconforge.touch_financial_effect_claim_gate(text,text)') IS NOT NULL
+        AND EXISTS(SELECT 1 FROM pg_catalog.pg_attribute WHERE attrelid='reconforge.manufacturing_execution_orders'::regclass
+          AND attname='execution_owner_id' AND NOT attisdropped) complete""").fetchone()
+    complete = row["complete"] if isinstance(row, Mapping) else row[0]
+    if complete is not True:
+        raise RuntimeError("Existing ME2 catalog is incomplete; apply the exact ordered manufacturing migration.")

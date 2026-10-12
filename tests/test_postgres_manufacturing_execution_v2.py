@@ -1,10 +1,13 @@
 """Actual nonowner ME2 stock/WIP, original expense claims and quality disposition."""
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from fractions import Fraction
 from typing import Any
 
 import pytest
 
+from reconforge.domain.finance_posting import FinancePostingError, canonical_json, digest_payload
+from reconforge.domain.inventory_receipt_posting import InventoryReceiptPostingError, ReceiptPreparation
 from reconforge.domain.manufacturing_execution import OrderPreparation
 from reconforge.domain.manufacturing_execution_v2 import (
     PERMISSIONS,
@@ -142,3 +145,159 @@ def test_original_expense_backed_material_wip_quality_hold_then_actual_saleable_
         assert final["material"]["execution_version"] == 2 and final["material"]["wip_minor"] == 0
     balances = financial_oracle(result)
     assert (balances["FG"], balances["SCRAP"], balances["WIP"], balances["LABOR"], balances["OVERHEAD"]) == (3420, 380, 0, 1400, 700)
+
+
+def business_snapshot(result: Any) -> str:
+    from psycopg import sql
+    tables = ("manufacturing_execution_orders", "manufacturing_execution_requirements", "manufacturing_execution_reservations",
+        "manufacturing_execution_v2_orders", "manufacturing_execution_v2_cost_claims", "manufacturing_execution_v2_cost_releases",
+        "manufacturing_execution_v2_productions", "manufacturing_execution_v2_inspections", "manufacturing_execution_v2_commands",
+        "manufacturing_execution_v2_events", "financial_effect_ownership_guards", "financial_effect_ownership_releases",
+        "finance_entries", "finance_entry_lines", "finance_entry_line_dimensions", "finance_posting_effects", "finance_posting_commands",
+        "inventory_movements", "inventory_movement_lines", "inventory_cost_layers", "inventory_layer_consumptions",
+        "inventory_receipt_plans", "inventory_receipt_reviews", "inventory_receipt_links", "inventory_receipt_commands")
+    with result.actor("poster") as (connection, _, _):
+        value = {table: [row["value"] for row in connection.execute(sql.SQL("SELECT to_jsonb(x) value FROM reconforge.{} x WHERE tenant_id=%s ORDER BY to_jsonb(x)::text").format(sql.Identifier(table)), (result.tenant,)).fetchall()] for table in tables}
+    return digest_payload(value)
+
+
+def clone_request(source: dict[str, Any], number: str, *, labor: int | None = None) -> ManufacturingOrderPreparation:
+    raw = source["command_request"]
+    material = OrderPreparation(**{key: value for key, value in raw["material"].items() if key != "schema_version"})
+    from dataclasses import replace
+    material = replace(material, number=number)
+    claims = [{**value} for value in raw["claims"]]
+    if labor is not None:
+        claims = [{**value, "minutes": 60, "rate_minor_per_hour": labor} if value["kind"] == "Labor" else value for value in claims]
+    return ManufacturingOrderPreparation(material, raw["routing_id"], claims)
+
+
+def test_reviewed_unposted_cancellation_releases_claims_and_exact_original_expense_can_reverse(manufacturing_v2_database: tuple[str, str]) -> None:
+    result = system(manufacturing_v2_database)
+    source = order(result)
+    with result.actor("poster") as (connection, _, _):
+        before = [row["value"] for row in connection.execute("SELECT to_jsonb(x) value FROM reconforge.finance_posting_effects x WHERE tenant_id=%s ORDER BY id", (result.tenant,)).fetchall()]
+    reviewed = owner_phase(result, owner_phase(result, source, "prepare"), "review")
+    cancelled = owner_phase(result, reviewed, "cancel")
+    assert cancelled["phase"] == 5
+    with result.actor("checker") as (connection, receipts, actor):
+        claims = connection.execute("SELECT state,id FROM reconforge.manufacturing_execution_v2_cost_claims WHERE tenant_id=%s", (result.tenant,)).fetchall()
+        assert len(claims) == 2 and {claim["state"] for claim in claims} == {"Released"}
+        assert connection.execute("SELECT count(*) n FROM reconforge.financial_effect_ownership_releases WHERE tenant_id=%s", (result.tenant,)).fetchone()["n"] == 2
+        assert connection.execute("SELECT count(*) n FROM reconforge.manufacturing_execution_reservations WHERE tenant_id=%s AND state='Active'", (result.tenant,)).fetchone()["n"] == 0
+        retained = [row["value"] for row in connection.execute("SELECT to_jsonb(x) value FROM reconforge.finance_posting_effects x WHERE tenant_id=%s ORDER BY id", (result.tenant,)).fetchall()]
+        assert retained == before
+        labor = next(claim for claim in source["claims"] if claim["kind"] == "Labor")
+        inverse = receipts.finance.prepare_reversal(labor["effect_id"], command_id="cancel-released-inverse", entry_number="EXPENSE-RELEASED-INVERSE",
+            period_id="period", posting_date="2026-10-08", reason="Released original expense remains independently reversible", actor=actor)
+        assert inverse["entry_id"]
+        assert PostgresManufacturingExecutionV2Repository(connection, result.tenant).act_order(source["id"], "cancel", expected_digest=source["source_digest"],
+            command_id=source["id"] + "-cancel", reason="Independent actual cancel", actor=actor) == cancelled
+
+
+def test_active_original_claim_refuses_native_reversal_and_direct_sql_source_mutation(manufacturing_v2_database: tuple[str, str]) -> None:
+    import psycopg
+    result = system(manufacturing_v2_database)
+    source = order(result)
+    before = business_snapshot(result)
+    labor = next(claim for claim in source["claims"] if claim["kind"] == "Labor")
+    with pytest.raises(FinancePostingError), result.actor("checker") as (_, receipts, actor):
+        receipts.finance.prepare_reversal(labor["effect_id"], command_id="claimed-original-inverse", entry_number="CLAIMED-ORIGINAL-INVERSE",
+            period_id="period", posting_date="2026-10-08", reason="Cannot detach original active production expense", actor=actor)
+    assert business_snapshot(result) == before
+    for statement, parameters in [
+        ("UPDATE reconforge.manufacturing_execution_v2_cost_claims SET amount_minor=amount_minor+1 WHERE tenant_id=%s", (result.tenant,)),
+        ("DELETE FROM reconforge.financial_effect_ownership_guards WHERE tenant_id=%s", (result.tenant,)),
+        ("UPDATE reconforge.manufacturing_execution_v2_orders SET phase=3,total_cost_minor=3800 WHERE tenant_id=%s", (result.tenant,)),
+    ]:
+        with pytest.raises(psycopg.Error), result.actor("poster") as (connection, _, actor):
+            connection.execute("SELECT set_config('app.manufacturing_execution_v2_actor_id',%s,true)", (actor.user_id,))
+            connection.execute(statement, parameters)
+        assert business_snapshot(result) == before
+    prepared = owner_phase(result, source, "prepare")
+    before = business_snapshot(result)
+    with pytest.raises(psycopg.Error), result.actor("maker") as (connection, _, _):
+        connection.execute("DELETE FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s", (result.tenant, prepared["cost_entry"]["entry_id"]))
+    assert business_snapshot(result) == before
+
+
+def test_two_current_orders_cannot_overclaim_one_original_expense_under_concurrency(manufacturing_v2_database: tuple[str, str]) -> None:
+    result = system(manufacturing_v2_database)
+    source = order(result)  #600 of original2000 already claimed.
+
+    def attempt(index: int) -> bool:
+        try:
+            with result.actor("maker") as (connection, _, actor):
+                PostgresManufacturingExecutionV2Repository(connection, result.tenant).create_order(clone_request(source, f"CONCURRENT-{index}", labor=800),
+                    command_id=f"concurrent-{index}", actor=actor)
+            return True
+        except FinancePostingError:
+            return False
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        outcomes = list(workers.map(attempt, (1, 2)))
+    assert outcomes.count(True) == outcomes.count(False) == 1
+    with result.actor("poster") as (connection, _, _):
+        labor = next(claim for claim in source["claims"] if claim["kind"] == "Labor")
+        actual = connection.execute("SELECT sum(amount_minor) total FROM reconforge.manufacturing_execution_v2_cost_claims WHERE tenant_id=%s AND effect_id=%s AND state<>'Released'", (result.tenant, labor["effect_id"])).fetchone()["total"]
+        assert int(actual) == 1400
+        assert connection.execute("SELECT count(*) n FROM reconforge.manufacturing_execution_v2_orders WHERE tenant_id=%s", (result.tenant,)).fetchone()["n"] == 2
+        assert connection.execute("SELECT count(*) n FROM reconforge.manufacturing_execution_orders WHERE tenant_id=%s", (result.tenant,)).fetchone()["n"] == 2
+
+
+def test_late_abnormal_loss_failure_rolls_back_completed_fg_participant_then_exact_retry(manufacturing_v2_database: tuple[str, str], monkeypatch: Any) -> None:
+    result = system(manufacturing_v2_database)
+    source = order(result)
+    owner_phase(result, owner_phase(result, owner_phase(result, source, "prepare"), "review"), "post")
+    with result.actor("maker") as (connection, _, actor):
+        production = PostgresManufacturingExecutionV2Repository(connection, result.tenant).produce(source["id"], output_quantity="4",
+            operations=[{"sequence": 1, "minutes": 24, "evidence_reference": "SYN-LATE-FAILURE"}], period_id="period", posting_date="2026-10-05",
+            command_id="late-produce", reason="Actual held production", actor=actor)
+    production = owner_phase(result, owner_phase(result, production, "review", "production"), "post", "production")
+    with result.actor("maker") as (connection, _, actor):
+        inspection = PostgresManufacturingExecutionV2Repository(connection, result.tenant).inspect(production["id"], accepted_quantity="3", rejected_quantity="1",
+            inspection_reference="SYN-LATE-QC", period_id="period", posting_date="2026-10-05", command_id="late-inspect", reason="Actual complete quality decision", actor=actor)
+    inspection = owner_phase(result, inspection, "review", "inspection")
+    before = business_snapshot(result)
+
+    def fail_loss(*args: Any, **kwargs: Any) -> Any:
+        raise RuntimeError("Synthetic failure after actual native FG before abnormal-loss publication")
+
+    with pytest.raises(RuntimeError, match="Synthetic failure"), result.actor("poster") as (connection, _, actor):
+        owner = PostgresManufacturingExecutionV2Repository(connection, result.tenant)
+        monkeypatch.setattr(owner, "_post", fail_loss)
+        owner.act_inspection(inspection["id"], "post", expected_digest=inspection["source_digest"], command_id=inspection["id"] + "-post", reason="Independent actual post", actor=actor)
+    assert business_snapshot(result) == before
+    posted = owner_phase(result, inspection, "post", "inspection")
+    with result.actor("poster") as (connection, _, actor):
+        replay = PostgresManufacturingExecutionV2Repository(connection, result.tenant).act_inspection(inspection["id"], "post", expected_digest=inspection["source_digest"],
+            command_id=inspection["id"] + "-post", reason="Independent actual post", actor=actor)
+        assert canonical_json(replay) == canonical_json(posted)
+    assert financial_oracle(result)["WIP"] == 2280
+
+
+def test_reserved_order_and_held_names_cannot_become_standalone_fg_receipts_or_extra_wip_journals(manufacturing_v2_database: tuple[str, str]) -> None:
+    import psycopg
+    result = system(manufacturing_v2_database)
+    source = order(result)
+    owner_phase(result, owner_phase(result, owner_phase(result, source, "prepare"), "review"), "post")
+    with result.actor("maker") as (connection, _, actor):
+        production = PostgresManufacturingExecutionV2Repository(connection, result.tenant).produce(source["id"], output_quantity="4",
+            operations=[{"sequence": 1, "minutes": 24, "evidence_reference": "SYN-NO-DETACHED-FG"}], period_id="period", posting_date="2026-10-05",
+            command_id="reserved-produce", reason="Actual production requires inspection", actor=actor)
+    production = owner_phase(result, owner_phase(result, production, "review", "production"), "post", "production")
+    before = business_snapshot(result)
+    for reserved in (source["id"], production["id"], source["routing_id"]):
+        with pytest.raises((InventoryReceiptPostingError, psycopg.Error)), result.actor("maker") as (_, receipts, actor):
+            receipts.prepare_receipt(ReceiptPreparation(receipt_number=reserved, posting_date="2026-10-05", period_id="period", item_code="PRODUCT",
+                location_code="MAIN/STOCK", quantity="4", total_value_minor=1520, policy_code="MFG", organization_code="ORG", entity_code="ENTITY", workspace="work",
+                reason="Cannot relabel uninspected production as standalone FG"), command_id="detached-" + reserved, actor=actor)
+        assert business_snapshot(result) == before
+    with pytest.raises(psycopg.Error), result.actor("maker") as (connection, receipts, actor):
+        receipts.finance.finance.create_entry(entry_number="EXTRA-UNBACKED-PRODUCTION", organization_code="ORG", entity_code="ENTITY", period_id="period",
+            journal_code="STOCK", posting_date="2026-10-05", description="A generic journal cannot attach unbacked extra source WIP", external_reference=source["id"],
+            workspace="work", actor_label=actor.username, lines=[{"account_code": "WIP", "debit": "9.00"}, {"account_code": "LABOR", "credit": "9.00"}])
+    assert business_snapshot(result) == before
+    with result.actor("poster") as (connection, _, actor):
+        parent = PostgresManufacturingExecutionV2Repository(connection, result.tenant).get_order(source["id"], actor=actor)
+        assert parent["wip_minor"] == 3800 and parent["held_quantity_scaled"] == 4

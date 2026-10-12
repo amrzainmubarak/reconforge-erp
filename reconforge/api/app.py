@@ -172,6 +172,7 @@ def create_api_app(
     redis_url: str | None = None,
     redis_require_tls: bool = True,
     postgres_dsn: str | None = None,
+    postgres_personnel_dsn: str | None = None,
     postgres_require_tls: bool = True,
     postgres_pool_size: int = 8,
     postgres_pool_acquire_timeout_seconds: float = 30.0,
@@ -201,6 +202,12 @@ def create_api_app(
         raise ValueError("allowed_hosts must contain exact DNS names or IPv4 addresses only.")
     if postgres_dsn is not None and tenant_db_root is None:
         raise ValueError("tenant_db_root is required when PostgreSQL server identity is enabled.")
+    if postgres_personnel_dsn is not None:
+        if postgres_dsn is None:
+            raise ValueError("Personnel PostgreSQL requires the server identity profile.")
+        from reconforge.api.server_personnel import validate_personnel_database_pair
+
+        validate_personnel_database_pair(postgres_dsn, postgres_personnel_dsn)
     app = FastAPI(
         title="ReconForge Local REST API",
         version=__version__,
@@ -209,6 +216,7 @@ def create_api_app(
     app.state.db_path = resolved_db_path
     app.state.tenant_db_router = TenantDatabaseRouter.from_root(tenant_db_root) if tenant_db_root is not None else None
     app.state.postgres_identity_factory = None
+    app.state.postgres_personnel_factory = None
     if postgres_dsn is not None:
         app.state.postgres_identity_factory = PostgresRuntimePooledConnectionFactory(
             PostgresSettings(dsn=postgres_dsn, require_tls=postgres_require_tls),
@@ -216,6 +224,13 @@ def create_api_app(
             acquire_timeout_seconds=postgres_pool_acquire_timeout_seconds,
         )
         app.router.add_event_handler("shutdown", app.state.postgres_identity_factory.close)
+    if postgres_personnel_dsn is not None:
+        app.state.postgres_personnel_factory = PostgresRuntimePooledConnectionFactory(
+            PostgresSettings(dsn=postgres_personnel_dsn, require_tls=postgres_require_tls),
+            max_size=postgres_pool_size,
+            acquire_timeout_seconds=postgres_pool_acquire_timeout_seconds,
+        )
+        app.router.add_event_handler("shutdown", app.state.postgres_personnel_factory.close)
     # The bounded PostgreSQL ledger uses the same secured connection factory
     # as server identity, but remains an explicit API capability boundary.
     app.state.postgres_ledger_factory = app.state.postgres_identity_factory

@@ -2794,6 +2794,14 @@ def api_serve_command(
             help="Optional PostgreSQL server-auth DSN; prefer RECONFORGE_POSTGRES_DSN in the environment.",
         ),
     ] = None,
+    postgres_personnel_dsn: Annotated[
+        str | None,
+        typer.Option(
+            "--postgres-personnel-dsn",
+            envvar="RECONFORGE_PERSONNEL_POSTGRES_DSN",
+            help="Optional separate personnel database login; prefer RECONFORGE_PERSONNEL_POSTGRES_DSN.",
+        ),
+    ] = None,
     postgres_require_tls: Annotated[
         bool,
         typer.Option("--postgres-require-tls/--postgres-no-tls", help="Require PostgreSQL TLS verification."),
@@ -2917,6 +2925,7 @@ def api_serve_command(
             db_path,
             tenant_db_root=tenant_db_root,
             postgres_dsn=postgres_dsn,
+            postgres_personnel_dsn=postgres_personnel_dsn,
             postgres_require_tls=postgres_require_tls,
             redis_url=redis_url,
             redis_require_tls=redis_require_tls,

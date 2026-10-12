@@ -342,3 +342,15 @@ def test_ordinary_worker_can_deliver_immutable_hc_events_without_private_access(
         assert connection.execute("SELECT count(*) AS n FROM reconforge.hc_rates").fetchone()["n"]==0
     with people.actor("maker") as (_,repository,actor):
         assert repository.evidence(plan["id"],actor=actor)["payrun"]["status"]=="Posted"
+
+
+def test_sql_head_cannot_advance_without_its_original_append_only_event(people: PeopleRuntime) -> None:
+    import psycopg
+    budget,times=approved_budget(people),approved_time(people)
+    plan=prepare(people,times,budget)
+    with pytest.raises(psycopg.errors.ForeignKeyViolation), people.actor("maker") as (connection,_,_):
+        connection.execute("UPDATE reconforge.hc_claim_heads SET sequence=sequence+1 WHERE tenant_id=%s",(people.base.tenant,))
+        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    with people.actor("maker") as (connection,_,_):
+        assert {row["sequence"] for row in connection.execute("SELECT sequence FROM reconforge.hc_claim_heads WHERE tenant_id=%s",(people.base.tenant,))}=={1}
+    assert commit(people,plan,"missing-event")["phase"]==2

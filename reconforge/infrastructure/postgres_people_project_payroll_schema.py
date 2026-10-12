@@ -107,7 +107,9 @@ CREATE TABLE reconforge.hc_claim_events(
  FOREIGN KEY(tenant_id,time_id,payrun_id) REFERENCES reconforge.hc_time_claims(tenant_id,time_id,payrun_id));
 CREATE TABLE reconforge.hc_claim_heads(
  tenant_id TEXT NOT NULL,time_id TEXT NOT NULL,payrun_id TEXT NOT NULL,sequence INTEGER NOT NULL CHECK(sequence>=1),state TEXT NOT NULL CHECK(state IN('Active','Released','Consumed')),
- PRIMARY KEY(tenant_id,time_id),FOREIGN KEY(tenant_id,time_id,payrun_id) REFERENCES reconforge.hc_time_claims(tenant_id,time_id,payrun_id));
+ PRIMARY KEY(tenant_id,time_id),FOREIGN KEY(tenant_id,time_id,payrun_id) REFERENCES reconforge.hc_time_claims(tenant_id,time_id,payrun_id),
+ CONSTRAINT hc_claim_head_original_event FOREIGN KEY(tenant_id,time_id,sequence) REFERENCES reconforge.hc_claim_events(tenant_id,time_id,sequence)
+ DEFERRABLE INITIALLY DEFERRED);
 CREATE TABLE reconforge.hc_commands(
  tenant_id TEXT NOT NULL,workspace_id TEXT NOT NULL,organization_id TEXT NOT NULL,legal_entity_id TEXT NOT NULL,command_id TEXT NOT NULL CHECK(length(command_id) BETWEEN 1 AND 140),
  operation TEXT NOT NULL CHECK(operation IN('personnel','manage','approve_time','prepare','review','post','pay','cancel')),

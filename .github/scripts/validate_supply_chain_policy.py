@@ -33,6 +33,14 @@ _GITLEAKS_REVIEW_REPORTS = {
     "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
     "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
 }
+_GITLEAKS_WAVE5_REGISTRY = "docs/security/gitleaks-public-source-digests-wave5.v1.json"
+_GITLEAKS_WAVE5_REGISTRY_SHA256 = "771a95202b271d3c15cd58a8f69c9dae6e403c745c19194efdb3c78f397f07ca"
+_GITLEAKS_COMPLETE_IGNORE_SHA256 = "8b58ab3f98d251a2e77c95e5569baf4f5ab2cb37fc12780486f61778a8e71460"
+_GITLEAKS_COMPLETE_CONFIG_SHA256 = "b7034f7bc41782964e2345d03fd271e3c873414bbf4bd6c8eb2045f9d4845be8"
+_GITLEAKS_WAVE5_REPORTS = {
+    "docs/execution/wave5-evidence/sourcing-oracle/accepted/report.json",
+    "docs/execution/wave5-evidence/sourcing-oracle/initial-failure/report.json",
+}
 _PUBLIC_DIGEST_LINE = re.compile(r'\s*"([^"\n]+)": "([a-f0-9]{64})",?\s*')
 _RELEASE_ACTION_REFERENCE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[0-9a-f]{40}$")
 _RELEASE_ACTION_USE = re.compile(r"(?m)^[ \t]*uses:[ \t]*([^\s#]+)")
@@ -665,6 +673,98 @@ def _validate_reviewed_gitleaks_hashes(root: Path, ignore_lines: list[str]) -> N
         raise SupplyChainPolicyError("reviewed Gitleaks ignores must match the exact 520 fingerprints")
 
 
+def _validate_wave5_reviewed_gitleaks_hashes(root: Path, ignore_lines: list[str]) -> None:
+    """Close reviewed source hashes without trusting replaceable ignored lines.
+
+    Original Git blobs were independently verified during review. Their immutable
+    proof registry is pinned here; runtime/archive validation requires the exact
+    retained reports, JSON members, original line bytes and full ignore/config
+    bytes. No Git installation or mutable current source version is required.
+    """
+    registry_path = _required_path(root, _GITLEAKS_WAVE5_REGISTRY)
+    if hashlib.sha256(registry_path.read_bytes()).hexdigest() != _GITLEAKS_WAVE5_REGISTRY_SHA256:
+        raise SupplyChainPolicyError("reviewed Wave5 Gitleaks registry bytes drifted")
+    registry = _load_json(registry_path)
+    ignore_raw = _required_path(root, ".gitleaksignore").read_bytes()
+    config_raw = _required_path(root, ".gitleaks.toml").read_bytes()
+    if hashlib.sha256(ignore_raw).hexdigest() != _GITLEAKS_COMPLETE_IGNORE_SHA256:
+        raise SupplyChainPolicyError("reviewed complete Gitleaks ignore bytes drifted")
+    if hashlib.sha256(config_raw).hexdigest() != _GITLEAKS_COMPLETE_CONFIG_SHA256:
+        raise SupplyChainPolicyError("reviewed complete Gitleaks config bytes drifted")
+    if (
+        registry["complete_ignore_sha256"] != _GITLEAKS_COMPLETE_IGNORE_SHA256
+        or registry["complete_config_sha256"] != _GITLEAKS_COMPLETE_CONFIG_SHA256
+        or registry["scanner"] != _load_json(_required_path(root, "docs/security/supply-chain-policy.v1.json"))["secret_scanning"]
+        or registry["finding_count"] != 166
+        or registry["distinct_original_sources"] != 83
+        or registry["history_fingerprint_count"] != 166
+        or registry["current_fingerprint_count"] != 166
+        or registry["introduced_commit"] != "b7801291b182fd11f4e22b1e7994461e0c4fecc0"
+        or registry["original_source_commit"] != "57ead9e9f5489328751910edde3be759ab27a4ab"
+    ):
+        raise SupplyChainPolicyError("reviewed Wave5 Gitleaks identity or scanner drifted")
+    baseline = registry["baseline_ignore"]
+    if (
+        baseline["bytes"] != 78266
+        or baseline["sha256"] != "f2093164734067159dc12e849aa9fd24380b91a5a8e643a833d98ca759f4eade"
+        or hashlib.sha256(ignore_raw[:78266]).hexdigest() != baseline["sha256"]
+    ):
+        raise SupplyChainPolicyError("reviewed historical ignore prefix drifted")
+    reports: dict[str, tuple[list[str], dict[str, Any]]] = {}
+    for report in registry["reports"]:
+        path = report["path"]
+        if path not in _GITLEAKS_WAVE5_REPORTS or path in reports or report["finding_count"] != 83:
+            raise SupplyChainPolicyError("reviewed Wave5 report population drifted")
+        raw = _required_path(root, path).read_bytes()
+        if hashlib.sha256(raw).hexdigest() != report["sha256"]:
+            raise SupplyChainPolicyError("reviewed Wave5 report bytes drifted")
+        document = json.loads(raw)
+        if document["source_head"] != registry["original_source_commit"]:
+            raise SupplyChainPolicyError("reviewed original source commit drifted")
+        reports[path] = (raw.decode("utf-8").splitlines(), document["runtime_sources_before"])
+    if set(reports) != _GITLEAKS_WAVE5_REPORTS or len(registry["records"]) != 166:
+        raise SupplyChainPolicyError("reviewed Wave5 report or record inventory drifted")
+    expected: set[str] = set()
+    population = dict.fromkeys(_GITLEAKS_WAVE5_REPORTS, 0)
+    sources: set[str] = set()
+    for record in registry["records"]:
+        path, number = record["path"], record["line"]
+        if path not in reports or type(number) is not int:
+            raise SupplyChainPolicyError("reviewed Wave5 report line is invalid")
+        lines, members = reports[path]
+        if not 1 <= number <= len(lines) or record["end_line"] != number:
+            raise SupplyChainPolicyError("reviewed Wave5 report line is invalid")
+        line = lines[number - 1]
+        match = _PUBLIC_DIGEST_LINE.fullmatch(line)
+        source = record["public_source_path"]
+        pointer = "/runtime_sources_before/" + source.replace("~", "~0").replace("/", "~1")
+        if (
+            match is None or match.group(1) != source
+            or members.get(source) != match.group(2)
+            or record["json_member_path"] != pointer
+            or record["source_head"] != registry["original_source_commit"]
+            or record["original_git_blob_sha256"] != match.group(2)
+            or hashlib.sha256(match.group(2).encode()).hexdigest() != record["expected_value_sha256"]
+            or hashlib.sha256(line.encode()).hexdigest() != record["source_line_sha256"]
+        ):
+            raise SupplyChainPolicyError("reviewed Wave5 source member, line or digest drifted")
+        current = f"{path}:generic-api-key:{number}"
+        history = f"{registry['introduced_commit']}:{current}"
+        if (
+            record["rule_id"] != "generic-api-key"
+            or record["current_fingerprint"] != current
+            or record["history_fingerprint"] != history
+            or current in expected or history in expected
+        ):
+            raise SupplyChainPolicyError("reviewed Wave5 fingerprint identity drifted")
+        expected.update((current, history))
+        population[path] += 1
+        sources.add(source)
+    actual = {value for value in ignore_lines if any(f"{path}:" in value for path in _GITLEAKS_WAVE5_REPORTS)}
+    if len(expected) != 332 or actual != expected or set(population.values()) != {83} or len(sources) != 83:
+        raise SupplyChainPolicyError("reviewed Wave5 ignores must match the exact 332 fingerprints")
+
+
 def _validate_gitleaks_config(root: Path) -> None:
     text = _required_path(root, ".gitleaks.toml").read_text(encoding="utf-8")
     if text.count("useDefault = true") != 1:
@@ -684,6 +784,7 @@ def _validate_gitleaks_config(root: Path) -> None:
     if any(_GITLEAKS_FINGERPRINT.fullmatch(line) is None for line in ignore_lines):
         raise SupplyChainPolicyError("Gitleaks ignores must be exact commit/path/rule/line fingerprints")
     _validate_reviewed_gitleaks_hashes(root, ignore_lines)
+    _validate_wave5_reviewed_gitleaks_hashes(root, ignore_lines)
 
 
 def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:

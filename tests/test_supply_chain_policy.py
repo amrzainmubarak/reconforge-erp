@@ -67,6 +67,9 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         "docs/security/supply-chain-policy.v1.json",
         "docs/security/container-runtime.openvex.json",
         "docs/security/gitleaks-public-source-digests-wave4.v1.json",
+        "docs/security/gitleaks-public-source-digests-wave5.v1.json",
+        "docs/execution/wave5-evidence/sourcing-oracle/accepted/report.json",
+        "docs/execution/wave5-evidence/sourcing-oracle/initial-failure/report.json",
         "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
         "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
         "pyproject.toml",
@@ -179,6 +182,84 @@ def test_reviewed_public_digest_ignores_reject_substitution_and_inventory_drift(
         else:
             value += record["path"] + ":generic-api-key:99999\n"
         ignore.write_text(value, encoding="utf-8")
+    with pytest.raises(SupplyChainPolicyError, match="reviewed|required policy"):
+        POLICY_MODULE._validate_gitleaks_config(root)
+
+
+def test_wave5_public_digest_ignores_close_exact_population_and_baseline_bytes() -> None:
+    registry = _json(ROOT / POLICY_MODULE._GITLEAKS_WAVE5_REGISTRY)
+    raw = (ROOT / ".gitleaksignore").read_bytes()
+    assert registry["finding_count"] == 166
+    assert registry["distinct_original_sources"] == 83
+    assert {report["finding_count"] for report in registry["reports"]} == {83}
+    assert len({record["current_fingerprint"] for record in registry["records"]}) == 166
+    assert len({record["history_fingerprint"] for record in registry["records"]}) == 166
+    assert hashlib.sha256(raw[:78266]).hexdigest() == registry["baseline_ignore"]["sha256"]
+    assert len(raw[78266:].splitlines()) == 332
+    assert hashlib.sha256(raw).hexdigest() == POLICY_MODULE._GITLEAKS_COMPLETE_IGNORE_SHA256
+    POLICY_MODULE._validate_gitleaks_config(ROOT)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "same_line_credential", "same_line_member", "unmatched_report_line", "source_head",
+        "registry", "unrelated_ignore", "missing_current", "missing_history", "duplicate_history",
+        "baseline_comment", "config_rule", "scanner_policy", "missing_report",
+    ],
+)
+def test_wave5_public_digest_ignores_reject_substitution_and_unreviewed_suppression(
+    tmp_path: Path, mutation: str
+) -> None:
+    root = _copy_policy_project(tmp_path)
+    registry_path = root / POLICY_MODULE._GITLEAKS_WAVE5_REGISTRY
+    registry = _json(registry_path)
+    record = registry["records"][0]
+    report_path = root / record["path"]
+    if mutation in {"same_line_credential", "same_line_member"}:
+        lines = report_path.read_bytes().decode().splitlines(keepends=True)
+        index = record["line"] - 1
+        original = lines[index]
+        if mutation == "same_line_credential":
+            replacement = hashlib.sha256(b"unreviewed synthetic credential at ignored line").hexdigest()
+            lines[index] = re.sub(r'"[a-f0-9]{64}"', '"' + replacement + '"', original)
+        else:
+            lines[index] = original.replace(record["public_source_path"], "tests/substituted_api.py")
+        assert lines[index] != original
+        report_path.write_bytes("".join(lines).encode())
+    elif mutation in {"unmatched_report_line", "source_head"}:
+        report = _json(report_path)
+        if mutation == "source_head":
+            report["source_head"] = "a" * 40
+        else:
+            report["container_name"] = "unreviewed-report-substitution"
+        _write_json(report_path, report)
+    elif mutation == "registry":
+        registry["records"][0]["public_source_path"] = "tests/substituted_api.py"
+        _write_json(registry_path, registry)
+    elif mutation in {"unrelated_ignore", "missing_current", "missing_history", "duplicate_history", "baseline_comment"}:
+        path = root / ".gitleaksignore"
+        raw = path.read_bytes()
+        if mutation == "unrelated_ignore":
+            raw += b"tests/unreviewed.py:generic-api-key:1\n"
+        elif mutation == "duplicate_history":
+            raw += (record["history_fingerprint"] + "\n").encode()
+        elif mutation == "baseline_comment":
+            raw = raw.replace(b"# False-positive", b"# Unreviewed", 1)
+        else:
+            key = "current_fingerprint" if mutation == "missing_current" else "history_fingerprint"
+            raw = raw.replace((record[key] + "\n").encode(), b"", 1)
+        path.write_bytes(raw)
+    elif mutation == "config_rule":
+        path = root / ".gitleaks.toml"
+        path.write_bytes(path.read_bytes() + b"\n[[rules]]\nid = 'generic-api-key'\nregex = 'never-match'\n")
+    elif mutation == "scanner_policy":
+        path = root / "docs/security/supply-chain-policy.v1.json"
+        policy = _json(path)
+        policy["secret_scanning"]["version"] = "8.30.2"
+        _write_json(path, policy)
+    else:
+        report_path.rename(report_path.with_suffix(".renamed"))
     with pytest.raises(SupplyChainPolicyError, match="reviewed|required policy"):
         POLICY_MODULE._validate_gitleaks_config(root)
 

@@ -19,7 +19,7 @@ from typing import Any
 
 KINDS = ("recognize", "settle", "revalue", "reverse_revaluation", "settle")
 RESTORE_HEAD_CONTRACT = "operational-fx-restore-head-v2"
-RESTORE_HEADS = frozenset(("0131_pg_fx_revaluation", "0136_pg_inventory_scope"))
+RESTORE_HEADS = frozenset(("0131_pg_fx_revaluation", "0136_pg_inventory_scope", "0140_pg_people_project_payroll"))
 SOURCE_FIELDS = frozenset(["foreign_gross_minor", "foreign_net_minor", "foreign_policy", "foreign_tax_minor", "functional_allocation_policy", "functional_gross_minor", "functional_net_minor", "functional_policy", "id", "invoice_id", "legal_entity_id", "lines", "organization_id", "preparer_actor_id", "request", "schema_version", "tax_components", "workspace_id"])
 PLAN_FIELDS = frozenset(["amount_minor", "command_request", "currency_code", "currency_precision", "entry_id", "equation", "id", "kind", "legal_entity_id", "organization_id", "period_id", "posting_date", "preparer_actor_id", "reason", "schema_version", "sequence", "snapshot", "source_digest", "source_id", "workspace_id"])
 PLAN_RUNTIME_FIELDS = frozenset(["plan_digest", "validation_digest", "phase", "status", "reviewer_actor_id", "posting_effect_id", "receipt_id"])

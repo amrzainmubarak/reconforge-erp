@@ -141,7 +141,7 @@ def test_explicit_integer_fixture_and_original_native_inverse_pass() -> None:
     assert verified["unique_audit_events"] == verified["unique_outbox_events"] == 20
 
 
-@pytest.mark.parametrize("revision", ["0131_pg_fx_revaluation", "0136_pg_inventory_scope"])
+@pytest.mark.parametrize("revision", ["0131_pg_fx_revaluation", "0136_pg_inventory_scope", "0140_pg_people_project_payroll"])
 def test_versioned_restore_heads_preserve_financial_catalog_contract(revision: str) -> None:
     proofs = fixture_proofs()
     report = fixture_report(proofs)
@@ -150,7 +150,7 @@ def test_versioned_restore_heads_preserve_financial_catalog_contract(revision: s
         report["native_restore"][key]["head"] = revision
     ORACLE["verify_report"](report, ORACLE["verify_proofs"](proofs), fixture_manifest(proofs, report))
     assert ORACLE["RESTORE_HEAD_CONTRACT"] == "operational-fx-restore-head-v2"
-    assert ORACLE["RESTORE_HEADS"] == frozenset(("0131_pg_fx_revaluation", "0136_pg_inventory_scope"))
+    assert ORACLE["RESTORE_HEADS"] == frozenset(("0131_pg_fx_revaluation", "0136_pg_inventory_scope", "0140_pg_people_project_payroll"))
 
 
 @pytest.mark.parametrize("attack", ["unknown_head", "snapshot_head", "checkpoint_head", "catalog", "rls"])
@@ -254,7 +254,7 @@ def test_post_restore_authentication_allows_only_identity_digest_with_same_popul
         ORACLE["verify_report"](report, ORACLE["verify_proofs"](proofs), manifest)
 
 
-@pytest.mark.parametrize("revision", ["0131_pg_fx_revaluation", "0136_pg_inventory_scope"])
+@pytest.mark.parametrize("revision", ["0131_pg_fx_revaluation", "0136_pg_inventory_scope", "0140_pg_people_project_payroll"])
 def test_unique_substituted_runtime_effect_cannot_escape_trusted_original_membership(revision: str) -> None:
     proofs = fixture_proofs()
     report = fixture_report(proofs)
@@ -297,7 +297,7 @@ def test_duplicate_json_key_is_rejected_even_if_a_hash_could_be_recomputed() -> 
 
 
 @pytest.mark.parametrize("optimized", [False, True])
-@pytest.mark.parametrize("revision", ["0131_pg_fx_revaluation", "0136_pg_inventory_scope"])
+@pytest.mark.parametrize("revision", ["0131_pg_fx_revaluation", "0136_pg_inventory_scope", "0140_pg_people_project_payroll"])
 def test_standalone_cli_keeps_financial_checks_under_python_optimization(tmp_path: Path, optimized: bool, revision: str) -> None:
     proofs = fixture_proofs()
     for index, proof in enumerate(proofs):

@@ -1482,3 +1482,9 @@ include tests/people_project_payroll_browser.py
 include tests/fixtures/people-project-payroll-native-v1.json
 include docs/operations/PEOPLE_PROJECT_PAYROLL.md
 include docs/execution/ENTERPRISE_M1_PROGRESS_2026-10-13.md
+
+include .github/scripts/verify_manufacturing_v2_cycle_oracle.py
+include tests/manufacturing_execution_v2_browser.py
+include tests/test_manufacturing_v2_cycle_oracle.py
+include tests/fixtures/manufacturing_v2_original_golden.json
+include tests/fixtures/manufacturing_v2_original_quality_hold.json

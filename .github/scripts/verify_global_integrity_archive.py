@@ -19,6 +19,7 @@ HELPERS = (
     "customer_returns_browser", "erp_procurement_commitments_browser",
     "operational_fx_tax_browser_seed", "erp_supplier_returns_browser",
     "manufacturing_execution_browser", "intercompany_operations_browser_seed", "procurement_sourcing_browser",
+    "manufacturing_execution_v2_browser", "intercompany_fx_browser_seed", "people_project_payroll_browser",
 )
 DIAGNOSTIC_HELPERS = (
     ".github/scripts/benchmark_wave5_profile_diagnostics.py",
@@ -453,6 +454,24 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "docs/execution/WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md",
         "docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.json",
         "docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.md",
+        "docs/execution/ENTERPRISE_M1_PROGRESS_2026-10-13.md",
+        "docs/adr/0855-versioned-enterprise-cost-fx-and-time-ownership.md",
+        ".github/scripts/verify_manufacturing_v2_cycle_oracle.py", "tests/test_manufacturing_v2_cycle_oracle.py",
+        ".github/scripts/verify_intercompany_fx_cycle_oracle.py", "tests/verify_people_project_payroll_oracle.py",
+        "tests/intercompany_fx_fixture.py", "tests/intercompany_fx_native_restore.py",
+        "tests/fixtures/people-project-payroll-native-v1.json",
+        "tests/fixtures/manufacturing_v2_original_golden.json", "tests/fixtures/manufacturing_v2_original_quality_hold.json",
+        "reconforge/ports/manufacturing_execution_v2.py", "reconforge/application/ports_people_project_payroll.py",
+        "reconforge/api/server_personnel.py", "reconforge/infrastructure/source_participant_admission.py",
+        "reconforge/infrastructure/postgres_financial_source_ownership.py", "reconforge/infrastructure/postgres_fx_conversion_sql.py",
+        "alembic/versions/0138_postgres_manufacturing_execution_v2.py",
+        "alembic/versions/0139_postgres_intercompany_fx.py", "alembic/versions/0140_postgres_people_project_payroll.py",
+        *("reconforge/" + layer + "/" + name + ".py" for layer in ("domain", "application")
+          for name in ("manufacturing_execution_v2", "intercompany_fx", "people_project_payroll")),
+        *("reconforge/infrastructure/postgres_" + name + suffix + ".py" for suffix in ("", "_schema")
+          for name in ("manufacturing_execution_v2", "intercompany_fx", "people_project_payroll")),
+        *("apps/web/src/components/" + name + ".tsx" for name in ("IntercompanyFxPage", "PeopleProjectPayrollPage")),
+
         "docs/execution/GLOBAL_ENTERPRISE_PROGRAM_CONTRACTS_2026-10-12.md",
         "LICENSE", "README.md", "MANIFEST.in", "pyproject.toml", "alembic.ini", "reconforge_migration_sql.py",
         "alembic/env.py", "alembic/script.py.mako", "tests/__init__.py", INDEX_PATH,

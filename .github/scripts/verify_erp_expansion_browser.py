@@ -313,6 +313,7 @@ def main() -> int:
     status_before = tracked_status(runtime_root)
     report: dict[str, object] = {
         "started_at": datetime.now(UTC).isoformat(), "image": IMAGE,
+        "container_resource_bounds": {"cpus": "2", "memory_bytes": 1073741824},
         "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=runtime_root, text=True).strip(),  # nosec B603 B607
         "source_sha256": source_digest(runtime_root), "runtime_root": str(runtime_root),
         "tooling_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
@@ -356,7 +357,7 @@ def main() -> int:
         environment = os.environ.copy()
         environment["POSTGRES_PASSWORD"] = admin_password
         container = run(["docker", "run", "--detach", "--rm", "--name", name,
-                         "--label", "reconforge.owner=erp-expansion-browser", "-e", "POSTGRES_PASSWORD",
+                         "--label", "reconforge.owner=erp-expansion-browser", "--cpus", "2", "--memory", "1g", "-e", "POSTGRES_PASSWORD",
                          "-p", "127.0.0.1::5432", IMAGE], environment=environment).stdout.strip()
         port = run(["docker", "port", container, "5432/tcp"]).stdout.strip().rsplit(":", 1)[1]
         admin_dsn = f"postgresql://postgres:{admin_password}@127.0.0.1:{port}/postgres?connect_timeout=5"

@@ -19,7 +19,7 @@ from typing import Any
 CONTRACT = "wave5-large-native-journal-export-v1"
 REVIEW = "finance-entry-review-v1"
 NUMBER = "BENCH-SNAPSHOT-DIMENSIONS"
-REVISIONS = {"0132_pg_stock_inverse_dispatch", "0136_pg_inventory_scope", "0137_pg_intercompany_projection"}
+REVISIONS = {"0132_pg_stock_inverse_dispatch", "0136_pg_inventory_scope", "0137_pg_intercompany_projection", "0140_pg_people_project_payroll"}
 HEADER_KEYS = (
     "id", "workspace_id", "organization_id", "legal_entity_id", "journal_id", "period_id", "entry_number",
     "posting_date", "description", "external_reference", "source_type", "currency_code", "currency_precision",

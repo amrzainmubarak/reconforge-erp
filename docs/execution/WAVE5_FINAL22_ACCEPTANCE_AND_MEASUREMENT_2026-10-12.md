@@ -421,3 +421,20 @@ support; verified activated country-specific packs in this scoped inventory are0
 The next implementation program begins only after actual corrected-source Wave5
 quality acceptance. No whole ERP, IFRS/US GAAP, global superiority or production
 readiness claim is made. Historical checkpoints retain their original subjects.
+
+## Source archive diagnostic dependency correction (2026-10-12)
+
+Original6ce3.12 hosted report79783871 checks3029 packaged tracked members
+and136 migrations; Git has3947 tracked paths. Packaging is a declared subset,
+not an assertion that every Git file is shipped. Both packaged diagnostic tests
+refer to missing scripts benchmark_wave5_profile_diagnostics.py and
+verify_wave5_large_journal.py; the new dependency guard closes this gap.
+Targeted265cases/5.667s passed0failures/errors/skips, including8new regressions
+and257 related contracts (145diagnostic+104oracle+8sharding). The earlier264-case XML/development proof13166be3 retain an extraneous
+PowerShell postscript failure after the tests
+and Ruff had passed; the corrected standalone Ruff/diff gate passed. No financial
+workload was rerun. Actual full fresh corrected-source/package acceptance is pending.
+
+This additive correction supersedes pending6ce archive completeness for the new
+diagnostic test dependencies only. Their original financial/source evidence and
+all public capsule bytes remain unchanged; runtime trees retain accepted22.

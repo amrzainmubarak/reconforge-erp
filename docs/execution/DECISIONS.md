@@ -1,5 +1,16 @@
 # ReconForge Execution Decisions Log
 
+## Source archive diagnostic dependency correction (2026-10-12)
+
+Preserve the explicit source-distribution policy; do not infer all Git files are
+packaged. Every packaged diagnostic test must carry its actual script dependency.
+Add both immutable diagnostic/oracle helpers plus current completion/measurement
+contracts and require extracted-source isolated import admission. Existing byte
+parity, financial oracles, migration, licenses and source-clean gates stay strict.
+A passed old selected-member verifier cannot override a newly discovered missing
+dependency. Freeze and test the corrected publication source separately.
+
+
 ## Corrective publication: preserve negative attempts and defer comparison (2026-10-12)
 
 Keep accepted22 application/migration/Studio trees unchanged. Correct only new

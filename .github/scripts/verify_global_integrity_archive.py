@@ -20,6 +20,10 @@ HELPERS = (
     "operational_fx_tax_browser_seed", "erp_supplier_returns_browser",
     "manufacturing_execution_browser", "intercompany_operations_browser_seed", "procurement_sourcing_browser",
 )
+DIAGNOSTIC_HELPERS = (
+    ".github/scripts/benchmark_wave5_profile_diagnostics.py",
+    ".github/scripts/verify_wave5_large_journal.py",
+)
 PREFIX20_SHA = "3f1ecffac62b7cc3cbea41264f2a61b7948d9875c87dd32f7eddf7f51238be41"
 INDEX_PATH = "docs/execution/benchmarks/INDEX.v1.json"
 GOLDEN = {100: "46669102", 1000: "493671004"}
@@ -391,6 +395,47 @@ print(json.dumps({'helpers':origins,'all_loaded_reconforge_and_tests_modules_fro
     return isolated_json([sys.executable, "-I", "-c", code, str(extracted), json.dumps((*HELPERS, "mandatory_native_gate"))], extracted)
 
 
+def check_diagnostic_imports(extracted: Path) -> dict[str, object]:
+    """Admit packaged diagnostic dependencies without executing their workloads."""
+    require(all((extracted / name).is_file() for name in DIAGNOSTIC_HELPERS),
+            "Source archive misses diagnostic test dependencies")
+    code = """
+import hashlib,importlib.util,json,os,pathlib,socket,subprocess,sys
+sys.dont_write_bytecode=True
+root=pathlib.Path(sys.argv[1]).resolve()
+def deny_workload(*args,**kwargs):
+ raise ValueError('Diagnostic imports cannot launch processes or network workloads')
+subprocess.Popen=deny_workload
+os.system=deny_workload
+socket.create_connection=deny_workload
+socket.socket.connect=deny_workload
+socket.socket.connect_ex=deny_workload
+origins={}
+for index,name in enumerate(json.loads(sys.argv[2])):
+ location=(root/name).resolve()
+ location.relative_to(root)
+ before=location.read_bytes()
+ spec=importlib.util.spec_from_file_location('archive_diagnostic_'+str(index),location)
+ if spec is None or spec.loader is None:
+  raise ValueError('Diagnostic import loader absent')
+ module=importlib.util.module_from_spec(spec)
+ sys.modules[spec.name]=module
+ spec.loader.exec_module(module)
+ if pathlib.Path(module.__file__).resolve()!=location or location.read_bytes()!=before:
+  raise ValueError('Diagnostic helper source/origin changed')
+ origins[name]={'sha256':hashlib.sha256(before).hexdigest(),'source':str(location)}
+for name in sys.modules:
+ if any(name==prefix or name.startswith(prefix+'.') for prefix in ('reconforge','psycopg','psycopg2','psutil')):
+  raise ValueError('Diagnostic import loaded application/database/profiler code')
+print(json.dumps({'helpers':origins,'workload_executed':False,'application_database_profiler_imports':False}))
+"""
+    result = isolated_json([sys.executable, "-I", "-c", code, str(extracted), json.dumps(DIAGNOSTIC_HELPERS)], extracted)
+    require(set(result["helpers"]) == set(DIAGNOSTIC_HELPERS)
+            and result["workload_executed"] is False and result["application_database_profiler_imports"] is False,
+            "Diagnostic dependency import admission failed")
+    return result
+
+
 def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
     require(hasattr(tarfile, "data_filter"), "Safe archive inspection requires tarfile.data_filter (Python 3.11.4+)")
     root = args.root.resolve()
@@ -403,6 +448,12 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
     require(sha(json.dumps(index["entries"][:20], sort_keys=True, separators=(",", ":")).encode("utf-8")) == PREFIX20_SHA, "Twenty retained index entries changed")
     pair = ("docs/execution/benchmarks/" + args.baseline_wrapper, "docs/execution/benchmarks/" + args.candidate_wrapper)
     required = {
+        *DIAGNOSTIC_HELPERS, "tests/test_wave5_profile_diagnostics.py", "tests/test_wave5_large_journal_oracle.py",
+        "tests/test_publication_diagnostic_dependencies.py",
+        "docs/execution/WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md",
+        "docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.json",
+        "docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.md",
+        "docs/execution/GLOBAL_ENTERPRISE_PROGRAM_CONTRACTS_2026-10-12.md",
         "LICENSE", "README.md", "MANIFEST.in", "pyproject.toml", "alembic.ini", "reconforge_migration_sql.py",
         "alembic/env.py", "alembic/script.py.mako", "tests/__init__.py", INDEX_PATH,
         "tests/mandatory_native_gate.py", "tests/test_mandatory_native_gate.py",
@@ -535,6 +586,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         report["wave4_independent_scale_10k"] = check_wave4_scale(extracted)
         report["reviewed_source_digest_ignores"] = check_reviewed_source_digest_ignores(extracted)
         report["browser_helper_imports"] = check_imports(extracted)
+        report["diagnostic_helper_imports"] = check_diagnostic_imports(extracted)
         report["acceptance_packet_keys"] = sorted(json.loads((extracted / "docs/execution" / (args.acceptance_stem + ".json")).read_text(encoding="utf-8")))
         with zipfile.ZipFile(args.wheel) as wheel:
             names = wheel.namelist()

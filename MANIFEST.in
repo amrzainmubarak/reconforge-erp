@@ -1465,3 +1465,10 @@ include .github/scripts/benchmark_mixed_native_api.py
 include docs/operator/manufacturing-execution.md
 
 include docs/execution/WAVE5_ACCEPTANCE_CHECKPOINT_2026-10-12.md
+include .github/scripts/benchmark_wave5_profile_diagnostics.py
+include .github/scripts/verify_wave5_large_journal.py
+include tests/test_publication_diagnostic_dependencies.py
+include docs/execution/WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md
+include docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.json
+include docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.md
+include docs/execution/GLOBAL_ENTERPRISE_PROGRAM_CONTRACTS_2026-10-12.md

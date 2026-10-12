@@ -1,5 +1,19 @@
 # Execution State
 
+## Source archive diagnostic dependency correction (2026-10-12)
+
+Independent inspection of the original6ce3.12 source-closure report found both
+diagnostic tests packaged but their two .github script dependencies absent. The
+existing selected-member archive gate passed; it does not establish this missing
+dependency closure. Add the exact scripts/current closure inventory to MANIFEST
+and require fresh isolated imports from extracted source without application,
+DB or profiling imports/workloads. Eight regressions and257 related contracts including8 sharding contracts
+passed265cases/0failures/errors/skips; Ruff/diff passed. Fresh corrected source
+package and full hosted acceptance remain pending.6ce actual CI outcomes stay
+original and are not silently reclassified. Runtime/migration/Studio remain22.
+Measurement is deferred by the human; next program activation stays conditional.
+
+
 ## Current corrective publication and deferred measurement (2026-10-12)
 
 Four quiet2 profiles completed and independently closed. The later V5 six-run

@@ -260,7 +260,12 @@ def test_wave5_public_digest_ignores_reject_substitution_and_unreviewed_suppress
         _write_json(path, policy)
     else:
         report_path.rename(report_path.with_suffix(".renamed"))
-    with pytest.raises(SupplyChainPolicyError, match="reviewed|required policy"):
+    expected_guard = (
+        "Gitleaks ignore fingerprints must be non-empty and unique"
+        if mutation == "duplicate_history"
+        else "reviewed|required policy"
+    )
+    with pytest.raises(SupplyChainPolicyError, match=expected_guard):
         POLICY_MODULE._validate_gitleaks_config(root)
 
 

@@ -62,12 +62,23 @@ CREATE TABLE reconforge.hc_rates(
  tenant_id TEXT NOT NULL,employment_id TEXT NOT NULL,workspace_id TEXT NOT NULL,organization_id TEXT NOT NULL,legal_entity_id TEXT NOT NULL,
  hourly_rate_minor BIGINT NOT NULL CHECK(hourly_rate_minor BETWEEN 1 AND 9000000000000000000),PRIMARY KEY(tenant_id,employment_id),
  FOREIGN KEY(tenant_id,employment_id) REFERENCES reconforge.hc_employments(tenant_id,id));
+-- Structural native reference constraints enforce custody even when the
+-- caller has no HC table privilege or cannot see its original tenant rows.
+ALTER TABLE reconforge.finance_dimensions ADD CONSTRAINT hc_dimension_identity
+ UNIQUE(tenant_id,id,workspace_id,dimension_code,dimension_type,required_on_entries,active,organization_code);
+ALTER TABLE reconforge.finance_dimension_values ADD CONSTRAINT hc_dimension_value_identity
+ UNIQUE(tenant_id,id,dimension_id,workspace_id,value_code,active);
 CREATE TABLE reconforge.hc_projects(
  tenant_id TEXT NOT NULL,id TEXT NOT NULL CHECK(id~'^HCP-[0-9a-f]{32}$'),workspace_id TEXT NOT NULL,organization_id TEXT NOT NULL,legal_entity_id TEXT NOT NULL,
  project_code TEXT NOT NULL,dimension_id TEXT NOT NULL,value_id TEXT NOT NULL,dimension_code TEXT NOT NULL,value_code TEXT NOT NULL,preparer_id TEXT NOT NULL,
  request_digest TEXT NOT NULL,audit_id TEXT NOT NULL,outbox_id TEXT NOT NULL,
+ dimension_type TEXT NOT NULL DEFAULT 'Project' CHECK(dimension_type='Project'),dimension_active BOOLEAN NOT NULL DEFAULT TRUE CHECK(dimension_active),
+ value_active BOOLEAN NOT NULL DEFAULT TRUE CHECK(value_active),dimension_required BOOLEAN NOT NULL,dimension_organization_code TEXT NOT NULL,
  PRIMARY KEY(tenant_id,id),UNIQUE(tenant_id,workspace_id,organization_id,legal_entity_id,project_code),
- FOREIGN KEY(tenant_id,dimension_id) REFERENCES reconforge.finance_dimensions(tenant_id,id),FOREIGN KEY(tenant_id,value_id) REFERENCES reconforge.finance_dimension_values(tenant_id,id));
+ FOREIGN KEY(tenant_id,dimension_id,workspace_id,dimension_code,dimension_type,dimension_required,dimension_active,dimension_organization_code)
+  REFERENCES reconforge.finance_dimensions(tenant_id,id,workspace_id,dimension_code,dimension_type,required_on_entries,active,organization_code),
+ FOREIGN KEY(tenant_id,value_id,dimension_id,workspace_id,value_code,value_active)
+  REFERENCES reconforge.finance_dimension_values(tenant_id,id,dimension_id,workspace_id,value_code,active));
 CREATE TABLE reconforge.hc_times(
  tenant_id TEXT NOT NULL,id TEXT NOT NULL CHECK(id~'^HCT-[0-9a-f]{32}$'),workspace_id TEXT NOT NULL,organization_id TEXT NOT NULL,legal_entity_id TEXT NOT NULL,
  employee_id TEXT NOT NULL,employment_id TEXT NOT NULL,business_date DATE NOT NULL,lines JSONB NOT NULL CHECK(jsonb_typeof(lines)='array' AND jsonb_array_length(lines) BETWEEN 1 AND 128),
@@ -167,7 +178,10 @@ BEGIN
   SELECT * INTO p FROM reconforge.finance_dimensions WHERE tenant_id=NEW.tenant_id AND id=NEW.dimension_id;
   SELECT * INTO bound FROM reconforge.finance_dimension_values WHERE tenant_id=NEW.tenant_id AND id=NEW.value_id;
   PERFORM reconforge.hc_assert(p.active AND bound.active AND p.dimension_type='Project' AND p.workspace_id=NEW.workspace_id AND bound.dimension_id=p.id
-    AND p.dimension_code=NEW.dimension_code AND bound.value_code=NEW.value_code,'Project must bind its original active native dimension');
+    AND p.dimension_code=NEW.dimension_code AND bound.value_code=NEW.value_code AND bound.workspace_id=NEW.workspace_id
+    AND p.organization_code IN('',(SELECT organization_code FROM reconforge.organizations WHERE tenant_id=NEW.tenant_id AND id=NEW.organization_id AND application_workspace_id=NEW.workspace_id)),
+    'Project must bind its original active native dimension and source organization');
+  NEW.dimension_required:=p.required_on_entries;NEW.dimension_organization_code:=p.organization_code;
   PERFORM reconforge.hc_actor(NEW.tenant_id,NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id,NEW.preparer_id,'people_project_payroll.manage');
  ELSIF TG_TABLE_NAME='hc_times' THEN
   SELECT * INTO a FROM reconforge.hc_employees WHERE tenant_id=NEW.tenant_id AND id=NEW.employee_id FOR UPDATE;
@@ -456,7 +470,8 @@ BEGIN
   op:='manage';action:='project_registered';actor:=p.preparer_id;
   PERFORM reconforge.hc_assert(EXISTS(SELECT 1 FROM reconforge.finance_dimensions d JOIN reconforge.finance_dimension_values val
    ON val.tenant_id=d.tenant_id AND val.dimension_id=d.id WHERE d.tenant_id=t AND d.id=p.dimension_id AND val.id=p.value_id
-   AND d.workspace_id=p.workspace_id AND d.active AND val.active AND d.dimension_type='Project' AND d.dimension_code=p.dimension_code AND val.value_code=p.value_code),
+   AND d.workspace_id=p.workspace_id AND val.workspace_id=p.workspace_id AND d.active AND val.active AND d.dimension_type='Project' AND d.dimension_code=p.dimension_code AND val.value_code=p.value_code
+   AND d.organization_code IN('',(SELECT organization_code FROM reconforge.organizations WHERE tenant_id=t AND id=p.organization_id AND application_workspace_id=p.workspace_id))),
    'Registered workforce Project retains its active native dimension and value');
  ELSIF table_name='hc_times' THEN
   SELECT * INTO p FROM reconforge.hc_times WHERE tenant_id=t AND id=identifier;
@@ -508,11 +523,6 @@ BEGIN
  ELSIF TG_OP='UPDATE' THEN changes:=ARRAY[to_jsonb(OLD),to_jsonb(NEW)];ELSE PERFORM reconforge.hc_assert(FALSE,'Unsupported workforce closure operation');END IF;
  FOREACH changed IN ARRAY changes LOOP
   native_id:=NULL;native_number:=NULL;source_id:=NULL;
-  IF TG_TABLE_NAME IN('finance_dimensions','finance_dimension_values') THEN
-   FOR p IN SELECT id FROM reconforge.hc_projects WHERE tenant_id=changed->>'tenant_id'
-    AND CASE TG_TABLE_NAME WHEN 'finance_dimensions' THEN dimension_id=changed->>'id' ELSE value_id=changed->>'id' END
-    LOOP PERFORM reconforge.hc_input_close(changed->>'tenant_id','hc_projects',p.id);END LOOP;
-  END IF;
   IF TG_TABLE_NAME IN('hc_employees','hc_employee_private','hc_employments','hc_rates','hc_projects','hc_times') THEN
    PERFORM reconforge.hc_input_close(changed->>'tenant_id',CASE TG_TABLE_NAME WHEN 'hc_employee_private' THEN 'hc_employees' WHEN 'hc_rates' THEN 'hc_employments' ELSE TG_TABLE_NAME END,
     CASE TG_TABLE_NAME WHEN 'hc_employee_private' THEN changed->>'employee_id' WHEN 'hc_rates' THEN changed->>'employment_id' ELSE changed->>'id' END);
@@ -593,7 +603,7 @@ DO $hc$ DECLARE n TEXT; BEGIN
  END LOOP;
  FOREACH n IN ARRAY ARRAY['hc_employees','hc_employee_private','hc_employments','hc_rates','hc_projects','hc_times','hc_commands',
  'hc_payruns','hc_payrun_private','hc_payments','hc_payment_private','hc_time_claims','hc_claim_events','hc_claim_heads',
- 'finance_dimensions','finance_dimension_values','finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects','budget_commitment_events','domain_audit_events','outbox_events'] LOOP
+ 'finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects','budget_commitment_events','domain_audit_events','outbox_events'] LOOP
   EXECUTE format('CREATE CONSTRAINT TRIGGER hc_source_close AFTER INSERT OR UPDATE OR DELETE ON reconforge.%I DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.hc_reverse_close()',n);
  END LOOP;
 END $hc$;
@@ -617,6 +627,8 @@ DROP TRIGGER IF EXISTS hc_source_close ON reconforge.outbox_events;
 DROP TABLE reconforge.hc_commands,reconforge.hc_claim_heads,reconforge.hc_claim_events,reconforge.hc_time_claims,
  reconforge.hc_payment_private,reconforge.hc_payments,reconforge.hc_payrun_private,reconforge.hc_payruns,reconforge.hc_times,
  reconforge.hc_projects,reconforge.hc_rates,reconforge.hc_employments,reconforge.hc_employee_private,reconforge.hc_employees;
+ALTER TABLE reconforge.finance_dimension_values DROP CONSTRAINT hc_dimension_value_identity;
+ALTER TABLE reconforge.finance_dimensions DROP CONSTRAINT hc_dimension_identity;
 DROP FUNCTION reconforge.hc_reverse_close(),reconforge.hc_payment_close(TEXT,TEXT),reconforge.hc_close(TEXT,TEXT),reconforge.hc_calculate(TEXT,TEXT),
  reconforge.hc_account_guard(),
  reconforge.hc_input_close(TEXT,TEXT,TEXT),reconforge.hc_phases(TEXT,JSONB,BOOLEAN),reconforge.hc_audit(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT),

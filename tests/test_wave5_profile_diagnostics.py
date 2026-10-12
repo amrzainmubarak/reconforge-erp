@@ -1,6 +1,8 @@
 """Stdlib-only diagnostic custody/oracle tests; no Docker/DB/application imports."""
 from __future__ import annotations
 
+import argparse
+import ast
 import hashlib
 import importlib.util
 import json
@@ -19,6 +21,137 @@ assert spec is not None and spec.loader is not None
 d = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = d
 spec.loader.exec_module(d)
+
+
+def capacity_fixture() -> tuple[dict, dict, list[str], Path]:
+    packet, source, _, harness = fixture()
+    n = d.CAPACITY_ENTRIES
+    expected = dict.fromkeys(("debit_minor", "credit_minor", "cash_minor", "equity_minor"), "5028151631")
+    ids = [f"PST-{i:032x}" for i in range(n)]
+    command = [sys.executable, str(harness), *d.capacity_arguments(Path(source["root"]), Path("/synthetic/evidence/native"))]
+    packet.update(counts=[n], command=command, max_seconds=7200, wall_seconds=100., snapshot_lines=0)
+    packet["posting"] = {"requested_cycles": n, "admitted_cycles": n, "completed_cycles": n, "error_count": 0,
+                         "not_admitted_cycles": 0, "failed_cycles": [], "completed_indices": list(range(n)), "expected": expected,
+                         "ordered_effect_ids": ids, "raw_cycle_latency_seconds": [1.] * n,
+                         "cycle_latency_seconds": dict.fromkeys(("p50", "p95", "p99"), 1.), "seconds": 100.,
+                         "client_process_cpu_seconds": 20., "native_postings_per_second": 100.,
+                         "client_cpu_seconds_per_completed_cycle": .002}
+    packet["posting_warmup"] = {"status": "passed", "completed_cycles": 20, "indices": list(range(n, n + 20)),
+                                "outside_measured_population": True, "effect_ids": [f"PST-{i:032x}" for i in range(n, n + 20)],
+                                "raw_cycle_latency_seconds": [1.] * 20}
+    packet["verified_reads"] = [{"count": n, "status": "passed", "expected": expected,
+        "dataset_effect_ids_sha256": hashlib.sha256(json.dumps(ids, separators=(",", ":")).encode()).hexdigest(),
+        "financial_effects_digest": "f" * 64, "samples": {label: [{"repetition": i, "status": "complete", "error_count": 0,
+            "requested_effects": n, "effects": n, "debit_minor": "5028151631", "credit_minor": "5028151631", "effects_digest": "f" * 64,
+            "raw_request_latency_seconds": [.1] * (n if label == "per_effect_baseline" else n // 100),
+            "request_latency_seconds": dict.fromkeys(("p50", "p95", "p99"), .1)} for i in range(3)]
+            for label in ("per_effect_baseline", "bounded_batch")}}]
+    del packet["posting_database_profile"]
+    packet["posting_profile"] = {"enabled": False, "raw_phase_observations": [], "phase_totals": {}, "statement_templates": [],
+                                 "function_profile": {"enabled": False, "cycle_ceiling": 32, "functions": []}}
+    return packet, source, command, harness
+
+
+def test_single_current10000_capacity_full_seed_ordered_population_and_real_batch_pages() -> None:
+    packet, source, command, harness = capacity_fixture()
+    proof = d.verify_capacity(packet, source, command, harness)
+    assert proof["financial_verification"] == "passed" and proof["oracle_minor"] == "5028151631"
+    assert proof["cycles"] == 10000 and proof["native_effects"] == 10020 and proof["warmups"] == 20
+    assert proof["read_requests"] == 30300
+    assert proof["harness_business_seconds"] == 7200 and proof["business_envelope_seconds"] == 7500
+    assert proof["performance_comparison_accepted"] is False and proof["cost_per_transaction"] is None
+    assert "--profile-stages" not in command and "--profile-cpu" not in command and "--profile-database" not in command
+    assert command[command.index("--snapshot-lines") + 1] == "0"
+
+
+@pytest.mark.parametrize(("path", "value"), [
+    (("counts",), [10000.0]), (("workers",), 4.0), (("max_seconds",), 7500), (("snapshot_lines",), 1000),
+    (("posting", "requested_cycles"), 9999), (("posting", "completed_cycles"), 10000.0),
+    (("posting", "error_count"), False), (("posting", "not_admitted_cycles"), 1),
+    (("posting", "failed_cycles"), [{"index": 99}]), (("posting", "completed_indices", 1), True),
+    (("posting", "completed_indices", 9999), 9998), (("posting", "expected", "cash_minor"), "5028151632"),
+    (("posting", "ordered_effect_ids", 9999), "PST-" + "0" * 32),
+    (("posting", "ordered_effect_ids", 9999), "unowned-effect"), (("posting", "raw_cycle_latency_seconds"), [1.] * 9999),
+    (("posting", "raw_cycle_latency_seconds", 9999), float("nan")), (("posting", "cycle_latency_seconds", "p99"), 2.),
+    (("posting_warmup", "indices", 0), 10000.0), (("posting_warmup", "effect_ids", 0), "PST-" + "0" * 32),
+    (("verified_reads", 0, "count"), 9999), (("verified_reads", 0, "dataset_effect_ids_sha256"), "0" * 64),
+    (("verified_reads", 0, "samples", "bounded_batch", 1, "repetition"), True),
+    (("verified_reads", 0, "samples", "bounded_batch", 0, "effects"), 9999),
+    (("verified_reads", 0, "samples", "bounded_batch", 0, "raw_request_latency_seconds"), [.1]),
+    (("verified_reads", 0, "samples", "per_effect_baseline", 0, "raw_request_latency_seconds"), [.1] * 9999),
+    (("verified_reads", 0, "samples", "bounded_batch", 0, "debit_minor"), "5028151630"),
+    (("verified_reads", 0, "samples", "bounded_batch", 0, "effects_digest"), "0" * 64),
+    (("posting_profile", "enabled"), True), (("posting_profile", "function_profile", "enabled"), True),
+    (("posting_profile", "raw_phase_observations"), [{"index": 0}]), (("wall_seconds",), 7500.01),
+    (("source_commit_after",), d.BASELINE), (("source_sha256_after",), "0" * 64),
+    (("harness_sha256_after",), "0" * 64), (("revision",), d.REVISIONS["projection"]),
+    (("owned_container_removed",), False), (("postgres_configuration", "fsync"), "off"),
+    (("runtime_role_flags",), [0, 0]), (("resource_sampling", "status"), "incomplete"),
+])
+def test_capacity_partial_replayed_duplicate_or_forged_packet_never_admitted(path: tuple, value: object) -> None:
+    packet, source, command, harness = capacity_fixture()
+    target = packet
+    for key in path[:-1]:
+        target = target[key]
+    target[path[-1]] = value
+    with pytest.raises(ValueError):
+        d.verify_capacity(packet, source, command, harness)
+
+
+def test_capacity_reordered_effect_set_requires_exact_original_read_population_hash() -> None:
+    packet, source, command, harness = capacity_fixture()
+    packet["posting"]["ordered_effect_ids"][0], packet["posting"]["ordered_effect_ids"][1] = (
+        packet["posting"]["ordered_effect_ids"][1], packet["posting"]["ordered_effect_ids"][0])
+    with pytest.raises(ValueError, match="ordered read population"):
+        d.verify_capacity(packet, source, command, harness)
+
+
+@pytest.mark.parametrize("variant", ["baseline", "projection"])
+def test_capacity_refuses_other_runtime_sources_even_if_metadata_is_consistently_rehashed(variant: str) -> None:
+    packet, source, command, harness = capacity_fixture()
+    source.update(variant=variant, commit=d.BASELINE if variant == "baseline" else d.PROJECTION, revision=d.REVISIONS[variant])
+    packet.update(source_commit=source["commit"], source_commit_after=source["commit"], revision=source["revision"])
+    with pytest.raises(ValueError, match="Only exact current22"):
+        d.verify_capacity(packet, source, command, harness)
+
+
+@pytest.mark.parametrize("field", ["snapshot_reads", "posting_database_profile"])
+def test_capacity_refuses_excluded_large_journal_or_database_profiler(field: str) -> None:
+    packet, source, command, harness = capacity_fixture()
+    packet[field] = {"status": "passed"}
+    with pytest.raises(ValueError):
+        d.verify_capacity(packet, source, command, harness)
+
+
+def test_capacity_command_is_exact_original_harness_and_no_hidden_profile_switches() -> None:
+    packet, source, command, harness = capacity_fixture()
+    packet["command"] = [*command, "--profile-stages"]
+    with pytest.raises(ValueError, match="command differs"):
+        d.verify_capacity(packet, source, command, harness)
+
+
+def test_capacity_near_deadline_and_wrong_source_do_not_create_output_or_child(tmp_path: Path) -> None:
+    with patch.object(d.subprocess, "Popen") as spawn:
+        with pytest.raises(ValueError, match="No new child"):
+            d.capacity_one(tmp_path, {}, tmp_path / "harness", d.CAPACITY_MODE, tmp_path / "no-output", deadline=time.monotonic() + 120)
+        with pytest.raises(ValueError, match="Only current22"):
+            d.capacity_one(tmp_path, {"commit": d.BASELINE, "variant": "baseline", "revision": d.REVISIONS["baseline"]},
+                           tmp_path / "harness", d.CAPACITY_MODE, tmp_path / "no-output", deadline=time.monotonic() + 8400)
+    spawn.assert_not_called()
+    assert not (tmp_path / "no-output").exists()
+
+
+@pytest.mark.parametrize("override", [{"current_capacity_entries": 10000.0}, {"current_capacity_entries": True},
+    {"current_capacity_entries": 1000}, {"baseline_root": Path("/baseline")}, {"projection_root": Path("/projection")},
+    {"include_serial": True}, {"large_snapshot_repetitions": 3}])
+def test_capacity_mode_envelope_refuses_mixed_or_nonexact_admission_before_any_provenance(override: dict) -> None:
+    args = argparse.Namespace(current_capacity_entries=10000, current_root=Path("/current"), output=Path("/evidence"),
+        baseline_root=None, projection_root=None, projection_commit="a" * 40, include_serial=False, large_snapshot_repetitions=None)
+    vars(args).update(override)
+    with patch.object(d, "source") as provenance, patch.object(d.subprocess, "Popen") as spawn, pytest.raises(ValueError):
+        d.capacity_main(args)
+    provenance.assert_not_called()
+    spawn.assert_not_called()
 
 
 def fixture(mode: str = "four-worker") -> tuple[dict, dict, list[str], Path]:
@@ -247,7 +380,10 @@ def test_changed_pid_birth_prevents_signal_or_group_kill() -> None:
         send.assert_not_called()
 
 
-def test_post_completion_source_timeout_preserves_cleanup_reserve(tmp_path: Path) -> None:
+@pytest.mark.parametrize(("mode", "outer_deadline", "work_deadline"), [("four-worker", 1000., 880.),
+    (d.CAPACITY_MODE, 8500., 7600.)])
+def test_post_completion_source_timeout_preserves_cleanup_reserve(tmp_path: Path, mode: str,
+                                                                 outer_deadline: float, work_deadline: float) -> None:
     clock = {"now": 100.}
     retained = {"pid": 1, "start_ticks": 2, "executable": str(Path(sys.executable).resolve()), "session": 1, "process_group": 1}
     process = SimpleNamespace(pid=1, returncode=None, stdin=SimpleNamespace(write=lambda _: None, flush=lambda: None))
@@ -257,24 +393,33 @@ def test_post_completion_source_timeout_preserves_cleanup_reserve(tmp_path: Path
 
     def spawn(*args: object, **kwargs: object) -> object:
         d.save(directory / "worker-complete.json", {"exit_code": 0, "origin_status": "passed"})
+        d.save(directory / "creation-response.json", {"container_id": "a" * 64})
         return process
 
     def late_source(*args: object, **kwargs: object) -> dict:
-        assert kwargs["deadline"] == 880.
-        clock["now"] = 881.
+        assert kwargs["deadline"] == work_deadline
+        clock["now"] = work_deadline + 1
         return {"commit": d.CURRENT}
 
     def stopped(*args: object, **kwargs: object) -> None:
-        assert kwargs["deadline"] == 1000.
+        assert kwargs["deadline"] == outer_deadline
+        assert args[0] is process and args[1] == 5 and args[2] == retained
         process.returncode = -9
+
+    def cleanup_owned(path: Path, *, deadline: float) -> dict:
+        assert path == directory and deadline == outer_deadline
+        assert d.read(path / "creation-response.json")["container_id"] == "a" * 64
+        return {"status": "verified_absent", "container_id": "a" * 64}
 
     with patch.object(d.time, "monotonic", side_effect=lambda: clock["now"]), patch.object(d.subprocess, "Popen", side_effect=spawn), \
          patch.object(d, "identity", return_value=retained), patch.object(d.os, "pidfd_open", return_value=5, create=True), \
          patch.object(d.os, "close"), patch.object(d, "source", side_effect=late_source), patch.object(d, "stop", side_effect=stopped), \
-         patch.object(d, "cleanup", return_value={"status": "verified_absent"}) as cleanup:
-        proof = d.one(tmp_path, expected, tmp_path / "harness", "four-worker", directory, deadline=1000.)
+         patch.object(d, "cleanup", side_effect=cleanup_owned) as cleanup:
+        launch = d.capacity_one if mode == d.CAPACITY_MODE else d.one
+        proof = launch(tmp_path, expected, tmp_path / "harness", mode, directory, deadline=outer_deadline)
     assert proof["status"] == "failed" and "cleanup reserve retained" in proof["primary_failure"]["failure"]
-    assert cleanup.call_args.kwargs["deadline"] == 1000.
+    assert cleanup.call_args.kwargs["deadline"] == outer_deadline
+    assert proof["process_cleanup"]["status"] == "verified_exited" and proof["container_cleanup"]["container_id"] == "a" * 64
 
 
 def test_atomic_original_packets_never_overwrite_or_accept_duplicates(tmp_path: Path) -> None:
@@ -440,3 +585,20 @@ def test_bare_effect_ids_may_repeat_in_distinct_native_tenants() -> None:
     proof = d.verify_large_population(rows)
     assert proof["native_effects_including_primary_warm_and_large"] == 1089
     assert proof["observed_distinct_bare_effect_ids"] == 121
+
+
+# Original executed0756 function ASTs: packaging-independent historical custody.
+ORIGINAL0756_FUNCTION_AST_SHA256 = {'require': 'de7bc869a7af461cd9d915c7f6c4870ecfb6ab48c1f702bb8a10116f4e4311c2', 'digest': '5c051b2c2a3d5a7a5503525cb1853c351d6d2064182799fb21ac4d78f26b6bd9', 'unique': '0e3629232d76290767682a634d18ea33e672648d88bc2fe9cc11cc43115a76da', 'read': 'dbeeb8078b327c4932608c0368bb0f88c6fcb385c0d08f0a8cbf52bfea280eaf', 'save': '883c4a4131943d5fa14d30e961650b810d1507d7b54d47c3d830aa6cc5bdca8b', 'checked': 'f08d6c8f445423286baeacdb0e8d183845b9294a29f746cb09d605f100bfc458', 'source': 'dbee6040be741f9964260f4c324ee0b5503640d0168c940c56d4b49fe7092dcb', 'projection_tree': 'eb18c6e0950261af9c082b464750f22acd61090baf6a1ced1b8cc1e51601e568', 'identity': 'c563f8b142c1f1e5501d4a890b30caaa25a0887c80e7dbfc8132ba11e7b9e8b3', 'numeric': '95b05ab87d252fc9a468827e30d4efdef1627297993a0cb7be486eb78e0527da', 'exact_ints': 'cefd51a312c19d5fd3c37522635141b9c0686de33fe72e803350826a7f91f4a4', 'percentile': '35a0f976a2b83c4e56c24dabb5083b22c55c5280df831871c95dfd82f09ae2ce', 'verify_snapshot': '24d5939a4bafabb89504d650c595196876711c77fbc394fae4e74f803b3103b2', 'verify_financial': '503da418f6cd835655e5da3f7b911a59f2ad61dab295e622444a73c9e5c0e7d3', 'docker_words': '0f000dbbe66c60fbde2b835e364f5239c77888fb07dd67ac5897b4f1c031a80b', 'verify_container': '16f4438d3ae3a87b745655a7b4f2c502526f10daebba72e34ced6a77e1771ef2', 'install_observer': '4900aaeb833e6a85b707fb7a36c88939ff833e2641d71ceb2fd29e0935ae8245', 'child': 'dfc643e33fe1e87ee73ddd9e675b3c74e33973c51bbabf725a452cffbeda1a7e', 'cleanup': '4072fd1f3b6f9a39b91e2647a2a3dc28b840cefc3c0a10842c44ff3fa338f9ee', 'stop': '9d84500f017d6aba69ec98d316ae3629798069a85aadcfa7f5f0cabe2da850eb', 'arguments': '5e47649e2c9163ac03dd8483809d32a0fe7ab40171fe5d25cbcc94f761a7b24c', 'load_ledger_helper': '08faa40cb8547b2a77fb1a04ec5d2c142b9f0e0aee7751de0b6ab0d88a441ffc', 'schedule': '6333383f1bd770965e27efda7918bcd0bf3c651c4671fd78d0fb6b2c843ee6eb', 'verify_large_population': 'f675f8df3f75c7f65d4b15a29d9dfc0512d888192b704c46aa7e62a956215b4b', 'one': 'f5ea795a1c55e7f6edaa9e0bdf265041636b7542c3fc4f9d687a1a6763da42d6'}
+
+
+def test_all_original_profile_large_and_linux_ownership_functions_remain_ast_identical() -> None:
+    functions = {node.name: node for node in ast.parse(SCRIPT.read_bytes()).body if isinstance(node, ast.FunctionDef)}
+    for name, expected in ORIGINAL0756_FUNCTION_AST_SHA256.items():
+        assert hashlib.sha256(ast.dump(functions[name], include_attributes=False).encode()).hexdigest() == expected, name
+    original_main = functions["main"]
+    original_main.body = [node for node in original_main.body if not (
+        isinstance(node, ast.Expr) and isinstance(node.value, ast.Call)
+        and any(isinstance(arg, ast.Constant) and arg.value == "--current-capacity-entries" for arg in node.value.args)
+        or isinstance(node, ast.If) and isinstance(node.test, ast.Compare)
+        and isinstance(node.test.left, ast.Attribute) and node.test.left.attr == "current_capacity_entries")]
+    assert hashlib.sha256(ast.dump(original_main, include_attributes=False).encode()).hexdigest() == '6a2312a6182d2fe83527f967472ce685d488c69d59d28934ca558f055d5e88da'

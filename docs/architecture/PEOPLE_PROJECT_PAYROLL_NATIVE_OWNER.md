@@ -51,10 +51,21 @@ native monetary registry binding rather than reinterpret the original policy.
 Posted correction, payment cancellation and partial-time claims need separate
 reviewed source contracts.
 
-The first development gate executed three native cases over accepted revision
-136 plus this owned schema: exact two-employee accrual and partial/final cash
-cycle, ordinary-role forged-private-selector refusal, and unposted cancellation
-with budget release and new immutable claim. Ordered migration140, actual HTTP
-and browser operation, independent exported oracle, concurrency, direct SQL
-and populated restore acceptance are subsequent gates. These development
-results do not qualify an integrated release or benchmark.
+The development gates over accepted revision136 plus this owned schema
+executed fifteen native cases without skips, covering the complete cycle,
+SQL bypass, race, revoked authority, replay, cancellation and worker delivery.
+Four later account-role cases passed without skips: original Expense/Liability/
+Asset chart roles, rollback of an invalid reserve, source-used role mutation,
+unreferenced deletion, and metadata maintenance without HC source SELECT.
+The populated restore case preserved every reconforge table's row fingerprint
+and the HC catalogs/policies, preserved personnel role separation, replayed
+the original immutable command receipt, and settled the remaining cash. It
+does not independently fingerprint every function, ACL or constraint.
+
+Ordered migration140 integration executed two real PostgreSQL TestClient
+cases with an HTTPS request scheme and both database roles. This establishes
+authenticated API integration, not socket/certificate TLS or browser execution.
+Twelve Studio component/data cases and TypeScript passed. The real browser
+contract is implemented but awaiting execution by the common owned TLS/restore
+runner. These source-specific gates do not qualify a full integrated release
+or any performance comparison.

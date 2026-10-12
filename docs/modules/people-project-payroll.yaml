@@ -8,7 +8,7 @@ incompatible_versions: []
 data_classification: restricted_personnel_and_confidential_aggregate_finance
 retention_policy: immutable_source_claim_and_financial_history
 permissions: [people_project_payroll.read, people_project_payroll.read_sensitive, people_project_payroll.personnel, people_project_payroll.manage, people_project_payroll.approve_time, people_project_payroll.prepare, people_project_payroll.review, people_project_payroll.post, people_project_payroll.pay]
-default_roles: [personnel_operator, independent_time_approver, financial_preparer, financial_reviewer, financial_poster]
+default_roles: []
 migrations: [0140_pg_people_project_payroll]
 domain_invariants:
   - Whole independently approved time is claimed by one active or consumed payrun
@@ -29,14 +29,18 @@ cli_commands: []
 ui_routes: [/people-project-payroll]
 import_schemas: []
 export_schemas: [people-payroll-evidence-v1]
-synthetic_fixtures: [tests/test_people_project_payroll.py, tests/test_postgres_people_project_payroll.py]
+synthetic_fixtures: [tests/test_people_project_payroll.py, tests/test_postgres_people_project_payroll.py, tests/fixtures/people-project-payroll-native-v1.json]
 threat_model: docs/architecture/PEOPLE_PROJECT_PAYROLL_NATIVE_OWNER.md
 benchmarks: []
 rollback_plan: Empty additive tables may downgrade; populated source history refuses destructive downgrade and requires a verified restore. Preserve operator-owned private role and membership prerequisites.
 test_matrix:
   exact_domain: tests/test_people_project_payroll.py
   native_development: tests/test_postgres_people_project_payroll.py
-runtime_acceptance: Initial development gate has 3 native tests with zero skips over accepted136 plus the owned additive schema. Central140 migration API Studio adversarial concurrency and restore acceptance are pending.
+  native_http: tests/test_postgres_people_project_payroll_api.py
+  native_populated_restore: tests/test_postgres_people_project_payroll_restore.py
+  independent_oracle_mutations: tests/test_people_project_payroll_oracle.py
+  real_browser_contract: apps/web/live/people-project-payroll-cycles.spec.ts
+runtime_acceptance: Development136 plus additiveHC executed15 native cases and4 additional account-role regressions with zero skips. A populated restore executed1 case with zero skips. Central140 integration executed2 HTTPS-scheme TestClient cases with dual DB roles; this does not prove socket TLS or a browser. Studio12 component/data cases and typecheck passed. Actual real-browser and complete integrated release acceptance remain pending.
 limitations:
   - Statutory country payroll tax pension and social contribution packs supported is zero
   - PostgreSQL with separately configured personnel login only; Community SQLite payroll unavailable

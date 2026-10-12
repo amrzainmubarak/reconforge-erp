@@ -438,6 +438,7 @@ class PostgresFinancePostingRepository:
                 (("IC2-", "IC2S-", "IC2R-", "IC2E-"), "intercompany-fx"),
                 (("HC1-", "HC1P-"), "people-payroll"),
                 (("AD1-", "AD1R-"), "accrual-deferral"),
+                (("PB1-", "PB1C-"), "project-billing"),
             )
             for prefixes, kind in enterprise_sources:
                 if entry["entry_number"].upper().startswith(prefixes) or entry["id"].upper().startswith(prefixes):
@@ -671,7 +672,7 @@ class PostgresFinancePostingRepository:
                     self.connection, self.tenant_id, source["id"], original["id"], number
                 ):
                     raise FinancePostingError("posting_source_unsupported", "Foreign sources require their exact reviewed source-owned inverse.")
-            if source["entry_number"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-", "ME1-", "ME1C-", "IC1-", "ME2-", "ME2C-", "HC1-", "HC1P-")) or source["id"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-", "ME1-", "ME1C-", "IC1-", "ME2-", "ME2C-", "HC1-", "HC1P-")):
+            if source["entry_number"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-", "ME1-", "ME1C-", "IC1-", "ME2-", "ME2C-", "HC1-", "HC1P-", "PB1-", "PB1C-")) or source["id"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-", "ME1-", "ME1C-", "IC1-", "ME2-", "ME2C-", "HC1-", "HC1P-", "PB1-", "PB1C-")):
                 raise FinancePostingError(
                     "posting_source_unsupported", "Operational sources require a reviewed native source inverse."
                 )

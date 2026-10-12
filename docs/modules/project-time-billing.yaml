@@ -1,0 +1,50 @@
+id: project-time-billing
+name: Original approved project time to native receivables and cash
+version: 1.0.0
+maturity: experimental
+owner: Amr
+dependencies: [identity, master-data, finance-core, finance-operational-posting, people-project-payroll, receivables, outbox]
+incompatible_versions: []
+data_classification: confidential_project_commercial_and_financial_sources
+retention_policy: immutable_price_time_claim_and_native_financial_history
+permissions: [project_time_billing.read, project_time_billing.manage, project_time_billing.approve_price, project_time_billing.prepare, project_time_billing.collect, project_time_billing.review, project_time_billing.post]
+default_roles: []
+migrations: [0143_pg_project_billing]
+domain_invariants:
+  - Billing and wage claims are distinct; each consumes an entire independently approved time document
+  - One active or consumed billing claim exists for each tenant-qualified time document
+  - Cancellation of an unposted bill appends Release without deleting prior claim history
+  - Consumed billed time cannot release or be billed a second time
+  - Exact rational minute pricing rounds once per Project using the captured native currency policy
+  - Current supported pricing policy is ROUND_HALF_UP, independent of payroll earnings rounding
+  - Approved effective prices never overlap for one scoped customer and Project
+  - Native AR remains Submitted until a third distinct authorized human posts original revenue
+  - Native AR approval and Project revenue publish atomically with the exact source effect
+  - Partial and final native receipt allocations publish atomically with Cash and AR ledger effects
+  - Native AR source links are immutable nullable tenant-qualified unique foreign keys
+  - Native account identity pins protect source-used roles without protected-source lookups on ordinary account changes
+  - Current customer credit and source period controls remain authoritative at publication
+  - Cached human principals are rechecked against current persisted hierarchy and permission grants on every read
+domain_events: [project_billing_price_registered, project_billing_price_approved, project_billing_prepared, project_billing_reviewed, project_billing_posted, project_billing_cancelled]
+api_routes: ["/api/v1/project-time-billing/prices", "/api/v1/project-time-billing/prices/{price_id}/approve", "/api/v1/project-time-billing/invoices", "/api/v1/project-time-billing/invoices/{invoice_id}/collections", "/api/v1/project-time-billing/plans/{plan_id}", "/api/v1/project-time-billing/plans/{plan_id}/review", "/api/v1/project-time-billing/plans/{plan_id}/post", "/api/v1/project-time-billing/plans/{plan_id}/cancel", "/api/v1/project-time-billing/invoices/{invoice_id}/evidence", "/api/v1/project-time-billing/catalog"]
+cli_commands: []
+ui_routes: [/project-time-billing]
+import_schemas: []
+export_schemas: [project-billing-evidence-v1]
+synthetic_fixtures: [tests/test_project_time_billing.py, tests/test_postgres_project_time_billing.py]
+threat_model: docs/architecture/PROJECT_TIME_BILLING_NATIVE_OWNER.md
+benchmarks: []
+rollback_plan: Empty additive schema may downgrade. Any recorded billing history refuses destructive downgrade and requires a verified restore. Existing native AR rows keep nullable owner links.
+test_matrix:
+  exact_domain: tests/test_project_time_billing.py
+  native_development: tests/test_postgres_project_time_billing.py
+runtime_acceptance: Pure allocation executed 45 cases. Development ordered140 plus the owned additive billing schema executed21 native cases with zero skips, including current module read authority and monetary context. The subsequent cross-permission evidence refinement executed4 targeted native cases with zero skips, including the original full invoice and partial/final cash cycle. Central143, HTTP, Studio, independent native export, populated restore and release acceptance remain separately gated.
+limitations:
+  - PostgreSQL only; Community SQLite project billing is explicitly unavailable
+  - Whole approved time only, with no partial-time billing allocations
+  - One functional currency and captured ROUND_HALF_UP price policy in this first cycle
+  - Country tax packs supported is zero; no statutory payroll or tax compliance claim
+  - Quantity1 aggregate native AR lines represent exact minute-based Project amounts
+  - Cash receipt accounting records an actual native ledger effect without initiating a bank transfer
+  - Posted invoice reversal, collection cancellation and credit notes are unavailable in this initial contract
+  - No production readiness performance cost or competitor superiority claim

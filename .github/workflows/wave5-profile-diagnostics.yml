@@ -1,0 +1,153 @@
+name: Wave5 source guard diagnostics
+
+on:
+  push:
+    branches: ["amr/wave5-ic-guard-projection-20261012"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wave5-source-guard-diagnostics-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  native-guard-gates:
+    name: Actual restricted-role projection and source guards
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:17.11-alpine@sha256:aa90e97ee862e558111d34cfb8b2c4bec768c2b039fb791341686928560263b3
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Retain original native workflow subject before setup
+        run: |
+          mkdir -p "$RUNNER_TEMP/wave5-projection-native"
+          printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/wave5-projection-native/workflow-source-commit.txt"
+      - name: Check out exact experimental source
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+      - name: Set up locked dependency runtime
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install exact existing dependency resolution
+        run: uv sync --locked --all-extras --no-editable --python 3.12
+      - name: Validate focused pure contracts
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          uv run --no-sync ruff check reconforge/infrastructure/postgres_intercompany_guard_projection.py alembic/versions/0137_postgres_intercompany_guard_projection.py tests/test_intercompany_guard_projection.py tests/test_postgres_intercompany_guard_projection.py .github/scripts/benchmark_wave5_profile_diagnostics.py tests/test_wave5_profile_diagnostics.py
+          uv run --no-sync python -m pytest tests/test_intercompany_guard_projection.py tests/test_wave5_profile_diagnostics.py -q --junitxml="$RUNNER_TEMP/wave5-projection-native/pure-contracts.xml"
+      - name: Create restricted synthetic fixture role
+        env:
+          OWNED_POSTGRES_SERVICE: ${{ job.services.postgres.id }}
+        run: |
+          docker exec --interactive "$OWNED_POSTGRES_SERVICE" psql --username postgres --dbname postgres --set ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE reconforge_app LOGIN PASSWORD 'reconforge_app' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION;
+          SQL
+      - name: Execute mandatory SQL, replay, revocation and source closure gates
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          PYTEST_ADDOPTS: -p tests.mandatory_native_gate
+          RECONFORGE_TEST_POSTGRES_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
+          RECONFORGE_TEST_POSTGRES_DSN: postgresql://reconforge_app:reconforge_app@localhost:5432/postgres
+          RECONFORGE_IC_PROJECTION_RUNTIME_ROOT: ${{ github.workspace }}
+          RECONFORGE_IC_PROJECTION_RUNTIME_COMMIT: ${{ github.sha }}
+        run: >-
+          uv run --no-sync python -m pytest
+          tests/test_postgres_intercompany_guard_projection.py
+          tests/test_postgres_intercompany_operations.py
+          tests/test_postgres_intercompany_operations_api.py
+          tests/test_postgres_manufacturing_execution.py
+          tests/test_postgres_procurement_sourcing.py
+          tests/test_postgres_procurement_sourcing_api.py
+          -q --junitxml="$RUNNER_TEMP/wave5-projection-native/native-source-guards.xml"
+      - name: Preserve actual gate evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: wave5-projection-native-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/wave5-projection-native/
+          if-no-files-found: error
+          retention-days: 30
+
+  diagnostic-profiles:
+    name: Sequential same-runner source and CPU discovery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - name: Retain original diagnostic workflow subject before setup
+        run: |
+          mkdir -p "$RUNNER_TEMP/wave5-profile-diagnostics"
+          printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/wave5-profile-diagnostics/workflow-source-commit.txt"
+      - name: Check out exact diagnostic control and projection source
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check out accepted Wave4 source
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          ref: 6362724f2337a79c3d7569574f7bf9591a018524
+          path: baseline
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check out frozen Wave5 source
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          ref: 22ebfd78e293aafa13d81b3a0bbf287491951115
+          path: current
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+      - name: Set up locked dependency runtime
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: control/uv.lock
+      - name: Install exact existing dependency resolution
+        working-directory: control
+        run: uv sync --locked --all-extras --no-editable --python 3.12
+      - name: Run bounded original-business diagnostics without local workloads
+        working-directory: control
+        run: >-
+          uv run --no-sync python .github/scripts/benchmark_wave5_profile_diagnostics.py
+          --baseline-root ../baseline
+          --current-root ../current
+          --projection-root .
+          --projection-commit "$GITHUB_SHA"
+          --output "$RUNNER_TEMP/wave5-profile-diagnostics/diagnostics"
+          --include-serial
+      - name: Preserve complete original reports and negative observations
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: wave5-profile-diagnostics-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/wave5-profile-diagnostics/
+          if-no-files-found: error
+          retention-days: 30

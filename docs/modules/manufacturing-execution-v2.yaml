@@ -1,0 +1,53 @@
+id: manufacturing-execution-v2
+name: Expense-backed inspected actual manufacturing
+version: 2.0.0
+maturity: experimental
+owner: ReconForge manufacturing
+dependencies: [manufacturing-execution, inventory-receipt-posting, finance-posting, finance-core, identity, scope-authority]
+incompatible_versions: []
+data_classification: synthetic-fixtures-and-authorized-financial-operational-records
+retention_policy: immutable-source-command-audit-and-native-financial-history
+permissions:
+  - manufacturing_execution_v2.read
+  - manufacturing_execution_v2.manage
+  - manufacturing_execution_v2.approve
+  - manufacturing_execution_v2.post
+default_roles: []
+migrations: [0138_pg_manufacturing_v2]
+domain_invariants:
+  - Existing ME1 orders retain their original material-only source contract.
+  - One ME2 owner delegates exactly one native ME1 material issue and prevents ME1 disposition bypass.
+  - Labor and overhead are cumulative bounded claims against original posted positive Manual Expense lines in the same retained scope and monetary policy.
+  - Financial source ownership and append-only releases preserve every original posted header and effect unchanged.
+  - Production cost pool freezes before first output and final output carries every residual minor unit.
+  - Held units remain WIP and create no native stock until independent quality acceptance posts.
+  - Complete held-tranche inspection splits accepted FG and rejected abnormal loss without double disposition.
+  - Source creation, review and financial posting retain three distinct authenticated current humans.
+  - Commands and events form a complete phase-bound bijection with exact historical ACK, audit and scoped outbox.
+domain_events: [create, approve, prepare, review, post, cancel]
+api_routes: []
+cli_commands: []
+ui_routes: []
+import_schemas: [manufacturing-workcenter-v2, manufacturing-routing-v2, manufacturing-order-v2, manufacturing-held-production-v2, manufacturing-inspection-v2]
+export_schemas: [original-source-and-native-financial-proof]
+synthetic_fixtures:
+  - Material2900 plus Labor600 plus Overhead300 equals FG3420 plus abnormal loss380 plus residual WIP0.
+threat_model:
+  - Direct SQL ownership detachment and forged source/ACK/evidence.
+  - Oversubscribed original expense lines and claim-versus-reversal races.
+  - Stale scoped authority after source waits and amount/currency reinterpretation.
+  - Stocking or issuing uninspected output and repeated inspection.
+  - Worker failure, lost response and exact command replay.
+benchmarks:
+  - No ME2 throughput or high-volume acceptance is claimed.
+rollback_plan: Empty ordered138 downgrade restores original ME1 function body; populated source/evidence refuses atomically.
+test_matrix:
+  pure: tests/test_manufacturing_execution_v2.py
+  postgresql: tests/test_postgres_manufacturing_execution_v2.py
+  api: pending-owned-router-and-root-registration
+  studio: pending-owned-studio-integration
+  independent_oracle: pending-original-native-export-and-standalone-integer-verifier
+backend_support:
+  postgres: native-owner-development
+  sqlite: unavailable-native-ME1-dependency
+claim_boundary: Core real PostgreSQL golden is developmental; API, Studio, adversarial and restored-source acceptance remain pending.

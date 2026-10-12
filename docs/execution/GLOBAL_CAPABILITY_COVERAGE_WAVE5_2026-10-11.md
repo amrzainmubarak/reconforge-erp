@@ -1,18 +1,71 @@
 # Wave5 capability and engineering gap matrix
 
-Reviewed 2026-10-11. This matrix distinguishes implemented source from executed
-acceptance. Final integration, HTTPS/restore and performance gates are pending.
-The Wave4 matrix and its limitations remain authoritative for unchanged slices.
-No global superiority or production readiness is established by this work.
+Official sources reviewed 2026-10-12. This matrix distinguishes bounded implemented
+cycles, source-bound executed evidence and outstanding acceptance. The actual
+ME1/IC1/SRC5 HTTPS and populated restore reports below belong to
+`8513a9e2fd1a061c02fb31d5444304809c8af92e`, source SHA256
+`f95d7114d6644bdf5c10a05acede40e016bff0079924b103a384cba23937d204`,
+at migration `0136_pg_inventory_scope`. They are not relabelled as later HEAD runs.
+Wave4 evidence remains historical evidence for its own source. Current complete
+hosted acceptance and fair Wave5 performance acceptance remain pending.
+No global superiority, statutory compliance or production readiness is established.
 
 | Capability and official competitor evidence | ReconForge implementation | Executed evidence at this checkpoint | Remaining dependencies and complexity | Measurable differentiation opportunity |
 |---|---|---|---|---|
-| Production actual cost/WIP: [SAP production accounting](https://help.sap.com/docs/SAP_S4HANA_CLOUD/4032610758dc437089f0c28320eec93f/e7f14152fe4eaa1ae10000000a445394.html), [Dynamics production lifecycle](https://learn.microsoft.com/en-us/dynamics365/supply-chain/production-control/production-process-overview), [NetSuite WIP](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_N2337938.html) document material consumption, production and costing workflows. | ME1 versioned approved base-UOM BOM, whole component reservation, native FIFO issue into WIP, reviewed partial finished receipt and abnormal scrap through existing GL/FIFO. Canonical requirements can be referenced by sourcing. | Clean1880b215 four-case native owner gate passed without skips; independent integer/Fraction cost2900 = finished2610 + scrap290 + remainingWIP0. Subsequent reciprocal evidence-seal repair is pending retest. | Very high: labor/overhead/routing, normal-yield treatment, rework, quality, capacity planning and full MRP remain gaps. Bounded same-date receipt identity search is a documented throughput limitation. | Measure source-to-native cost conservation, retained ACK/evidence verification and complete production-cycle resource cost under SQL bypass and concurrency. Manufacturing functionality itself exists in competitors. |
-| Paired company books and group elimination: [Oracle consolidation eliminations](https://docs.oracle.com/en/cloud/saas/financial-consolidation-cloud/agfcc/intercompany_eliminations.html), [Dynamics consolidation](https://learn.microsoft.com/en-us/dynamics365/finance/general-ledger/financial-consolidations-currency-translation) document consolidation, currency translation and eliminations. | IC1 same-functional-currency recognition and partial settlement in two original entities; native elimination GL in a distinct authorized group adjustment entity. Existing reviewed report maps generate three-book financial statements with original-effect drilldown. | Clean13bb4344 five-case nonowner PostgreSQL gate passed, zero skips: recognition10001 per company, cash3000 per company, elimination17002, five native effects; independent group balances/net income/net cash zero. Late second effect, competing settlements, native/public inverse denial and current three-scope ABAC passed. HTTPS/populated restore remains pending. | High: reporting-currency translation, ownership/noncontrolling interests, inventory-profit eliminations, dividends/investments, policy differences and subsequent corrections. Elimination seals this bounded source against further settlement. | Atomic cross-entity effect closure and independently reproducible elimination membership are testable; no claim that group reporting or drilldown is unique. |
-| Requisition/RFQ/quotation/award: [Oracle26D supplier negotiations](https://docs.oracle.com/en/cloud/saas/procurement/26d/oaprc/oracle-supplier-negotiations.html), [Oracle26D award outcomes](https://docs.oracle.com/en/cloud/saas/readiness/scm/26d/proc26d/26D-procurement-wn-f51980.htm) document negotiation from requisition lines to purchasing documents and approval-dependent award finalization. | SRC5 immutable requisition, independently opened RFQ, retained offers, deterministic reviewed selection and third-human atomic native BPC1 budget-reserved PO. Existing partial receipt/AP/payment lifecycle reused. | Corrected owned26 native/API cases passed without skips. Independent golden reserve17000, consume7400, release9600; five native effects total debit=credit22200. Reciprocal full-quotation amount-authority repair needs new acceptance; final ME1 demand linkage/HTTPS/restore pending. | High: contracts, multi-level policy-driven approvals, split awards, foreign/taxed budget procurement, charges and supplier-return budget restitution. Up to128 lines/32 offers in this bounded slice. | Evidence of exact quote-to-PO-to-budget closure, source-owned SQL effects and permission revocation on replay; benchmark real multi-line workflows, not table inserts. |
+| Production actual cost/WIP: [SAP quantity and value flow](https://help.sap.com/docs/SAP_S4HANA_ON-PREMISE/5e23dc8fe9be4fd496f8ab556667ea05/e2c7d8530439414de10000000a174cb4.html) covers direct/indirect production costs and WIP; [Dynamics production lifecycle](https://learn.microsoft.com/en-us/dynamics365/supply-chain/production-control/production-process-overview) covers BOMs/routes, production stages and costing; [NetSuite manufacturing routing](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/chapter_N2341076.html) covers labor/machine operations and WIP-to-assembly accounting. | ME1 versioned approved base-UOM BOM, whole component reservation, native FIFO issue into WIP, reviewed partial finished receipt and abnormal scrap through existing GL/FIFO. At most 100 components and 200 retained output attempts; same functional currency, one output item, no lot/serial execution. Canonical requirements can be referenced by sourcing. | Actual HTTPS/restore passed on the source above. Separate stdlib integer/Fraction oracle accepted original and restored proofs under Python `-I` and `-I -O`: materials **2,900 = FG 2,610 + abnormal scrap 290 + WIP 0**; finished quantity 9, scrap quantity 1; six native effects and balanced turnover 21,133 minor units. Restore retained 270 tables, 51 nonempty; 48 protected/unbound and 41 sibling-workspace probes. | Very high: partial material issue, cross-UOM conversion, labor/overhead/routing, normal yield, rework, quality, capacity planning and full MRP remain gaps. A 4,096-candidate same-date receipt identity ceiling remains a scale limitation with explicit refusal. | Measure original-cost conservation, complete native effect membership, historical ACK custody and cycle resource cost under bypass/concurrency. Material manufacturing and evidence features already exist globally; uniqueness is not established. |
+| Paired company books and group elimination: [Oracle consolidation eliminations](https://docs.oracle.com/en/cloud/saas/financial-consolidation-cloud/agfcc/intercompany_eliminations.html) covers common-control/proportional eliminations; [Dynamics consolidation](https://learn.microsoft.com/en-us/dynamics365/finance/general-ledger/financial-consolidations-currency-translation) covers elimination and currency translation options. | IC1 bounded service-charge recognition and partial settlement in two original entities; native elimination GL in a distinct explicitly authorized group adjustment entity. Same captured functional/reporting currency; at most 32 posted installments before a final adjustment. Reviewed existing maps generate three-book management statements with native-effect drilldown. | Actual HTTPS/restore passed. Separate stdlib oracle verified three downloaded native proofs and the group report under `-I` and `-I -O`: recognition **10,001** per party, cash **3,000** per party, residual **7,001**, elimination **17,002**, five native effects; group income/expense/net cash and balance-sheet net positions zero. Complete typed financial effects were identical after restore; 270 tables, 42 nonempty. | High: group FX translation, ownership/noncontrolling interests, investment/dividend/profit-in-stock eliminations, tax treatment, policy differences, post-elimination corrections and external bank settlement. Final elimination prevents further progression of this bounded source. | Atomic paired native effects and independently reproducible original membership are testable. No universal consolidation, tax treatment or unique drilldown claim. |
+| Requisition/RFQ/quotation/award: [Oracle 26D supplier negotiations](https://docs.oracle.com/en/cloud/saas/procurement/26d/oaprc/oracle-supplier-negotiations.html) documents requisition-derived lines, supplier response controls and ranking requirements. | SRC5 immutable requisition, independently opened RFQ, complete immutable supplier price vectors, deterministic lowest-total selection and third-human atomic BPC1 budget-reserved PO. Existing partial receipt/AP/payment lifecycle reused. Up to 128 demand lines/32 suppliers, one appropriation, original functional currency, zero tax. ME1 demand references bind provenance; they do not calculate net shortages. | Actual HTTPS/restore passed; separately invoked stdlib oracle verified award/reserve **17,000**, received/AP/budget consume and paid **7,400**, release **9,600**, remaining source reserve **0**, budget available **12,600**; five native effects with debit=credit turnover **22,200**. Before/after effects and oracle input SHA identical; 270 tables, 78 nonempty. | High: negotiated amendments, contracts, split/weighted awards, multi-level approval policies, foreign/taxed procurement, landed charges and BPC supplier-return budget restitution. Full MRP and planning remain absent. | Verify exact quote-to-PO-to-budget closure, source-owned SQL effects and current authority on replay; measure actual multi-line operations rather than SQL inserts. |
 | Customer/supplier partial and foreign/tax returns | Wave4 CR1/SR1/FX1/LC1/BPC1 retained. Original whole customer return/refund and eligible supplier receipt return remain available within original contracts. | Prior accepted130 evidence retained. New Wave5 sourcing/manufacturing does not automatically extend return eligibility. | Very high: cumulative partial original FIFO/COGS/tax/FX reversals, paid AP restitution, consumed layers, landed charge disposition and BPC budget conservation. No one-function guard relaxation is sufficient. | Independently verify cumulative original-cost residuals and source-native cash/AR/AP/GL consistency under racing returns and payments. |
 | Treasury, close, fixed assets, FX and tax | Existing native FX revaluation/inverse, approved accounting periods, fixed assets and financial reporting reused. IC1 introduces original group-native effects without a parallel ledger. | Wave4 acceptance retained; new IC1 tested with reviewed report maps. | Country tax determination/local statutory rules, foreign AP, group translation, advanced treasury and broader financial dimensions require separate complete cycles. | Faster immutable report membership/drilldown with original precision and current authorization. |
 | HCM/payroll, projects, service, CRM, planning and industry operations | Existing control foundations remain; this wave concentrates on production, sourcing and native group books. | No new operational completeness claim for these domains. | Statutory localization, domain lifecycle models and source-owned financial effects precede broad UI coverage. | Prioritize end-to-end operating value; module count is not evidence of superiority. |
+| Large commercial orders | Finance posting supports the separately tested 1,000-line accounting snapshot. This is a GL contract, not a 1,000-line sales/procurement order or manufacturing BOM. | No actual 1,000+ line commercial order capacity result is established by these Wave5 packets. | End-to-end pricing, reservations, partial delivery, AR/AP/tax and original FIFO effects under concurrent multi-warehouse demand need separate workload admission. | Compare equal complete business scenarios with resource and financial oracles. |
+
+## Source-bound evidence and UI acceptance
+
+The accepted local raw reports are `output/wave5-final-wire-8513a9e2/{scenario}/report.json`;
+local ignored artifacts are not a published external attestation. Raw report SHA256:
+
+| Scenario | Original report SHA256 |
+|---|---|
+| Manufacturing | `d344a4db07e6e322396834f37bcb531966992a2fae6f8c9571ad905f2dfda64e` |
+| Intercompany | `c9418e110bb83bced524b587fd366d9ea43ba8fe544fb38de4f0a698b9ad4305` |
+| Sourcing | `797e8c5e087feb48440cdeb4489015a6f5508dd596026e4c8de68ffc53e3ce01` |
+
+The separate ME/IC review rejects duplicate JSON members before extraction and
+binds report SHA, exact JSON pointer, extracted proof SHA, oracle script SHA,
+commands and output SHA. Its binding report SHA is
+`c75cb557b5795a4e0af2aacc3285bb6e18aed8ffb24e841e70637cc05bebd2c1`.
+ME original/restored proof SHA is
+`3af67dde3c93f627dc0eb63ffb83015ed753bf0d177077ce9f9fa21e6becc9f0`.
+IC restored HTTP artifacts were not exported again: its independent original
+HTTP proof is linked to complete restored-effect equality and the native snapshot
+in the source-bound report. All three actual database roles were non-superuser,
+without RLS bypass. The original tenant-global audit chain is the documented ME
+workspace exception; native inventory/FIFO/GL were not exempted.
+
+FX proof subject repair `34c92761dd7f55044bf14d9387df602e07b4b24b` is separately
+review-validated. A new early-DOM regression proved that passive same-plan
+invalidation could discard a valid proof. Before-paint committed subject binding
+now preserves identical refreshed records and rejects changed plan/seal/scope or
+session results. Nine actual-WebCrypto React cases and TypeScript passed; current
+hosted acceptance and affected FX HTTPS acceptance are pending. This newer UI
+change does not relabel the earlier whole-web runtime packets. Root's subsequent
+integration checkpoint `b6fcf71d` reports 68 React files/452 cases without skips,
+plus TypeScript/build success; affected FX HTTPS remains pending at this checkpoint.
+
+The separately inspected PostgreSQL gate at
+`e8e2de24bf6311d67b46a9bfd3b025c1792c3474` passed **73 cases with zero failures,
+errors or skips** in 882.8294731 seconds on immutable PostgreSQL17.11. JSON and
+JUnit both confirm the count: migration2, inventory scope7, manufacturing15,
+intercompany8+API3, sourcing20+API8, posting snapshot/profile8 and legacy finance
+scope races2. Source SHA before/after was
+`676611870ab9695b0226f28553ed15b0ce4343266964f44aeecf96c880156cd6`,
+with clean tracked source. Its raw packet
+`output/global-operating-platform-20261009/commercial/native-1791771040926527000/native-gate.json`
+has SHA256 `75af21b3f7cfbb08481b75588fccc3dea6510045a43e46a82253504af99eb1f3`;
+JUnit SHA is `8808c664976ecabcde466d0c2147cb7b793c895ad292fb4263947dd0bb95ba82`.
+This proves those mandatory native scenarios on e8e, not later UI/HTTPS acceptance
+or financial throughput.
 
 ## Engineering evaluation
 
@@ -29,10 +82,29 @@ The new external controller uses the same byte-fingerprinted harness for both
 unchanged application checkouts, BC/CB/BC fresh populations,20 real warmups,
 four workers, three repeated read measurements, independent financial/resource
 verification, full active power parameter bookends and sampled AC/frequency.
+The attempted six-run comparison was interrupted after the user confirmed heavy
+external load. Those samples cannot establish an isolated Wave5 improvement.
 Final CPU/RAM/latency/throughput acceptance remains pending. Monetary transaction
 cost is unavailable without an actual resource price model. No equivalent vendor
 hardware/durability/workload packet has been established, so no vendor speed ratio
 is valid.
+
+SAP's [official benchmark archive](https://www.sap.com/about/benchmark/appbm/archive.html)
+states that the SD benchmark retired in December 2025. Its five-line sell-from-stock
+workflow and historical SAPS sizing metric are different from our authenticated
+prepare/review/post GL cycle. [SAP sizing definitions](https://www.sap.com/about/benchmark/sizing/decision-tree.html)
+relate 100 SAPS to 2,000 processed business order lines/hour; this is not a conversion
+to ReconForge journals/second. The current [Q2C benchmark](https://www.sap.com/about/benchmark/appbm/q2c.html)
+uses SAP HANA/S/4HANA 2021, credit/ATP and analytics; 100 aSAPS combines 2,000 order
+lines/hour with two OLAP queries/hour. Our three-human GL benchmark lacks that
+workload and vendor hardware/configuration packet, so no SAPS/aSAPS speed ratio is admissible.
+
+Microsoft's [batch scheduling guidance](https://learn.microsoft.com/en-us/dynamics365/fin-ops-core/dev-itpro/sysadmin/priority-based-batch-scheduling)
+describes priorities, idempotent retries, bounded tasks and concurrency control.
+Its [migration optimization guidance](https://learn.microsoft.com/en-us/dynamics365/fin-ops-core/dev-itpro/sysadmin/optimize-data-migration)
+warns that excess threads can degrade performance. These are operating
+recommendations, not published like-for-like GL throughput results. They inform
+experiments without establishing a competitor performance comparison.
 
 [PostgreSQL version policy](https://www.postgresql.org/support/versioning/) lists
 17.11 as the current supported17 minor. [17.11 release notes](https://www.postgresql.org/docs/17/release-17-11.html)
@@ -40,21 +112,22 @@ include security fixes to role-dependent cached plans, SQL/server behavior and
 backup clients; minor upgrades normally preserve the data directory but may need
 configuration/reindex review. The frozen17.10 historical synthetic baseline is not
 described as the latest secure server. An immutable17.11 image and separate
-security/migration/restore acceptance are being verified. Comparisons must use
+security/migration/restore packet is retained for the sources above. Later-head
+acceptance is separate. Comparisons must use
 the same pinned server image on both application versions. PostgreSQL18 or19beta
 adoption, partitioning, a new analytical engine and microservices are not justified
 by the current profile.
 
 [NIST publications](https://csrc.nist.gov/Projects/ssdf/publications) identify
 SSDF1.1 as Final and1.2 as Draft; draft status must not be represented as final.
-[OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/)
-provides the security verification reference. Mapping controls and publishing
+[OWASP ASVS](https://owasp.org/projects/asvs) identifies 5.0.0 as its stable
+downloaded verification reference. Mapping controls and publishing
 test evidence does not establish certification or universal tax/legal compliance.
 
 ## Next complete-cycle priorities
 
-1. Close final135 migration/permissions, exact historical ACK/outbox scope seals,
-   concurrency/revocation/late-failure and populated HTTPS/restore gates.
+1. Finish current frozen-source hosted/security/UI acceptance, including the FX
+   subject repair and migration136 inventory scope; preserve all earlier failures.
 2. Measure final source on matched1K and bounded10K populations; reject unsupported
    resource improvements and retain adverse samples and execution boundaries.
 3. Implement partial supplier/customer return accounting including original-cost

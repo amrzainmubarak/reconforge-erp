@@ -437,6 +437,7 @@ class PostgresFinancePostingRepository:
                 (("ME2-", "ME2C-"), "manufacturing-v2-post"),
                 (("IC2-", "IC2S-", "IC2R-", "IC2E-"), "intercompany-fx"),
                 (("HC1-", "HC1P-"), "people-payroll"),
+                (("AD1-", "AD1R-"), "accrual-deferral"),
             )
             for prefixes, kind in enterprise_sources:
                 if entry["entry_number"].upper().startswith(prefixes) or entry["id"].upper().startswith(prefixes):
@@ -657,6 +658,12 @@ class PostgresFinancePostingRepository:
                     self.connection, self.tenant_id, source["id"], original["id"], number
                 ):
                     raise FinancePostingError("posting_source_unsupported", "Foreign intercompany sources require their exact reviewed native inverse.")
+            if source["entry_number"].upper().startswith(("AD1-", "AD1R-")) or source["id"].upper().startswith(("AD1-", "AD1R-")):
+                participant_type = source_participant_type("accrual-deferral")
+                if participant_type is None or not isinstance(_source_owner, participant_type) or not _source_owner.admits_reversal(
+                    self.connection, self.tenant_id, source["id"], original["id"], number
+                ):
+                    raise FinancePostingError("posting_source_unsupported", "Accrual and deferral sources require their exact reviewed native inverse.")
             if source["entry_number"].upper().startswith("FX1-") or source["id"].upper().startswith("FX1-"):
                 from reconforge.infrastructure.postgres_operational_fx_tax import _FxPostingParticipant
 

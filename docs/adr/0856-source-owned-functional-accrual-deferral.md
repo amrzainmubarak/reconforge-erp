@@ -1,6 +1,6 @@
 # Source-owned functional-currency voucher schedules
 
-Status: accepted implementation contract for the separate M2 slice; native execution pending.
+Status: accepted implementation contract for the separate M2 slice; development native/HTTP proof captured, final migration/race/restore/Studio acceptance pending.
 
 AD1 owns an immutable reviewed source voucher or estimate and explicit fiscal-period tranches. It uses the existing Finance Core GL, period lock/reopen governance, monetary registry binding, review/post transaction and native audit/outbox. Allocation delegates to the existing exact integer Hamilton allocator, with stable tranche IDs as the tie break. The captured currency policy remains `ROUND_HALF_UP`; allocation is separately versioned as `native-hamilton-stable-id-v1`.
 
@@ -13,3 +13,9 @@ Whole-original attachment uses the existing `financial_effect_claim_gates` and `
 Schedule allocation and planned fixtures alone prove arithmetic, not ERP execution. Acceptance additionally requires actual PostgreSQL non-owner/FORCE RLS SQL closure, authenticated API source creation and three-person phases, current permissions and period locks after waits, races and rollback, populated migration/restore, original-effect export with a stdlib independent oracle, and real Arabic/English Studio execution. Local comparative performance remains deferred. SQLite availability must be explicit; there is no Community parity claim until an adapter is independently executed.
 
 This is a bounded functional-currency management accrual/deferral source. It does not qualify country tax, statutory payroll, comprehensive IFRS/US GAAP reporting, AP invoice settlement, bank payment execution or a complete ERP. The separate IC2 cashflow view will classify actual paired-trade settlement membership: a USD3000 receivable settlement and USD3000 payable settlement net to zero, while closing translation of the retained cash contributes USD101 exchange effect. That exchange effect cannot be relabeled as settlement cashflow.
+
+## Development checkpoint
+
+The current140 kernel plus conditional owned AD1/Core fragment installation has executed8 native cases with0 failures/errors/skips, including exact paid originals without additional cash, unconsumed cancellation followed by ordinary original inverse, native prepaid release/inverse/replacement, accrued next-period inverses, current shared-reference scope restoration and structural account pin ACL refusal. Two authenticated native TestClient contracts and61 pure/independent oracle cases passed. An additional targeted original six-effect export passed after qualified tenant projection was added. These records are development evidence; central ordered141, populated restore, further original-source races and real Studio wire acceptance remain separate gates.
+
+Four immutable scoped native account reference tuples use a composite FK over tenant/id/workspace/chart/code/type. Calendar pins similarly reference native dates/year/number/workspace. This prevents hidden source identity changes without placing private owner-table reads on public native metadata mutations. A bounded savepoint clears only both entity aliases for exact shared metadata SELECT/row locks, while retaining tenant/workspace/organization and locked persisted source authority before and after. Both aliases restore before every business operation and on exceptions; this mechanism is not a generic business-row access path.

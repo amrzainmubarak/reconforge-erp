@@ -14,8 +14,8 @@ class AccrualDeferralRepositoryProtocol(Protocol):
     def prepare_reversal(self, source_id: str, *, original_plan_id: str, period_id: str,
                          posting_date: str, reason: str, command_id: str,
                          actor: PostingActor) -> dict[str, Any]: ...
-    def cancel_unconsumed_source(self, source_id: str, *, expected_plan_digest: str, reason: str,
-                                 command_id: str, actor: PostingActor) -> dict[str, Any]: ...
+    def prepare_cancellation(self, source_id: str, *, reason: str,
+                             command_id: str, actor: PostingActor) -> dict[str, Any]: ...
     def review(self, plan_id: str, *, expected_plan_digest: str, reason: str,
                command_id: str, actor: PostingActor) -> dict[str, Any]: ...
     def post(self, plan_id: str, *, expected_plan_digest: str, reason: str,
@@ -47,10 +47,9 @@ class AccrualDeferralApplicationService:
         return self.repository.prepare_reversal(source_id, original_plan_id=original_plan_id, period_id=period_id,
             posting_date=posting_date, reason=reason, command_id=command_id, actor=actor)
 
-    def cancel_unconsumed_source(self, source_id: str, *, expected_plan_digest: str, reason: str,
-                                 command_id: str, actor: PostingActor) -> dict[str, Any]:
-        return self.repository.cancel_unconsumed_source(source_id, expected_plan_digest=expected_plan_digest,
-            reason=reason, command_id=command_id, actor=actor)
+    def prepare_cancellation(self, source_id: str, *, reason: str,
+                             command_id: str, actor: PostingActor) -> dict[str, Any]:
+        return self.repository.prepare_cancellation(source_id, reason=reason, command_id=command_id, actor=actor)
 
     def review(self, plan_id: str, *, expected_plan_digest: str, reason: str,
                command_id: str, actor: PostingActor) -> dict[str, Any]:

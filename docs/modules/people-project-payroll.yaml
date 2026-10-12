@@ -1,0 +1,48 @@
+id: people-project-payroll
+name: Source-owned nonstatutory workforce and project wage accounting
+version: 1.0.0
+maturity: experimental
+owner: Amr
+dependencies: [identity, master-data, finance-core, finance-operational-posting, budget-control, outbox]
+incompatible_versions: []
+data_classification: restricted_personnel_and_confidential_aggregate_finance
+retention_policy: immutable_source_claim_and_financial_history
+permissions: [people_project_payroll.read, people_project_payroll.read_sensitive, people_project_payroll.personnel, people_project_payroll.manage, people_project_payroll.approve_time, people_project_payroll.prepare, people_project_payroll.review, people_project_payroll.post, people_project_payroll.pay]
+default_roles: [personnel_operator, independent_time_approver, financial_preparer, financial_reviewer, financial_poster]
+migrations: [0140_pg_people_project_payroll]
+domain_invariants:
+  - Whole independently approved time is claimed by one active or consumed payrun
+  - Unposted cancellation preserves original claim history and releases budget before a new claim
+  - Consumed time is never released or silently assigned to a new payrun
+  - Effective hourly employment versions never overlap for one employee
+  - Employee-linked identity and time submitter cannot approve their time
+  - Exact Fraction earnings round HALF_EVEN per employee with cumulative project residual conservation
+  - Captured native currency policy remains distinct from the earnings rounding version
+  - Native project expense and wage liability then partial cash settlement use the existing GL
+  - Reserve Consume Release and source phase effects close in one ACID transaction
+  - Three distinct current authorized humans own each financial preparation review and posting
+  - Names rates and individual wage allocations require a dedicated authenticated private DB login plus current human authority
+  - Audit and outbox retain source digest and actor without raw names rates or individual payments
+domain_events: [people_employee_registered, people_employment_registered, people_project_registered, people_time_submitted, people_time_approved, people_payrun_prepared, people_payment_prepared, people_plan_reviewed, people_plan_posted, people_payrun_cancelled]
+api_routes: [/api/v1/people-project-payroll/employees, /api/v1/people-project-payroll/employees/{employee_id}/employment, /api/v1/people-project-payroll/projects, /api/v1/people-project-payroll/times, /api/v1/people-project-payroll/times/{time_id}/approve, /api/v1/people-project-payroll/payruns, /api/v1/people-project-payroll/payruns/{payrun_id}/payments, /api/v1/people-project-payroll/plans/{plan_id}, /api/v1/people-project-payroll/plans/{plan_id}/private, /api/v1/people-project-payroll/plans/{plan_id}/review, /api/v1/people-project-payroll/plans/{plan_id}/post, /api/v1/people-project-payroll/payruns/{payrun_id}/cancel, /api/v1/people-project-payroll/payruns/{payrun_id}/evidence, /api/v1/people-project-payroll/catalog/{kind}]
+cli_commands: []
+ui_routes: [/people-project-payroll]
+import_schemas: []
+export_schemas: [people-payroll-evidence-v1]
+synthetic_fixtures: [tests/test_people_project_payroll.py, tests/test_postgres_people_project_payroll.py]
+threat_model: docs/architecture/PEOPLE_PROJECT_PAYROLL_NATIVE_OWNER.md
+benchmarks: []
+rollback_plan: Empty additive tables may downgrade; populated source history refuses destructive downgrade and requires a verified restore. Preserve operator-owned private role and membership prerequisites.
+test_matrix:
+  exact_domain: tests/test_people_project_payroll.py
+  native_development: tests/test_postgres_people_project_payroll.py
+runtime_acceptance: Initial development gate has 3 native tests with zero skips over accepted136 plus the owned additive schema. Central140 migration API Studio adversarial concurrency and restore acceptance are pending.
+limitations:
+  - Statutory country payroll tax pension and social contribution packs supported is zero
+  - PostgreSQL with separately configured personnel login only; Community SQLite payroll unavailable
+  - Whole approved time entries only; no partial-time allocations
+  - One functional currency and strict original currency policy binding
+  - Posted correction and payment cancellation are intentionally unavailable in this initial source contract
+  - Cash settlement records native ledger effects and does not initiate a bank transfer
+  - Dedicated personnel DB credentials are trusted backend credentials rather than individual human DB authentication
+  - No production readiness compliance performance superiority or cost claim

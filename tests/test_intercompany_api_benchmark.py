@@ -160,6 +160,41 @@ def test_tracked_clean_checkout_cannot_import_nonignored_untracked_source(tmp_pa
         common.require_common_completion(report, 20)
 
 
+def test_source_fingerprint_binds_large_binary_tail_without_whole_file_allocation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tracemalloc
+
+    binary = tmp_path / "a.bin"
+    payload = b"\x00\xff\r\n" * (2 * 1024 * 1024)
+    binary.write_bytes(payload)
+    text = b"retained = True\r\n"
+    (tmp_path / "z.py").write_bytes(text)
+    expected = hashlib.sha256(b"a.bin" + hashlib.sha256(payload).digest()
+                              + b"z.py" + hashlib.sha256(text).digest()).hexdigest()
+    answers = {("ls-files", "-z"): "z.py\0a.bin\0", ("rev-parse", "HEAD"): "fixed-commit\n",
+               ("status", "--porcelain", "--untracked-files=no"): "",
+               ("ls-files", "--others", "--exclude-standard", "-z"): ""}
+    monkeypatch.setattr(common, "command", lambda args, **kwargs: SimpleNamespace(stdout=answers[tuple(args[1:])]))
+    tracemalloc.start()
+    try:
+        before = common.source_state(tmp_path)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    assert before["tracked_sha256"] == expected and peak < 2 * 1024 * 1024
+    original_stat = binary.stat()
+    with binary.open("r+b") as stream:
+        stream.seek(-1, 2)
+        stream.write(b"\x01")
+    common.os.utime(binary, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+    after = common.source_state(tmp_path)
+    assert binary.stat().st_size == original_stat.st_size
+    assert binary.stat().st_mtime_ns == original_stat.st_mtime_ns
+    assert after["tracked_sha256"] != before["tracked_sha256"]
+    assert after["commit"] == before["commit"] and after["tracked_status"] == before["tracked_status"] == ""
+
+
 def test_mixed_scenario_names_both_original_oracles_without_duplicate_or_foreign_provenance(tmp_path: Path) -> None:
     original = tmp_path / "original_ic_oracle.py"
     second = tmp_path / "original_me_oracle.py"

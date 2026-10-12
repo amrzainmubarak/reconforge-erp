@@ -109,7 +109,8 @@ def main() -> int:
         source_digest = hashlib.sha256()
         for name in sorted(names):
             source_digest.update(name.encode())
-            source_digest.update(hashlib.sha256((ROOT / name).read_bytes()).digest())
+            with (ROOT / name).open("rb") as source_file:
+                source_digest.update(hashlib.file_digest(source_file, "sha256").digest())
         return source_digest.hexdigest()
 
     report: dict[str, object] = {

@@ -65,7 +65,8 @@ def source_state(root: Path) -> dict[str, Any]:
     digest = hashlib.sha256()
     for name in sorted(filter(None, names)):
         digest.update(name.encode())
-        digest.update(hashlib.sha256((root / name).read_bytes()).digest())
+        with (root / name).open("rb") as source_file:
+            digest.update(hashlib.file_digest(source_file, "sha256").digest())
     return {"commit": command(["git", "rev-parse", "HEAD"], cwd=root).stdout.strip(),
             "tracked_sha256": digest.hexdigest(),
             "tracked_status": command(["git", "status", "--porcelain", "--untracked-files=no"], cwd=root).stdout,

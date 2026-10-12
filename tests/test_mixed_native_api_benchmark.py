@@ -21,6 +21,7 @@ class OwnedContract:
 
     def __init__(self, name: str, root: Path, events: list[Any]) -> None:
         self.name, self.events, self.next_tenant, self.refuse = name, events, 0, False
+        self.retained_populations: dict[str, tuple[str, ...]] = {}
         self.expected_requests_per_cycle = 20 if name == "intercompany_operations" else 22
         self.tool_path = root / (name + "_tool.py")
         self.oracle_path = root / (name + "_original_oracle.py")
@@ -41,6 +42,9 @@ class OwnedContract:
         row = {"index": index, "tenant_id": runtime.tenant, "source_id": "source-" + runtime.tenant,
                "financial_verification": "passed", "seconds": .01, "client_cpu_seconds": .001}
         ids = [f"effect-{runtime.tenant}-{number}" for number in range(5 if self.expected_requests_per_cycle == 20 else 6)]
+        if self.expected_requests_per_cycle == 22:
+            ids[:2] = ["seeded-material-receipt-0", "seeded-material-receipt-1"]
+        self.retained_populations[runtime.tenant] = tuple(ids)
         if self.expected_requests_per_cycle == 20:
             row["native_effects"] = [{"effect_id": value} for value in ids]
         else:
@@ -51,6 +55,10 @@ class OwnedContract:
         self.events.append((self.name, "financial_completion", report))
         if self.refuse or any(row["financial_verification"] != "passed" for row in report["cycles"]):
             raise ValueError("Original independent owner refused its financial proof")
+        for row in report["cycles"]:
+            ids = tuple(effect["effect_id"] for effect in row["native_effects"]) if self.expected_requests_per_cycle == 20 else tuple(row["original_effect_ids"])
+            if self.retained_populations.get(row["tenant_id"]) != ids:
+                raise ValueError("Original scoped native population changed")
 
 
 def scenario(tmp_path: Path) -> tuple[Any, list[Any]]:
@@ -132,3 +140,33 @@ def test_changed_request_or_oracle_owner_contract_is_not_admitted(tmp_path: Path
     mixed.manufacturing.oracle_paths = (mixed.intercompany.oracle_path,)
     with pytest.raises(ValueError, match="distinct original"):
         driver.MixedScenario(mixed.intercompany, mixed.manufacturing)
+
+
+def test_original_receipt_ids_can_repeat_only_in_distinct_verified_tenants(tmp_path: Path) -> None:
+    mixed, report, _ = population(tmp_path, count=3)
+    rows = report["cycles"]
+    local_ids = [effect for row in rows for effect in row["manufacturing"]["original_effect_ids"]]
+    assert len(local_ids) == 18 and len(set(local_ids)) == 14
+    assert len({row["manufacturing"]["tenant_id"] for row in rows}) == 3
+    assert mixed.financial_summary(report) == {
+        "financial_verification": "passed", "successful_cycles": 3,
+        "native_posting_effects": 33, "timed_native_posting_effects": 27,
+    }
+
+
+@pytest.mark.parametrize(("owner", "damage"), [("intercompany", "duplicate_original"),
+                                               ("manufacturing", "duplicate_original"),
+                                               ("manufacturing", "duplicate_timed")])
+def test_scoped_population_refuses_duplicates_even_if_owner_label_is_passed(tmp_path: Path, owner: str, damage: str) -> None:
+    mixed, report, _ = population(tmp_path, count=3)
+    # Exercise the composition's own population guard independently of owner refusal.
+    getattr(mixed, owner).require_financial_completion = lambda _: None
+    row = report["cycles"][1][owner]
+    if owner == "intercompany":
+        row["native_effects"][0]["effect_id"] = row["native_effects"][1]["effect_id"]
+    elif damage == "duplicate_original":
+        row["original_effect_ids"][0] = row["original_effect_ids"][1]
+    else:
+        row["timed_manufacturing_effect_ids"][0] = row["timed_manufacturing_effect_ids"][1]
+    with pytest.raises(ValueError, match="disjoint original/timed"):
+        mixed.require_financial_completion(report)

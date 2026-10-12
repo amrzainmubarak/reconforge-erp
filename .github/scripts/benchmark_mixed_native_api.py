@@ -87,8 +87,8 @@ class MixedScenario:
             owner.require_financial_completion({"configuration": {"cycles": count}, "cycles": [row[key] for row in cycles]})
         tenants: list[str] = []
         sources: list[str] = []
-        effects: list[str] = []
-        timed: list[str] = []
+        effects: list[tuple[str, str]] = []
+        timed: list[tuple[str, str]] = []
         for row in cycles:
             first, second = row[IC], row[ME]
             tenants.extend(identifier(part["tenant_id"]) for part in (first, second))
@@ -98,8 +98,12 @@ class MixedScenario:
             me_timed = [identifier(effect) for effect in second["timed_manufacturing_effect_ids"]]
             if len(ic_effects) != 5 or len(me_effects) != 6 or len(me_timed) != 4 or type(second["posting_effects"]) is not int or second["posting_effects"] != 6 or not set(me_timed).issubset(me_effects):
                 raise ValueError("Exactly five IC1 and six original/four timed ME1 effects required")
-            effects.extend(ic_effects + me_effects)
-            timed.extend(ic_effects + me_timed)
+            # Native posting identities are keyed by tenant, including seeded receipts.
+            # Equal local IDs in distinct tenants are separate original effects.
+            effects.extend((first["tenant_id"], value) for value in ic_effects)
+            effects.extend((second["tenant_id"], value) for value in me_effects)
+            timed.extend((first["tenant_id"], value) for value in ic_effects)
+            timed.extend((second["tenant_id"], value) for value in me_timed)
         if len(set(tenants)) != 2 * count or len(set(sources)) != 2 * count or len(effects) != 11 * count or len(set(effects)) != 11 * count or len(timed) != 9 * count or len(set(timed)) != 9 * count:
             raise ValueError("Separate fresh owner tenants, sources and disjoint original/timed native populations required")
 

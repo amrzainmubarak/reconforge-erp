@@ -281,3 +281,143 @@ and reporting-FX/correction/ownership consolidation. Broad CRM/HCM/payroll/proje
 service gaps remain in the [official capability matrix](GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md).
 Vendor production/consolidation/evidence features already exist; no uniqueness or
 global superiority is inferred from adding them to ReconForge.
+
+## Actual62/current22 10K capacity: independently verified
+
+The corrected [run38252859442](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38252859442)
+completed successfully at14:04:08UTC. Original15-member artifact11751937667
+is609566bytes/SHA39bd08b84bf3867e2aba4661333a9e52681725b32a6d69f8418c6df6f6b5acee.
+Separate stdlib verifiers under `-I` and `-I -O` reproduce identical proofs:
+owner37bf754c6da7703e426e7a185a689c592fb76b695efdb3f599a55434bbc04490;
+peer588745bb3e4b1b3c4b64278d5e823fef5dbbb9f2104f336ebadf95bb84b28b70.
+They verify full Git source fingerprints, current22/revision136, control62,
+unchanged harness7bce/image17.11,10000 completed primary effects,20 disjoint
+warmups and30300 measured native reads. Independent integer seed total is
+**5028151631 minor units** for selected debit/credit/cash/equity. Hosted pure
+contracts passed245cases/0failures/errors/skips. PID/birth/module origins and
+acknowledged full CIDaf0d0784 close; process exited/container absent after normal
+cleanup. The initial f04 zero-business setup failure remains a separate failure.
+
+| Original single-population metric | Actual62/current22 |
+| --- | ---: |
+| Native posting wall seconds | 3578.90454609 |
+| Native posting cycles/sec | 2.794151079 |
+| Cycle p50/p95/p99 seconds | 1.417118638 /1.647548856 /1.798446184 |
+| Client posting process CPU seconds | 3586.675165149 |
+| Distinct PostgreSQL cgroup CPU bracket seconds | 7630.282795 |
+| Observed client lifetime RSS peak bytes | 143245312 |
+| Posting-end container lifetime memory peak bytes | 431108096 |
+| Container block-write bracket bytes | 1089998848 |
+| Sampled WAL-window delta bytes | 229573614 |
+| Resource sampler points | 369 |
+
+This is one bounded native two-line USD book, not HTTPS/mixedERP/manufacturing
+capacity and not three comparative repetitions. Native read totals/membership
+and independent seed arithmetic are checked; no separate export of all10000
+raw journal snapshots or new isolation proof is claimed. CPU/cgroup/WAL/read
+windows differ. Client CPU includes observer work; lifetime memory includes
+startup/migrations/warmup and sampling may miss later peaks. Counter files are
+read sequentially; track_io_timing off gives no useful zero-I/O inference.
+Physical-host power/frequency isolation is unavailable. Comparative performance
+acceptance remains **false**, monetary cost **null**,100K/1M unexecuted.
+
+The [new59-input lossless capsule](wave5-evidence/native10k-62-capacity/wave5-native10k-62-38252859442-v1.index.json)
+has60ZIP members including manifest, ZIP1500461bytes/SHA
+18f271117f6f88514ec4e73cc14ba0390dcf6653096b3d8cca24698e3f74cd9e.
+Independent public-byte closureadc2a287 verifies all59inputs and all30prior
+15capsule references unchanged. Root copies the three published files exactly.
+Full66994-byte job log remains local; public63129-byte exact spans and3865-byte
+omissions preserve original boundaries. Original retrieval failure/one read-only
+recovery are retained; no financial workload was retried. Historical pending
+statements above remain their original checkpoints, not current10K status.
+
+## Publication4c failed gate and additional authorized quiet discovery
+
+Actual4c CI38257659454 completed with41SUCCESS/2PythonFAILURE/1dependentDocker
+paritySKIP across44jobs. All18mandatory native partitions, the separate scripted writeback gate and14browser jobs succeeded;
+source archive steps in failed Python jobs did not execute. Python3.11 reported
+5543passed/2failed/663inherited prerequisite skips;3.12 reported5544passed/
+1failed/663inherited skips. The newly published controller tests depended on a
+shared import cache and3.12-only empty AST generic fields. Correct only their
+test contracts: fresh isolated import, temporary cache restoration and absent
+legacy-field normalization with nonempty/body drift rejection. Preserve all25
+historical function pins/main pin. Targeted264cases passed0failures/errors/skips;
+independent reviewc0694a0b closes exact test1ea1f8e0/XMLecac0a54. Full corrected
+source acceptance is pending. Runtime/controller/migration/Studio bytes do not
+change. Current4c manual Security executed all5jobs, with0Critical/0High/
+9Medium/1Negligible image findings;65/68 license metadata coverage and unassessed
+legal compatibility remain explicit. Current4c Docker/CodeQL succeeded separately.
+
+The human approved the additional local quiet window. Root created a managed
+isolated accepted22 source rather than altering the integration or primary
+checkouts, relocated only the copied owner ROOT literal and profile bindings,
+and retained original wrappers/oracles/harness. Fresh actual physical-interpreter
+preflights and readiness7b904ff3 bind new Windows source bytesdfdf4296, not older
+cf9 bytes. The existing683eb823 Docker ownership smoke is explicitly reused
+historical evidence, not a new smoke. Seven pure contracts and independent
+read-only prelaunch reviewdc0f142d passed. Immediate actual load admission recorded
+5.859375/5.46875/3.662109375percent busyCPU,71percentmemory,AC/saver-off and the
+unchanged381b4222 scheme. Short four-worker stage/SQL and serial bounded-cProfile
+runs have begun; they are diagnostic, with no automatic comparative acceptance.
+Their later exact source-bound results will remain additive and separately bound.
+
+## Completed quiet2 diagnosis and V5 power-stop: current closure (2026-10-12)
+
+This supersedes the earlier “have begun” checkpoint. Four bounded diagnostic
+populations completed on exact baseline636 and isolated accepted22:100 primary
+postings,20 separate warmups and303 measured native reads each. All four independent
+source/custody/seed proofs passed, with46669102 primary minor units. The final
+four-population independent normal/optimized analysis is byte-identical SHA256
+c35aaf8d404b650ea414ae93e9bb2d946d057e36157efb42e2ffa85807064595.
+The [lossless four-profile capsule](wave5-evidence/quiet2-four-profiles/wave5-quiet2-discovery-636-22-fourprofiles-v1.index.json)
+contains116 original inputs plus manifest, ZIP SHA256
+3dc3b141f59b401366c80e42de425244bbc8f2af5779f65fdcacb7c60673ba16.
+Independent closurecf3eed64 verifies exact current originals and source captures.
+
+Measured primary-phase thread CPU attributed to identity admission was93.4800%
+for baseline four-worker and93.5957% for current four-worker runs. The bounded
+96-call PBKDF2 profile per subject and select.select wall time are diagnostic;
+these are not pure-KDF CPU, database CPU or isolated lock-wait measurements.
+Each SQL profile retained a200-row ceiling.182 complete query keys overlap;
+18 noncommon keys per subject do not prove query absence or new guard cost.
+The common posting_snapshot query had300 calls: baseline planning4218.175ms/
+execution1630.439ms, current planning4179.985ms/execution1623.757ms. Nested and
+outer planning/execution windows overlap and must not be summed. Existing RLS
+and repeated snapshot policy decoding are hypotheses for further controlled
+work; no auth relaxation, RLS weakening, migration137 or speculative cache is adopted.
+
+The subsequent six-run paired1K attempt V5 is **FAILED**, owner SHA256
+3135177c777cf2e6023630551f212e4781e851cf06529fa9f2e81cd8e1133818.
+Windows recorded AC=false at2026-10-12T15:32:48.230589Z; the guard stopped the
+owned workload gracefully. B1/C1/C2 completed1000 primary+20 warmup effects
+and3333 measured reads each, with independent493671004 minor-unit arithmetic.
+B2's original failed report records1000 completed posting cycles/zero posting
+errors and20 warmups, but only2489 successful request-duration entries/4766
+effect visits; its final sample remains running at166 effects. The last unrecorded
+request outcome is unknown, source-after closure absent, and the secondary
+OutOfOrderTransactionNesting shutdown error is preserved with cause unproven.
+B2 is not a fourth accepted financial population. B3/C3 were unperformed.
+All four exact PID/birth/Job/CID lifecycles and absent containers close.
+No six-run medians, fair comparison, recovery/RPO/RTO or resource gain is claimed.
+
+The [separate negative V5 capsule](wave5-evidence/v5-power-stop-negative/wave5-v5-paired1k-636-22-power-stop-negative-v1.index.json)
+retains80 original inputs plus manifest, ZIP SHA256
+b2466af34fbfea82c6a00459c1eba05613788c4ddeb96eda47e44bd52879aa4a.
+Independent negative audits under normal/optimized Python reproduce4e7f2093;
+byte closureb213ab8e verifies every input and earlier capsule references unchanged.
+The human's latest instruction is **complete Wave5 gates; arrange measurement later**.
+No additional local performance workload is authorized by this checkpoint.
+Comparative performance acceptance remains false; monetary cost remains null.
+
+The isolated CurrencyMemo V4 patch7c742f9d remains ignored, unapplied and UNRUN;
+its static review corrected tuple/list cache-equivalence and deep-recursion error
+boundary defects. It is a future experiment requiring authority/financial/native/
+restore tests and fair measurement, not an accepted optimization or runtime change.
+
+The [six-domain/five-guarantee inventory](ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.md)
+and [conditional program contracts](GLOBAL_ENTERPRISE_PROGRAM_CONTRACTS_2026-10-12.md)
+retain the all-countries target. Generic FX/tax configuration is not statutory
+support; verified activated country-specific packs in this scoped inventory are0.
+The next implementation program begins only after actual corrected-source Wave5
+quality acceptance. No whole ERP, IFRS/US GAAP, global superiority or production
+readiness claim is made. Historical checkpoints retain their original subjects.

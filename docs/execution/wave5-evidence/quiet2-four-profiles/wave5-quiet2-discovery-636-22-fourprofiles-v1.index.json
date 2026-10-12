@@ -1,0 +1,1098 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-quiet2-discovery-636-22-fourprofiles-v1.zip",
+  "capture_for_root_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+  "acceptance_scope": "Original per-entry source headers govern; ignored diagnostic control bytes have no publication-commit attribution.",
+  "coverage": {
+    "completed_populations": [
+      "baseline-four-r1",
+      "candidate-four-r1",
+      "baseline-serial-r1",
+      "candidate-serial-r1"
+    ],
+    "measured_cycles_per_population": 100,
+    "disjoint_warmup_per_population": 20,
+    "measured_read_requests_per_population": 303,
+    "independent_minor_total_per_population": "46669102",
+    "baseline_source": "6362724f2337a79c3d7569574f7bf9591a018524",
+    "candidate_source": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+    "same_common_harness_sha256": "7bce2382df24d439d39386f0e02c07bf362c4f451649dbd8d7f225c8a920396b",
+    "same_current_pinned_database": "postgres:17.11-alpine@sha256:aa90e97ee862e558111d34cfb8b2c4bec768c2b039fb791341686928560263b3",
+    "independent_normal_optimized_pairs": 4,
+    "cross_source_final_normal_optimized_identical": true,
+    "server_profile_rows": "200 capped rows in each four-worker population;182exactquery_id+toplevel+SHA shared; top-level/nested kept separate.",
+    "serial_functions": "First32measuredcycles perstage;96PBKDF2calls perpopulation; cProfile self-wall distinct from thread/process CPU.",
+    "source_query_mapping": "Four exact public AST constants reproduce native SQL hashes; full query text/parameters were not captured.",
+    "source_custody": "Original reported full fingerprints preserved;21publicGitblobs+20selectedactualphysicalfiles captured with raw hashes and normalized equality; no live full-tree scan.",
+    "raw_logs": "All four short child logs and synthetic migration logs included byte-exact; no credential/DSN setup logs.",
+    "new_unprofiled_v5_pair_included": false,
+    "native_line_exports_included": false,
+    "performance_comparison_accepted": false,
+    "causal_rls_planner_root_cause_proven": false,
+    "optimization_implemented_or_integrated": false
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 116,
+  "raw_bytes": 7761885,
+  "records": [
+    {
+      "entry_name": "git-originals/0001-baseline-server_query_profile.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0001-baseline-server_query_profile.py",
+      "bytes": 3080,
+      "sha256": "febd2ca7793376aa3ef9f7fb1ea0cd977c813ae103eca9cca7019982b4f48fad",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0002-baseline-enterprise_posting_profile.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0002-baseline-enterprise_posting_profile.py",
+      "bytes": 7731,
+      "sha256": "bd6ce80b935df0e79e291e8109a49f336235be047d6af865b424bcb2e490eb20",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0003-baseline-passwords.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0003-baseline-passwords.py",
+      "bytes": 1596,
+      "sha256": "01a23c84aaf5217a818673d6abf8ecb474e3ad011649547814a49a52959ecdcc",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0004-baseline-postgres_identity.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0004-baseline-postgres_identity.py",
+      "bytes": 32874,
+      "sha256": "a5a4c8d2134de381f0ac6d519d46193c2f93343ad73d8891be0052f0b1fc0b1d",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0005-baseline-postgres.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0005-baseline-postgres.py",
+      "bytes": 27133,
+      "sha256": "6390f50ea8a10ca3add06860029b1573f6a50bc19ad43adf6d9faccf059123fc",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0006-baseline-postgres_finance_core.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0006-baseline-postgres_finance_core.py",
+      "bytes": 100967,
+      "sha256": "888ca74d4bc647b6491293be0a87bff1cb3ec4c4abebfe8f048bbb9c71ed533e",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0007-baseline-postgres_finance_posting.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0007-baseline-postgres_finance_posting.py",
+      "bytes": 44342,
+      "sha256": "bdeb8e06ff6a9a38b6c1d457f80540a3ebd2230dadd321a3f0fc78b74f61d2ea",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0008-baseline-postgres_finance_scope.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0008-baseline-postgres_finance_scope.py",
+      "bytes": 34068,
+      "sha256": "a9f162df8831abebb8ef683fe7509fa02a6329e53dfef1371e156fec80d95448",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0009-baseline-test_postgres_inventory_receipt_posting.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0009-baseline-test_postgres_inventory_receipt_posting.py",
+      "bytes": 50225,
+      "sha256": "556a8b624372a53b340e58eca7c907a144e7cf01d6bce2380594f2682ddb6d08",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0010-baseline-0095_postgres_finance_scope.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0010-baseline-0095_postgres_finance_scope.py",
+      "bytes": 37349,
+      "sha256": "6db84e279ecc0cad97bfdb53af95529c0105d4c906289c0fc3eb22ac445f5850",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0011-candidate-server_query_profile.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0011-candidate-server_query_profile.py",
+      "bytes": 3080,
+      "sha256": "febd2ca7793376aa3ef9f7fb1ea0cd977c813ae103eca9cca7019982b4f48fad",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0012-candidate-enterprise_posting_profile.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0012-candidate-enterprise_posting_profile.py",
+      "bytes": 7731,
+      "sha256": "bd6ce80b935df0e79e291e8109a49f336235be047d6af865b424bcb2e490eb20",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0013-candidate-passwords.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0013-candidate-passwords.py",
+      "bytes": 1596,
+      "sha256": "01a23c84aaf5217a818673d6abf8ecb474e3ad011649547814a49a52959ecdcc",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0014-candidate-postgres_identity.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0014-candidate-postgres_identity.py",
+      "bytes": 32874,
+      "sha256": "a5a4c8d2134de381f0ac6d519d46193c2f93343ad73d8891be0052f0b1fc0b1d",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0015-candidate-postgres.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0015-candidate-postgres.py",
+      "bytes": 27133,
+      "sha256": "6390f50ea8a10ca3add06860029b1573f6a50bc19ad43adf6d9faccf059123fc",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0016-candidate-postgres_finance_core.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0016-candidate-postgres_finance_core.py",
+      "bytes": 102118,
+      "sha256": "911214c5290fa0549fa7204001ce3e6bf47b604c056e9406920abd19a1bd4cae",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0017-candidate-postgres_finance_posting.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0017-candidate-postgres_finance_posting.py",
+      "bytes": 45648,
+      "sha256": "113e6893e182dfa303fcac90ddc66e0cb2dddb7971d18cd37859c8fc7866c706",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0018-candidate-postgres_finance_scope.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0018-candidate-postgres_finance_scope.py",
+      "bytes": 34068,
+      "sha256": "a9f162df8831abebb8ef683fe7509fa02a6329e53dfef1371e156fec80d95448",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0019-candidate-test_postgres_inventory_receipt_posting.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0019-candidate-test_postgres_inventory_receipt_posting.py",
+      "bytes": 50225,
+      "sha256": "556a8b624372a53b340e58eca7c907a144e7cf01d6bce2380594f2682ddb6d08",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0020-candidate-0095_postgres_finance_scope.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0020-candidate-0095_postgres_finance_scope.py",
+      "bytes": 37349,
+      "sha256": "6db84e279ecc0cad97bfdb53af95529c0105d4c906289c0fc3eb22ac445f5850",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "git-originals/0021-common-harness-benchmark_enterprise_finance.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0021-common-harness-benchmark_enterprise_finance.py",
+      "bytes": 29481,
+      "sha256": "7bce2382df24d439d39386f0e02c07bf362c4f451649dbd8d7f225c8a920396b",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Exact immutable public Git blob; SHA1 verified with original Git blob header and raw bytes.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "independent/baseline-four-r1-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-independent\\baseline-four-r1-I.json",
+      "bytes": 23799,
+      "sha256": "ec115431c1e4e8db09c892c1923e58da21baf8a29a18368b7df4033f57e855fa",
+      "source_commit": null,
+      "source_attribution": "File-only stdlib audit/cross-source analysis; earlier three-population report retained separately from completed four-population report.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "independent/baseline-four-r1-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-independent\\baseline-four-r1-IO.json",
+      "bytes": 23799,
+      "sha256": "ec115431c1e4e8db09c892c1923e58da21baf8a29a18368b7df4033f57e855fa",
+      "source_commit": null,
+      "source_attribution": "File-only stdlib audit/cross-source analysis; earlier three-population report retained separately from completed four-population report.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "independent/baseline-serial-r1-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-independent\\baseline-serial-r1-I.json",
+      "bytes": 545161,
+      "sha256": "b654f30e10931eda9e2548928cb8834d1a12e31bc201df2f63575dfd5711aa99",
+      "source_commit": null,
+      "source_attribution": "File-only stdlib audit/cross-source analysis; earlier three-population report retained separately from completed four-population report.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "independent/baseline-serial-r1-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-independent\\baseline-serial-r1-IO.json",
+      "bytes": 545161,
+      "sha256": "b654f30e10931eda9e2548928cb8834d1a12e31bc201df2f63575dfd5711aa99",
+      "source_commit": null,
+      "source_attribution": "File-only stdlib audit/cross-source analysis; earlier three-population report retained separately from completed four-population report.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "independent/candidate-four-r1-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-independent\\candidate-four-r1-I.json",
+      "bytes": 23822,
+      "sha256": "a93cf5c9b5d460c54a29e368cb6b809949083df44bdb2ba15fbfe7edb258899f",
+      "source_commit": null,
+      "source_attribution": "File-only stdlib audit/cross-source analysis; earlier three-population report retained separately from completed four-population report.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "independent/candidate-four-r1-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-independent\\candidate-four-r1-IO.json",
+      "bytes": 23822,
+      "sha256": "a93cf5c9b5d460c54a29e368cb6b809949083df44bdb2ba15fbfe7edb258899f",
+      "source_commit": null,
+      "source_attribution": "File-only stdlib audit/cross-source analysis; earlier three-population report retained separately from completed four-population report.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "independent/candidate-serial-r1-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-independent\\candidate-serial-r1-I.json",
+      "bytes": 511576,
+      "sha256": "54cfd988b66da610a6c12fddd43626a92af38443d32a1b3e77d82ac6edcace0d",
+      "source_commit": null,
+      "source_attribution": "File-only stdlib audit/cross-source analysis; earlier three-population report retained separately from completed four-population report.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "independent/candidate-serial-r1-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-independent\\candidate-serial-r1-IO.json",
+      "bytes": 511576,
+      "sha256": "54cfd988b66da610a6c12fddd43626a92af38443d32a1b3e77d82ac6edcace0d",
+      "source_commit": null,
+      "source_attribution": "File-only stdlib audit/cross-source analysis; earlier three-population report retained separately from completed four-population report.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "independent/cross-source-four-populations-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-independent\\cross-source-four-populations-I.json",
+      "bytes": 188465,
+      "sha256": "c35aaf8d404b650ea414ae93e9bb2d946d057e36157efb42e2ffa85807064595",
+      "source_commit": null,
+      "source_attribution": "File-only stdlib audit/cross-source analysis; earlier three-population report retained separately from completed four-population report.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "independent/cross-source-four-populations-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-independent\\cross-source-four-populations-IO.json",
+      "bytes": 188465,
+      "sha256": "c35aaf8d404b650ea414ae93e9bb2d946d057e36157efb42e2ffa85807064595",
+      "source_commit": null,
+      "source_attribution": "File-only stdlib audit/cross-source analysis; earlier three-population report retained separately from completed four-population report.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "independent/cross-source-three-populations-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-independent\\cross-source-three-populations-I.json",
+      "bytes": 184241,
+      "sha256": "cddc7216e865c83a9f1cc46496fa6b11e100e3957032b59b5e45b0637c044a4f",
+      "source_commit": null,
+      "source_attribution": "File-only stdlib audit/cross-source analysis; earlier three-population report retained separately from completed four-population report.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "independent/cross-source-three-populations-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-independent\\cross-source-three-populations-IO.json",
+      "bytes": 184241,
+      "sha256": "cddc7216e865c83a9f1cc46496fa6b11e100e3957032b59b5e45b0637c044a4f",
+      "source_commit": null,
+      "source_attribution": "File-only stdlib audit/cross-source analysis; earlier three-population report retained separately from completed four-population report.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/launcher-bindings-development-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\launcher-bindings-development-v1.json",
+      "bytes": 854,
+      "sha256": "3c7c15b0dc6378fa03d3d1fac4f6ace6e695d5e12594d331198eb4958d40de07",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/actual-docker-smoke-1/smoke.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\actual-docker-smoke-1\\smoke.json",
+      "bytes": 49099,
+      "sha256": "683eb823aaa5193b8dbc8f25773c735a4fa7c73742d7dd79c92191a562326512",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/final22_pair.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\final22_pair.py",
+      "bytes": 45760,
+      "sha256": "f8c61b96b8bdfe29800f44dfe1ada879f540fa33ae932a0c3f4e0b7296f4daf4",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/identity_probe.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\identity_probe.py",
+      "bytes": 2410,
+      "sha256": "196b6a5a0f5f98f74bf93df8dd9f92871a9f9d7cba9e95e4bf95b8637e2228e3",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/live-physical-preflight-baseline-readiness-v4/admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\live-physical-preflight-baseline-readiness-v4\\admission.json",
+      "bytes": 278,
+      "sha256": "17544ac1c60a170a58b5330c14cc5a07260d62616568ed0db1f56078987b9876",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/live-physical-preflight-baseline-readiness-v4/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\live-physical-preflight-baseline-readiness-v4\\result.json",
+      "bytes": 1942,
+      "sha256": "96eedab3448c474683c5fbddc5d095dec66a3da580b28f1ed67dfa1eba38abc4",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/live-physical-preflight-candidate-readiness-v4/admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\live-physical-preflight-candidate-readiness-v4\\admission.json",
+      "bytes": 278,
+      "sha256": "1512c3c7afbe383f0f3e36e0b0e9bbc18e9f53c902d0153f001ce9c8d6b9d2eb",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/live-physical-preflight-candidate-readiness-v4/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\live-physical-preflight-candidate-readiness-v4\\result.json",
+      "bytes": 1970,
+      "sha256": "8b357e7de38465bae2ee12cb6aa40f1afd46d452630a2e2f245648d3388e3287",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/native_observations.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\native_observations.py",
+      "bytes": 11146,
+      "sha256": "26ef301ed52c94aa50308830eb4d8ed7fadb45c61010d0a903b9639cfa2259ed",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/original-verifiers/benchmark_global_engineering_pair.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\original-verifiers\\benchmark_global_engineering_pair.py",
+      "bytes": 15886,
+      "sha256": "5086ee51416636d34c080da155a9980092d2876eb97b4c00ed517b4391086e63",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/original-verifiers/verify_native_posting_pair.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\original-verifiers\\verify_native_posting_pair.py",
+      "bytes": 18876,
+      "sha256": "b09575672dd79997e42afb1ade898a6e7b2448af3674ec5fc746f0120c167e58",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/owned_child.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\owned_child.py",
+      "bytes": 10559,
+      "sha256": "834b7634513ca813c808dd18b34645cb8d8f1a86149bc29161cdfc6cc1bdcf71",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/readiness-v4.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\readiness-v4.json",
+      "bytes": 15007,
+      "sha256": "7b904ff39d3db18634b581e83dde73d928d1e9d8783466749f9e42e3fbff33ca",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/pair/test_final22_pair.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\pair\\test_final22_pair.py",
+      "bytes": 10492,
+      "sha256": "580a82eab7066eae5cd708c8e06c50cc9df918d8183c111d5ce35df0607cb04f",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/prelaunch-load-power-v2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\prelaunch-load-power-v2.json",
+      "bytes": 7478,
+      "sha256": "05a2856f5ece2381890d97760555e15d8a57a682c44b31361bec6f4885cfe3dc",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/profile/four-worker-baseline-plan.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\profile\\four-worker-baseline-plan.json",
+      "bytes": 920,
+      "sha256": "e95d54fb6806b44df73854ddc414a06f26817c40c1fece5cc167e12acb0cbf08",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/profile/four-worker-candidate-plan.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\profile\\four-worker-candidate-plan.json",
+      "bytes": 921,
+      "sha256": "307cd8f7c1b362e7632ed3af8423316c2324c72ef5977c3e1ead21c6c6cfb848",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/profile/profile_final22.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\profile\\profile_final22.py",
+      "bytes": 22011,
+      "sha256": "23043c22b30dbb9664d30fc12ce994f049918ae9573af86f02394fb7af9cb759",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/profile/serial-cpu-baseline-plan.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\profile\\serial-cpu-baseline-plan.json",
+      "bytes": 919,
+      "sha256": "dc4bcc551146cecc5a278deb0a06e4b04c8d763ab74892ce4981b1789d68de3a",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/profile/serial-cpu-candidate-plan.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\profile\\serial-cpu-candidate-plan.json",
+      "bytes": 920,
+      "sha256": "de81b35773045695fba712fad34264ffbbedf84d02eece5840b1a9f7a8f6a98a",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/profile/test_profile_final22.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\profile\\test_profile_final22.py",
+      "bytes": 8523,
+      "sha256": "f1c1c08797043d944bedc6ef451abe4f58152e692a7092c102cf1fcf6e883def",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original-controls/relocation-development-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\relocation-development-v1.json",
+      "bytes": 2190,
+      "sha256": "f668c7bd33c4f43b0dcdaed5b201b36e9e28e206fefc9005460ec9e22075b7a9",
+      "source_commit": null,
+      "source_attribution": "Exact ignored quiet2 controller/preflight/relocation checkpoint; original preparation/smoke/development source headers govern attribution.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-four-r1/child.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-four-r1\\child.log",
+      "bytes": 226,
+      "sha256": "a22ebf1c0b8d4ca0311fb0ec990b9d2ea38f28feda05bca404fcc3b8684ebe68",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-four-r1/native-profile-admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-four-r1\\native-profile-admission.json",
+      "bytes": 278,
+      "sha256": "ccceba87284724b3467b8fe6dae4cb1795d2a0bb5d1d77e8458765551d2f254d",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-four-r1/native-profile-origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-four-r1\\native-profile-origins.json",
+      "bytes": 41631,
+      "sha256": "2c0f769d220ed08ba876a4d8b87ba66668159881411dc6f886815c3518a56ae8",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-four-r1/native-profile-ownership.audit-crosscheck.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-four-r1\\native-profile-ownership.audit-crosscheck.json",
+      "bytes": 500,
+      "sha256": "6f95712c6c8cb1de22b53da8270927de35df02388473bcd4b5ede2a2f7b7ba77",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-four-r1/native-profile-ownership.created.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-four-r1\\native-profile-ownership.created.json",
+      "bytes": 663,
+      "sha256": "d88f6dfabe0ff14d576acaa437e3849887f45957a2efcd95a1803f4bff92e020",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-four-r1/native-profile-ownership.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-four-r1\\native-profile-ownership.json",
+      "bytes": 819,
+      "sha256": "b22c4545429d104367aefccceb0a0f17c883052c521f8b977744735fe8b6a49b",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-four-r1/native-profile/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-four-r1\\native-profile\\migration.log",
+      "bytes": 22876,
+      "sha256": "b2f8b856f7d5850299991f692aa25ba1caab23ad6bbf43adb6429b88eca9584b",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-four-r1/native-profile/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-four-r1\\native-profile\\result.json",
+      "bytes": 475668,
+      "sha256": "a72df238992f5722aa3ac4a13264c2b65ee63f58cbebc1767acfad9f243cfa44",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-four-r1/profile.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-four-r1\\profile.json",
+      "bytes": 16332,
+      "sha256": "4f109b8a019f644c9ac59ddaa49b6650a248aca80a45690254f221ab47c47db9",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-serial-r1/child.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-serial-r1\\child.log",
+      "bytes": 228,
+      "sha256": "378d2c62cbf635644339192334ccfa6ee52b630c53635cb58dc4a7b343c48bd1",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-serial-r1/native-profile-admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-serial-r1\\native-profile-admission.json",
+      "bytes": 278,
+      "sha256": "f79abdb349d92329444022d6f60b1f5680e5ae35d77c2c6befe1f7b7b0fc5d39",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-serial-r1/native-profile-origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-serial-r1\\native-profile-origins.json",
+      "bytes": 41631,
+      "sha256": "ad51e5cd044ceb42799a836b6ffdfa25c90a4a1528c1c20f31cd723146427bac",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-serial-r1/native-profile-ownership.audit-crosscheck.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-serial-r1\\native-profile-ownership.audit-crosscheck.json",
+      "bytes": 500,
+      "sha256": "9e6c6bff7534868631dde7cf3e31d5d39da1a68ec2a407920f9e801d4a92a882",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-serial-r1/native-profile-ownership.created.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-serial-r1\\native-profile-ownership.created.json",
+      "bytes": 663,
+      "sha256": "e23f98afb6961e4fbdea92a0805c61f702ceddae6292d8df6ed8722151846eca",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-serial-r1/native-profile-ownership.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-serial-r1\\native-profile-ownership.json",
+      "bytes": 819,
+      "sha256": "70343cb6064872771f94e95d23113fca72c3310c36f0676f04e4e54d855f1454",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-serial-r1/native-profile/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-serial-r1\\native-profile\\migration.log",
+      "bytes": 22876,
+      "sha256": "b2f8b856f7d5850299991f692aa25ba1caab23ad6bbf43adb6429b88eca9584b",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-serial-r1/native-profile/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-serial-r1\\native-profile\\result.json",
+      "bytes": 925136,
+      "sha256": "6ffc8cf9d835320865c354b26ec5448b6c144d678235f5585391b01b74d05347",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/baseline-serial-r1/profile.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\baseline-serial-r1\\profile.json",
+      "bytes": 16336,
+      "sha256": "eccd43844ce7c3ae5da8542e2781af750574209c4ba38dfd829d2cce9376edcb",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-four-r1/child.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-four-r1\\child.log",
+      "bytes": 227,
+      "sha256": "d214084402bd2d2e1a1627404b788b218b5b026b3031faca626f126b43db80bd",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-four-r1/native-profile-admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-four-r1\\native-profile-admission.json",
+      "bytes": 278,
+      "sha256": "53ed28977a4aa6506fa2efbade0f64af8da5d81970d1b9af724dca4e541d86b3",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-four-r1/native-profile-origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-four-r1\\native-profile-origins.json",
+      "bytes": 43024,
+      "sha256": "23bc8638d0497d704fba46244d1d03fc6173d6594c0a41a0ebc3bedc91bc6716",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-four-r1/native-profile-ownership.audit-crosscheck.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-four-r1\\native-profile-ownership.audit-crosscheck.json",
+      "bytes": 500,
+      "sha256": "73f4cb85c933cf5d18c708d2fa7d0ac14ed161b73aa70fd348dee6aa715c5884",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-four-r1/native-profile-ownership.created.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-four-r1\\native-profile-ownership.created.json",
+      "bytes": 663,
+      "sha256": "31ba956d675066a808e1ca174d6703013c3d3635bd15a93403e2d695c885dde5",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-four-r1/native-profile-ownership.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-four-r1\\native-profile-ownership.json",
+      "bytes": 819,
+      "sha256": "c7f613484bc85fb5a385f6670e242c275fe217704dbd90d4e1cd0b74f74c1187",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-four-r1/native-profile/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-four-r1\\native-profile\\migration.log",
+      "bytes": 23616,
+      "sha256": "cbba54d8da1909bd5edb8c8279ef886e13f674a78fd06fc1268c1f945b4f76af",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-four-r1/native-profile/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-four-r1\\native-profile\\result.json",
+      "bytes": 475887,
+      "sha256": "346eda54081990230e4a60da2e152db59d58eaaf82c8ceff9db7a5aed1365d74",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-four-r1/profile.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-four-r1\\profile.json",
+      "bytes": 16383,
+      "sha256": "d973701038afbbe951334628d441805e6262a31e6a3f8709c9e8c64546bafaab",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-serial-r1/child.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-serial-r1\\child.log",
+      "bytes": 229,
+      "sha256": "0a6418897dc35d048b0ef12dd5d4b18f963d479a8266830abaf75222fbbd3d84",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-serial-r1/native-profile-admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-serial-r1\\native-profile-admission.json",
+      "bytes": 278,
+      "sha256": "ae8925a5e04b36a7619100bbd5c21c56b1e5e7f46ff4f47436d6f1e0672a0052",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-serial-r1/native-profile-origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-serial-r1\\native-profile-origins.json",
+      "bytes": 43024,
+      "sha256": "766d05a36172c2d8fa79e7f14e4f2d8e4c302c657cf965f08f7275e7551084a9",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-serial-r1/native-profile-ownership.audit-crosscheck.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-serial-r1\\native-profile-ownership.audit-crosscheck.json",
+      "bytes": 500,
+      "sha256": "af82424c36df8399961ab1967958407afd1def1d3b1a2008131d3553d4dff115",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-serial-r1/native-profile-ownership.created.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-serial-r1\\native-profile-ownership.created.json",
+      "bytes": 663,
+      "sha256": "4309247a7e35ca97cae70dce7304899b34253cacc8f9a084064314c4be3066ed",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-serial-r1/native-profile-ownership.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-serial-r1\\native-profile-ownership.json",
+      "bytes": 819,
+      "sha256": "77fbaf5ef816ce1ab8a9db92c64f7fc5db15175d22e7b39d39b31dee3986fdc5",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-serial-r1/native-profile/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-serial-r1\\native-profile\\migration.log",
+      "bytes": 23616,
+      "sha256": "cbba54d8da1909bd5edb8c8279ef886e13f674a78fd06fc1268c1f945b4f76af",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-serial-r1/native-profile/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-serial-r1\\native-profile\\result.json",
+      "bytes": 891139,
+      "sha256": "ac97d4ca5595bd77fe2eb74d2493390560bcb6ac28c210a5517c3bf2d44fe74c",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "original/candidate-serial-r1/profile.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-20261012\\candidate-serial-r1\\profile.json",
+      "bytes": 16390,
+      "sha256": "c981e66117e9c0b5d8d0020acc58bad37efed500315e9121380a4a25e87fbf6a",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Completed original diagnostic; own actual runtime/source/PID/CID headers retained; not current publication-head performance acceptance.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0001-physical-baseline-server_query_profile.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0001-physical-baseline-server_query_profile.py",
+      "bytes": 3080,
+      "sha256": "febd2ca7793376aa3ef9f7fb1ea0cd977c813ae103eca9cca7019982b4f48fad",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0002-physical-baseline-enterprise_posting_profile.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0002-physical-baseline-enterprise_posting_profile.py",
+      "bytes": 7731,
+      "sha256": "bd6ce80b935df0e79e291e8109a49f336235be047d6af865b424bcb2e490eb20",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0003-physical-baseline-passwords.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0003-physical-baseline-passwords.py",
+      "bytes": 1596,
+      "sha256": "01a23c84aaf5217a818673d6abf8ecb474e3ad011649547814a49a52959ecdcc",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0004-physical-baseline-postgres_identity.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0004-physical-baseline-postgres_identity.py",
+      "bytes": 32874,
+      "sha256": "a5a4c8d2134de381f0ac6d519d46193c2f93343ad73d8891be0052f0b1fc0b1d",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0005-physical-baseline-postgres.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0005-physical-baseline-postgres.py",
+      "bytes": 27133,
+      "sha256": "6390f50ea8a10ca3add06860029b1573f6a50bc19ad43adf6d9faccf059123fc",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0006-physical-baseline-postgres_finance_core.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0006-physical-baseline-postgres_finance_core.py",
+      "bytes": 100967,
+      "sha256": "888ca74d4bc647b6491293be0a87bff1cb3ec4c4abebfe8f048bbb9c71ed533e",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0007-physical-baseline-postgres_finance_posting.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0007-physical-baseline-postgres_finance_posting.py",
+      "bytes": 44342,
+      "sha256": "bdeb8e06ff6a9a38b6c1d457f80540a3ebd2230dadd321a3f0fc78b74f61d2ea",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0008-physical-baseline-postgres_finance_scope.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0008-physical-baseline-postgres_finance_scope.py",
+      "bytes": 34068,
+      "sha256": "a9f162df8831abebb8ef683fe7509fa02a6329e53dfef1371e156fec80d95448",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0009-physical-baseline-test_postgres_inventory_receipt_posting.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0009-physical-baseline-test_postgres_inventory_receipt_posting.py",
+      "bytes": 50225,
+      "sha256": "556a8b624372a53b340e58eca7c907a144e7cf01d6bce2380594f2682ddb6d08",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0010-physical-baseline-0095_postgres_finance_scope.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0010-physical-baseline-0095_postgres_finance_scope.py",
+      "bytes": 37349,
+      "sha256": "6db84e279ecc0cad97bfdb53af95529c0105d4c906289c0fc3eb22ac445f5850",
+      "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0011-physical-candidate-server_query_profile.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0011-physical-candidate-server_query_profile.py",
+      "bytes": 3080,
+      "sha256": "febd2ca7793376aa3ef9f7fb1ea0cd977c813ae103eca9cca7019982b4f48fad",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0012-physical-candidate-enterprise_posting_profile.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0012-physical-candidate-enterprise_posting_profile.py",
+      "bytes": 7731,
+      "sha256": "bd6ce80b935df0e79e291e8109a49f336235be047d6af865b424bcb2e490eb20",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0013-physical-candidate-passwords.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0013-physical-candidate-passwords.py",
+      "bytes": 1596,
+      "sha256": "01a23c84aaf5217a818673d6abf8ecb474e3ad011649547814a49a52959ecdcc",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0014-physical-candidate-postgres_identity.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0014-physical-candidate-postgres_identity.py",
+      "bytes": 32874,
+      "sha256": "a5a4c8d2134de381f0ac6d519d46193c2f93343ad73d8891be0052f0b1fc0b1d",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0015-physical-candidate-postgres.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0015-physical-candidate-postgres.py",
+      "bytes": 27133,
+      "sha256": "6390f50ea8a10ca3add06860029b1573f6a50bc19ad43adf6d9faccf059123fc",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0016-physical-candidate-postgres_finance_core.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0016-physical-candidate-postgres_finance_core.py",
+      "bytes": 102118,
+      "sha256": "911214c5290fa0549fa7204001ce3e6bf47b604c056e9406920abd19a1bd4cae",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0017-physical-candidate-postgres_finance_posting.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0017-physical-candidate-postgres_finance_posting.py",
+      "bytes": 45648,
+      "sha256": "113e6893e182dfa303fcac90ddc66e0cb2dddb7971d18cd37859c8fc7866c706",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0018-physical-candidate-postgres_finance_scope.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0018-physical-candidate-postgres_finance_scope.py",
+      "bytes": 34068,
+      "sha256": "a9f162df8831abebb8ef683fe7509fa02a6329e53dfef1371e156fec80d95448",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0019-physical-candidate-test_postgres_inventory_receipt_posting.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0019-physical-candidate-test_postgres_inventory_receipt_posting.py",
+      "bytes": 50225,
+      "sha256": "556a8b624372a53b340e58eca7c907a144e7cf01d6bce2380594f2682ddb6d08",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "physical-originals/0020-physical-candidate-0095_postgres_finance_scope.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\0020-physical-candidate-0095_postgres_finance_scope.py",
+      "bytes": 37349,
+      "sha256": "6db84e279ecc0cad97bfdb53af95529c0105d4c906289c0fc3eb22ac445f5850",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Selected actual runtime physical bytes; LF-normalized equality to exact original Git blob verified. Not a live full-tree rescan.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "read-only-tools/audit_wave5_quiet2_discovery.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\audit_wave5_quiet2_discovery.py",
+      "bytes": 24848,
+      "sha256": "127dc226d3430d14e14ed127a6107639dee0b31233edf27d580e282ea0806275",
+      "source_commit": null,
+      "source_attribution": "Exact stdlib evidence review/builder checkpoint; no application/DB/network/workload imports/calls.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "read-only-tools/build_wave5_quiet2_discovery_capsule.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\build_wave5_quiet2_discovery_capsule.py",
+      "bytes": 15522,
+      "sha256": "44c2946d48ea6375f0a21e2d67d9094048a2e90e8069f566085abdb5b07ae2b0",
+      "source_commit": null,
+      "source_attribution": "Exact stdlib evidence review/builder checkpoint; no application/DB/network/workload imports/calls.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "read-only-tools/compare_wave5_quiet2_discovery.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\compare_wave5_quiet2_discovery.py",
+      "bytes": 11441,
+      "sha256": "d9e79a1ec5c887a63bdcfbb4269cc03e6e5612e02901ecded5550846a9c14f72",
+      "source_commit": null,
+      "source_attribution": "Exact stdlib evidence review/builder checkpoint; no application/DB/network/workload imports/calls.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "reference-only/prior-native10k-extension.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-public-capsule-20261012-v1\\capsule-index-extension-native10k-62-20261012-v1.json",
+      "bytes": 15050,
+      "sha256": "0c1cfdb6775f3bb2a4f86cfeede046872100afb47fa9d399f2d21c0d2471e25e",
+      "source_commit": null,
+      "source_attribution": "Original existing capsule reference index only; no earlier archives embedded or rewritten, no historical acceptance rebinding.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    },
+    {
+      "entry_name": "source-bindings.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1\\source-originals\\source-bindings.json",
+      "bytes": 15087,
+      "sha256": "63c4b844b8d02548131ba5bf3219831c502136b949003df510ae5223bc1de07c",
+      "source_commit": null,
+      "source_attribution": "Selected physical/Git source custody; original full-tree fingerprints retained unchanged.",
+      "raw_header_policy": "Original byte-exact headers and source scopes unchanged."
+    }
+  ]
+}

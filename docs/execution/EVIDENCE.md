@@ -1,5 +1,67 @@
 # ReconForge Execution Evidence Log
 
+## Corrective source publication: exact new evidence and pending full gate (2026-10-12)
+
+Actual10K59-input capsuleZIP18f27111/index61eb967e is independently verified,
+as are quiet2 four-profile116-input ZIP3dc3b141/index187460fe and failed V5
+80-input ZIPb2466af3/indexfaed5126. The public4c failure/staged-repair62-input
+ZIP15e65cfc/indexaff4d945 preserves41successful/2failed/1dependent skipped CI
+jobs and the actual5-job manual Security run. All earlier capsules remain intact.
+The corrected test1ea1f8e0 passed264 targeted cases/XMLecac0a54; independent
+reviewc0694a0b. ROOT byte-copy proof7f0a0bbc closes six new diagnostic/negative
+files plus raw inventory JSON85b6173b/MD51a11672. These facts are source-bound;
+fresh complete corrective-head CI/package/security acceptance remains pending.
+The raw inventory MD contains original doubled carriage returns. Preserve its
+exact51a11672 bytes and raw JSON in the three-member lossless original-inventory-v2
+ZIP7d2b978d/index5976e5e6. The readable MD9919e51e changes line endings only;
+its normal whitespace gate remains enabled. Only raw JSON has the narrow original
+CRLF preservation attribute. The initial copy proof refers to the raw MD before
+this documented presentation transform; raw custody remains the sealed ZIP.
+[Current closure and limits](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md)
+retains each source, oracle, comparison refusal and deferred measurement decision.
+
+
+## Actual10K capacity and additional authorized local diagnosis (2026-10-12)
+
+Corrected62/current22 run38252859442 passed10000native effects+20separate warmups,
+30300reads and independent5028151631minor-unit equality. Two independent `-I`/
+`-I -O` audits and new59-input/60-member lossless capsule close source/PID/CID/
+normal cleanup. Posting3578.904546sec/TPS2.794151 is standalone capacity; no fair
+comparison, new10K raw-journal export/isolation or monetary cost is inferred.
+Previous15capsules and original f04 zero-business failure remain unchanged.
+The additional local quiet window is now explicitly authorized. Root isolated
+accepted22, retained exact harness/wrappers/oracles and began bounded diagnosis
+following actual5.86/5.47/3.66percentCPU/AC admission. All earlier pending statements
+below retain their checkpoint subjects. Publication4c fullCI failed its new test
+contracts;264targeted corrected cases and independent review passed. Corrected
+source full hosted acceptance remains pending. See [actual closure](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md).
+
+## Publication4c gate failures and portable test correction (2026-10-12)
+
+The actual publication head `4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91`
+[CI38257659454](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38257659454)
+failed: Python3.11 reported5543passed/2failed/663inherited prerequisite skips;
+Python3.12 reported5544passed/1failed/663inherited prerequisite skips.
+The failures were in the newly published diagnostic controller test contracts:
+a shared-process `sys.modules` assertion depended on full-suite import order,
+and the historical AST digest included3.12's empty `type_params` field absent
+from3.11. Original failure logs remain retained; this gate is not a success.
+
+Correct only that test file: restore temporary diagnostic-module registration,
+verify import independence in a fresh `-I` subprocess, and deep-copy ASTs to add
+only an absent legacy empty generic field. Preserve all original0756 hash pins,
+nonempty generic parameters, body differences and original AST objects. Three
+adversarial function/async/class cases retain those refusal boundaries. No
+application, migration, API, Studio, controller or financial oracle bytes change.
+The exact combined targeted gate passed264cases/0failures/errors/skips, with Ruff
+and diff checks. Full corrected-source hosted acceptance remains pending.
+Actual4c Docker/CodeQL and manual Security38258765073 succeeded separately;
+manual Security executed all5jobs, with0Critical/0High/9Medium/1Negligible image
+findings and65/68 license metadata coverage; legal compatibility is unassessed.
+Actual corrected62/current22 10K run38252859442 is still in progress; no completed
+10K population or fair performance gain is inferred. Previous22 acceptance and
+all original negative measurements below keep their historical source subjects.
+
 ## Actual22 hosted acceptance, raw1K comparison and isolated cloud experiment (2026-10-12)
 
 [Final22 closure](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md) links

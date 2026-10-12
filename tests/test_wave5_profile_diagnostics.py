@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import copy
 import hashlib
 import importlib.util
 import json
@@ -19,8 +20,8 @@ SCRIPT = Path(__file__).resolve().parents[1] / ".github/scripts/benchmark_wave5_
 spec = importlib.util.spec_from_file_location("wave5_diagnostic_contract", SCRIPT)
 assert spec is not None and spec.loader is not None
 d = importlib.util.module_from_spec(spec)
-sys.modules[spec.name] = d
-spec.loader.exec_module(d)
+with patch.dict(sys.modules, {spec.name: d}):
+    spec.loader.exec_module(d)
 
 
 def capacity_fixture() -> tuple[dict, dict, list[str], Path]:
@@ -440,7 +441,23 @@ def test_fixed_modes_image_common_harness_bounds_and_independence() -> None:
         assert command[command.index("--workers") + 1] == str(workers)
         assert all(flag in command for flag in flags)
         assert command[command.index("--postgres-image") + 1] == d.IMAGE
-    assert "reconforge.infrastructure.postgres_finance_core" not in sys.modules
+
+
+def test_controller_import_is_independent_in_a_fresh_isolated_interpreter() -> None:
+    code = """
+import importlib.util
+import sys
+from unittest.mock import patch
+spec = importlib.util.spec_from_file_location('isolated_wave5_controller', sys.argv[1])
+module = importlib.util.module_from_spec(spec)
+with patch.dict(sys.modules, {spec.name: module}):
+    spec.loader.exec_module(module)
+assert not any(name == 'reconforge' or name.startswith('reconforge.') for name in sys.modules)
+assert spec.name not in sys.modules
+"""
+    result = subprocess.run([sys.executable, "-I", "-c", code, str(SCRIPT)], capture_output=True, text=True,
+                            check=False, timeout=30)
+    assert result.returncode == 0, result.stderr
 
 
 def test_large_journal_selection_has_nine_exact_balanced_fresh_runs() -> None:
@@ -591,14 +608,43 @@ def test_bare_effect_ids_may_repeat_in_distinct_native_tenants() -> None:
 ORIGINAL0756_FUNCTION_AST_SHA256 = {'require': 'de7bc869a7af461cd9d915c7f6c4870ecfb6ab48c1f702bb8a10116f4e4311c2', 'digest': '5c051b2c2a3d5a7a5503525cb1853c351d6d2064182799fb21ac4d78f26b6bd9', 'unique': '0e3629232d76290767682a634d18ea33e672648d88bc2fe9cc11cc43115a76da', 'read': 'dbeeb8078b327c4932608c0368bb0f88c6fcb385c0d08f0a8cbf52bfea280eaf', 'save': '883c4a4131943d5fa14d30e961650b810d1507d7b54d47c3d830aa6cc5bdca8b', 'checked': 'f08d6c8f445423286baeacdb0e8d183845b9294a29f746cb09d605f100bfc458', 'source': 'dbee6040be741f9964260f4c324ee0b5503640d0168c940c56d4b49fe7092dcb', 'projection_tree': 'eb18c6e0950261af9c082b464750f22acd61090baf6a1ced1b8cc1e51601e568', 'identity': 'c563f8b142c1f1e5501d4a890b30caaa25a0887c80e7dbfc8132ba11e7b9e8b3', 'numeric': '95b05ab87d252fc9a468827e30d4efdef1627297993a0cb7be486eb78e0527da', 'exact_ints': 'cefd51a312c19d5fd3c37522635141b9c0686de33fe72e803350826a7f91f4a4', 'percentile': '35a0f976a2b83c4e56c24dabb5083b22c55c5280df831871c95dfd82f09ae2ce', 'verify_snapshot': '24d5939a4bafabb89504d650c595196876711c77fbc394fae4e74f803b3103b2', 'verify_financial': '503da418f6cd835655e5da3f7b911a59f2ad61dab295e622444a73c9e5c0e7d3', 'docker_words': '0f000dbbe66c60fbde2b835e364f5239c77888fb07dd67ac5897b4f1c031a80b', 'verify_container': '16f4438d3ae3a87b745655a7b4f2c502526f10daebba72e34ced6a77e1771ef2', 'install_observer': '4900aaeb833e6a85b707fb7a36c88939ff833e2641d71ceb2fd29e0935ae8245', 'child': 'dfc643e33fe1e87ee73ddd9e675b3c74e33973c51bbabf725a452cffbeda1a7e', 'cleanup': '4072fd1f3b6f9a39b91e2647a2a3dc28b840cefc3c0a10842c44ff3fa338f9ee', 'stop': '9d84500f017d6aba69ec98d316ae3629798069a85aadcfa7f5f0cabe2da850eb', 'arguments': '5e47649e2c9163ac03dd8483809d32a0fe7ab40171fe5d25cbcc94f761a7b24c', 'load_ledger_helper': '08faa40cb8547b2a77fb1a04ec5d2c142b9f0e0aee7751de0b6ab0d88a441ffc', 'schedule': '6333383f1bd770965e27efda7918bcd0bf3c651c4671fd78d0fb6b2c843ee6eb', 'verify_large_population': 'f675f8df3f75c7f65d4b15a29d9dfc0512d888192b704c46aa7e62a956215b4b', 'one': 'f5ea795a1c55e7f6edaa9e0bdf265041636b7542c3fc4f9d687a1a6763da42d6'}
 
 
+def portable_ast_sha256(node: ast.AST) -> str:
+    """Retain the original3.12 pins;3.11 has no generic type-parameter field."""
+    normalized = copy.deepcopy(node)
+    for child in ast.walk(normalized):
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and "type_params" not in child._fields:
+            child._fields = (*child._fields, "type_params")
+            child.type_params = []
+    return hashlib.sha256(ast.dump(normalized, include_attributes=False).encode()).hexdigest()
+
+
+@pytest.mark.parametrize("source", ["def f():\n    return 1", "async def f():\n    return 1", "class F:\n    pass"])
+def test_portable_ast_only_admits_the_absent_empty_legacy_generic_field(source: str) -> None:
+    original = ast.parse(source).body[0]
+    legacy = copy.deepcopy(original)
+    legacy._fields = tuple(field for field in legacy._fields if field != "type_params")
+    if hasattr(legacy, "type_params"):
+        del legacy.type_params
+    explicit = copy.deepcopy(legacy)
+    explicit._fields = (*explicit._fields, "type_params")
+    explicit.type_params = []
+    assert portable_ast_sha256(legacy) == portable_ast_sha256(explicit)
+    explicit.type_params = [ast.Name(id="UnapprovedGeneric", ctx=ast.Load())]
+    assert portable_ast_sha256(legacy) != portable_ast_sha256(explicit)
+    changed_body = copy.deepcopy(legacy)
+    changed_body.body = [ast.Raise(exc=ast.Constant(value="changed"), cause=None)]
+    assert portable_ast_sha256(legacy) != portable_ast_sha256(changed_body)
+    assert "type_params" not in legacy._fields and explicit.type_params
+
+
 def test_all_original_profile_large_and_linux_ownership_functions_remain_ast_identical() -> None:
     functions = {node.name: node for node in ast.parse(SCRIPT.read_bytes()).body if isinstance(node, ast.FunctionDef)}
     for name, expected in ORIGINAL0756_FUNCTION_AST_SHA256.items():
-        assert hashlib.sha256(ast.dump(functions[name], include_attributes=False).encode()).hexdigest() == expected, name
+        assert portable_ast_sha256(functions[name]) == expected, name
     original_main = functions["main"]
     original_main.body = [node for node in original_main.body if not (
         isinstance(node, ast.Expr) and isinstance(node.value, ast.Call)
         and any(isinstance(arg, ast.Constant) and arg.value == "--current-capacity-entries" for arg in node.value.args)
         or isinstance(node, ast.If) and isinstance(node.test, ast.Compare)
         and isinstance(node.test.left, ast.Attribute) and node.test.left.attr == "current_capacity_entries")]
-    assert hashlib.sha256(ast.dump(original_main, include_attributes=False).encode()).hexdigest() == '6a2312a6182d2fe83527f967472ce685d488c69d59d28934ca558f055d5e88da'
+    assert portable_ast_sha256(original_main) == '6a2312a6182d2fe83527f967472ce685d488c69d59d28934ca558f055d5e88da'

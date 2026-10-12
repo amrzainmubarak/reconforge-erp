@@ -1,5 +1,44 @@
 # ReconForge Execution Decisions Log
 
+## Corrective publication: preserve negative attempts and defer comparison (2026-10-12)
+
+Keep accepted22 application/migration/Studio trees unchanged. Correct only new
+portable diagnostic tests, preserving historical AST pins and financial guards.
+Publish independently byte-closed actual10K, four-profile and power-stopped V5
+capsules separately; never upgrade a posting-stage completion into a completed
+read/source/financial proof. Preserve the secondary shutdown error and unknown
+last-request outcome. Follow the human instruction to finish Wave5 hosted gates
+and schedule fair measurement later. Unrun CurrencyMemo and rejected137 stay
+outside this source. The all-countries completion inventory is a conditional
+program contract, not statutory support or authorization to bypass Wave5 acceptance.
+
+
+## Publication4c gate failures and portable test correction (2026-10-12)
+
+The actual publication head `4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91`
+[CI38257659454](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38257659454)
+failed: Python3.11 reported5543passed/2failed/663inherited prerequisite skips;
+Python3.12 reported5544passed/1failed/663inherited prerequisite skips.
+The failures were in the newly published diagnostic controller test contracts:
+a shared-process `sys.modules` assertion depended on full-suite import order,
+and the historical AST digest included3.12's empty `type_params` field absent
+from3.11. Original failure logs remain retained; this gate is not a success.
+
+Correct only that test file: restore temporary diagnostic-module registration,
+verify import independence in a fresh `-I` subprocess, and deep-copy ASTs to add
+only an absent legacy empty generic field. Preserve all original0756 hash pins,
+nonempty generic parameters, body differences and original AST objects. Three
+adversarial function/async/class cases retain those refusal boundaries. No
+application, migration, API, Studio, controller or financial oracle bytes change.
+The exact combined targeted gate passed264cases/0failures/errors/skips, with Ruff
+and diff checks. Full corrected-source hosted acceptance remains pending.
+Actual4c Docker/CodeQL and manual Security38258765073 succeeded separately;
+manual Security executed all5jobs, with0Critical/0High/9Medium/1Negligible image
+findings and65/68 license metadata coverage; legal compatibility is unassessed.
+Actual corrected62/current22 10K run38252859442 is still in progress; no completed
+10K population or fair performance gain is inferred. Previous22 acceptance and
+all original negative measurements below keep their historical source subjects.
+
 ## Preserve actual subjects and reject unproven performance changes (2026-10-12)
 
 Accept the bounded ME1/IC1/SRC5 operational contracts after actual final22 hosted

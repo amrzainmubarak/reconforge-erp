@@ -26,3 +26,6 @@ docs/execution/wave5-evidence/capsules/copy-verification.json whitespace=blank-a
 docs/execution/wave5-evidence/capsules/copy-verification-v2.json whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 docs/execution/wave5-evidence/capsules/copy-verification-v4.json whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 docs/execution/wave5-evidence/capsules/source-lineage-checkpoint.json whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+
+# Preserve the independently sealed inventory's original mixed/CRLF capture bytes.
+docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.json -text -eol whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

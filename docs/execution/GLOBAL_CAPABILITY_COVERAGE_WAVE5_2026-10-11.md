@@ -1,5 +1,30 @@
 # Wave5 capability and engineering gap matrix
 
+## Current corrective publication checkpoint (2026-10-12)
+
+The six-domain/five-guarantee [completion inventory](ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.md)
+records existing/partial/missing cycles with exact source searches, dependencies
+and evidence limits; [program contracts](GLOBAL_ENTERPRISE_PROGRAM_CONTRACTS_2026-10-12.md)
+define ownership and complete operating acceptance. All countries are the target;
+no activated statutory country pack is proven by this inventory. Wave5 corrected
+publication acceptance is pending; runtime remains exact accepted22. Actual10K
+single native capacity and four bounded profiles succeeded financially. The later
+V5 attempt failed on power loss with3complete/1interrupted/2unperformed; fair
+performance acceptance remains false. Competitor features are not treated as
+ReconForge uniqueness, and no noncomparable performance superiority is claimed.
+The official-source matrix below retains its original dated/source-bound claims.
+
+
+Current evidence addition2026-10-12: actual corrected62/current22 run38252859442
+independently verified10000native USD two-line posting cycles+20warmups/30300reads,
+5028151631minor-unit equality and source/owned cleanup. ObservedTPS2.794151 is
+single-population capacity, not comparative improvement, mixedERP/manufacturing
+or1000-line commercial-order capacity.100K/1M remain unexecuted. Actual4c hosted
+publication gate failed new controller test contracts; corrected264-case targeted
+gate passed and full corrected-source acceptance remains pending. Additional
+human-authorized local quiet diagnosis is underway. Prior benchmark, capability
+and official-source boundaries below remain unchanged.
+
 ## Additive actual22 acceptance update — 2026-10-12
 
 The final22 runtime gates have since passed44/44 CI jobs, CodeQL, Docker, all five

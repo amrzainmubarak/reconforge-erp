@@ -48,10 +48,10 @@ review-validated. A new early-DOM regression proved that passive same-plan
 invalidation could discard a valid proof. Before-paint committed subject binding
 now preserves identical refreshed records and rejects changed plan/seal/scope or
 session results. Nine actual-WebCrypto React cases and TypeScript passed; current
-hosted acceptance and affected FX HTTPS acceptance are pending. This newer UI
+hosted acceptance remains pending. This newer UI
 change does not relabel the earlier whole-web runtime packets. Root's subsequent
 integration checkpoint `b6fcf71d` reports 68 React files/452 cases without skips,
-plus TypeScript/build success; affected FX HTTPS remains pending at this checkpoint.
+plus TypeScript/build success. Actual b6fc five-stage FX HTTPS/populated restore subsequently passed119.047s, one browser with zero skipped/unexpected/flaky outcomes and clean unchanged source/web. Independent Fraction verification in normal/optimized isolated Python passes the exact reviewed0136 contract; the original0131 packet still passes. The actual newer FX evidence remains source-bound.
 
 The separately inspected PostgreSQL gate at
 `e8e2de24bf6311d67b46a9bfd3b025c1792c3474` passed **73 cases with zero failures,

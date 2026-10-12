@@ -1,5 +1,60 @@
 # Execution State
 
+## Wave5 integration and acceptance checkpoint (2026-10-12)
+
+Draft [PR131](https://github.com/amrzainmubarak/reconforge-erp/pull/131) remains
+stacked on accepted PR130 `6362724f2337a79c3d7569574f7bf9591a018524` and the
+129→124 dependency chain. Main and the primary checkout's two original dirty
+schema files remain unchanged. All new commits use Amr's author/committer identity.
+
+Implemented bounded cycles now have actual Studio/API/native financial and
+populated restore evidence: ME1 approved BOM→reservation→original FIFO issue→WIP→
+partial finished receipt/scrap; IC1 paired company books→partial settlement→native
+group elimination/report; SRC5 requisition→RFQ→quotation/selection→BPC purchase→
+partial receipt/AP/payments/release. The three complete original HTTPS/restore
+packets remain bound to `8513a9e2`; the cohesive PostgreSQL17.11 native gate at
+`e8e2de24` passed 73 cases with zero failures/errors/skips. Additive0136 restricts
+nine original inventory/FIFO tables; it does not rewrite financial history. The
+original tenant-global audit chain is explicitly disclosed as a workspace exception.
+
+The newer FX proof-lifecycle race was reproduced and fixed without bypassing
+actual cryptographic verification. On `b6fcf71d`, all68 Studio files/452 tests,
+TypeScript/build and actual five-stage FX HTTPS/populated restore passed. An
+independent Fraction reader admits exactly reviewed restore heads0131/0136 while
+retaining original catalog/RLS/population/effect/source-seal checks. The original
+reader's0136 refusal and both corrected/legacy isolated-Python outcomes remain
+retained. These results are source-bound, not relabelled as later HEAD executions.
+
+Actual `1a40bda0` hosted Python3.11/3.12 each passed5228 tests with663 inherited
+prerequisite skips; mandatory native pytest15 partitions/44 sessions completed1269
+selected tests with zero skip/xfail/xpass. Its web race failed, three other native
+partitions were cancelled, and dependent browsers/Docker did not execute. That
+whole CI run is failed. Actual manual Security38196678518 ran all five jobs,
+including image/SBOM, successfully on1a40. Current frozen-source hosted acceptance
+and package verification are separate pending gates.
+
+Nine lossless evidence capsules preserve488 files with flat SHA256 indexes;
+497 ZIP members including their embedded indexes were checked during copying.
+Native/failed-web log indexes explicitly identify safe retained byte spans and
+omitted authentication/DSN setup; complete remote log hashes/lengths remain pinned.
+No result, raw financial report, source header or earlier failed packet is rewritten.
+See [evidence checkpoint](WAVE5_ACCEPTANCE_CHECKPOINT_2026-10-12.md) and the
+[official capability matrix](GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md).
+
+Performance acceptance remains false. Three actual1K financial runs completed
+before the user confirmed external load; the six-run pair was stopped and retained,
+including seven actual power bookends and five unperformed bookends. The user
+requested completion of gates before agreeing on a quiet measurement window.
+The new three-cohort mixed API discovery completed126 successful requests and
+all per-cycle financial proofs, but its completion contract rejected legitimate
+local seeded-effect IDs reused across distinct tenants. Benchmark adapters now
+use the native `(tenant_id, id)` identity; fresh repeated runs remain required.
+No Wave5 throughput/resource gain, monetary transaction cost,100K/1M capacity,
+country-tax compliance or competitor superiority is established.
+
+The older Wave5 entries below are historical development checkpoints; this section
+supersedes their pending local statements without erasing prior failures.
+
 ## Wave5 active implementation (2026-10-11)
 
 2026-10-12 correction checkpoint: root5da0c4c1 passed66 actual native cases

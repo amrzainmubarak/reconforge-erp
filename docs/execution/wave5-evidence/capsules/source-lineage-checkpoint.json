@@ -1,0 +1,63 @@
+{
+  "schema_version": "wave5-source-lineage-checkpoint-v1",
+  "verified_at": "2026-10-12T03:50:24.785336+00:00",
+  "integrated_head_before_evidence_commit": "bbb3013d1590b5ec435cb6fec13f35fb55f75118",
+  "accepted_base": "6362724f2337a79c3d7569574f7bf9591a018524",
+  "dependencies": [
+    {
+      "pr": 124,
+      "commit": "dbad7b03fc7c276186c6d3a1c22f92ce14131e06",
+      "ancestor_of_integrated_head": true
+    },
+    {
+      "pr": 125,
+      "commit": "f24d48363817f36991239c436ae616f59d391918",
+      "ancestor_of_integrated_head": true
+    },
+    {
+      "pr": 126,
+      "commit": "21b4b8a23a4bf9c3e5562b51392fad896f39ef7d",
+      "ancestor_of_integrated_head": true
+    },
+    {
+      "pr": 127,
+      "commit": "34b9e7a5b2a7c4d8ae49b641a36de030a878d507",
+      "ancestor_of_integrated_head": true
+    },
+    {
+      "pr": 128,
+      "commit": "6995141426fea1670b64313ae1a5b2f1d6064f8f",
+      "ancestor_of_integrated_head": true
+    },
+    {
+      "pr": 129,
+      "commit": "e07bff2a2e8197b052d53454ea85c727f7c7518e",
+      "ancestor_of_integrated_head": true
+    },
+    {
+      "pr": 130,
+      "commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+      "ancestor_of_integrated_head": true
+    }
+  ],
+  "new_commit_identities": [
+    "Amr|Amr|143402681+amrzainmubarak@users.noreply.github.com|143402681+amrzainmubarak@users.noreply.github.com"
+  ],
+  "financial_python_and_migrations_equal_8513": true,
+  "financial_python_tree": "e4cc01681904fbd06b8ab4de9bf305038aa5b1d7",
+  "primary_head": "6995141426fea1670b64313ae1a5b2f1d6064f8f",
+  "primary_main": "b61ea56bb9c135fda12546e173795af3c243e4fb",
+  "protected_original_files": [
+    {
+      "file": "reconforge/infrastructure/postgres_fixed_assets_schema.py",
+      "sha256": "947fe0b9d75f528225200aaadb3bb4505cc6ca438201f64be2c7e4321005ae13",
+      "unchanged": true
+    },
+    {
+      "file": "reconforge/infrastructure/postgres_landed_cost_schema.py",
+      "sha256": "a65fd766f4082f9e92ad7fc663e496681ed67bf2055e7e074f3ddd6920ff3263",
+      "unchanged": true
+    }
+  ],
+  "later_final_head_check_required": true
+}

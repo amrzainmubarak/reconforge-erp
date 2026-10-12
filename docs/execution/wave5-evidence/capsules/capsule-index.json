@@ -1,0 +1,128 @@
+{
+  "schema_version": "reconforge-flat-evidence-capsule-index-v1",
+  "capture_for_root_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+  "capsules": [
+    {
+      "file_name": "wave5-wire-independent-native-retained-v1.zip",
+      "sha256": "c37112e85881c1576755ff9c60223132e1d23e3cefb631020c743ff66b7c6be7",
+      "bytes": 4882321,
+      "file_count": 175,
+      "raw_bytes": 14968839,
+      "index_name": "wave5-wire-independent-native-retained-v1.index.json",
+      "index_sha256": "4c11e23ee0d45bf9ad037817f36a93e3d3fb187755e85fd4487b7a9b3899fb71",
+      "coverage": {
+        "final_wire_source": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+        "retained_wire_stages": 5,
+        "native_runs": [
+          {
+            "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+            "accepted": true,
+            "counts": {
+              "tests": 66,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+            "accepted": false,
+            "counts": null
+          },
+          {
+            "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+            "accepted": true,
+            "counts": {
+              "tests": 7,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "source_commit": "e8e2de24bf6311d67b46a9bfd3b025c1792c3474",
+            "accepted": true,
+            "counts": {
+              "tests": 73,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          }
+        ],
+        "financial_proofs": "Original and restored ME/IC/SRC evidence retained; no synthetic replacement of actual results."
+      }
+    },
+    {
+      "file_name": "wave5-profiles-interrupted-pair-12fe-v1.zip",
+      "sha256": "4fc20313342188c5669ee1e883372b2cdd6c52ea4790b423bc9ef4ce75bd78e9",
+      "bytes": 588178,
+      "file_count": 24,
+      "raw_bytes": 3738455,
+      "index_name": "wave5-profiles-interrupted-pair-12fe-v1.index.json",
+      "index_sha256": "21cf55f2992899086dbaa0f290823192cff622ea12b44acb3ca7ac1be8d5afbf",
+      "coverage": {
+        "completed_financial_runs": 3,
+        "actual_bookend_files": 7,
+        "scheduled_bookends": 12,
+        "unperformed_bookends": 5,
+        "incomplete_run": "2-baseline; migration/partial artifacts preserved",
+        "fair_comparison_admitted": false
+      }
+    },
+    {
+      "file_name": "wave5-security-diagnostics-git-mirror-failures-v1.zip",
+      "sha256": "3e331ee8d1376a791e4228022f5a2b7df7ca5f26eaa521f1fe229a37918ab72f",
+      "bytes": 1267770,
+      "file_count": 113,
+      "raw_bytes": 4203031,
+      "index_name": "wave5-security-diagnostics-git-mirror-failures-v1.index.json",
+      "index_sha256": "5f687f665b1938f946fba98f66f209dcd5f604d423decdd6641df7fd9c167e46",
+      "coverage": {
+        "failed_history_findings": 166,
+        "independently_proven_source_blobs": 83,
+        "closed_review_diagnostic_commit": "52d798b4ed7747f5931139ad126bc7d48c1f6a4f",
+        "exact_git_mirror_objects": [
+          236,
+          48
+        ]
+      }
+    },
+    {
+      "file_name": "wave5-source-archive-verifications-8513-1a40-v1.zip",
+      "sha256": "90da9c492913be50ee0fb46fb43d56a8bf8d1d412dbd9c7c46071f5d33d0890d",
+      "bytes": 614765,
+      "file_count": 4,
+      "raw_bytes": 2456503,
+      "index_name": "wave5-source-archive-verifications-8513-1a40-v1.index.json",
+      "index_sha256": "466bd34cb4a3b504359c4b093e9979b7fd3e65e569eec3536c9f8a652499e8a4",
+      "coverage": {
+        "accepted_verification_sources": [
+          "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+          "1a40bda0754664be88932c33b0afd7cb1c05b383"
+        ],
+        "binary_build_products": "Original wheel/sdist files remain in root output; their published fingerprints are preserved in original verification records."
+      }
+    },
+    {
+      "file_name": "wave5-root-security-1a40-38196678518-v1.zip",
+      "sha256": "47235b63b71e3b8f18bfdb55a9acbea3d908abe66446c238252892636b74b73e",
+      "bytes": 894578,
+      "file_count": 14,
+      "raw_bytes": 2504578,
+      "index_name": "wave5-root-security-1a40-38196678518-v1.index.json",
+      "index_sha256": "2e5a072a00a8e4db9269ea0dc5e195f577f976c472e138e6679bab1582bea629",
+      "coverage": {
+        "run_id": 38196678518,
+        "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+        "all_five_jobs": "success",
+        "actual_history_findings": 0,
+        "actual_tree_findings": 0,
+        "final_overall_ci": "Pending other gates; web failure separately retained by root."
+      }
+    }
+  ],
+  "total_capsule_bytes": 8247612,
+  "raw_byte_verification": "Every ZIP member compared byte-for-byte with original input; input hashes rechecked after assembly.",
+  "original_sources_unchanged": true
+}

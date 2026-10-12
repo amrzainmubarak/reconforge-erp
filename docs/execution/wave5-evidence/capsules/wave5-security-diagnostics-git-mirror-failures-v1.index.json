@@ -1,0 +1,1052 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-security-diagnostics-git-mirror-failures-v1.zip",
+  "capture_for_root_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "failed_history_findings": 166,
+    "independently_proven_source_blobs": 83,
+    "closed_review_diagnostic_commit": "52d798b4ed7747f5931139ad126bc7d48c1f6a4f",
+    "exact_git_mirror_objects": [
+      236,
+      48
+    ]
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 113,
+  "raw_bytes": 4203031,
+  "records": [
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/api-failure-1791731066528810300.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\api-failure-1791731066528810300.json",
+      "bytes": 557,
+      "sha256": "d4ba9d5901fc2f19ced2a754a4daef1f4092f98ba91877a896b03aaace9b20c3",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/api-failure-1791733898645449500.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\api-failure-1791733898645449500.json",
+      "bytes": 565,
+      "sha256": "6397d58a1303ec47177021c5d991b9d85d4e83ac4a09aa548d1d11ca943456f0",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/api-failure-1791734427469397900.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\api-failure-1791734427469397900.json",
+      "bytes": 565,
+      "sha256": "6397d58a1303ec47177021c5d991b9d85d4e83ac4a09aa548d1d11ca943456f0",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/api-failure-1791734508104029400.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\api-failure-1791734508104029400.json",
+      "bytes": 565,
+      "sha256": "9d485964d61aabbde8782c6c25513842c3dae2d0e94ad0374ea25dd5cae64b83",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/api-failure-1791737311727344800.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\api-failure-1791737311727344800.json",
+      "bytes": 346,
+      "sha256": "4b8009fe0f6af4ea72af7cc723e9c06f18b7307ed9395879bbec991f4caab5df",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/dry-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\dry-run.json",
+      "bytes": 339,
+      "sha256": "7f81f6939616969491f39292f41bd1daffe318092aecdff22f393866c967b743",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/journal.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\journal.json",
+      "bytes": 12019,
+      "sha256": "d4afa31058592b2299d8a4d1d7ce377774ac391209f033b68c5bf4be89ba974a",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/plan.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\plan.json",
+      "bytes": 49853,
+      "sha256": "2e8ee1fbd6da0457d133ebf096b3fd7899c9b25a254d5deebb88c46373dc9a78",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\result.json",
+      "bytes": 453,
+      "sha256": "0a1a94b612ecbb27e0b179fa8470603ab5aa3ac8d17f981078e6f4f6273c231f",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791736748948869100.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791736748948869100.json",
+      "bytes": 760,
+      "sha256": "2cb3e0aafcb151d94927f031dbfa98debb16787dc7b0e4e6234fc78f35a4ac9d",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791737297554037400.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791737297554037400.json",
+      "bytes": 623,
+      "sha256": "737f6ede8b584ba78cc4d9b0b3a9705e339326198dd0b32af7b730f0586a146a",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766674611580500.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766674611580500.json",
+      "bytes": 637,
+      "sha256": "a8339d9fd77edcb9e52f18449c25d34ae8bd43e92892add283ecc97953f8794a",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766676382823600.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766676382823600.json",
+      "bytes": 637,
+      "sha256": "2024fe1b778d869f7d771b6ad6a1e070f76770b2f0dd0981761cad2256bfa45a",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766677763151800.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766677763151800.json",
+      "bytes": 636,
+      "sha256": "17425f9a0cebc873974ebc6089bb2b23c97de0da0994861b985209c9e6916f31",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766686595735600.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766686595735600.json",
+      "bytes": 636,
+      "sha256": "9b4874fca32f49b1fec97ee08e4b7c5090f9260e02320d366c929bfe0d8e22e7",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766704053694700.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766704053694700.json",
+      "bytes": 634,
+      "sha256": "4cec5fcdd47695f33a7c67834a59376f8226fcb5c5f6d1d435ecddc1ce64d5dc",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766723056935600.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766723056935600.json",
+      "bytes": 636,
+      "sha256": "f7e211327f52a9c37f1108da7a513a104477a3aa4e7d1527f64126b775cd4a42",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766744019362100.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766744019362100.json",
+      "bytes": 622,
+      "sha256": "317a741555a9fac64c668598fd3e732e85bd82f55a342d34f8ec6f921e19eea8",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766747210103200.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766747210103200.json",
+      "bytes": 637,
+      "sha256": "7174f713d5929d1f98d1cba7bf964652201d2e71a30c52a9f29710abb6b7b806",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766750978552300.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766750978552300.json",
+      "bytes": 636,
+      "sha256": "a1e12d0d696880c4c7c13f588b2a7111ad8edc3e0ab1940dbc8bb4aa35c9dbca",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766754023932300.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766754023932300.json",
+      "bytes": 622,
+      "sha256": "85376ddea774a32267db713c055b91dc51d7c01861c627c76a8b993323c3f90a",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766767899394800.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766767899394800.json",
+      "bytes": 636,
+      "sha256": "88d89425f8e97b15e9a007c28d84efa6d3382b5ca6ad77b64cffacebb279bd6c",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766771119215000.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766771119215000.json",
+      "bytes": 624,
+      "sha256": "6442416e90c4d043e2ca10db649857a57fc51364d5ce9c93deef61fe9dfd3099",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766775023861900.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766775023861900.json",
+      "bytes": 621,
+      "sha256": "de2be49b05a117e4b82c0552546de72995f708dc77986cde98c1d87f99f8f3ad",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766781394682400.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766781394682400.json",
+      "bytes": 623,
+      "sha256": "3c6f6f4666c5840461f5074c0bfdcc21966a43fb3f151306cc093c77a5bf3df9",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766785105302700.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766785105302700.json",
+      "bytes": 635,
+      "sha256": "4455816e8b3f4a71b6c7261d7c34f99cb66e131730a632f654ac51734a464f66",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766791779395200.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766791779395200.json",
+      "bytes": 635,
+      "sha256": "430ecf0d41b838c2835f5c5385f0414bd198c6848d40ea3d11f390668e0c7f68",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766795696452000.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766795696452000.json",
+      "bytes": 624,
+      "sha256": "4024dc59d9773e53f8054b4f71e1777fdc68d18965e94c736f472f4c5db405cf",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766799608170200.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766799608170200.json",
+      "bytes": 622,
+      "sha256": "6c14ffb36dd96bcec1f8e0f356a8354da053a84c53e048c74589d59d71743c2b",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766804231708600.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766804231708600.json",
+      "bytes": 636,
+      "sha256": "7e18e55159f4b36d152ef0675c147e765be657bf01fc9cc9ae5cf072d1ce2458",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766807947517100.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766807947517100.json",
+      "bytes": 637,
+      "sha256": "0a36278427191236308203066f7a16463bdc5d5dfb8c336425810238750bf406",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766814971054500.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766814971054500.json",
+      "bytes": 621,
+      "sha256": "dbc6c80dac6625e87d869d10542fd9512ce19f57550f2b826ff7f235dda32e20",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766818668611500.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766818668611500.json",
+      "bytes": 637,
+      "sha256": "c9f1d886b4862506d4b1f03fd7de66057ba18ea4d40aa33e43a1c7441a4f774a",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766825455323400.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766825455323400.json",
+      "bytes": 623,
+      "sha256": "d1067b2eaf61c469fdc5c05012849829b65b1c1f2cb2a224365530cb5a805c99",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766834984842500.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766834984842500.json",
+      "bytes": 636,
+      "sha256": "3d32f9b78b15b32768228c40a53184d18a4e3498e1faffe2e755272f9c273585",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766838083446300.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766838083446300.json",
+      "bytes": 623,
+      "sha256": "532f90273689303ed2db6a699e519ef08b6d2d0eafd2f4363111014efb1fb800",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766849530904500.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766849530904500.json",
+      "bytes": 608,
+      "sha256": "04e49b40a80375a0846d0c804df55a90ab288dd9c6fcbe7d8232e64a01c4cabd",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766860664261700.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766860664261700.json",
+      "bytes": 636,
+      "sha256": "18a554ac815a8dca4db6e7652dee232336452a753fb5d415d8eee273b92c6114",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766865197749900.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766865197749900.json",
+      "bytes": 636,
+      "sha256": "495088d0c0409958df854a2526ac0630273f864047533997d5e83fe201d4076b",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766870393169800.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766870393169800.json",
+      "bytes": 637,
+      "sha256": "05eeeb2bd0a79747ab5c97b1913052b707bb457deb107be90cbec24c0a5f4b58",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766877357102300.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766877357102300.json",
+      "bytes": 635,
+      "sha256": "6fb54a52ae694a45e28c27282abfa62984e9d8e0c2066e9be50371e275f05091",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766881350048600.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766881350048600.json",
+      "bytes": 622,
+      "sha256": "170775e5b0eeebcec6354033aff0652e2bdef787717a55bb1e19ceb93341ede9",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766888216330400.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766888216330400.json",
+      "bytes": 622,
+      "sha256": "ec0635e5292cb0fa74cd1469ab5c70cd87f9853b51704485ea22cf2d42e592f2",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766913289715700.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766913289715700.json",
+      "bytes": 636,
+      "sha256": "e446b43a25088065b1998fde021ecabe15195e9db13fb9ec42b792b1a558f0cd",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766916400732600.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766916400732600.json",
+      "bytes": 637,
+      "sha256": "00c4aa5496e1b3e7c21aad57a8a9961631180091bdab421fd2540034dde16945",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766917945251100.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766917945251100.json",
+      "bytes": 610,
+      "sha256": "a2460673761ff5a15452f08ff2f10c28f1dbdef18fd53f52b1a227cae64bce05",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766921255473300.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766921255473300.json",
+      "bytes": 636,
+      "sha256": "bf847d81bea76f2f0d11aad9cecc03cd420f23c37a517031ad2ee19cd0e278d2",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766925195919900.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766925195919900.json",
+      "bytes": 637,
+      "sha256": "0b5799a03f7df7854574e16e8d38d7ec741bb55e9276f174394aa7e28106dc51",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766927678845900.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766927678845900.json",
+      "bytes": 637,
+      "sha256": "e4340ac734d177585c27d9801a860a2e8ee1e4a5309d2e3d003612de4e6b5a33",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766933144165800.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766933144165800.json",
+      "bytes": 622,
+      "sha256": "13f33507e86857b81efefc3340009dafd2847cd601fa76db965476cb74af750c",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766940897692700.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766940897692700.json",
+      "bytes": 635,
+      "sha256": "128d3006d3b198c64fdc6c43765b2bb17802cdc7115042fab36ddd407d325e29",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766950351735700.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766950351735700.json",
+      "bytes": 634,
+      "sha256": "c43e0381f6a78e1d831c79d6bb111a81f47d82b57d60a03cb51bf7d5d5ab10a4",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766953928178500.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766953928178500.json",
+      "bytes": 637,
+      "sha256": "8acd69d1cae8443762e16bb2ad555c5260b0f57d65bc9c5f7040239028ea8903",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766957312167400.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766957312167400.json",
+      "bytes": 636,
+      "sha256": "950ac6cd10a888c6252b10727db43007971ea1179b06a0f97f85bbfd2dc7eae2",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766964619613000.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766964619613000.json",
+      "bytes": 635,
+      "sha256": "ffdc8a3f8b8ede829e3574983db632e2670052c235dd4da6d6337a56387529bc",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766972035152800.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766972035152800.json",
+      "bytes": 636,
+      "sha256": "3a7fcad3f83a8eda997aecbab3ff33c8d3987fdd92b63f87eb47872236728555",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766975346661600.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766975346661600.json",
+      "bytes": 636,
+      "sha256": "9545acf8a129facefbbababdea819b306ad2f8dfae0691b11155718c517d71c1",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/stream-transport-1791766976616943500.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\stream-transport-1791766976616943500.json",
+      "bytes": 624,
+      "sha256": "f5fa62fdb748e7ff3bcc6b8843f368666d0886e83db565bbc746563255508f9e",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/utf8-fallback-8ef56ecc01ce9949897e10e93518846e87e2a341.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\utf8-fallback-8ef56ecc01ce9949897e10e93518846e87e2a341.json",
+      "bytes": 371,
+      "sha256": "093f38e73ef41e1f5ab18ae0a21eddeab91621d201be86383fa5f08bc2347152",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261011/packet/verification.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261011\\packet\\verification.json",
+      "bytes": 855,
+      "sha256": "0d36d8fe0cf67e717585db3bf60a4ae9d7496979b560b6e15b0d67ccf7b92148",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/dry-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\dry-run.json",
+      "bytes": 336,
+      "sha256": "ab42768b30f623ef6c480b4c9f22b03309980eb093019433fb1f93953b959793",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/journal.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\journal.json",
+      "bytes": 2828,
+      "sha256": "65e8aba0f6e90a9e28d077bc3e57208c302c9668f16c1a0aa329755bb701d625",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/plan.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\plan.json",
+      "bytes": 10409,
+      "sha256": "388070dc4dc121d43d346196437756c2f114c98bec9540af13b098a1340eb4ca",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\result.json",
+      "bytes": 449,
+      "sha256": "f6fcdf885f68af3d560475d6fffab7a1fdcd421a438a3a195af7fc265eee2953",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/stream-transport-1791767247733478200.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\stream-transport-1791767247733478200.json",
+      "bytes": 635,
+      "sha256": "421861cd501126d707d05c6225bcf313bdcd9e51ed1c471cf912d9b5220223bd",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/stream-transport-1791767254864946000.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\stream-transport-1791767254864946000.json",
+      "bytes": 622,
+      "sha256": "cb33b8fbed33d7eef50761a5f05c2871ccaa7f0fbf9506eb479aa1198c7d9d64",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/stream-transport-1791767261958221100.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\stream-transport-1791767261958221100.json",
+      "bytes": 636,
+      "sha256": "629b1da3c1ac42e197e9f4ddc592ea34680b8e65ce9ef914ce41a77f6e455ade",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/stream-transport-1791767273770755300.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\stream-transport-1791767273770755300.json",
+      "bytes": 635,
+      "sha256": "39f8da383103652755307d568d824e7bac4fd1869298c28bfc88a001df2c5f49",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/stream-transport-1791767276753752300.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\stream-transport-1791767276753752300.json",
+      "bytes": 637,
+      "sha256": "c3ef358d915b6e00bbb1466a586feff6deffe47213042e77f4700919e4deca0b",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/stream-transport-1791767277994889400.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\stream-transport-1791767277994889400.json",
+      "bytes": 637,
+      "sha256": "fda4f585aeec8e1415e6b84cde375a7441b0cd65d3e715414121c4f20795761e",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/stream-transport-1791767280564616900.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\stream-transport-1791767280564616900.json",
+      "bytes": 636,
+      "sha256": "c5304cb0da4d012b697b6ab8e605e6aee974c8518ad2d32632cce20391251086",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/stream-transport-1791767284058330800.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\stream-transport-1791767284058330800.json",
+      "bytes": 623,
+      "sha256": "546ee124644587cf4f488b517558754e64ce9cb84c4876c3a8fc272427ce307b",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/stream-transport-1791767290214420600.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\stream-transport-1791767290214420600.json",
+      "bytes": 623,
+      "sha256": "abcb64987582b11f363a6dfc3209ba5cab56153270f03ec95be227108c672e97",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/stream-transport-1791767294831922700.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\stream-transport-1791767294831922700.json",
+      "bytes": 637,
+      "sha256": "2e2915098c2894c15fc9ecfe588fdd69de260366cce054d6ae7c25ec4b4f093a",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/stream-transport-1791767298400218700.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\stream-transport-1791767298400218700.json",
+      "bytes": 637,
+      "sha256": "d76c4101fa29738b50f6fe1282356ddf427d53371097d0b90a12bc81149d647b",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/stream-transport-1791767313644178600.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\stream-transport-1791767313644178600.json",
+      "bytes": 621,
+      "sha256": "4242da1d8abe5d7e076d8e0ec8137e0f02c488c2a1c56df145226b263b0d9a9a",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/git-object-api-mirror-20261012-8513/packet/verification.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\git-object-api-mirror-20261012-8513\\packet\\verification.json",
+      "bytes": 1057,
+      "sha256": "ed598da3037853968479628b66a342bb18de3f00b5c1d5636bb65286d1123df9",
+      "source_commit": null,
+      "source_attribution": "Exact immutable Git object mirror; original base/target/result/unchanged-ref headers govern attribution. No auth headers or credential material recorded.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/artifact-11721924704.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\artifact-11721924704.zip",
+      "bytes": 294,
+      "sha256": "60ef7691f271de216ebc60ceb8c7c64181a7d09cc2b7dc3e4f0f802110c069fc",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/artifact-11721979792.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\artifact-11721979792.zip",
+      "bytes": 397840,
+      "sha256": "48eed9295dc74fc629fff808dc344c9604b39dcdc55730827f3c587a130ec905",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/container-security-evidence.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\container-security-evidence.json",
+      "bytes": 1981,
+      "sha256": "938600944a8688897aa55c0b6ce31e747834bf38821d5f19729d38fa06bdf28b",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/diagnostic-acceptance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\diagnostic-acceptance.json",
+      "bytes": 4140,
+      "sha256": "a97ab8399643f9e79dc84a3b25a6a2cccb98cd4ed056a582ee7e8e45619a8983",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/gitleaks-history.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\gitleaks-history.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/gitleaks-tree.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\gitleaks-tree.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/image-artifact-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\image-artifact-provenance.json",
+      "bytes": 748,
+      "sha256": "527c479a2ee0229d17a444cb13264c14576ea8dc356a36626aed804497dbdc99",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/image.grype.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\image.grype.json",
+      "bytes": 59297,
+      "sha256": "65705d783ea0a7c65069546f2ec760a3d1718c3bad3a8fcd3810b53830b254e8",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/image.syft.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\image.syft.json",
+      "bytes": 1783659,
+      "sha256": "f0051b84ebde6748314bd275a29e53a16843e89ce9e7c0f2a4938442a0f206cb",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/job-114632811044.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\job-114632811044.log",
+      "bytes": 48962,
+      "sha256": "3ac160a42c20a1f02c202b62ea7f6ff6f3734dc2d71e6ab54ef9cdf1c3b2bfac",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/job-114632811212.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\job-114632811212.log",
+      "bytes": 82022,
+      "sha256": "6a16b0be2c7c77a4dfd73ad0a5c95d487921215d5c27d66126afaa00afe6fe0d",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/job-114632811304.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\job-114632811304.log",
+      "bytes": 82022,
+      "sha256": "48367b4ba12e4c9a8ea0b32afb3d47f53f372fc514800247b228dda1767c274e",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/job-114632811345.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\job-114632811345.log",
+      "bytes": 41249,
+      "sha256": "c07ec921b021f05c612259029cc6e64a7570e092e1a19c6d7dccbd3e5bf1c2b4",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/job-114633246412.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\job-114633246412.log",
+      "bytes": 2473,
+      "sha256": "54690c264fc8a8bd9357042c23b3b0f7e3d2a8b0c538445bc8a5f2f85cc69bc9",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/log-index.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\log-index.json",
+      "bytes": 719,
+      "sha256": "236c783cc4cadd9ef92369cda6f043c19eeb62e1ca6994292d922b8fd42e9c43",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/redacted-artifact-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\redacted-artifact-provenance.json",
+      "bytes": 642,
+      "sha256": "c1b08212207d86a8633cf3a89fbb3744d4f4176cfd2fbf61695f6a317917c423",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/closed-review-52d798b4/run-metadata.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\closed-review-52d798b4\\run-metadata.json",
+      "bytes": 505,
+      "sha256": "d5b3c4e68677a9a570017e9b0e9a465a5966781debe5515e4f0cc6a7bfc6d91b",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/diagnostic-5af8884c/artifact-11721891467.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\diagnostic-5af8884c\\artifact-11721891467.zip",
+      "bytes": 6704,
+      "sha256": "45189fc134b0d6deb542488f47014f6c62592b2258edf57e2e6cbd1b78790c44",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/diagnostic-5af8884c/artifact-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\diagnostic-5af8884c\\artifact-provenance.json",
+      "bytes": 721,
+      "sha256": "2bd494f433f9b7af3dd8b292e85eb212b4900bdc86ce1340e07efd27eb228e97",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/diagnostic-5af8884c/gitleaks-history.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\diagnostic-5af8884c\\gitleaks-history.json",
+      "bytes": 177260,
+      "sha256": "631834d8efece8a1c4ff52f78642c1a522e0efcdbb14359d25c64b322a021606",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/diagnostic-5af8884c/source-digest-review.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\diagnostic-5af8884c\\source-digest-review.json",
+      "bytes": 231932,
+      "sha256": "c82a15e6cc34c19a2618b37b29a369e24dcca1f9f3da96da5b81396a4e2e40d6",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/job-114622997002.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\job-114622997002.log",
+      "bytes": 82497,
+      "sha256": "6990c8e76adee0c01502673423386608711696d0fd3ae298bbb681f16ce8967e",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/job-114622997159.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\job-114622997159.log",
+      "bytes": 82418,
+      "sha256": "9ada60847e7eb6cc3234d29e285929307dcc9157a2383ae8b783dfd67bb81c41",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/job-114622997225.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\job-114622997225.log",
+      "bytes": 35807,
+      "sha256": "8940544aa33ef37be6d8a892d7271b67bba16111a68ff9352e270a98e57865aa",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/job-114623127083.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\job-114623127083.log",
+      "bytes": 2540,
+      "sha256": "ef986e0a5794cf6ca1e0aa24d43a78af07abc9db80dcd4d186448f66fbf2c4b3",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/log-index.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\log-index.json",
+      "bytes": 1232,
+      "sha256": "7adca5a40a783276ea0a53109d4f10b55853f7d2b65e5be1b82b0109e6680bac",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/python-audit-summaries.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\python-audit-summaries.json",
+      "bytes": 1089,
+      "sha256": "493ce20f720fd37d4f0c7f246ff0d8f217993b82105e6d8e236a0a610775ac13",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/remote-diagnostics-and-closed-review-proposal.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\remote-diagnostics-and-closed-review-proposal.json",
+      "bytes": 2273,
+      "sha256": "39cf621ea11404b351c6d516fbfae2000341e211df536161ab8e65d7671cae2d",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/security-8513-classification-20261012/targeted-policy-duplicate-guard.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\security-8513-classification-20261012\\targeted-policy-duplicate-guard.xml",
+      "bytes": 2637,
+      "sha256": "dd2b9b7457ec0598b8e4fbed2349de3360d236b8a83bd7a0ff6360f2d9f2ecf5",
+      "source_commit": null,
+      "source_attribution": "Per-file original 8513 failure, 5af diagnostic and 52d closed-review source/run headers govern attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/ci-parity-3e34a1a9.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\ci-parity-3e34a1a9.log",
+      "bytes": 517220,
+      "sha256": "7686d308837f050e82545103240f846a77f2c1fa1149297f928fd7fdbcf73bb0",
+      "source_commit": null,
+      "source_attribution": "Original failed hosted CI log; filename/run header governs exact source; failure retained unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/ci-python-3.12-1969d964.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\ci-python-3.12-1969d964.log",
+      "bytes": 107153,
+      "sha256": "d7074c572167cd77dc31aea4680c7ec9031d2bfd7685becb2d8c37c8cd5b9f6f",
+      "source_commit": null,
+      "source_attribution": "Original failed hosted CI log; filename/run header governs exact source; failure retained unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/ci-python-3.12-3e34a1a9.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\ci-python-3.12-3e34a1a9.log",
+      "bytes": 107356,
+      "sha256": "517cd1137d980aa7344d55c0704dc996987b33a57d3bc9053743aab05b51783f",
+      "source_commit": null,
+      "source_attribution": "Original failed hosted CI log; filename/run header governs exact source; failure retained unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/ci-web-3e34a1a9.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\ci-web-3e34a1a9.log",
+      "bytes": 107521,
+      "sha256": "327b9f990506bbbc115bb0979a778cd3101cfe014918c0cadc649b8199ffcc4e",
+      "source_commit": null,
+      "source_attribution": "Original failed hosted CI log; filename/run header governs exact source; failure retained unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/security-locked-audit-3e34a1a9.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\security-locked-audit-3e34a1a9.log",
+      "bytes": 72678,
+      "sha256": "d98af3d22264a7005e6418ab0189e14dd366f2f8b81512e0cf7e474fdccfbeb6",
+      "source_commit": null,
+      "source_attribution": "Original failed hosted CI log; filename/run header governs exact source; failure retained unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/security-python-3e34a1a9.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\security-python-3e34a1a9.log",
+      "bytes": 1448,
+      "sha256": "804d9894cf3444bf86c3516eca2a502be3e0b9e74ef37e9aadfe1b84e63dd174",
+      "source_commit": null,
+      "source_attribution": "Original failed hosted CI log; filename/run header governs exact source; failure retained unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/security-secret-npm-8513a9e2.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\security-secret-npm-8513a9e2.log",
+      "bytes": 35807,
+      "sha256": "8940544aa33ef37be6d8a892d7271b67bba16111a68ff9352e270a98e57865aa",
+      "source_commit": null,
+      "source_attribution": "Original failed hosted CI log; filename/run header governs exact source; failure retained unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

@@ -1,5 +1,41 @@
 # ReconForge Execution Decisions Log
 
+## Wave5 additive isolation, proof lifecycle and namespace contracts (2026-10-12)
+
+0136 adds nine restrictive original inventory/FIFO scope policies with pure invoker
+helpers. Preserve original tenant-only compatibility when unbound and retain
+FORCE RLS/current parent hierarchy on bound workspace/entity reads and mutations;
+no history rewrite, parallel GL or authorization cache. Document the original
+tenant-global audit chain separately rather than pretending workspace concealment.
+
+Bind browser proof lifecycle to committed scope/session/source/plan/phase/native
+seals before rendered actions become interactive. Exact equivalent read refreshes
+retain proof; changed subjects and late old results do not. Keep actual WebCrypto,
+corrupt-digest refusal and human financial mutation controls. The independent FX
+reader version admits only0131 and0136; future migrations need reviewed contracts.
+
+Benchmark identities follow original native PK(tenant_id,id), including repeated
+synthetic seed IDs in distinct tenants. Retain each owner oracle and reject repeated
+identities within one tenant, forged membership and cross-tenant reuse of a source.
+A per-cycle financial success cannot override an aggregate refusal. Retain raw failed
+attempts; run fresh populations after correction. Monetary cost needs a price model.
+
+Publish lossless ZIP evidence capsules with flat indexes and original source headers.
+Separately record safe log spans and omitted setup bytes with complete remote hash/
+length; do not expose authentication/DSN setup. Check embedded index/member/source
+fingerprints and package every tracked capsule. These are local reproducible anchors,
+not independent external attestations. No broad secret-scan allowlist is introduced.
+
+Disposable Docker cleanup must confirm captured64hex ownership, stop only that ID,
+then allow bounded removal polling. Only exact same-ID NoSuchContainer responses
+with the expected exit code and empty stdout prove absence; daemon/permission/
+ambiguous errors do not. Preserve the original immediate-probe failure and bind
+historical runner reports to their original Git bytes rather than today's helper.
+
+Complete code/restore/security gates before requesting the quiet benchmark window,
+as the user directed. Keep all existing3 genuine1K results descriptive/unaccepted;
+never infer stable resources from AC alone or turn old Wave4 gains into new claims.
+
 ## Wave5 source-owned industrial and group transactions (2026-10-11)
 
 Start exact accepted636 in four managed worktrees; preserve primary dirty files and main. Migrations133–135 are additive. ME1 reuses native inventory/FIFO/IRP and GL; IC1 pairs original books and places eliminations in an explicit third authorized adjustment scope; sourcing awards into BPC1. No parallel ledger or implicit foreign/tax/statutory support. New permission catalogs grant no existing role automatically; sensitive mutations are human-only and require step-up. Draft batching candidate4102b039 retains each native row and deferred guard. See WAVE5_CONTRACTS_2026-10-11.md.

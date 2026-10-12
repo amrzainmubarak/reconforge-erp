@@ -1,5 +1,28 @@
 # ReconForge Execution Evidence Log
 
+## Wave5 source-bound business, restore and failed-gate publication (2026-10-12)
+
+[Checkpoint](WAVE5_ACCEPTANCE_CHECKPOINT_2026-10-12.md) records the actual8513
+ME/IC/SRC HTTPS/270-table populated restores, original/restored independent financial
+oracles, e8e73-case native gate with zero failures/errors/skips, and corrected b6fc
+FX HTTPS119.047s plus Studio68files/452cases/TypeScript/build. The local trust anchors
+and scope limits remain explicit. Nine lossless capsules/flat indexes retain488
+files, including failed reports, exact safe CI spans, interrupted profile/pair,
+original security/Git transport provenance and actual source archive verification.
+Root checked497 ZIP members; copy-verification SHA256
+645a655642002abe5ace12302525073399d4d19e6c12dc5f81a41407bdc2e5ae.
+
+1a40 whole hosted CI failed (web race, cancelled native shards, blocked browsers),
+although both ordinary Python gates passed5228 with663 prerequisite skips each and
+mandatory native15pytest partitions/1269selected-completed cases had zero skips.
+Actual manual Security38196678518 ran all five jobs successfully on1a40, including
+image/SBOM. These packets do not prove a later head. New final-source hosted/archive
+checks and fresh mixed/fair performance repetitions remain pending. Three completed
+1K populations passed independent493671004minor-unit financial conservation but
+external load invalidated the comparison; seven actual power bookends/five unrun
+are retained. First b6fc mixed126HTTP requests/per-cycle proofs passed, but scoped
+receipt-ID aggregate refusal keeps its report failed. No current Wave5 speed gain.
+
 ## Wave5 actual636 profile and incremental gates (2026-10-11)
 
 Fresh rapidbaseline: Ruff passed;61 targeted Python tests passed without skips. Exact accepted636 hosted38-job acceptance is reused as historical full baseline, explicitly distinguished from fresh commands. New raw100cycle profile and migration log are copied byte-exact at wave5-evidence/baseline-profile-6362724f/ with SHA256 index in summary.json. Client50.34375CPU seconds, identity phases46.8125threadCPU seconds including5warmups;0errors/46669102minor measured oracle. This profile is descriptive, not an accepted improvement or a power-equivalent comparison. Initial owner-source sourcing and IC1 golden outcomes exist; all final-source gates and benchmarks remain pending.

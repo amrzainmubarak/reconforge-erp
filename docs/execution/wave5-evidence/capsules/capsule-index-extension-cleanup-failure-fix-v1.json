@@ -1,0 +1,38 @@
+{
+  "schema_version": "reconforge-flat-evidence-capsule-extension-v1",
+  "prior_eight_capsules_unchanged": true,
+  "capsules": [
+    {
+      "file_name": "wave5-writeback-b6fc-failure-cleanup-fix-v1.zip",
+      "sha256": "0468b089af4c5d8614a114aa7a45446e79940ce9afb70c6f1bdbcb5b742033de",
+      "bytes": 473808,
+      "file_count": 49,
+      "raw_bytes": 2993862,
+      "index_name": "wave5-writeback-b6fc-failure-cleanup-fix-v1.index.json",
+      "index_sha256": "648b35ad47520701c5b0f46813bcc1c283d150af58bc0026f60ad79a3edc0215",
+      "coverage": {
+        "original_failed_source": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+        "original_run": 38198974522,
+        "original_job": 114647963500,
+        "complete_failed_step_preserved": true,
+        "original_failure_never_rebound_to_pass": true,
+        "reviewed_fix_commit": "a2e555b89c91a9be88017a95b27c12e337755e41",
+        "targeted_tests": {
+          "tests": 29,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "actual_readonly_absence_format": "Verified against a known removed owned ID; not a new actual lifecycle run.",
+        "root_offline_contract_gate": {
+          "tests": 99,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "original_failed_mixedr1": "Full source-bound report/proofs/log and retrospective owner metadata retained; remains failed and performance-comparison-unaccepted.",
+        "fresh_actual_fixed_ci": "Required, not yet claimed."
+      }
+    }
+  ]
+}

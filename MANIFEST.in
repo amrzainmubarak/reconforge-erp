@@ -1454,7 +1454,7 @@ include docs/execution/WAVE5_CONTRACTS_2026-10-11.md
 include docs/execution/GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md
 include docs/architecture/PROCUREMENT_SOURCING.md
 include docs/operator/intercompany-operations.md
-recursive-include docs/execution/wave5-evidence *.json *.log *.xml
+recursive-include docs/execution/wave5-evidence *.json *.log *.xml *.zip
 include .github/scripts/verify_procurement_sourcing_oracle.py
 include .github/scripts/verify_manufacturing_cycle_oracle.py
 include .github/scripts/benchmark_native_api_runtime.py
@@ -1462,3 +1462,5 @@ include .github/scripts/benchmark_intercompany_api.py
 include .github/scripts/benchmark_manufacturing_api.py
 include .github/scripts/benchmark_mixed_native_api.py
 include docs/operator/manufacturing-execution.md
+
+include docs/execution/WAVE5_ACCEPTANCE_CHECKPOINT_2026-10-12.md

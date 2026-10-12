@@ -1,0 +1,69 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-source-archive-verifications-8513-1a40-v1.zip",
+  "capture_for_root_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "accepted_verification_sources": [
+      "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "1a40bda0754664be88932c33b0afd7cb1c05b383"
+    ],
+    "binary_build_products": "Original wheel/sdist files remain in root output; their published fingerprints are preserved in original verification records."
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 4,
+  "raw_bytes": 2456503,
+  "records": [
+    {
+      "entry_name": "root/output/wave5-final-package-1a40bda0-build.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-package-1a40bda0-build.log",
+      "bytes": 522831,
+      "sha256": "f1e87a41b45a7f5457e5df418955bf0cac21370385a2ffc2ae4c14307df31b57",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Byte-exact source archive verification/build record; huge file-fingerprint map stays inside ordinary ZIP artifact.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-package-1a40bda0/archive-verification.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-package-1a40bda0\\archive-verification.json",
+      "bytes": 705542,
+      "sha256": "4357a7d70dfa9f17e0d829427d4e883c8aec0b9a87c2e442720a86bc199be5be",
+      "source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+      "source_attribution": "Byte-exact source archive verification/build record; huge file-fingerprint map stays inside ordinary ZIP artifact.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-package-8513a9e2.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-package-8513a9e2.log",
+      "bytes": 522725,
+      "sha256": "e04a3dc3793665c7aa7d3ab2d748f5a99f49c3204a17cdf272b97f767f621275",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Byte-exact source archive verification/build record; huge file-fingerprint map stays inside ordinary ZIP artifact.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-package-8513a9e2/archive-verification.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-package-8513a9e2\\archive-verification.json",
+      "bytes": 705405,
+      "sha256": "a3c740e62efd29835d1ac06db27f66e6a9eb981c2c95fe38d3876026509758dd",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Byte-exact source archive verification/build record; huge file-fingerprint map stays inside ordinary ZIP artifact.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

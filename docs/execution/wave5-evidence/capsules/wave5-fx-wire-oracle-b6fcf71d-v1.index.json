@@ -1,0 +1,512 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-fx-wire-oracle-b6fcf71d-v1.zip",
+  "capture_for_root_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "actual_runtime_source": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+    "oracle_source_commit": "e5bdbeecc1431c60e1cedc6dc81d5896369ef853",
+    "browser_expected": 1,
+    "browser_skipped_unexpected_flaky": [
+      0,
+      0,
+      0
+    ],
+    "native_restore": "passed at exact0136 with original snapshot/checkpoint/probe evidence",
+    "actual_web": {
+      "files": 68,
+      "passed": 452,
+      "skipped": 0
+    },
+    "trusted_manifest_sha256": "d2a4e557da3da1b85016622f314a7fd41d8adccdca7e7c92b41599a7af2efd62",
+    "preserved_original_contract_failures": 2,
+    "actual_b6_stdlib_isolated_passes": 2,
+    "unchanged_wave4_stdlib_isolated_passes": 2,
+    "targeted_oracle_tests": {
+      "passed": 35,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "trust_boundary": "Local retained proof membership anchor, not an external audit attestation; synthetic EUR/USD tax fixture only."
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 51,
+  "raw_bytes": 942948,
+  "records": [
+    {
+      "entry_name": "operations-source/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/verifier-original-131-contract.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\verifier-original-131-contract.py",
+      "bytes": 29587,
+      "sha256": "c8c543b0819bb916d365b3c015ab6be62a14dcc1ff2c1ecf880686fb32ff6e90",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Byte-exact original stdlib oracle that refused current136; failure source preserved.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/fx-oracle-targeted-execution.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\fx-oracle-targeted-execution.json",
+      "bytes": 1146,
+      "sha256": "bd49539261ff24fe5bf25d49b2a575245f6701ef4aa5f86fa9c6a3a042c9d5e6",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/fx-oracle-targeted-ruff.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\fx-oracle-targeted-ruff.log",
+      "bytes": 19,
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/fx-oracle-targeted.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\fx-oracle-targeted.log",
+      "bytes": 81,
+      "sha256": "f784d91362c0bfcb642f7917353fa043b3ad1079a3c7f7c342048066ba34c5f1",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/fx-oracle-targeted.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\fx-oracle-targeted.xml",
+      "bytes": 6287,
+      "sha256": "ee4e35e60e78ad81c2e74e44cbeef1a029d64b4fe99ab3d2d655b99d2734f85a",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/oracle-commit-attribution.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\oracle-commit-attribution.json",
+      "bytes": 587,
+      "sha256": "6a2e91418bc2e7cc1b743f335dad2eb0a431030b0e5524684907e36da6451402",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/original-131-contract-execution.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\original-131-contract-execution.json",
+      "bytes": 3522,
+      "sha256": "d06571dcb6e0a3516b58616d9145d9a219df9d8ba125ce31b171ee8f27e3b1e2",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/original-131-contract-isolated-optimized.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\original-131-contract-isolated-optimized.json",
+      "bytes": 3612,
+      "sha256": "64e3c0d13bd94d48af44fd209fd3733ba8cb94cb06ca14449e3b3214428da025",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/original-131-contract-isolated-optimized.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\original-131-contract-isolated-optimized.log",
+      "bytes": 377,
+      "sha256": "b64acfdb38ed365e5ef2a04652ce5593626b783ea99ec5f019a26370a012c1a0",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/original-131-contract-isolated.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\original-131-contract-isolated.json",
+      "bytes": 3591,
+      "sha256": "92dc030af3c243f8d1a776923032de773ae0cfc1e0d5876ff070387b2c767b7a",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/original-131-contract-isolated.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\original-131-contract-isolated.log",
+      "bytes": 367,
+      "sha256": "83a6d7b42e82d6d24f16bce95de6ef73652e5dd56db2781ec986dd155fb17cfd",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/proof-manifest-b6fc.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\proof-manifest-b6fc.json",
+      "bytes": 2111,
+      "sha256": "d2a4e557da3da1b85016622f314a7fd41d8adccdca7e7c92b41599a7af2efd62",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/retained-wave4-131-execution.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\retained-wave4-131-execution.json",
+      "bytes": 2962,
+      "sha256": "78fa58775d76af72159d6b201daad6eb019fecbb2359e491a18a744886127213",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/retained-wave4-131-isolated-optimized.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\retained-wave4-131-isolated-optimized.json",
+      "bytes": 5953,
+      "sha256": "c446b393847dd7750a075cb8012c149fb796ca149c86e736b96119b10631f27d",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/retained-wave4-131-isolated-optimized.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\retained-wave4-131-isolated-optimized.log",
+      "bytes": 341,
+      "sha256": "ddcd799abf26841280a54389d4572cdf6aa5e68192f18ab35eecf73e6dc1ace8",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/retained-wave4-131-isolated.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\retained-wave4-131-isolated.json",
+      "bytes": 5932,
+      "sha256": "7fb16a7e7016084e35aa97eacfc859d07ffafe2c5df04445478b2688dc834fb9",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/retained-wave4-131-isolated.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\retained-wave4-131-isolated.log",
+      "bytes": 331,
+      "sha256": "b8cd03c41a694e901b818832513748b876ca00632f80ff7a43d6d61f81cd70b5",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/trusted-manifest-anchor.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\trusted-manifest-anchor.json",
+      "bytes": 606,
+      "sha256": "c82d040db9a0341346491d2258c543652b132a791deee7e0d32e4ac4e173731c",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/versioned-131-136-contract-execution.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\versioned-131-136-contract-execution.json",
+      "bytes": 3354,
+      "sha256": "791f8b67097f4d8346a4b0157bf269e7f71bfb3267606bc70dd0045d1f6cb6ac",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/versioned-131-136-contract-isolated-optimized.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\versioned-131-136-contract-isolated-optimized.json",
+      "bytes": 6124,
+      "sha256": "701a13af059ea21e6d828f3a683f558033461a83b0dffed13f4d56887d567542",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/versioned-131-136-contract-isolated-optimized.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\versioned-131-136-contract-isolated-optimized.log",
+      "bytes": 349,
+      "sha256": "32979f105715a3fd6ae8e74ebcb5ec76f2bf48870a0c30f7309c5d982b95902a",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/versioned-131-136-contract-isolated.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\versioned-131-136-contract-isolated.json",
+      "bytes": 6103,
+      "sha256": "735834c01679a726fcc8ac8834762054d1bad330b1c036080b321748209a44c6",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-evidence-capsules-20261012-v1/source-material/fx-wire-b6fc-oracle/versioned-131-136-contract-isolated.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\fx-wire-b6fc-oracle\\versioned-131-136-contract-isolated.log",
+      "bytes": 339,
+      "sha256": "e835303a3b237511410f5c2f42a5189f1903a4abdb43b0cb4c35b31b83b2be10",
+      "source_commit": null,
+      "source_attribution": "Per-file actual verifier identity governs attribution: preserved original 0131-only failures, separately pinned actual b6fc membership, reviewed e5bd versioned oracle passes, unchanged Wave4 compatibility and targeted35 zero-skip outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "retained-wave4/docs/execution/wave4-evidence/fx-1e73267e/cycle-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\docs\\execution\\wave4-evidence\\fx-1e73267e\\cycle-report.json",
+      "bytes": 90395,
+      "sha256": "594b41ada0420a647b1c0b99aa083c0d631635276e7a7aa133352706c65ae027",
+      "source_commit": "1e73267eaff0fb6bf92849bc6f5a877418adb786",
+      "source_attribution": "Original immutable Wave4 0131 proof/report/manifest and former oracle headers retained; new verifier compatibility does not rebind old runtime evidence.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "retained-wave4/docs/execution/wave4-evidence/fx-1e73267e/fx-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\docs\\execution\\wave4-evidence\\fx-1e73267e\\fx-proof-0.json",
+      "bytes": 17419,
+      "sha256": "e98f19ce390547c951ce419b12e088c3e5c0c8f271ccc9d710bdff0248af8101",
+      "source_commit": "1e73267eaff0fb6bf92849bc6f5a877418adb786",
+      "source_attribution": "Original immutable Wave4 0131 proof/report/manifest and former oracle headers retained; new verifier compatibility does not rebind old runtime evidence.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "retained-wave4/docs/execution/wave4-evidence/fx-1e73267e/fx-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\docs\\execution\\wave4-evidence\\fx-1e73267e\\fx-proof-1.json",
+      "bytes": 16487,
+      "sha256": "46a1f22cc0a216eebe5282d766a9422b1ccf3766ddbf736a12e9cb0182507f7f",
+      "source_commit": "1e73267eaff0fb6bf92849bc6f5a877418adb786",
+      "source_attribution": "Original immutable Wave4 0131 proof/report/manifest and former oracle headers retained; new verifier compatibility does not rebind old runtime evidence.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "retained-wave4/docs/execution/wave4-evidence/fx-1e73267e/fx-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\docs\\execution\\wave4-evidence\\fx-1e73267e\\fx-proof-2.json",
+      "bytes": 15897,
+      "sha256": "42b44512124ad614a844754838950891ad185b28f72732d6ee90133ed286fa27",
+      "source_commit": "1e73267eaff0fb6bf92849bc6f5a877418adb786",
+      "source_attribution": "Original immutable Wave4 0131 proof/report/manifest and former oracle headers retained; new verifier compatibility does not rebind old runtime evidence.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "retained-wave4/docs/execution/wave4-evidence/fx-1e73267e/fx-proof-3.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\docs\\execution\\wave4-evidence\\fx-1e73267e\\fx-proof-3.json",
+      "bytes": 15594,
+      "sha256": "814c10a2ba1253d5dfeb9690ca340f8f304b3bf84502433d6aa7006008db7493",
+      "source_commit": "1e73267eaff0fb6bf92849bc6f5a877418adb786",
+      "source_attribution": "Original immutable Wave4 0131 proof/report/manifest and former oracle headers retained; new verifier compatibility does not rebind old runtime evidence.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "retained-wave4/docs/execution/wave4-evidence/fx-1e73267e/fx-proof-4.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\docs\\execution\\wave4-evidence\\fx-1e73267e\\fx-proof-4.json",
+      "bytes": 16505,
+      "sha256": "94c26cbe298b796604661ac0068266f2a8398bf2c73181ccee8df6975b09565d",
+      "source_commit": "1e73267eaff0fb6bf92849bc6f5a877418adb786",
+      "source_attribution": "Original immutable Wave4 0131 proof/report/manifest and former oracle headers retained; new verifier compatibility does not rebind old runtime evidence.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "retained-wave4/docs/execution/wave4-evidence/fx-1e73267e/fx-proof-ar-mobile.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\docs\\execution\\wave4-evidence\\fx-1e73267e\\fx-proof-ar-mobile.json",
+      "bytes": 16505,
+      "sha256": "94c26cbe298b796604661ac0068266f2a8398bf2c73181ccee8df6975b09565d",
+      "source_commit": "1e73267eaff0fb6bf92849bc6f5a877418adb786",
+      "source_attribution": "Original immutable Wave4 0131 proof/report/manifest and former oracle headers retained; new verifier compatibility does not rebind old runtime evidence.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "retained-wave4/docs/execution/wave4-evidence/fx-1e73267e/oracle-normal.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\docs\\execution\\wave4-evidence\\fx-1e73267e\\oracle-normal.json",
+      "bytes": 5953,
+      "sha256": "cd5e6657b80f2dfa656599bb54be369fedea15dd60703ead17c73dcb44735a98",
+      "source_commit": "1e73267eaff0fb6bf92849bc6f5a877418adb786",
+      "source_attribution": "Original immutable Wave4 0131 proof/report/manifest and former oracle headers retained; new verifier compatibility does not rebind old runtime evidence.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "retained-wave4/docs/execution/wave4-evidence/fx-1e73267e/oracle-optimized.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\docs\\execution\\wave4-evidence\\fx-1e73267e\\oracle-optimized.json",
+      "bytes": 5967,
+      "sha256": "3e2be012104525d438b09059efb12f4a32c1626572cac0bed92c00783d129456",
+      "source_commit": "1e73267eaff0fb6bf92849bc6f5a877418adb786",
+      "source_attribution": "Original immutable Wave4 0131 proof/report/manifest and former oracle headers retained; new verifier compatibility does not rebind old runtime evidence.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "retained-wave4/docs/execution/wave4-evidence/fx-1e73267e/proof-manifest.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\docs\\execution\\wave4-evidence\\fx-1e73267e\\proof-manifest.json",
+      "bytes": 2481,
+      "sha256": "3ac5b0bf960862abcd5b11183de059a6a4df61f3b6fac3a7feab59cf633cf58a",
+      "source_commit": "1e73267eaff0fb6bf92849bc6f5a877418adb786",
+      "source_attribution": "Original immutable Wave4 0131 proof/report/manifest and former oracle headers retained; new verifier compatibility does not rebind old runtime evidence.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "reviewed-oracle-source/.github/scripts/verify_operational_fx_cycle_oracle.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\.github\\scripts\\verify_operational_fx_cycle_oracle.py",
+      "bytes": 29815,
+      "sha256": "220eb2ef4a6f0a249d56bd58eb738a1ab58e1d5e06f138bf61ccb5b0017a2089",
+      "source_commit": "e5bdbeecc1431c60e1cedc6dc81d5896369ef853",
+      "source_attribution": "Exact isolated Amr two-file commit; financial application runtime is unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "reviewed-oracle-source/tests/test_operational_fx_cycle_oracle.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\tests\\test_operational_fx_cycle_oracle.py",
+      "bytes": 22687,
+      "sha256": "27dbcfb2207712ce4e54f6883aa5839f540c93d5df29690212c0bdc9320e3a48",
+      "source_commit": "e5bdbeecc1431c60e1cedc6dc81d5896369ef853",
+      "source_attribution": "Exact isolated Amr two-file commit; financial application runtime is unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-fx-final-wire-b6fcf71d/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-fx-final-wire-b6fcf71d\\browser.log",
+      "bytes": 437,
+      "sha256": "670dab565a31eac2c24742c6d0c9156f28791c28e687925c8b66a750f7f022c3",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual b6fc FX HTTPS and populated native restore, original source and acceptance headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-fx-final-wire-b6fcf71d/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-fx-final-wire-b6fcf71d\\https-runtime.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual b6fc FX HTTPS and populated native restore, original source and acceptance headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-fx-final-wire-b6fcf71d/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-fx-final-wire-b6fcf71d\\migration.log",
+      "bytes": 23616,
+      "sha256": "cbba54d8da1909bd5edb8c8279ef886e13f674a78fd06fc1268c1f945b4f76af",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual b6fc FX HTTPS and populated native restore, original source and acceptance headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-fx-final-wire-b6fcf71d/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-fx-final-wire-b6fcf71d\\playwright-artifacts\\.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual b6fc FX HTTPS and populated native restore, original source and acceptance headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-fx-final-wire-b6fcf71d/playwright-artifacts/fx-ar-390.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-fx-final-wire-b6fcf71d\\playwright-artifacts\\fx-ar-390.png",
+      "bytes": 176830,
+      "sha256": "535e8949ecec176b4171e5401f23e4725c477468cfd3d04141d9c9d8e9b02c72",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual b6fc FX HTTPS and populated native restore, original source and acceptance headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-fx-final-wire-b6fcf71d/playwright-artifacts/fx-en-390.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-fx-final-wire-b6fcf71d\\playwright-artifacts\\fx-en-390.png",
+      "bytes": 192894,
+      "sha256": "1b1795f82b3ea306c1d581d334eaa031fc2a85ba2bfad9cbf7aa5f7c700a2d92",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual b6fc FX HTTPS and populated native restore, original source and acceptance headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-fx-final-wire-b6fcf71d/playwright-artifacts/fx-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-fx-final-wire-b6fcf71d\\playwright-artifacts\\fx-proof-0.json",
+      "bytes": 17419,
+      "sha256": "3cd3e1ed3e60c1dd49ddc74ed868b69df443176609c7897cde03bad2d571b129",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual b6fc FX HTTPS and populated native restore, original source and acceptance headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-fx-final-wire-b6fcf71d/playwright-artifacts/fx-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-fx-final-wire-b6fcf71d\\playwright-artifacts\\fx-proof-1.json",
+      "bytes": 16487,
+      "sha256": "9a5829666344df2d42f2163c78fd33a7369a5abd2f79675daa65770507936d44",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual b6fc FX HTTPS and populated native restore, original source and acceptance headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-fx-final-wire-b6fcf71d/playwright-artifacts/fx-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-fx-final-wire-b6fcf71d\\playwright-artifacts\\fx-proof-2.json",
+      "bytes": 15897,
+      "sha256": "90d008c8f2bc0af91ebaae39a574e2c600969bde166e1a8defc8ad60917b71d8",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual b6fc FX HTTPS and populated native restore, original source and acceptance headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-fx-final-wire-b6fcf71d/playwright-artifacts/fx-proof-3.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-fx-final-wire-b6fcf71d\\playwright-artifacts\\fx-proof-3.json",
+      "bytes": 15594,
+      "sha256": "b7dbc647a1ada72396f2f70783a75109945d453235d22ab390b4590263523b6f",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual b6fc FX HTTPS and populated native restore, original source and acceptance headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-fx-final-wire-b6fcf71d/playwright-artifacts/fx-proof-4.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-fx-final-wire-b6fcf71d\\playwright-artifacts\\fx-proof-4.json",
+      "bytes": 16505,
+      "sha256": "1631135055029a1aacf5a06bda78198abf946a2f39fd73faec8085e71d080b8c",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual b6fc FX HTTPS and populated native restore, original source and acceptance headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-fx-final-wire-b6fcf71d/playwright-artifacts/fx-proof-ar-mobile.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-fx-final-wire-b6fcf71d\\playwright-artifacts\\fx-proof-ar-mobile.json",
+      "bytes": 16505,
+      "sha256": "1631135055029a1aacf5a06bda78198abf946a2f39fd73faec8085e71d080b8c",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual b6fc FX HTTPS and populated native restore, original source and acceptance headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-fx-final-wire-b6fcf71d/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-fx-final-wire-b6fcf71d\\playwright.json",
+      "bytes": 3625,
+      "sha256": "5360d44247045095810fa8cfa8a8c0c1c9b375c251a225859e065c462e46f521",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual b6fc FX HTTPS and populated native restore, original source and acceptance headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-fx-final-wire-b6fcf71d/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-fx-final-wire-b6fcf71d\\report.json",
+      "bytes": 100479,
+      "sha256": "238fc98e019458641541e2e1c5468e22cc44bde440da3707308d9ca07709bcfe",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual b6fc FX HTTPS and populated native restore, original source and acceptance headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-web-b6fcf71d.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-web-b6fcf71d.log",
+      "bytes": 349,
+      "sha256": "a17df25e4e4486790598bb5a52f8d90c917a39886629bd15b552e755cb53a319",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual complete 68-file/452-test Studio and TypeScript/build log at b6fc; no rebind to later commits.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-web-build-b6fcf71d.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-web-build-b6fcf71d.log",
+      "bytes": 6880,
+      "sha256": "7b7e0ac5ee223d60012c4bf5be267d62dd532b96dcaac7bac33e80860692eaa7",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Actual complete 68-file/452-test Studio and TypeScript/build log at b6fc; no rebind to later commits.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

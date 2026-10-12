@@ -1,0 +1,1643 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-wire-independent-native-retained-v1.zip",
+  "capture_for_root_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "final_wire_source": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+    "retained_wire_stages": 5,
+    "native_runs": [
+      {
+        "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+        "accepted": true,
+        "counts": {
+          "tests": 66,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      {
+        "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+        "accepted": false,
+        "counts": null
+      },
+      {
+        "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+        "accepted": true,
+        "counts": {
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      {
+        "source_commit": "e8e2de24bf6311d67b46a9bfd3b025c1792c3474",
+        "accepted": true,
+        "counts": {
+          "tests": 73,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      }
+    ],
+    "financial_proofs": "Original and restored ME/IC/SRC evidence retained; no synthetic replacement of actual results."
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 175,
+  "raw_bytes": 14968839,
+  "records": [
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/binding-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\binding-report.json",
+      "bytes": 19040,
+      "sha256": "c75cb557b5795a4e0af2aacc3285bb6e18aed8ffb24e841e70637cc05bebd2c1",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/intercompany-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\intercompany-i.json",
+      "bytes": 2922,
+      "sha256": "1310eb4cf97ffdd77f7aec7f1725d57402d2f8b183b7251a1b8632a8219c00d6",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/intercompany-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\intercompany-io.json",
+      "bytes": 2922,
+      "sha256": "1310eb4cf97ffdd77f7aec7f1725d57402d2f8b183b7251a1b8632a8219c00d6",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/intercompany-operations-original-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\intercompany-operations-original-report.json",
+      "bytes": 104054,
+      "sha256": "c9418e110bb83bced524b587fd366d9ea43ba8fe544fb38de4f0a698b9ad4305",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/intercompany-original-artifacts/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\intercompany-original-artifacts\\ic-group-report.json",
+      "bytes": 38224,
+      "sha256": "742e34f9796add7d1435826f579f5e0f48613f34be4eab81cd6d63b629872c94",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/intercompany-original-artifacts/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\intercompany-original-artifacts\\ic-proof-0.json",
+      "bytes": 22339,
+      "sha256": "3a39c97a1d9016d5435df8e1a48e8df192cadfffbf39cccfa7cea8d91b45b567",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/intercompany-original-artifacts/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\intercompany-original-artifacts\\ic-proof-1.json",
+      "bytes": 21723,
+      "sha256": "1d5657fa9abc30f7b754f5232053de427d030c49e3dd922b19579928edf4236a",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/intercompany-original-artifacts/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\intercompany-original-artifacts\\ic-proof-2.json",
+      "bytes": 16428,
+      "sha256": "aab3629f655364c9889d09063359d605d410ac16763244a666939d34c894a1ba",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/intercompany-trusted-original-manifest.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\intercompany-trusted-original-manifest.json",
+      "bytes": 347,
+      "sha256": "7aee05cf71777a45462f325f5583a757f6e98e5640e465f4a4b8c593454cfed9",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/manufacturing-execution-original-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\manufacturing-execution-original-report.json",
+      "bytes": 2367095,
+      "sha256": "d344a4db07e6e322396834f37bcb531966992a2fae6f8c9571ad905f2dfda64e",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/manufacturing-original-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\manufacturing-original-i.json",
+      "bytes": 996,
+      "sha256": "45158fac6d4e6d583fead95389f2febd2646308e752212023053faef93d8bcc5",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/manufacturing-original-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\manufacturing-original-io.json",
+      "bytes": 996,
+      "sha256": "45158fac6d4e6d583fead95389f2febd2646308e752212023053faef93d8bcc5",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/manufacturing-original-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\manufacturing-original-proof.json",
+      "bytes": 768299,
+      "sha256": "3af67dde3c93f627dc0eb63ffb83015ed753bf0d177077ce9f9fa21e6becc9f0",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/manufacturing-restored-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\manufacturing-restored-i.json",
+      "bytes": 996,
+      "sha256": "45158fac6d4e6d583fead95389f2febd2646308e752212023053faef93d8bcc5",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/manufacturing-restored-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\manufacturing-restored-io.json",
+      "bytes": 996,
+      "sha256": "45158fac6d4e6d583fead95389f2febd2646308e752212023053faef93d8bcc5",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-independent-8513-review/manufacturing-restored-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-independent-8513-review\\manufacturing-restored-proof.json",
+      "bytes": 768299,
+      "sha256": "3af67dde3c93f627dc0eb63ffb83015ed753bf0d177077ce9f9fa21e6becc9f0",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent original/restored proof exports, original trusted SHA binding and stdlib oracle outcomes.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/commercial-review/manufacturing-independent-i.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\commercial-review\\manufacturing-independent-i.json",
+      "bytes": 996,
+      "sha256": "dc7e3af6d094a74a8fccf33bafea64383d077996ac589ab43a0e9785cfa59d93",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent stdlib -I/-O outputs; each original binding header controls attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/commercial-review/manufacturing-independent-io.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\commercial-review\\manufacturing-independent-io.json",
+      "bytes": 996,
+      "sha256": "dc7e3af6d094a74a8fccf33bafea64383d077996ac589ab43a0e9785cfa59d93",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Independent stdlib -I/-O outputs; each original binding header controls attribution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/global-operating-platform-20261009/commercial/native-1791722625388556500/native-gate.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\global-operating-platform-20261009\\commercial\\native-1791722625388556500\\native-gate.json",
+      "bytes": 1473,
+      "sha256": "049e68a4f11d06d5e236888a0c51b1789b0211a43bb35823bf48a03df7ab3ae8",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Native gate original acceptance header retained; accepted=True",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/global-operating-platform-20261009/commercial/native-1791722625388556500/native-gate.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\global-operating-platform-20261009\\commercial\\native-1791722625388556500\\native-gate.log",
+      "bytes": 141637,
+      "sha256": "618abed0d846676af7ffb30b8e4e31b8f5d6dfb944ee17a746b1432ed9306c75",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Native gate original acceptance header retained; accepted=True",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/global-operating-platform-20261009/commercial/native-1791722625388556500/native-gate.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\global-operating-platform-20261009\\commercial\\native-1791722625388556500\\native-gate.xml",
+      "bytes": 10875,
+      "sha256": "0883f756962718ac34fd2249053b918b2c901161f4d6a31ecb925826d682d73d",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Native gate original acceptance header retained; accepted=True",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/global-operating-platform-20261009/commercial/native-1791767157932901100/native-gate.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\global-operating-platform-20261009\\commercial\\native-1791767157932901100\\native-gate.json",
+      "bytes": 1454,
+      "sha256": "b7fa6e1e159f3f7baacc43d2398fb271d5205947de0a242463715145f645161e",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Native gate original acceptance header retained; accepted=False",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/global-operating-platform-20261009/commercial/native-1791767157932901100/native-gate.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\global-operating-platform-20261009\\commercial\\native-1791767157932901100\\native-gate.log",
+      "bytes": 217652,
+      "sha256": "bcf0170c8ef1dc89f1e92ccbd3dd57bc0fdc1370c71a4d4a77a540ee4412fc80",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Native gate original acceptance header retained; accepted=False",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/global-operating-platform-20261009/commercial/native-1791767157932901100/native-gate.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\global-operating-platform-20261009\\commercial\\native-1791767157932901100\\native-gate.xml",
+      "bytes": 15610,
+      "sha256": "07ee73d350cb9978ee032b3f9110e459c3ef4f1f6a67e955b132d0d0b12bb6f1",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Native gate original acceptance header retained; accepted=False",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/global-operating-platform-20261009/commercial/native-1791768174355996900/native-gate.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\global-operating-platform-20261009\\commercial\\native-1791768174355996900\\native-gate.json",
+      "bytes": 1026,
+      "sha256": "97003cf2fa1c35169be0d6e37cf9165a115dd7f06d3e00416eb7a3d74701c836",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Native gate original acceptance header retained; accepted=True",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/global-operating-platform-20261009/commercial/native-1791768174355996900/native-gate.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\global-operating-platform-20261009\\commercial\\native-1791768174355996900\\native-gate.log",
+      "bytes": 875,
+      "sha256": "9d587bfcf86f0bc4ce9612f7c508fc31f44c7993ca2c6fa14e5e3ed195123437",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Native gate original acceptance header retained; accepted=True",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/global-operating-platform-20261009/commercial/native-1791768174355996900/native-gate.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\global-operating-platform-20261009\\commercial\\native-1791768174355996900\\native-gate.xml",
+      "bytes": 1292,
+      "sha256": "d5b21c64ae9a733d1a4db163193e70aec1b6db409f77053dba7dc4dfd5d849aa",
+      "source_commit": "12fe5f2bfed238789c2fc8ffe42e8539d9d961d7",
+      "source_attribution": "Native gate original acceptance header retained; accepted=True",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/global-operating-platform-20261009/commercial/native-1791771040926527000/native-gate.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\global-operating-platform-20261009\\commercial\\native-1791771040926527000\\native-gate.json",
+      "bytes": 1520,
+      "sha256": "75af21b3f7cfbb08481b75588fccc3dea6510045a43e46a82253504af99eb1f3",
+      "source_commit": "e8e2de24bf6311d67b46a9bfd3b025c1792c3474",
+      "source_attribution": "Native gate original acceptance header retained; accepted=True",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/global-operating-platform-20261009/commercial/native-1791771040926527000/native-gate.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\global-operating-platform-20261009\\commercial\\native-1791771040926527000\\native-gate.log",
+      "bytes": 142850,
+      "sha256": "dac187db865e3c085e8259cf0196cf7ea66ab1842a5760888fc61f5d952a6f6b",
+      "source_commit": "e8e2de24bf6311d67b46a9bfd3b025c1792c3474",
+      "source_attribution": "Native gate original acceptance header retained; accepted=True",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/global-operating-platform-20261009/commercial/native-1791771040926527000/native-gate.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\global-operating-platform-20261009\\commercial\\native-1791771040926527000\\native-gate.xml",
+      "bytes": 11925,
+      "sha256": "8808c664976ecabcde466d0c2147cb7b793c895ad292fb4263947dd0bb95ba82",
+      "source_commit": "e8e2de24bf6311d67b46a9bfd3b025c1792c3474",
+      "source_attribution": "Native gate original acceptance header retained; accepted=True",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/intercompany-operations/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\intercompany-operations\\browser.log",
+      "bytes": 425,
+      "sha256": "af5a40d0279cda5064e37371ec0e816d431a451a5bafa35c2e102df0e4a31c0a",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/intercompany-operations/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\intercompany-operations\\https-runtime.log",
+      "bytes": 1310,
+      "sha256": "b6b9264482aee4b60825780a272099aa7411840f229f90b2b3300fdc3d141be2",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/intercompany-operations/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\intercompany-operations\\independent-oracle.json",
+      "bytes": 2860,
+      "sha256": "4a2d977d144255460c553ab86485119639175a0f77b51871cf39b20d35d31cd2",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/intercompany-operations/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\intercompany-operations\\migration.log",
+      "bytes": 23436,
+      "sha256": "105b31d905533bc526acd18d2d4926184d0f422bc796a3e5a150958d35c9ba41",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/intercompany-operations/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\intercompany-operations\\playwright-artifacts\\.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/intercompany-operations/playwright-artifacts/ic-ar-mobile.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\intercompany-operations\\playwright-artifacts\\ic-ar-mobile.png",
+      "bytes": 135862,
+      "sha256": "9271793cccde7921df74569c5c6e1454949d0462f1ab32d779fe37189e57cc7d",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/intercompany-operations/playwright-artifacts/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\intercompany-operations\\playwright-artifacts\\ic-group-report.json",
+      "bytes": 38224,
+      "sha256": "2cb42e1fd048421a2e24f1efdceca966d63b9a0e7e953406d801c77f97d3b683",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/intercompany-operations/playwright-artifacts/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\intercompany-operations\\playwright-artifacts\\ic-proof-0.json",
+      "bytes": 22339,
+      "sha256": "ef65773cec5e6c3ad55c5054f3b70f8b7ae8862b710c9f2ed51d69468db81c74",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/intercompany-operations/playwright-artifacts/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\intercompany-operations\\playwright-artifacts\\ic-proof-1.json",
+      "bytes": 21723,
+      "sha256": "97b3b774adc8181a10a7f34eb6e9ec11da0c0149bab3f28688a59f212386979b",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/intercompany-operations/playwright-artifacts/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\intercompany-operations\\playwright-artifacts\\ic-proof-2.json",
+      "bytes": 16428,
+      "sha256": "0cd8309d45f0be9450de803cc904c9750efe71b6494076259114571f7d917b15",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/intercompany-operations/playwright-artifacts/ic-proof-ar-mobile.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\intercompany-operations\\playwright-artifacts\\ic-proof-ar-mobile.json",
+      "bytes": 16428,
+      "sha256": "0cd8309d45f0be9450de803cc904c9750efe71b6494076259114571f7d917b15",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/intercompany-operations/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\intercompany-operations\\playwright.json",
+      "bytes": 3683,
+      "sha256": "902c98ec6f67c98d4527af8a27740f536963c5713b041309e58ade923cce9456",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/intercompany-operations/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\intercompany-operations\\report.json",
+      "bytes": 99446,
+      "sha256": "48941d2c0aca64548885f68cf7239cc1ef3be2bd62c51674b6d73d78f9610693",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/manufacturing-execution/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\manufacturing-execution\\browser.log",
+      "bytes": 426,
+      "sha256": "df6af26274c81342c1182c7d26ca57df906dfc30597386c7b430b5dbde6e3706",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/manufacturing-execution/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\manufacturing-execution\\https-runtime.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/manufacturing-execution/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\manufacturing-execution\\migration.log",
+      "bytes": 23436,
+      "sha256": "105b31d905533bc526acd18d2d4926184d0f422bc796a3e5a150958d35c9ba41",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/manufacturing-execution/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\manufacturing-execution\\playwright-artifacts\\.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/manufacturing-execution/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\manufacturing-execution\\playwright.json",
+      "bytes": 3696,
+      "sha256": "3bdfeea0f512c4992057a4acf44e99eee431bfcba33c48bde4d42034f3ae036a",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/manufacturing-execution/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\manufacturing-execution\\report.json",
+      "bytes": 1118625,
+      "sha256": "2c685ccb58b77d1111f1d71166997162991a0e8841e0f6689925dbc540d85290",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/procurement-sourcing/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\procurement-sourcing\\browser.log",
+      "bytes": 440,
+      "sha256": "85d192a1099d5eac559d22d08b671bdbab777bd0be0f5d82412fe5a395b9e898",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/procurement-sourcing/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\procurement-sourcing\\https-runtime.log",
+      "bytes": 22270,
+      "sha256": "4af3c1aff2e21b26e539baf283873e127b1e8ece0aa6d9de241f870da1cfe03b",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/procurement-sourcing/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\procurement-sourcing\\migration.log",
+      "bytes": 23436,
+      "sha256": "105b31d905533bc526acd18d2d4926184d0f422bc796a3e5a150958d35c9ba41",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/procurement-sourcing/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\procurement-sourcing\\playwright-artifacts\\.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/appropriation-390px-ar.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\appropriation-390px-ar.png",
+      "bytes": 174623,
+      "sha256": "b7c506f47a055668aa7c9736c9a09f616591098a36ec76177822e3141030c0fa",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/appropriation-390px-en.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\appropriation-390px-en.png",
+      "bytes": 181506,
+      "sha256": "5119ce23d0b3b609dd9ba6cdafd94140ffdff3a0f5ce22697a27f36ffc3f09a8",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/sourcing-390px-ar.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\sourcing-390px-ar.png",
+      "bytes": 85422,
+      "sha256": "8a889d1d8f7ec7697e7a6ce6bbd014af8e5675c8e8c3d6996aa3274cf47c6718",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/sourcing-390px-en.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\sourcing-390px-en.png",
+      "bytes": 96999,
+      "sha256": "3e98a309f5dc632cbc9d46cd96925f3d4dc4b4bae7285ee1956fb24da88c939e",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/procurement-sourcing/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\procurement-sourcing\\playwright.json",
+      "bytes": 3651,
+      "sha256": "4fc9f6e5f68c28fd3950874cc60d980a6bd700281d373ec9670cf53200e56655",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-23778af1/procurement-sourcing/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-23778af1\\procurement-sourcing\\report.json",
+      "bytes": 97696,
+      "sha256": "397a75965a8658a81c183086a3bbe1aa3ddc4e175a3ed74b1669ff7542ce43ef",
+      "source_commit": "23778af137f6ce0a3de50eb1b0ed354361b93215",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/intercompany-operations/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\intercompany-operations\\browser.log",
+      "bytes": 425,
+      "sha256": "36d6ed5fa70845d5f1b0a835a436398b82b43fdb1edc8f1be51e52b87dedf3f7",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/intercompany-operations/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\intercompany-operations\\https-runtime.log",
+      "bytes": 655,
+      "sha256": "9c4bd64d02bc8e0c9f44d61379cdeca13deb70bb6a6c00b708a14821791d5f23",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/intercompany-operations/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\intercompany-operations\\independent-oracle.json",
+      "bytes": 2860,
+      "sha256": "06b285ff391e641b30c47fa99ad55130e7c4acd20f76421e6dd8c8973f24507b",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/intercompany-operations/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\intercompany-operations\\migration.log",
+      "bytes": 23436,
+      "sha256": "105b31d905533bc526acd18d2d4926184d0f422bc796a3e5a150958d35c9ba41",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/intercompany-operations/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\intercompany-operations\\playwright-artifacts\\.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/intercompany-operations/playwright-artifacts/ic-ar-mobile.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\intercompany-operations\\playwright-artifacts\\ic-ar-mobile.png",
+      "bytes": 135939,
+      "sha256": "ac8f43f76ce2bcf7e6b72964d6d9b9e002d2785f280e310387982439dc587092",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/intercompany-operations/playwright-artifacts/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\intercompany-operations\\playwright-artifacts\\ic-group-report.json",
+      "bytes": 38224,
+      "sha256": "1c04f8fb1ebdb6ba910b40842fb6e5865324778d94b5a4298e473fe4bd81c8a9",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/intercompany-operations/playwright-artifacts/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\intercompany-operations\\playwright-artifacts\\ic-proof-0.json",
+      "bytes": 22339,
+      "sha256": "d36e7ac99edd317597960eb1640ce2fb8f58256e25c168a41250bd4d52c8ae5f",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/intercompany-operations/playwright-artifacts/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\intercompany-operations\\playwright-artifacts\\ic-proof-1.json",
+      "bytes": 21723,
+      "sha256": "000b8f4d304a52da2501be8a0a27bb59c32ab6a3160a373cd6b607da29dd110e",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/intercompany-operations/playwright-artifacts/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\intercompany-operations\\playwright-artifacts\\ic-proof-2.json",
+      "bytes": 16428,
+      "sha256": "eea82b035a312bf259a43c2dd2984142c3280f5f695dc0e3d0969412184784b9",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/intercompany-operations/playwright-artifacts/ic-proof-ar-mobile.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\intercompany-operations\\playwright-artifacts\\ic-proof-ar-mobile.json",
+      "bytes": 16428,
+      "sha256": "eea82b035a312bf259a43c2dd2984142c3280f5f695dc0e3d0969412184784b9",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/intercompany-operations/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\intercompany-operations\\playwright.json",
+      "bytes": 3685,
+      "sha256": "92fca407559691e036453446716fdfff6a4c9dbd2402e87e61c58d495fab32df",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/intercompany-operations/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\intercompany-operations\\report.json",
+      "bytes": 7559,
+      "sha256": "2a85e139b4b5b2a364c0b8a198a2b1cf05633c0917bdf52713a7bd33b2d41784",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/manufacturing-execution/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\manufacturing-execution\\browser.log",
+      "bytes": 425,
+      "sha256": "8c6dd66132e61656bb553b538c9f4896ed5803930321b0fe748a83ef1112f787",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/manufacturing-execution/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\manufacturing-execution\\https-runtime.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/manufacturing-execution/independent-oracle-optimized.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\manufacturing-execution\\independent-oracle-optimized.json",
+      "bytes": 996,
+      "sha256": "dc7e3af6d094a74a8fccf33bafea64383d077996ac589ab43a0e9785cfa59d93",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/manufacturing-execution/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\manufacturing-execution\\independent-oracle.json",
+      "bytes": 996,
+      "sha256": "dc7e3af6d094a74a8fccf33bafea64383d077996ac589ab43a0e9785cfa59d93",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/manufacturing-execution/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\manufacturing-execution\\migration.log",
+      "bytes": 23436,
+      "sha256": "105b31d905533bc526acd18d2d4926184d0f422bc796a3e5a150958d35c9ba41",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/manufacturing-execution/original-manufacturing-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\manufacturing-execution\\original-manufacturing-proof.json",
+      "bytes": 768273,
+      "sha256": "0c32c86b63c2bc3e7f94b36c392659786f149a0ff4b18aa4b5515f6501356ca8",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/manufacturing-execution/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\manufacturing-execution\\playwright-artifacts\\.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/manufacturing-execution/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\manufacturing-execution\\playwright.json",
+      "bytes": 3687,
+      "sha256": "a9cf58edf11a145628b4bd8acb7c0afbe7aa47e2904066bf9e7e372ee57bd6b9",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/manufacturing-execution/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\manufacturing-execution\\report.json",
+      "bytes": 1118599,
+      "sha256": "44b76554004e2153ed902ac0eac6934c6c9d17c8e21cdf889b9a5b31eab5e55d",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/procurement-sourcing/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\procurement-sourcing\\browser.log",
+      "bytes": 439,
+      "sha256": "7ef4fa03bff22a003e69c06d02c2d95ff623b67c797aedd299e97deef870955b",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/procurement-sourcing/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\procurement-sourcing\\https-runtime.log",
+      "bytes": 18340,
+      "sha256": "1fa544127bb13a22043dacaed90e070637f8d7ce7a91fd565c68fe89d8fc1475",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/procurement-sourcing/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\procurement-sourcing\\migration.log",
+      "bytes": 23436,
+      "sha256": "105b31d905533bc526acd18d2d4926184d0f422bc796a3e5a150958d35c9ba41",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/procurement-sourcing/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\procurement-sourcing\\playwright-artifacts\\.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/appropriation-390px-ar.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\appropriation-390px-ar.png",
+      "bytes": 174183,
+      "sha256": "a157a076740997a297f8da84da5ad4438f168abc174e74710fb0d80c962e4b98",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/appropriation-390px-en.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\appropriation-390px-en.png",
+      "bytes": 181088,
+      "sha256": "9d5d0752364f2503f2be1e745dfd8b252a3b717d0904034f3d08fff1653778a9",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/sourcing-390px-ar.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\sourcing-390px-ar.png",
+      "bytes": 85750,
+      "sha256": "e1d1c4d9ecafcf95d0ab4fce20f0f3fd9e4fa5bdf5594b03b271c9483fb7f2bf",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/sourcing-390px-en.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\sourcing-390px-en.png",
+      "bytes": 96670,
+      "sha256": "026a5a41a8e9be810c1ddb6352edebe4c6d6fdcb98a7a75b558ae889825b18f0",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/procurement-sourcing/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\procurement-sourcing\\playwright.json",
+      "bytes": 3659,
+      "sha256": "5d9191bab07a4b0158070a5a0146bd98b98b7c4a2e26c88d7f6556cc7e36207c",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-5da0c4c1/procurement-sourcing/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-5da0c4c1\\procurement-sourcing\\report.json",
+      "bytes": 97704,
+      "sha256": "bc30164f8b42625bdd45be7db16877c4f96592cb487cea7e800133406ede816b",
+      "source_commit": "5da0c4c1ca64b2e0d3a310c4e4d3012014180fdb",
+      "source_attribution": "Retained former wire failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/intercompany-operations/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\intercompany-operations\\browser.log",
+      "bytes": 423,
+      "sha256": "d3dabf5615c7790ab32d92b5c9fd9b8cda4ba14c45cb2e89270fc483bf2d0873",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/intercompany-operations/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\intercompany-operations\\https-runtime.log",
+      "bytes": 1310,
+      "sha256": "b6b9264482aee4b60825780a272099aa7411840f229f90b2b3300fdc3d141be2",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/intercompany-operations/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\intercompany-operations\\migration.log",
+      "bytes": 23616,
+      "sha256": "cbba54d8da1909bd5edb8c8279ef886e13f674a78fd06fc1268c1f945b4f76af",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/intercompany-operations/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\intercompany-operations\\playwright-artifacts\\.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/intercompany-operations/playwright-artifacts/ic-ar-mobile.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\intercompany-operations\\playwright-artifacts\\ic-ar-mobile.png",
+      "bytes": 136741,
+      "sha256": "e1f0f2c601f23925946980cf2e556864ac36dab4369bba13b128d3ef00849e65",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/intercompany-operations/playwright-artifacts/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\intercompany-operations\\playwright-artifacts\\ic-group-report.json",
+      "bytes": 38224,
+      "sha256": "742e34f9796add7d1435826f579f5e0f48613f34be4eab81cd6d63b629872c94",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/intercompany-operations/playwright-artifacts/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\intercompany-operations\\playwright-artifacts\\ic-proof-0.json",
+      "bytes": 22339,
+      "sha256": "3a39c97a1d9016d5435df8e1a48e8df192cadfffbf39cccfa7cea8d91b45b567",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/intercompany-operations/playwright-artifacts/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\intercompany-operations\\playwright-artifacts\\ic-proof-1.json",
+      "bytes": 21723,
+      "sha256": "1d5657fa9abc30f7b754f5232053de427d030c49e3dd922b19579928edf4236a",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/intercompany-operations/playwright-artifacts/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\intercompany-operations\\playwright-artifacts\\ic-proof-2.json",
+      "bytes": 16428,
+      "sha256": "aab3629f655364c9889d09063359d605d410ac16763244a666939d34c894a1ba",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/intercompany-operations/playwright-artifacts/ic-proof-ar-mobile.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\intercompany-operations\\playwright-artifacts\\ic-proof-ar-mobile.json",
+      "bytes": 16428,
+      "sha256": "aab3629f655364c9889d09063359d605d410ac16763244a666939d34c894a1ba",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/intercompany-operations/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\intercompany-operations\\playwright.json",
+      "bytes": 3685,
+      "sha256": "0238a2445934b66236e9832d09a5e3ff6c3cbdb7b0d1a4e0f720be64a2174aa0",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/intercompany-operations/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\intercompany-operations\\report.json",
+      "bytes": 104054,
+      "sha256": "c9418e110bb83bced524b587fd366d9ea43ba8fe544fb38de4f0a698b9ad4305",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/manufacturing-execution/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\manufacturing-execution\\browser.log",
+      "bytes": 424,
+      "sha256": "98754e09627deac4a56c6886739dc8a00d5573043e832494ad761ac83c890e6e",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/manufacturing-execution/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\manufacturing-execution\\https-runtime.log",
+      "bytes": 1310,
+      "sha256": "b6b9264482aee4b60825780a272099aa7411840f229f90b2b3300fdc3d141be2",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/manufacturing-execution/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\manufacturing-execution\\migration.log",
+      "bytes": 23616,
+      "sha256": "cbba54d8da1909bd5edb8c8279ef886e13f674a78fd06fc1268c1f945b4f76af",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/manufacturing-execution/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\manufacturing-execution\\playwright-artifacts\\.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/manufacturing-execution/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\manufacturing-execution\\playwright.json",
+      "bytes": 3687,
+      "sha256": "44dd008b5d5f6a7e947fb57d8cba3a7357d518cee8710821966e6c9c43e97b97",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/manufacturing-execution/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\manufacturing-execution\\report.json",
+      "bytes": 2367095,
+      "sha256": "d344a4db07e6e322396834f37bcb531966992a2fae6f8c9571ad905f2dfda64e",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/procurement-sourcing/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\procurement-sourcing\\browser.log",
+      "bytes": 440,
+      "sha256": "bf6ce84c95bda24d36daa56a4164851c0708e8fd9079d8a8d0bdb41a582b160e",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/procurement-sourcing/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\procurement-sourcing\\https-runtime.log",
+      "bytes": 26200,
+      "sha256": "00a363ffb69cac038b61250116ffd39fa506bd4ac48a194d65bf44371c0557df",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/procurement-sourcing/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\procurement-sourcing\\migration.log",
+      "bytes": 23616,
+      "sha256": "cbba54d8da1909bd5edb8c8279ef886e13f674a78fd06fc1268c1f945b4f76af",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/procurement-sourcing/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\procurement-sourcing\\playwright-artifacts\\.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/appropriation-390px-ar.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\appropriation-390px-ar.png",
+      "bytes": 174590,
+      "sha256": "f559312f5c3f334fcf7337e1fa904724b51063b7c7ab0396e7404d963d876162",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/appropriation-390px-en.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\appropriation-390px-en.png",
+      "bytes": 181490,
+      "sha256": "96b0344b648e21b328c5bbf2f10178687ba020e03cc4c7f3de486bc224c683b0",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/sourcing-390px-ar.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\sourcing-390px-ar.png",
+      "bytes": 85647,
+      "sha256": "7688764d842444dff63fb0883f04227eaa493ed438f62229a0a0d312c42f153b",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/sourcing-390px-en.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\sourcing-390px-en.png",
+      "bytes": 97969,
+      "sha256": "621aeec83529d58a5b593cb7838f95c45bca7da9983fbb78feeaaad8c0aa8e76",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/procurement-sourcing/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\procurement-sourcing\\playwright.json",
+      "bytes": 3651,
+      "sha256": "c3787fa554ec5ad5c37a87fa3ebbbe86628aea63963dd9b108e0a4dddb105535",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-wire-8513a9e2/procurement-sourcing/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-wire-8513a9e2\\procurement-sourcing\\report.json",
+      "bytes": 103994,
+      "sha256": "797e8c5e087feb48440cdeb4489015a6f5508dd596026e4c8de68ffc53e3ce01",
+      "source_commit": "8513a9e2fd1a061c02fb31d5444304809c8af92e",
+      "source_attribution": "Actual three domain HTTPS/native populated restore acceptance; original headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/intercompany-operations/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\intercompany-operations\\browser.log",
+      "bytes": 2991,
+      "sha256": "09ad1ffcc6163d701e2e9a2a5712ac2dbf04a07678c6687fea264693418e9d7f",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/intercompany-operations/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\intercompany-operations\\https-runtime.log",
+      "bytes": 2620,
+      "sha256": "a402afa778abda101e9705e2daebd69b9c6c10a39f78953c6361ba54086f135d",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/intercompany-operations/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\intercompany-operations\\migration.log",
+      "bytes": 23436,
+      "sha256": "105b31d905533bc526acd18d2d4926184d0f422bc796a3e5a150958d35c9ba41",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/intercompany-operations/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\intercompany-operations\\playwright-artifacts\\.last-run.json",
+      "bytes": 96,
+      "sha256": "d54971420b81f6ad9613a908b34659546547b80c660db5ffab21d4661242e521",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/intercompany-operations/playwright-artifacts/intercompany-operations-cy-00d40-lingual-three-book-evidence-intercompany-operations-chromium/error-context.md",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\intercompany-operations\\playwright-artifacts\\intercompany-operations-cy-00d40-lingual-three-book-evidence-intercompany-operations-chromium\\error-context.md",
+      "bytes": 17360,
+      "sha256": "bd5b6acaef0ed26ca729483bf5012f2fa42c341c9b10a83cbdbc373b3d6762a2",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/intercompany-operations/playwright-artifacts/intercompany-operations-cy-00d40-lingual-three-book-evidence-intercompany-operations-chromium/test-failed-1.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\intercompany-operations\\playwright-artifacts\\intercompany-operations-cy-00d40-lingual-three-book-evidence-intercompany-operations-chromium\\test-failed-1.png",
+      "bytes": 93801,
+      "sha256": "3910ee3f1283f0bd92d8f0e7dfc0d1e759867247d3300c190fbe55ec37b5fb72",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/intercompany-operations/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\intercompany-operations\\playwright.json",
+      "bytes": 8968,
+      "sha256": "48224e226fbabf37fd4721212ebcc27514ed60c5ad691aa51d225b27c56b80c9",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/intercompany-operations/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\intercompany-operations\\report.json",
+      "bytes": 5519,
+      "sha256": "3985e606899619e0b2f65bbcef923736665740940fd2de885cedd8a8c834f8e3",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/manufacturing-execution/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\manufacturing-execution\\browser.log",
+      "bytes": 3646,
+      "sha256": "d3759d25a7f16f5bfeedc3275437a6b745bb54fd0595c9a2ec0fc3481270c1c9",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/manufacturing-execution/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\manufacturing-execution\\https-runtime.log",
+      "bytes": 2620,
+      "sha256": "a402afa778abda101e9705e2daebd69b9c6c10a39f78953c6361ba54086f135d",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/manufacturing-execution/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\manufacturing-execution\\migration.log",
+      "bytes": 23436,
+      "sha256": "105b31d905533bc526acd18d2d4926184d0f422bc796a3e5a150958d35c9ba41",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/manufacturing-execution/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\manufacturing-execution\\playwright-artifacts\\.last-run.json",
+      "bytes": 96,
+      "sha256": "7c37ce15207ba0259689c39a04815c049cb065d331cf336353e451ae18ca24f0",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/manufacturing-execution/playwright-artifacts/manufacturing-execution-cy-7d1c9-ancelled-draft-and-lost-ACK-manufacturing-execution-chromium/error-context.md",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\manufacturing-execution\\playwright-artifacts\\manufacturing-execution-cy-7d1c9-ancelled-draft-and-lost-ACK-manufacturing-execution-chromium\\error-context.md",
+      "bytes": 14205,
+      "sha256": "0e8797173988f1c58d183d91c7f881b7131e97d9f0cce32fa0ac3ddbae676f9c",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/manufacturing-execution/playwright-artifacts/manufacturing-execution-cy-7d1c9-ancelled-draft-and-lost-ACK-manufacturing-execution-chromium/test-failed-1.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\manufacturing-execution\\playwright-artifacts\\manufacturing-execution-cy-7d1c9-ancelled-draft-and-lost-ACK-manufacturing-execution-chromium\\test-failed-1.png",
+      "bytes": 95474,
+      "sha256": "e992a515795946876678419c6b4717766dcbfc378e4a8e0e08bb471ba176328e",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/manufacturing-execution/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\manufacturing-execution\\playwright.json",
+      "bytes": 10367,
+      "sha256": "7d00e0414cfa858a0261179c122d15511b5e49c81336f5d7129510dc66ec9afd",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/manufacturing-execution/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\manufacturing-execution\\report.json",
+      "bytes": 5509,
+      "sha256": "3690c2674d6f9c579b841dcfd23588c25d8d0ab462580818293fb63bb90ada60",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/procurement-sourcing/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\procurement-sourcing\\browser.log",
+      "bytes": 4303,
+      "sha256": "23199d9f2164c484da38091eb44538c45f19893157030ee9e97afdb720105c7e",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/procurement-sourcing/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\procurement-sourcing\\https-runtime.log",
+      "bytes": 9170,
+      "sha256": "4480f7e2d4417a3078c131b286f16ac371fdc0d6ccba2e243f2b5e95624fddfc",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/procurement-sourcing/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\procurement-sourcing\\migration.log",
+      "bytes": 23436,
+      "sha256": "105b31d905533bc526acd18d2d4926184d0f422bc796a3e5a150958d35c9ba41",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/procurement-sourcing/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\procurement-sourcing\\playwright-artifacts\\.last-run.json",
+      "bytes": 96,
+      "sha256": "1f81f081abdb6063017dc65e2e3c8e2a19a34e20ba872ffe2cec12e608b5e565",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/error-context.md",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\error-context.md",
+      "bytes": 24257,
+      "sha256": "9a4d2fe42ee93bcd11869923babf2e61d2e67819989d06fe84dc97c61da23e45",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/sourcing-390px-en.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\sourcing-390px-en.png",
+      "bytes": 98042,
+      "sha256": "f8922667075e9d443bcd50512f2abad095304aa165b94ec86b908c300161dc80",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/test-failed-1.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\test-failed-1.png",
+      "bytes": 105945,
+      "sha256": "a2657d7bb3d7275aa2fe39901bb78ad1cc5abbbec89f0a8a599e0d41f1d18b92",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/test-failed-2.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\test-failed-2.png",
+      "bytes": 54590,
+      "sha256": "0674ccbf42db7e17e63d330890acb39aa93cfe5b335426d812ecdc284ed651d6",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/test-failed-3.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\test-failed-3.png",
+      "bytes": 108667,
+      "sha256": "d7dd6532459d787c72f9bd9b4650e977cabffe165a3fb0c52a07b6a49af64e20",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/procurement-sourcing/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\procurement-sourcing\\playwright.json",
+      "bytes": 9530,
+      "sha256": "2216b6518bdae880245f83dbde598aea25ff1c165b19d9764ab30c5fe3f7c75a",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-3e34a1a9/procurement-sourcing/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-3e34a1a9\\procurement-sourcing\\report.json",
+      "bytes": 5481,
+      "sha256": "b6c410aacfa280693a27b2eb884546a26112e04741ecb5d0af513951dd0a2935",
+      "source_commit": "3e34a1a99b33fe9a067911370254f31c53012936",
+      "source_attribution": "Retained initial three HTTPS failures; not accepted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/intercompany-operations/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\intercompany-operations\\browser.log",
+      "bytes": 3128,
+      "sha256": "044e44ab5fe74d396daf5f05c1f3292682179f6f53105ba9f9de1e6b96a8604f",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/intercompany-operations/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\intercompany-operations\\https-runtime.log",
+      "bytes": 3930,
+      "sha256": "7348a715ad0164af553481f2427a431206a12fa501cfcbd9d7e79178c5dfd134",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/intercompany-operations/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\intercompany-operations\\migration.log",
+      "bytes": 23436,
+      "sha256": "105b31d905533bc526acd18d2d4926184d0f422bc796a3e5a150958d35c9ba41",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/intercompany-operations/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\intercompany-operations\\playwright-artifacts\\.last-run.json",
+      "bytes": 96,
+      "sha256": "d54971420b81f6ad9613a908b34659546547b80c660db5ffab21d4661242e521",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/intercompany-operations/playwright-artifacts/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\intercompany-operations\\playwright-artifacts\\ic-group-report.json",
+      "bytes": 38224,
+      "sha256": "7fad057ed6029f306251cb2a46cf523e817248e796317d64e34bab807baf8cf2",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/intercompany-operations/playwright-artifacts/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\intercompany-operations\\playwright-artifacts\\ic-proof-0.json",
+      "bytes": 22339,
+      "sha256": "c8c19c583d5d905b0c88f51c59ab30593f492235fc1331a428659aa8f1ccf095",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/intercompany-operations/playwright-artifacts/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\intercompany-operations\\playwright-artifacts\\ic-proof-1.json",
+      "bytes": 21723,
+      "sha256": "ac104a32bcaf05087249435deb478b607262580c7d5e7a186aa38bbaa146bc41",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/intercompany-operations/playwright-artifacts/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\intercompany-operations\\playwright-artifacts\\ic-proof-2.json",
+      "bytes": 16428,
+      "sha256": "dcd6fc34e5c387845499db6a1193290b51bd387bd59cfbf92e66df6e2ef3747f",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/intercompany-operations/playwright-artifacts/ic-proof-ar-mobile.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\intercompany-operations\\playwright-artifacts\\ic-proof-ar-mobile.json",
+      "bytes": 16428,
+      "sha256": "dcd6fc34e5c387845499db6a1193290b51bd387bd59cfbf92e66df6e2ef3747f",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/intercompany-operations/playwright-artifacts/intercompany-operations-cy-00d40-lingual-three-book-evidence-intercompany-operations-chromium/error-context.md",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\intercompany-operations\\playwright-artifacts\\intercompany-operations-cy-00d40-lingual-three-book-evidence-intercompany-operations-chromium\\error-context.md",
+      "bytes": 19563,
+      "sha256": "d4dd174344f1209df3efb003932caa2d62720e8bacb5701065cd41b44ab7ff85",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/intercompany-operations/playwright-artifacts/intercompany-operations-cy-00d40-lingual-three-book-evidence-intercompany-operations-chromium/test-failed-1.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\intercompany-operations\\playwright-artifacts\\intercompany-operations-cy-00d40-lingual-three-book-evidence-intercompany-operations-chromium\\test-failed-1.png",
+      "bytes": 41585,
+      "sha256": "785518c26e72e1b2b071255c14781bdc65a1315a6a8e7e1df51480fd10cba6fc",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/intercompany-operations/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\intercompany-operations\\playwright.json",
+      "bytes": 8644,
+      "sha256": "7dbb4658d803d1e3a596b68c93f6f8272e905721d6729ab2e75cc6111c674878",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/intercompany-operations/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\intercompany-operations\\report.json",
+      "bytes": 5511,
+      "sha256": "d9f2825ec7d3b72b6a754ed602eafca8e0ec8af73e7be3f4666476afdef198ca",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/manufacturing-execution/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\manufacturing-execution\\browser.log",
+      "bytes": 425,
+      "sha256": "fd339b0455e1a973287118a47f3ea47d263c4f1ca5d0374c3cbe3d9b4b40fa4a",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/manufacturing-execution/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\manufacturing-execution\\https-runtime.log",
+      "bytes": 3930,
+      "sha256": "7348a715ad0164af553481f2427a431206a12fa501cfcbd9d7e79178c5dfd134",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/manufacturing-execution/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\manufacturing-execution\\migration.log",
+      "bytes": 23436,
+      "sha256": "105b31d905533bc526acd18d2d4926184d0f422bc796a3e5a150958d35c9ba41",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/manufacturing-execution/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\manufacturing-execution\\playwright-artifacts\\.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/manufacturing-execution/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\manufacturing-execution\\playwright.json",
+      "bytes": 3673,
+      "sha256": "11c52949bef9f44f0db430605b41f891744738daee6b341e7ef918d41ce1247c",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/manufacturing-execution/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\manufacturing-execution\\report.json",
+      "bytes": 5436,
+      "sha256": "16827c6b3b02d58b1f3657621f057bffd01e58b65e5596868da7206fcc10cf45",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/procurement-sourcing/browser.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\procurement-sourcing\\browser.log",
+      "bytes": 440,
+      "sha256": "1abc76f4e193779f729a09e213e5d6dbf1a4cc781065b1e45098bd228b6e1f71",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/procurement-sourcing/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\procurement-sourcing\\https-runtime.log",
+      "bytes": 26200,
+      "sha256": "00a363ffb69cac038b61250116ffd39fa506bd4ac48a194d65bf44371c0557df",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/procurement-sourcing/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\procurement-sourcing\\migration.log",
+      "bytes": 23436,
+      "sha256": "105b31d905533bc526acd18d2d4926184d0f422bc796a3e5a150958d35c9ba41",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/procurement-sourcing/playwright-artifacts/.last-run.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\procurement-sourcing\\playwright-artifacts\\.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/appropriation-390px-ar.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\appropriation-390px-ar.png",
+      "bytes": 173882,
+      "sha256": "a31b303e66f48015c7f7e97efbe92daca4c105f6d6fd65c1143d794fba84f34f",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/appropriation-390px-en.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\appropriation-390px-en.png",
+      "bytes": 180794,
+      "sha256": "ff90185728d4f8e52d60197e447bac9a60a157f6cd8bf557bb3bee289b60571f",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/sourcing-390px-ar.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\sourcing-390px-ar.png",
+      "bytes": 85773,
+      "sha256": "264269034dc1be5ffea824e7646472b3e624e421927ea91af508886b93d02736",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/procurement-sourcing/playwright-artifacts/procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium/sourcing-390px-en.png",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\procurement-sourcing\\playwright-artifacts\\procurement-sourcing-actua-a9049--AP-cash-GL-survive-restore-procurement-sourcing-chromium\\sourcing-390px-en.png",
+      "bytes": 98542,
+      "sha256": "6fd1c529dc5658958ed02b0d414a636736bc8fffb09168090128be5576322190",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/procurement-sourcing/playwright.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\procurement-sourcing\\playwright.json",
+      "bytes": 3647,
+      "sha256": "6b923635f777764ca56214cde221f9f6bf5b9d9524d7982e34dec657b94c1c8d",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-https-second/procurement-sourcing/report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-https-second\\procurement-sourcing\\report.json",
+      "bytes": 97705,
+      "sha256": "332d1df76381e437f243d3e788be5fb41ab4523ef9d6abcf8aae633994d43cfc",
+      "source_commit": "ca7f891f358bf5543c5351bd8045b6e69bc82878",
+      "source_attribution": "Retained second HTTPS failure/acceptance stages; not final-source acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

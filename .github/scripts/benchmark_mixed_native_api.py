@@ -33,8 +33,10 @@ class MixedScenario:
     measurement_scope = (
         "Sequential cohort on one actual HTTPS server/PostgreSQL container: IC1 then ME1 in separate fresh tenants; "
         "masters and ME1's two original material-receipt effects seeded before timing; 42 actual HTTPS requests; "
-        "11 original native effects verified, 9 timed business effects per cohort. Cohort wall/client CPU includes "
-        "both owners' proof/oracle work; retain each owner's business latency separately (both exclude independent "
+        "11 original native effects verified, 9 timed business effects per cohort. Cohort wall time includes "
+        "both owners' proof/oracle work and waits. Cohort client process_time includes in-process proof/oracle "
+        "work and the observer thread, excludes wait time and external subprocess CPU; both original oracles "
+        "run in-process. Retain each owner's business latency separately (both exclude independent "
         "oracle work; ME1 also excludes native proof export). No cross-domain financial linkage, retries or fair "
         "baseline comparison is claimed."
     )

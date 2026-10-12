@@ -522,7 +522,16 @@ def run(scenario: NativeApiScenario, argv: list[str] | None = None) -> int:
             report["database_cpu_seconds"] = delta / 1_000_000
             report["cycle_latencies"] = summary([row["seconds"] for row in report["cycles"]])
             report["request_latencies"] = summary([row["seconds"] for row in report["requests"]])
-            report["resource_scope"] = "Server GetProcessTimes or /proc CPU; client process_time includes observer thread; PostgreSQL cgroup CPU includes read-only exec counter overhead; RSS samples can miss spikes; startup/migration/master seed excluded from CPU deltas, lifetime peak includes them"
+            report["resource_scope"] = (
+                "Server CPU is the actual API interpreter PID only (GetProcessTimes or /proc own CPU), excluding "
+                "launcher and child-process CPU. Client process_time includes all client threads and in-process "
+                "proof/oracle work, excludes wait time and external subprocess CPU; its loop includes progress JSON "
+                "writes. PostgreSQL CPU is the dedicated container cgroup and can include read-only exec counter "
+                "overhead inside its CPU interval; counter files are sampled sequentially, not atomically. "
+                "Client loop, server PID and cgroup intervals have distinct boundaries; these are not a process-tree "
+                "or whole-host CPU total. RSS samples can miss spikes; lifetime peaks begin at process creation, "
+                "not benchmark admission. Startup/migration/master seed excluded from CPU deltas."
+            )
     except Exception as exc:
         diagnostic = str(exc)
         for secret in secrets_to_redact:

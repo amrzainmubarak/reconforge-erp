@@ -85,7 +85,9 @@ def test_literal_seed_and_sequential_original_callbacks_share_client_without_mer
     assert [row[0] for row in actions] == ["intercompany_operations", "manufacturing_execution"]
     assert actions[0][1] is actions[1][1] is client and actions[0][4].name == "intercompany" and actions[1][4].name == "manufacturing"
     assert mixed.oracle_paths == (mixed.intercompany.oracle_path, mixed.manufacturing.oracle_path)
-    assert mixed.expected_requests_per_cycle == 42 and "Cohort wall/client CPU includes" in mixed.measurement_scope
+    assert mixed.expected_requests_per_cycle == 42 and "Cohort wall time includes" in mixed.measurement_scope
+    assert "includes in-process proof/oracle" in mixed.measurement_scope
+    assert "excludes wait time and external subprocess CPU" in mixed.measurement_scope
     assert mixed.financial_summary({"configuration": {"cycles": 1}, "cycles": [result]}) == {
         "financial_verification": "passed", "successful_cycles": 1, "native_posting_effects": 11, "timed_native_posting_effects": 9}
 

@@ -1440,6 +1440,7 @@ include tests/test_stable_power_pair_controller.py
 include .github/scripts/verify_stable_power_environment.py
 include tests/test_stable_power_environment_verifier.py
 include docs/security/gitleaks-public-source-digests-wave4.v1.json
+include docs/security/gitleaks-public-source-digests-wave5.v1.json
 include .gitleaks.toml
 include .gitleaksignore
 include .github/scripts/validate_supply_chain_policy.py

@@ -582,3 +582,14 @@ def test_ordinary_manual_native_inverse_needs_no_intercompany_table_select(runti
         with psycopg.connect(runtime.base.admin_dsn) as admin:
             for table in tables:
                 admin.execute(sql.SQL("GRANT SELECT ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(role)))
+
+
+@pytest.mark.parametrize("debit,credit", [("4500000000000000001", "0"), ("0", "4500000000000000001"), ("0.5", "0"), ("0", "0"), ("1", "1")])
+def test_sql_native_source_line_cap_matches_declared_domain_bound(runtime: FxRuntime, debit: str, credit: str) -> None:
+    import psycopg
+
+    with runtime.actor("poster") as (connection, _, _):
+        with pytest.raises(psycopg.errors.CheckViolation, match="bounded exact native side"), connection.transaction():
+            connection.execute("SELECT reconforge.icfx_line('IC2_CASH',%s::numeric,%s::numeric)", (debit, credit))
+        line = connection.execute("SELECT reconforge.icfx_line('IC2_CASH',4500000000000000000,0) line").fetchone()["line"]
+        assert line == {"account_code": "IC2_CASH", "debit_minor": 4500000000000000000, "credit_minor": 0}

@@ -52,9 +52,14 @@ CREATE FUNCTION reconforge.icfx_scope(t TEXT,w TEXT,o TEXT,a TEXT,b TEXT,g TEXT)
  LANGUAGE sql STABLE SECURITY INVOKER SET search_path=pg_catalog AS $icfx$
  SELECT a<>b AND a<>g AND b<>g AND reconforge.irp_scope(t,w,o,a) AND reconforge.irp_scope(t,w,o,b) AND reconforge.irp_scope(t,w,o,g)
 $icfx$;
-CREATE FUNCTION reconforge.icfx_line(account TEXT,debit NUMERIC,credit NUMERIC) RETURNS JSONB LANGUAGE sql IMMUTABLE SET search_path=pg_catalog AS $icfx$
- SELECT jsonb_build_object('account_code',account,'debit_minor',debit,'credit_minor',credit)
-$icfx$;
+CREATE FUNCTION reconforge.icfx_line(account TEXT,debit NUMERIC,credit NUMERIC) RETURNS JSONB LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog AS $icfx$
+BEGIN
+ PERFORM reconforge.icfx_assert(account~'^[A-Z0-9][A-Z0-9._-]{0,63}$' AND debit IS NOT NULL AND credit IS NOT NULL
+  AND debit=trunc(debit) AND credit=trunc(credit) AND debit BETWEEN 0 AND 4500000000000000000
+  AND credit BETWEEN 0 AND 4500000000000000000 AND(debit=0)<>(credit=0),
+  'Paired FX lines require one positive bounded exact native side');
+ RETURN jsonb_build_object('account_code',account,'debit_minor',debit,'credit_minor',credit);
+END $icfx$;
 CREATE FUNCTION reconforge.icfx_event(t TEXT,p TEXT,a TEXT,b TEXT,actor TEXT,action TEXT,metadata JSONB) RETURNS BOOLEAN
  LANGUAGE sql STABLE SECURITY INVOKER SET search_path=pg_catalog AS $icfx$
  SELECT EXISTS(SELECT 1 FROM reconforge.domain_audit_events x JOIN reconforge.outbox_events y ON y.tenant_id=x.tenant_id

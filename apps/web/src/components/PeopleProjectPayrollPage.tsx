@@ -95,7 +95,7 @@ function PeopleSession({ locale }: { locale: Locale }) {
   }
   function submit(path: string, body: Record<string, ScopedJsonValue>) { try { void send(prepareScopedCommand(peopleRoot + path, body)); } catch { setError("invalid"); } }
   const input = (key: Word, value: string, change: (value: string) => void, required = true) => <label>{t(key)}<input required={required} disabled={locked} value={value} type={key === "password" ? "password" : ["business_date", "valid_from", "valid_through", "posting_date"].includes(key) ? "date" : "text"} maxLength={key === "reason" ? 500 : 160} onChange={event => change(event.target.value)} /></label>;
-  const select = (label: Word, value: string, change: (value: string) => void, rows: Row[]) => <label>{t(label)}<select required disabled={locked} value={value} onChange={event => change(event.target.value)}><option value="">—</option>{rows.map(row => <option key={row.id} value={row.id}>{String(row.employee_code ?? row.project_code ?? row.id)}</option>)}</select></label>;
+  const select = (label: Word, value: string, change: (value: string) => void, rows: Row[]) => <label>{t(label)}<select aria-label={t(label)} required disabled={locked} value={value} onChange={event => change(event.target.value)}><option value="">—</option>{rows.map(row => <option key={row.id} value={row.id}>{String(row.employee_code ?? row.project_code ?? row.id)}</option>)}</select></label>;
   const approved = catalog.times.filter(row => row.approver_id), selectedTime = catalog.times.find(row => row.id === time);
   const independentTimeApproval = selectedTime && identity?.id !== selectedTime.submitter_id &&
     identity?.id !== catalog.employees.find(row => row.id === selectedTime.employee_id)?.linked_user_id;

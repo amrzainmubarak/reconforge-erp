@@ -1,0 +1,45 @@
+{
+  "schema_version": "reconforge-flat-evidence-capsule-extension-v1",
+  "prior_eleven_own_capsules_unchanged": true,
+  "twelfth_commercial_capsule_reference_only": true,
+  "capsules": [
+    {
+      "file_name": "wave5-current-profile-d5-streamed-source-e9-review-v1.zip",
+      "sha256": "7dddb8228a4a2e1010417c09f093f79406761587619840b643fae65bc6eb1c83",
+      "bytes": 131090,
+      "file_count": 27,
+      "raw_bytes": 423431,
+      "index_name": "wave5-current-profile-d5-streamed-source-e9-review-v1.index.json",
+      "index_sha256": "e695fb43017407ba657a3e6e75a4dd0c90cee5421ff21ca980912605f529380b",
+      "coverage": {
+        "profile_commit": "d5c60f47ee3a7310f0097ca3a172e8384c365ba1",
+        "integrated_profile_commit": "a6b2b5b53383d045a0460dddb9f8444b9f4fc319",
+        "streamed_source_commit": "e9dc608eee639bc5dc93f1c8d055fbf7214b4b47",
+        "profile_targeted_final": {
+          "tests": 62,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "seconds": 3.408
+        },
+        "streamed_source_development_targeted": {
+          "tests": 59,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "seconds": 2.549
+        },
+        "source_custody": "Immutable exact Git blobs and raw source SHA256, with development-run to later-commit equivalence mapping.",
+        "prior_eleven_capsules_unchanged": true,
+        "twelfth_input_capsule_reference_only": true,
+        "current_postgres_actual_lifecycle_acceptance": "Pending final integrated source run.",
+        "financial_posting_performance_accepted": false,
+        "wall_cpu_comparison_accepted": false,
+        "python_traced_peak_bytes": {
+          "baseline": 22276896,
+          "candidate": 271537
+        }
+      }
+    }
+  ]
+}

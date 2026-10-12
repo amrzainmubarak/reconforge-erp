@@ -102,8 +102,11 @@ React cases, TypeScript and reciprocal review passed. Current hosted and affecte
 FX HTTPS acceptance are pending; no earlier whole-web packet covers this new code.
 Root's integrated `b6fcf71d` checkpoint reports all68 React files/452 tests with
 zero skips and TypeScript/build success. Those later UI checks preserve their
-own source identity; affected FX HTTPS/restore is still running, and complete
-current hosted CI acceptance has not been declared here.
+own source identity. Actual b6fc five-stage FX HTTPS/270-table populated restore
+subsequently passed119.047s with one expected browser and zero skipped/unexpected/
+flaky outcomes. Independent normal/optimized Fraction verification accepts exactly
+the reviewed0131/0136 restore contracts, including unchanged original evidence.
+Complete corrected-source hosted CI acceptance remains a separate gate.
 
 ## Measurement admission
 
@@ -113,6 +116,15 @@ The attempted six-run pair was interrupted after the user confirmed heavy extern
 load. No current Wave5 speed/resource improvement is admitted from that attempt.
 An isolated fresh retest is required, with successful genuine financial effects
 counted; API seeding/export/oracle windows must remain explicit.
+
+Three corrected D3 mixed API repetitions each passed3 cohorts/126 successful
+requests/33 original effects/27 timed effects, both original financial oracles,
+clean unchanged source and owned cleanup. This is bounded business acceptance
+under external load, with performance_comparison_accepted=false. In-process
+oracle CPU is included in client process_time; external child CPU and wait time
+are excluded. Actual server-PID and dedicated database-cgroup windows differ.
+The description-only clarification retains executable AST equivalence without
+changing original D3 packets or claiming fair resource improvement.
 
 Official competitor references were refreshed 2026-10-12 in the
 [capability matrix](GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md).

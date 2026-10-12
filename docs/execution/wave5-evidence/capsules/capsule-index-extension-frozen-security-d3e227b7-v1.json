@@ -1,0 +1,45 @@
+{
+  "schema_version": "reconforge-flat-evidence-capsule-extension-v1",
+  "prior_nine_capsules_unchanged": true,
+  "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+  "capsules": [
+    {
+      "file_name": "wave5-frozen-security-d3e227b7-38202724005-v1.zip",
+      "sha256": "53309b4e347510e7bdc3227aec8f64b256c98fecc5b3146b4214b2d8f7867e85",
+      "bytes": 897885,
+      "file_count": 19,
+      "raw_bytes": 2512171,
+      "index_name": "wave5-frozen-security-d3e227b7-38202724005-v1.index.json",
+      "index_sha256": "59fc001b78bb8ab6daffc500b879628853e06fea6198b5d031d6ef42ef713c32",
+      "coverage": {
+        "source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+        "run_id": 38202724005,
+        "all_five_security_jobs": "success",
+        "history_findings": 0,
+        "tree_findings": 0,
+        "image_counts": {
+          "critical": 0,
+          "high": 0,
+          "low": 0,
+          "medium": 9,
+          "negligible": 1,
+          "unknown": 0
+        },
+        "license_metadata": {
+          "coverage_basis_points": 9558,
+          "legal_compatibility_assessed": false,
+          "licensed_packages": 65,
+          "minimum_coverage_basis_points": 9000,
+          "missing_license_packages": [
+            ".python-rundeps@20261001.214925",
+            "markdown-it-py@4.2.0",
+            "python@3.12.15"
+          ],
+          "total_packages": 68
+        },
+        "complete_ci_acceptance": "Separate mainCI snapshot only; final gate evidence remains required.",
+        "performance_acceptance": "No benchmark or global superiority assertion from security evidence."
+      }
+    }
+  ]
+}

@@ -1,0 +1,298 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-current-profile-d5-streamed-source-e9-review-v1.zip",
+  "capture_for_root_commit": "e9dc608eee639bc5dc93f1c8d055fbf7214b4b47",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "profile_commit": "d5c60f47ee3a7310f0097ca3a172e8384c365ba1",
+    "integrated_profile_commit": "a6b2b5b53383d045a0460dddb9f8444b9f4fc319",
+    "streamed_source_commit": "e9dc608eee639bc5dc93f1c8d055fbf7214b4b47",
+    "profile_targeted_final": {
+      "tests": 62,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 3.408
+    },
+    "streamed_source_development_targeted": {
+      "tests": 59,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 2.549
+    },
+    "source_custody": "Immutable exact Git blobs and raw source SHA256, with development-run to later-commit equivalence mapping.",
+    "prior_eleven_capsules_unchanged": true,
+    "twelfth_input_capsule_reference_only": true,
+    "current_postgres_actual_lifecycle_acceptance": "Pending final integrated source run.",
+    "financial_posting_performance_accepted": false,
+    "wall_cpu_comparison_accepted": false,
+    "python_traced_peak_bytes": {
+      "baseline": 22276896,
+      "candidate": 271537
+    }
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 27,
+  "raw_bytes": 423431,
+  "records": [
+    {
+      "entry_name": "git-commits/770b380a12a791a7d1a019168add6be5a485afa5.txt",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-commits\\770b380a12a791a7d1a019168add6be5a485afa5.txt",
+      "bytes": 321,
+      "sha256": "1f2ee7487353a58a15b42e47537adc1d7d063c9e38085925e3f08d0418271e19",
+      "source_commit": "770b380a12a791a7d1a019168add6be5a485afa5",
+      "source_attribution": "Original exact Git commit object bytes; Amr author/committer and ancestry retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-commits/a6b2b5b53383d045a0460dddb9f8444b9f4fc319.txt",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-commits\\a6b2b5b53383d045a0460dddb9f8444b9f4fc319.txt",
+      "bytes": 313,
+      "sha256": "1f2335c38c9ef073c22721a5bb5bf87bb3da272dd1c008fa36eb415592b73058",
+      "source_commit": "a6b2b5b53383d045a0460dddb9f8444b9f4fc319",
+      "source_attribution": "Original exact Git commit object bytes; Amr author/committer and ancestry retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-commits/d5c60f47ee3a7310f0097ca3a172e8384c365ba1.txt",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-commits\\d5c60f47ee3a7310f0097ca3a172e8384c365ba1.txt",
+      "bytes": 313,
+      "sha256": "cb12ac382523931f103f6ba2c3ee5a2f4d7f223961cbfcb2d4aaf364628cd73a",
+      "source_commit": "d5c60f47ee3a7310f0097ca3a172e8384c365ba1",
+      "source_attribution": "Original exact Git commit object bytes; Amr author/committer and ancestry retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-commits/e9dc608eee639bc5dc93f1c8d055fbf7214b4b47.txt",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-commits\\e9dc608eee639bc5dc93f1c8d055fbf7214b4b47.txt",
+      "bytes": 346,
+      "sha256": "18c333d775b3f0bcb3124ee5ad60638b566807396ad795664a958fbefa426cff",
+      "source_commit": "e9dc608eee639bc5dc93f1c8d055fbf7214b4b47",
+      "source_attribution": "Original exact Git commit object bytes; Amr author/committer and ancestry retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-sources/770b380a/.github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-sources\\770b380a\\.github\\scripts\\verify_postgres_writeback_recovery_compensation_matrix.py",
+      "bytes": 29079,
+      "sha256": "95189f7a39ffbdf5627da8bece24d61c38db32ae0a2e184a932c8011dc634d67",
+      "source_commit": "770b380a12a791a7d1a019168add6be5a485afa5",
+      "source_attribution": "Immutable original Git blob bytes; source snapshot, not a new workload acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-sources/a6b2b5b5/.github/scripts/benchmark_enterprise_finance.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-sources\\a6b2b5b5\\.github\\scripts\\benchmark_enterprise_finance.py",
+      "bytes": 29419,
+      "sha256": "6a16da1c71ae151b502c0bb21c1bf16dd12eea09dedb8c6cd0c19403ba85369d",
+      "source_commit": "a6b2b5b53383d045a0460dddb9f8444b9f4fc319",
+      "source_attribution": "Immutable original Git blob bytes; source snapshot, not a new workload acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-sources/a6b2b5b5/.github/scripts/benchmark_native_api_runtime.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-sources\\a6b2b5b5\\.github\\scripts\\benchmark_native_api_runtime.py",
+      "bytes": 35006,
+      "sha256": "1186ff74c20b1b3ff5e0886d24b39f70d1c0ade2db39980ba98058d4bdd5e12a",
+      "source_commit": "a6b2b5b53383d045a0460dddb9f8444b9f4fc319",
+      "source_attribution": "Immutable original Git blob bytes; source snapshot, not a new workload acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-sources/a6b2b5b5/tests/test_intercompany_api_benchmark.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-sources\\a6b2b5b5\\tests\\test_intercompany_api_benchmark.py",
+      "bytes": 13859,
+      "sha256": "7250c622dc4897c327f4f12ec6806cb65603062bdb992e373f12b88f0e79e312",
+      "source_commit": "a6b2b5b53383d045a0460dddb9f8444b9f4fc319",
+      "source_attribution": "Immutable original Git blob bytes; source snapshot, not a new workload acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-sources/d5c60f47/.github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-sources\\d5c60f47\\.github\\scripts\\verify_postgres_writeback_recovery_compensation_matrix.py",
+      "bytes": 34635,
+      "sha256": "01ec01b835240c0b871b346109ad44e1c205e28c96b04615e06b9d7db7b4acf3",
+      "source_commit": "d5c60f47ee3a7310f0097ca3a172e8384c365ba1",
+      "source_attribution": "Immutable original Git blob bytes; source snapshot, not a new workload acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-sources/d5c60f47/MANIFEST.in",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-sources\\d5c60f47\\MANIFEST.in",
+      "bytes": 88706,
+      "sha256": "79c83c3d2dd5524c4b3c2bbbc7f5bfeb5415528f05e7ebdcecb40461755ffbe7",
+      "source_commit": "d5c60f47ee3a7310f0097ca3a172e8384c365ba1",
+      "source_attribution": "Immutable original Git blob bytes; source snapshot, not a new workload acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-sources/d5c60f47/docs/schemas/postgres_writeback_recovery_compensation_matrix.v2.schema.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-sources\\d5c60f47\\docs\\schemas\\postgres_writeback_recovery_compensation_matrix.v2.schema.json",
+      "bytes": 5869,
+      "sha256": "ec7319c415c0b84b1c1b310dd06af1f9f5098c3edefa65749ddb8bcec764f4f7",
+      "source_commit": "d5c60f47ee3a7310f0097ca3a172e8384c365ba1",
+      "source_attribution": "Immutable original Git blob bytes; source snapshot, not a new workload acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-sources/d5c60f47/tests/test_postgres_writeback_recovery_compensation_matrix.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-sources\\d5c60f47\\tests\\test_postgres_writeback_recovery_compensation_matrix.py",
+      "bytes": 30071,
+      "sha256": "b4f4beaf7dac375773e58061a974fd0b9492ce0a663b98b0d218940f52738211",
+      "source_commit": "d5c60f47ee3a7310f0097ca3a172e8384c365ba1",
+      "source_attribution": "Immutable original Git blob bytes; source snapshot, not a new workload acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-sources/e9dc608e/.github/scripts/benchmark_enterprise_finance.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-sources\\e9dc608e\\.github\\scripts\\benchmark_enterprise_finance.py",
+      "bytes": 29481,
+      "sha256": "7bce2382df24d439d39386f0e02c07bf362c4f451649dbd8d7f225c8a920396b",
+      "source_commit": "e9dc608eee639bc5dc93f1c8d055fbf7214b4b47",
+      "source_attribution": "Immutable original Git blob bytes; source snapshot, not a new workload acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-sources/e9dc608e/.github/scripts/benchmark_native_api_runtime.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-sources\\e9dc608e\\.github\\scripts\\benchmark_native_api_runtime.py",
+      "bytes": 35064,
+      "sha256": "3895f3afff0095bca2f769054ea264d81af5c3a3ebae88023b5ea873f241b07d",
+      "source_commit": "e9dc608eee639bc5dc93f1c8d055fbf7214b4b47",
+      "source_attribution": "Immutable original Git blob bytes; source snapshot, not a new workload acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-sources/e9dc608e/tests/test_intercompany_api_benchmark.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-sources\\e9dc608e\\tests\\test_intercompany_api_benchmark.py",
+      "bytes": 15533,
+      "sha256": "f68a98ee457ea868d79a0e1d9e9d49d7834fe6c9ada4eb901c9e121275920002",
+      "source_commit": "e9dc608eee639bc5dc93f1c8d055fbf7214b4b47",
+      "source_attribution": "Immutable original Git blob bytes; source snapshot, not a new workload acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "profile-targeted/targeted-final.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-current-recovery-profile-review\\targeted-final.log",
+      "bytes": 81,
+      "sha256": "80b733e3344a79564a96035746af9abc6a6667df35774e19c9cd0711760d70a1",
+      "source_commit": "d5c60f47ee3a7310f0097ca3a172e8384c365ba1",
+      "source_attribution": "Original development test output; final62 or explicitly provisional61 filename remains unchanged. Source-equal d5 mapping, not clean-final reexecution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "profile-targeted/targeted-final.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-current-recovery-profile-review\\targeted-final.xml",
+      "bytes": 11598,
+      "sha256": "c4efef24a115805f9e1b405d71c136a794b6ef7d9991f7b67af87176777e6275",
+      "source_commit": "d5c60f47ee3a7310f0097ca3a172e8384c365ba1",
+      "source_attribution": "Original development test output; final62 or explicitly provisional61 filename remains unchanged. Source-equal d5 mapping, not clean-final reexecution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "profile-targeted/targeted.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-current-recovery-profile-review\\targeted.log",
+      "bytes": 81,
+      "sha256": "684d4fbae388dd5cc9634003a0146ad118ad12244ffd69d34a2e4f29f8d33de5",
+      "source_commit": "d5c60f47ee3a7310f0097ca3a172e8384c365ba1",
+      "source_attribution": "Original development test output; final62 or explicitly provisional61 filename remains unchanged. Source-equal d5 mapping, not clean-final reexecution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "profile-targeted/targeted.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-current-recovery-profile-review\\targeted.xml",
+      "bytes": 11336,
+      "sha256": "48891c2544e8262212628f26b07016eab16e4f593e1f285d4794237f1e2d1627",
+      "source_commit": "d5c60f47ee3a7310f0097ca3a172e8384c365ba1",
+      "source_attribution": "Original development test output; final62 or explicitly provisional61 filename remains unchanged. Source-equal d5 mapping, not clean-final reexecution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root-development/profile_source_hash_memory.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\profile_source_hash_memory.py",
+      "bytes": 3345,
+      "sha256": "4ac89bc1460ec4df5e09b98b1fc913acb8c4b76f704e2c1e71994b609228e417",
+      "source_commit": "e9dc608eee639bc5dc93f1c8d055fbf7214b4b47",
+      "source_attribution": "Original root development record on a6b with candidate changes before e9 commit; source bytes mapped to e9, original raw headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root-development/wave5-source-hash-memory-observations.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-source-hash-memory-observations.json",
+      "bytes": 3159,
+      "sha256": "c3dd2347f69f88e6482ecc20700e8f2b3b247eb560209a613e49ee300dc0fdc5",
+      "source_commit": "e9dc608eee639bc5dc93f1c8d055fbf7214b4b47",
+      "source_attribution": "Original root development record on a6b with candidate changes before e9 commit; source bytes mapped to e9, original raw headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root-development/wave5-streamed-source-targeted.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-streamed-source-targeted.log",
+      "bytes": 81,
+      "sha256": "7794d06855d2ab67cf60331853338eee94d118d4bb0f2bfb10bf8a6e05eb4e5f",
+      "source_commit": "e9dc608eee639bc5dc93f1c8d055fbf7214b4b47",
+      "source_attribution": "Original root development record on a6b with candidate changes before e9 commit; source bytes mapped to e9, original raw headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root-development/wave5-streamed-source-targeted.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-streamed-source-targeted.xml",
+      "bytes": 9810,
+      "sha256": "65bf6b6eb99af21a778a9841a6eb6385735439411e27b4a4b02e6de92242826d",
+      "source_commit": "e9dc608eee639bc5dc93f1c8d055fbf7214b4b47",
+      "source_attribution": "Original root development record on a6b with candidate changes before e9 commit; source bytes mapped to e9, original raw headers retained.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "verification/build_profile_memory_capsule.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-current-recovery-profile-review\\build_profile_memory_capsule.py",
+      "bytes": 15846,
+      "sha256": "fab54b11e399d4a93bc17b15794069faaad5fc4288fbea3f51e2206ef192b818",
+      "source_commit": null,
+      "source_attribution": "Packaging and read-only verification script; no app imports or workloads, does not execute the original microprobe.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "verification/git-source-custody.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\git-source-custody.json",
+      "bytes": 14969,
+      "sha256": "80f08bdf20a4a5f5690494790ae8b409947a4b5af0725b3f8e48b98a7a51aee4",
+      "source_commit": "e9dc608eee639bc5dc93f1c8d055fbf7214b4b47",
+      "source_attribution": "Read-only independent original Git blob/AST verification and exact commit-equivalence mapping; no app imports.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "verification/prior-capsules-and-input-reference.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\prior-capsules-and-input-reference.json",
+      "bytes": 3770,
+      "sha256": "d96310c993684f9a26ea9cf029c9d74b1b446410a72aef959529545840c16964",
+      "source_commit": null,
+      "source_attribution": "Flat, independently verified original artifact references; no large input duplicate and no new resource-cost acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "verification/reciprocal-review-checkpoint.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-evidence-capsules-20261012-v1\\source-material\\profile-memory-d5-e9-v1\\reciprocal-review-checkpoint.json",
+      "bytes": 1340,
+      "sha256": "e9a55beea3c5bbed50a10cc847b11ced4ff1a3bd2385ba192ae7ff626dd71786",
+      "source_commit": "e9dc608eee639bc5dc93f1c8d055fbf7214b4b47",
+      "source_attribution": "Recorded reviewer acknowledgement with independent byte/AST verification; no claim that reviewer reran tests or workloads.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

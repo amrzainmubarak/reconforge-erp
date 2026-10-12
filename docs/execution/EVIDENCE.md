@@ -6,11 +6,12 @@
 ME/IC/SRC HTTPS/270-table populated restores, original/restored independent financial
 oracles, e8e73-case native gate with zero failures/errors/skips, and corrected b6fc
 FX HTTPS119.047s plus Studio68files/452cases/TypeScript/build. The local trust anchors
-and scope limits remain explicit. Nine lossless capsules/flat indexes retain488
+and scope limits remain explicit. Thirteen lossless capsules/flat indexes retain702
 files, including failed reports, exact safe CI spans, interrupted profile/pair,
 original security/Git transport provenance and actual source archive verification.
-Root checked497 ZIP members; copy-verification SHA256
-645a655642002abe5ace12302525073399d4d19e6c12dc5f81a41407bdc2e5ae.
+Root checked715 ZIP members; v3 copy-verification SHA256
+265b71652a768ba2968a8155f92c7b5d2c8334abee130bb7345658d6dc2a875c.
+The original v2 nine-capsule copy/index records remain unchanged.
 
 1a40 whole hosted CI failed (web race, cancelled native shards, blocked browsers),
 although both ordinary Python gates passed5228 with663 prerequisite skips each and
@@ -21,7 +22,32 @@ checks and fresh mixed/fair performance repetitions remain pending. Three comple
 1K populations passed independent493671004minor-unit financial conservation but
 external load invalidated the comparison; seven actual power bookends/five unrun
 are retained. First b6fc mixed126HTTP requests/per-cycle proofs passed, but scoped
-receipt-ID aggregate refusal keeps its report failed. No current Wave5 speed gain.
+receipt-ID aggregate refusal keeps its report failed. Three later independent
+frozen D3 runs each passed3 cohorts/126 actual HTTPS requests/33 scoped original
+effects/27 timed effects, original financial oracles and owned cleanup. Thirty-six
+isolated normal/optimized file-only oracle rechecks reproduced those financial
+outcomes. SourceSHA7bd6416813ce18f098bd7d312274df0dd31d86821eeb67e8060f0b01159c5487
+was independently reconstructed from original Git/archive bytes.
+
+Completed D3 CI38202432973 remains failed:44jobs,41success/two ordinary Python
+failures/one dependent Docker-parity skip. Both Python jobs recorded5258 passes,
+eight YAML parse failures and663 inherited prerequisite skips. One-line quoted
+scalar preserves728 tasks; actual a874 root22 affected cases passed. D3 CodeQL,
+Docker, all five manual Security38202724005 jobs and source archive/wheel/sdist
+inspection passed on their original source. D3 writeback recovery/owned cleanup
+passed16.14/17.10; current16.15/17.11 is a separately versioned V2 profile with62
+targeted passes and pending actual integrated execution. Original reports/policies/
+V1 schema and eight history/role/cleanup functions remain unchanged.
+
+Root e9dc bounded source hashing retains byte-exact source fingerprints;59
+development cases passed. Three warmed alternating observations per method on the
+original22268230-byte capsule measured median traced Python hashing allocations
+22276896→271537 bytes, with inputSHA unchanged. Original microprobe reportSHA
+c3dd2347f69f88e6482ecc20700e8f2b3b247eb560209a613e49ee300dc0fdc5 and all six
+observations are retained. This is hashing allocation evidence; financial posting,
+wall/CPU/RSS/monetary improvement and fair comparison remain unaccepted. Final
+corrected-source hosted/actual current-profile gates and quiet workload measurements
+remain separate required executions. No current Wave5 financial speed gain.
 
 ## Wave5 actual636 profile and incremental gates (2026-10-11)
 

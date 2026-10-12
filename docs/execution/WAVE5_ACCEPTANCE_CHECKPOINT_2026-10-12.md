@@ -70,9 +70,40 @@ but writeback recovery-compensation failed its immediate Docker cleanup probe af
 normal body/stop completion. Its raw failed step is retained. A bounded verifier
 checks exact owned identity and waits for removal, accepts only exact same-ID
 NoSuchContainer responses and refuses daemon/permission/ambiguous errors. Targeted
-29cases pass; fresh actual acceptance is required. Current final frozen-source
-hosted CI, manual image and archive checks remain pending; prior1a40 archive
-success is preserved without relabelling.
+29 cases passed on the cleanup-fix source. The subsequent actual D3 writeback
+job114658522852 passed both original recovery/compensation histories and owned
+cleanup on PostgreSQL16.14/17.10. Its original artifact/report are retained;
+this is historical-version compatibility evidence, not current17.11 acceptance.
+The separately reviewed current-image extension d5c60f47/root a6b2b5b5 now defaults
+to the exact16.15/17.11 policy pair. Explicit legacy selection retains the original
+V1 shape and pins; new current reports use the closed V2 schema. Approved policy
+source is captured once for normalization/hash/parse; altered constants, selected
+pairs/order and unapproved versions refuse before SQLite/Docker. The schema registry
+contains only the shipped V1/V2 definitions and refuses unknown HTTPS/file references.
+Original history/role/cleanup functions and three historical reports are unchanged.
+Sixty-two targeted cases passed without failures/errors/skips; actual current-pair
+execution on the integrated frozen source remains a separate gate.
+
+Actual D3 CodeQL38202432988 and Docker38202432976 succeeded. Manual
+[Security38202724005](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38202724005)
+executed all five jobs successfully, with0Critical/0High/9Medium/1Negligible,
+zero active exceptions,65/68 packages with license metadata and the same three
+unassessed gaps. These results belong to D3, not the corrected later source.
+D3 sdist/wheel and independent extracted-source verification also passed;
+archive report SHA256 is
+`88b2ba6bbcdacab3eb65e4afc40ec644af0753db0934d94185cf0663e30bc460`.
+
+The actual D3 ordinary Python jobs each recorded8 failures,5258 passes and663
+inherited prerequisite skips. All eight failed when parsing the unquoted BACKLOG
+scalar at line27,column100; the following archive-upload step lacked its report
+because the failed pytest command prevented build/inspection. One-line quote fix
+770b380a, integrated as a8742d1c, preserves the decoded scalar and728 task states.
+Reciprocal review and22 affected execution-contract tests passed with zero
+failures/errors/skips, including a fresh root execution on a8742d1c. The failed
+D3 jobs remain failed; complete corrected-source hosted acceptance is required.
+The completed D3 aggregate contains44 jobs:41 successful, the two failed ordinary
+Python jobs and one dependent Docker-parity skip. All dedicated native and actual
+enterprise browser/recovery partitions succeeded. The aggregate is failed.
 
 ## Performance: measured discovery, acceptance false
 
@@ -104,10 +135,69 @@ repeat in distinct tenants. Original failed report SHA256
 `22c38fffde155990e440e343567b08c82a908eeb8db4218d3c21b16fe53d80b6` remains
 unchanged. The benchmark adapters/composition are corrected to the native
 PK(tenant_id,id), preserving owner verification and duplicate-within-tenant refusal.
-Fresh repeated final-source mixed runs remain required. This workload contains
-ME and IC in separate fresh tenants, not an integrated procurement/manufacturing/
-intercompany commercial chain. Resource figures under current background load
-are descriptive; no monetary cost, fair Baseline/Candidate or scale acceptance follows.
+Three subsequent independent fresh-population runs passed on frozen D3
+`d3e227b7d46be7e7d3b73ac39fa82615943319e8`. Each completed three cohorts,
+126 HTTPS200 requests,33 tenant-qualified original effects and27 timed business
+effects, with both original owner financial verifiers, unchanged clean source,
+complete resource observations and owned cleanup. Original result SHA256 values:
+
+| Repeat | Entire runner elapsed seconds | Original result SHA256 |
+|---|---:|---|
+| R1 |475.359|`f334e5c877b5ca79eaf81e35543a85f162de03fb26bc183cb782ac4bc1e75982`|
+| R2 |436.172|`9bb9f1add57095b4241e8edf459535b7fdb6a6fad7ecb0886382f2e51499133b`|
+| R3 |446.219|`9d977cd30aef9ee5c1a55dbef4e1b86eacc6d3f5a135f79e5650196806002bc4`|
+
+These elapsed values include setup and cleanup and are not business latency or
+transactions/sec. Raw request/cohort latencies and process/cgroup resource counters
+are retained separately:
+
+| Repeat | Cohort-loop window s | Request p50/p95/p99 s | Client CPU s | API PID CPU s | Database cgroup CPU s |
+|---|---:|---|---:|---:|---:|
+| R1 |398.319651|3.020080 /4.908240 /5.646200|2.296875|19.718750|101.855013|
+| R2 |386.358709|2.954448 /4.703619 /5.455690|1.734375|18.140625|95.220130|
+| R3 |397.478091|2.926872 /4.936206 /6.159436|1.875000|17.125000|104.728191|
+
+Observed client RSS sample peaks were188882944/191614976/189960192 bytes; API PID
+maximum observed RSS including boundary readings was175837184/175390720/175288320.
+PostgreSQL whole-cgroup lifetime memory peaks were338796544/338399232/337805312;
+they include pre-admission work and are not database-process RSS. Interval block
+read/write bytes were0/26726400,0/44728320 and4096/45764608. WAL-specific counters
+were unavailable and remain null, as do monetary cost and production RPO/RTO.
+
+Both stdlib owner verifiers execute in the client process,
+so client process_time includes their CPU and the observer thread, while excluding
+wait time and external subprocess CPU. Server CPU observes the actual API PID;
+PostgreSQL CPU observes the dedicated cgroup. Their windows differ and do not
+represent a process-tree or whole-host total. RSS samples can miss spikes; lifetime
+peaks include earlier setup. The reviewed description-only clarification at
+53b6495c/root e0c8da07 preserves executable ASTs and does not rebind D3 reports.
+
+This workload contains ME and IC in separate fresh tenants, without a linked
+procurement/manufacturing/intercompany commercial cycle. Under acknowledged
+background load, resource measurements remain descriptive and each report keeps
+performance_comparison_accepted=false and monetary cost null. No fair
+Baseline/Candidate or scale acceptance follows.
+
+Source verification previously allocated a complete tracked file before hashing,
+so retained evidence size could raise client lifetime memory outside the financial
+CPU window. Root e9dc608e changes only the two benchmark hashing loops to binary
+`hashlib.file_digest`, preserving exact filename ordering and raw-byte fingerprints.
+The new guard regression detects a last-byte edit at unchanged size/mtime/status,
+retains binary/CRLF bytes and checks bounded allocations on8MiB. Fifty-nine targeted
+cases passed with zero failures/errors/skips in the development candidate; the three
+committed source files match those reviewed/tested bytes.
+
+Three warmed alternating observations per hashing method on the same original
+22268230-byte capsule retained SHA256
+`90a5b1d7afad3cba8f955c3f90ceca36b1b77f1cb5ed2aac1fb97ce59f354113`
+in every observation. Median
+Python allocations traced inside that hashing call were22276896→271537 bytes.
+The observation report SHA256 is
+`c3dd2347f69f88e6482ecc20700e8f2b3b247eb560209a613e49ee300dc0fdc5`.
+This is a content-hashing allocation result, not process RSS, financial throughput
+or a monetary efficiency result. Wall/CPU comparison remains unaccepted under
+external load. Original D3 resource packets are not explained or rebound by this
+later source-verification change; final workloads must use the same updated harness.
 
 After all acceptance gates, agree the requested quiet window and execute three
 fresh alternating1K Baseline/Candidate repetitions on the same hardware/data/server,
@@ -119,14 +209,23 @@ ratios remain unavailable without valid price/deployment/equivalent workload evi
 
 ## Portable evidence
 
-[Capsule copy verification](wave5-evidence/capsules/copy-verification-v2.json)
-binds nine lossless ZIPs and flat indexes.488 retained files and497 total ZIP
+[Capsule copy verification](wave5-evidence/capsules/copy-verification-v3.json)
+binds thirteen lossless ZIPs and flat indexes.702 retained files and715 total ZIP
 members were hash-checked; each embedded index equals its external original bytes.
 Original source headers and all known failed attempts remain intact. Log provenance
 identifies exact safe byte spans and authentication/DSN setup omissions with original
 remote SHA/length; these are not falsely described as complete raw job logs.
-The source archive includes the capsules. Membership trust anchors are retained
+Final source archives must include every tracked capsule. The retained D3 archive
+acceptance covers its original nine capsules; the expanded thirteen-capsule corpus
+requires final-source archive verification. Membership trust anchors are retained
 locally and independently checked, not third-party attestations.
+The previous nine-capsule v2 copy record remains unchanged. New capsules retain
+actual D3 security, both Python failures/quote repair/legacy writeback success,
+all three D3 mixed runs/original wheel+sdist/36 isolated file-only financial
+rechecks and the later62-case profile/59-case development/memory-guard reviews.
+The one new standalone capsule catalog is copied under a unique extension filename
+with exactly the same original bytes; no prior index is replaced. V3 copy record
+SHA256 is265b71652a768ba2968a8155f92c7b5d2c8334abee130bb7345658d6dc2a875c.
 
 ## Highest-value remaining slices
 

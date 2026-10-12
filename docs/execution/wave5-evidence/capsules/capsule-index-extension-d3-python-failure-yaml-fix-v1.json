@@ -1,0 +1,30 @@
+{
+  "schema_version": "reconforge-flat-evidence-capsule-extension-v1",
+  "prior_ten_capsules_unchanged": true,
+  "capsules": [
+    {
+      "file_name": "wave5-d3-python-failure-yaml-fix-writeback-success-v1.zip",
+      "sha256": "d8bbf703907c9467692f08a5b4a97a42cb80b685c7eb2c0627d2cbb37d4697c9",
+      "bytes": 595605,
+      "file_count": 21,
+      "raw_bytes": 1994606,
+      "index_name": "wave5-d3-python-failure-yaml-fix-writeback-success-v1.index.json",
+      "index_sha256": "7b790c8d88c9687b147f5b96855ee77cbeb461b7ab7d924cf9e8b7a70b07f2d9",
+      "coverage": {
+        "original_source_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+        "original_run_id": 38202432973,
+        "ordinary_python": "Both versions8failed/5258passed/663inherited prerequisites skipped; failure retained.",
+        "fixed_source_commit": "770b380a12a791a7d1a019168add6be5a485afa5",
+        "fix_scope": "Only one scalar quoting change; runtime trees identical.",
+        "targeted_tests": {
+          "tests": 22,
+          "failed": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "actual_current_writeback": "D3 job114658522852 successful; original report and exact ZIP preserve both version checks/cleanup=true.",
+        "corrected_whole_ci": "Still required; no retry or final acceptance claimed by operations."
+      }
+    }
+  ]
+}

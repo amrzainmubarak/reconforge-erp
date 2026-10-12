@@ -36,6 +36,32 @@ Complete code/restore/security gates before requesting the quiet benchmark windo
 as the user directed. Keep all existing3 genuine1K results descriptive/unaccepted;
 never infer stable resources from AC alone or turn old Wave4 gains into new claims.
 
+The three corrected mixed API executions are bound to frozen D3. Owner stdlib
+oracles run inside the client interpreter; include their CPU in process_time but
+exclude external child CPU and waits. Observe only the actual API PID for server
+CPU and the dedicated PostgreSQL cgroup for database CPU. Describe distinct sample
+windows, observer overhead and lifetime peaks; never add these into an alleged
+whole-host cost. Clarify descriptions without rewriting original raw reports.
+
+Preserve both failed D3 Python jobs and their secondary missing archive-upload
+report. Repair only the unquoted BACKLOG scalar, keep its decoded meaning/task
+statuses and verify affected contracts before the next full source acceptance.
+Successful D3 recovery on16.14/17.10 remains compatibility evidence; introduce a
+versioned current16.15/17.11 schema/profile rather than broadening the immutable
+historical report contract or portraying old pins as current security acceptance.
+
+Default current recovery uses a separately closed V2 schema; explicit legacy keeps
+V1. Hash and parse one captured normalized policy source, compare constants and
+selected pairs to those approved values before any disposable effects, retain
+captured policy digests in the subject and deny unknown schema retrieval. Reuse
+the original lifecycle/history/role/cleanup functions without changing their ASTs.
+
+Stream tracked-source file hashing in both benchmark guards with Python3.11+
+file_digest. Preserve sorted filename bytes and the raw content SHA256 sequence;
+no text normalization or stat cache. Large evidence should not require whole-file
+Python allocation to verify source custody. Keep hashing-allocation measurements
+separate from ERP throughput/RSS/whole-host cost and retain original D3 reports.
+
 ## Wave5 source-owned industrial and group transactions (2026-10-11)
 
 Start exact accepted636 in four managed worktrees; preserve primary dirty files and main. Migrations133–135 are additive. ME1 reuses native inventory/FIFO/IRP and GL; IC1 pairs original books and places eliminations in an explicit third authorized adjustment scope; sourcing awards into BPC1. No parallel ledger or implicit foreign/tax/statutory support. New permission catalogs grant no existing role automatically; sensitive mutations are human-only and require step-up. Draft batching candidate4102b039 retains each native row and deferred guard. See WAVE5_CONTRACTS_2026-10-11.md.

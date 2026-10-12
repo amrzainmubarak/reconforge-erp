@@ -38,7 +38,7 @@ tasks:
     title: Optimize profiled native posting under unchanged financial and identity controls
     status: in_progress
     depends_on: [AMR-WAVE4-004]
-    exit_evidence: Actual636 and negative integrated descriptive CPU/SQL profiles retained. Batching preserves original row guards. Attempted12fe six-run pair interrupted after3 financial1K successes due acknowledged external load; comparison false. Fresh three-cohort mixed API126 requests/per-cycle proofs passed but aggregate tenant-ID bug refused completion; adapters corrected and fresh repetitions pending. Final quiet1K/large-journal/10K comparisons and100K/1M admission remain pending.
+    exit_evidence: "Actual636 and negative integrated descriptive CPU/SQL profiles retained. Batching preserves original row guards. Attempted12fe six-run pair interrupted after3 financial1K successes due acknowledged external load; comparison false. Original mixed tenant-ID refusal retained; corrected native namespace accepted in three independent frozenD3 runs, each3 cohorts/126 HTTPS requests/33 original effects/27 timed effects, both financial oracles and owned cleanup. Root e9dc content hashing preserves exact source fingerprints with bounded allocations; three warmed alternating observations per method on same22268230-byte input yield medianPython traced peak22276896 to271537 bytes, not ERP throughput or RSS. Resources remain descriptive under external load. Final quiet1K/large-journal/10K comparisons and100K/1M admission remain pending."
   - id: AMR-WAVE4-001
     priority: P0
     area: original-customer-returns

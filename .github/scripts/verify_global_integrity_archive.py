@@ -412,6 +412,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         ".github/scripts/benchmark_wave5_engineering_pair.py", "tests/test_wave5_engineering_pair_controller.py",
         ".github/scripts/validate_current_postgres_images.py", "tests/test_current_postgres_images.py",
         "docs/security/postgres-current-images.wave5.v1.json",
+        "docs/schemas/postgres_writeback_recovery_compensation_matrix.v2.schema.json",
         "tests/test_wave5_permission_contract.py", "tests/test_postgres_wave5_migrations.py",
         "alembic/versions/0136_postgres_inventory_scope.py", "reconforge/infrastructure/postgres_inventory_scope.py",
         "tests/test_postgres_inventory_scope.py",

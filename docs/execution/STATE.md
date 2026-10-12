@@ -30,14 +30,24 @@ prerequisite skips; mandatory native pytest15 partitions/44 sessions completed12
 selected tests with zero skip/xfail/xpass. Its web race failed, three other native
 partitions were cancelled, and dependent browsers/Docker did not execute. That
 whole CI run is failed. Actual manual Security38196678518 ran all five jobs,
-including image/SBOM, successfully on1a40. Current frozen-source hosted acceptance
-and package verification are separate pending gates.
+including image/SBOM, successfully on1a40. Subsequent D3 CodeQL, Docker, all five
+manual Security38202724005 jobs and local sdist/wheel/source-archive inspection
+passed with their original source identity. D3 ordinary Python jobs each failed
+eight execution-contract tests on one unquoted BACKLOG scalar, with5258 passes
+and663 inherited prerequisite skips. The one-line quoting repair retains the
+scalar/tasks; reciprocal review and22 affected cases passed on a8742d1c. Whole
+corrected-source hosted acceptance remains required. Actual D3 writeback recovery
+and owned cleanup passed on16.14/17.10; current16.15/17.11 execution is a separate gate.
+Completed D3 CI has44 jobs:41 success, two ordinary-Python failures and one dependent
+Docker-parity skip. The failed aggregate is retained despite successful native and
+enterprise browser/recovery partitions.
 
-Nine lossless evidence capsules preserve488 files with flat SHA256 indexes;
-497 ZIP members including their embedded indexes were checked during copying.
+Thirteen lossless evidence capsules preserve702 files with flat SHA256 indexes;
+715 ZIP members including their embedded indexes were checked during copying.
 Native/failed-web log indexes explicitly identify safe retained byte spans and
 omitted authentication/DSN setup; complete remote log hashes/lengths remain pinned.
 No result, raw financial report, source header or earlier failed packet is rewritten.
+The prior nine-capsule copy record remains intact; v3 records all thirteen additions.
 See [evidence checkpoint](WAVE5_ACCEPTANCE_CHECKPOINT_2026-10-12.md) and the
 [official capability matrix](GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md).
 
@@ -48,7 +58,21 @@ requested completion of gates before agreeing on a quiet measurement window.
 The new three-cohort mixed API discovery completed126 successful requests and
 all per-cycle financial proofs, but its completion contract rejected legitimate
 local seeded-effect IDs reused across distinct tenants. Benchmark adapters now
-use the native `(tenant_id, id)` identity; fresh repeated runs remain required.
+use the native `(tenant_id, id)` identity. Three actual fresh D3 repetitions each
+passed three cohorts/126 HTTPS requests/33 original effects/27 timed effects,
+both original owner oracles, unchanged clean source and verified owned cleanup.
+The resource-scope descriptions now explicitly distinguish client process CPU,
+actual server PID CPU and dedicated PostgreSQL cgroup CPU, with different windows.
+Both owner oracles run in-process; their CPU is included. Descriptive clarification
+preserves executable ASTs and does not relabel D3 packets as later-head executions.
+Root e9dc source verification uses bounded binary hashing and preserves exact
+raw-byte/name-order fingerprints. Fifty-nine development cases passed; an8MiB
+regression detects tail changes at the same size/mtime. Three warmed alternating
+observations per method on one22.27MB original capsule measured Python hashing
+allocations22276896→271537 bytes. This is source-verification allocation evidence;
+CPU/wall, business throughput, whole-host RSS and monetary gains are unaccepted.
+The current recovery V2 profile is separately reviewed with62 zero-skip cases and
+defaults to16.15/17.11; actual integrated lifecycle acceptance remains required.
 No Wave5 throughput/resource gain, monetary transaction cost,100K/1M capacity,
 country-tax compliance or competitor superiority is established.
 

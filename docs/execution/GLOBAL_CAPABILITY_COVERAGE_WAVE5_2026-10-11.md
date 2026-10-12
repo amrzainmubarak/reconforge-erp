@@ -89,6 +89,23 @@ cost is unavailable without an actual resource price model. No equivalent vendor
 hardware/durability/workload packet has been established, so no vendor speed ratio
 is valid.
 
+Three actual mixed IC1/ME1 executions on frozen D3 independently passed3 cohorts,
+126 HTTPS requests,33 scoped original effects and27 timed effects each, both owner
+financial verifiers and owned cleanup. They use different original tenants and do
+not establish a complete supply-to-manufacturing commercial chain. Client CPU
+includes the in-process stdlib oracles; server CPU covers one API PID and database
+CPU covers the dedicated cgroup, with different observation windows. Background
+load remains acknowledged, so all three retain performance-comparison acceptance
+false and monetary cost null. Raw original headers/latencies/resources are retained.
+
+Benchmark source custody now uses bounded binary file hashing. Three alternating
+warmed observations per method on one original22268230-byte evidence capsule kept
+the exact same SHA256 and reduced median traced Python allocation during hashing
+from22276896 to271537 bytes. Raw-byte/name-order and same-size/mtime tail-tamper
+regressions passed. This is a source-verification allocation improvement, without
+an ERP posting, process RSS, wall/CPU or monetary gain claim. Final matched workloads
+must use the same updated harness for both variants.
+
 SAP's [official benchmark archive](https://www.sap.com/about/benchmark/appbm/archive.html)
 states that the SD benchmark retired in December 2025. Its five-line sell-from-stock
 workflow and historical SAPS sizing metric are different from our authenticated
@@ -112,11 +129,14 @@ include security fixes to role-dependent cached plans, SQL/server behavior and
 backup clients; minor upgrades normally preserve the data directory but may need
 configuration/reindex review. The frozen17.10 historical synthetic baseline is not
 described as the latest secure server. An immutable17.11 image and separate
-security/migration/restore packet is retained for the sources above. Later-head
-acceptance is separate. Comparisons must use
-the same pinned server image on both application versions. PostgreSQL18 or19beta
-adoption, partitioning, a new analytical engine and microservices are not justified
-by the current profile.
+security/migration/restore packet is retained for the sources above. The actual D3
+writeback compensation runner still executed historical16.14/17.10 successfully;
+it is preserved as compatibility evidence. A separately versioned current16.15/
+17.11 profile and actual lifecycle gate are required. The
+[16.15 release notes](https://www.postgresql.org/docs/16/release-16-15.html) also
+document the reviewed minor update. Comparisons must use the same pinned server
+image on both application versions. New major-version adoption, partitioning,
+a new analytical engine and microservices are not justified by the current profile.
 
 [NIST publications](https://csrc.nist.gov/Projects/ssdf/publications) identify
 SSDF1.1 as Final and1.2 as Draft; draft status must not be represented as final.

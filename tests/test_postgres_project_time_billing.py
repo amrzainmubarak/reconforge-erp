@@ -98,6 +98,11 @@ def test_empty_owned_schema_roundtrip_preserves_native_ar_and_exact_force_rls_ca
 
 
 def test_actual_whole_approved_time_native_ar_project_revenue_partial_and_final_cash(billing: PeopleRuntime) -> None:
+    import json
+    import os
+    from datetime import date, datetime
+    from pathlib import Path
+
     times, prices = sources(billing)
     plan = prepare(billing, times, prices)
     assert plan["amount_minor"] == 6236
@@ -115,6 +120,17 @@ def test_actual_whole_approved_time_native_ar_project_revenue_partial_and_final_
         assert proof["ar_invoice"]["outstanding_minor"] == 0
         balances = connection.execute("SELECT a.account_code,sum(l.debit_minor-l.credit_minor) balance FROM reconforge.finance_entry_lines l JOIN reconforge.finance_posting_effects e ON e.tenant_id=l.tenant_id AND e.entry_id=l.entry_id JOIN reconforge.finance_accounts a ON a.tenant_id=l.tenant_id AND a.id=l.account_id WHERE l.tenant_id=%s GROUP BY a.account_code", (billing.base.tenant,)).fetchall()
         assert {row["account_code"]: int(row["balance"]) for row in balances} == {"AR": 0, "REVENUE": -6236, "CASH": 6236}
+        assert proof["observed_native_balances"] == {row["account_code"]: str(int(row["balance"])) for row in balances}
+        target = os.environ.get("RECONFORGE_PB1_EVIDENCE_DIRECTORY")
+        if target:
+            directory = Path(target)
+            directory.mkdir(parents=True, exist_ok=True)
+            def temporal(value: Any) -> str:
+                if not isinstance(value, (date, datetime)):
+                    raise TypeError("Evidence values must have an explicit JSON or date representation")
+                return value.isoformat()
+            with (directory / (plan["id"] + ".json")).open("x", encoding="utf-8", newline="\n") as stream:
+                stream.write(json.dumps(proof, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False, default=temporal) + "\n")
 
 
 def test_unposted_cancel_releases_billing_claim_history_then_reclaims_without_reusing_posted_time(billing: PeopleRuntime) -> None:

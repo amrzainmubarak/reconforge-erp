@@ -38,7 +38,8 @@ rollback_plan: Empty additive schema may downgrade. Any recorded billing history
 test_matrix:
   exact_domain: tests/test_project_time_billing.py
   native_development: tests/test_postgres_project_time_billing.py
-runtime_acceptance: Pure allocation executed 45 cases. Development ordered140 plus the owned additive billing schema executed21 native cases with zero skips, including current module read authority and monetary context. The subsequent cross-permission evidence refinement executed4 targeted native cases with zero skips, including the original full invoice and partial/final cash cycle. Central143, HTTP, Studio, independent native export, populated restore and release acceptance remain separately gated.
+  independent_native_oracle: tests/test_project_time_billing_cycle_oracle.py
+runtime_acceptance: Pure allocation executed 45 cases. Development ordered140 plus the owned additive billing schema executed21 native cases with zero skips, including current module read authority and monetary context. The subsequent cross-permission evidence refinement executed4 targeted native cases with zero skips, including the original full invoice and partial/final cash cycle. The current original-native export executed1 further full-cycle case; its independently pinned normal and optimized standalone verifications agree, and56 file-only adversarial cases pass. Central143, HTTP, registered Studio, populated restore and release acceptance remain separately gated.
 limitations:
   - PostgreSQL only; Community SQLite project billing is explicitly unavailable
   - Whole approved time only, with no partial-time billing allocations

@@ -387,6 +387,64 @@ class PostgresProjectTimeBillingRepository:
             self._authorize(actor, "read", source, mutation=False)
             return self._view(source)
 
+    def _original_rows(self, source: Mapping[str, Any], plans: list[dict[str, Any]]) -> dict[str, Any]:
+        """Authorized public source and native financial rows, never personnel pay fields."""
+        entry_ids = [row["entry_id"] for row in plans]
+        receipt_ids = [row["receipt_id"] for row in plans if row["receipt_id"]]
+        v = source["payload"]
+        def rows(table: str, where: str, parameters: tuple[Any, ...]) -> list[dict[str, Any]]:
+            # All identifiers and predicates below are internal closed literals.
+            return records(self.connection.execute("SELECT * FROM reconforge." + table +
+                " WHERE tenant_id=%s AND " + where, (self.tenant_id, *parameters)))
+        entries = records(self.connection.execute("""SELECT e.*,o.id AS organization_id,le.id AS legal_entity_id
+            FROM reconforge.finance_entries e JOIN reconforge.organizations o ON o.tenant_id=e.tenant_id
+             AND o.application_workspace_id=e.workspace_id AND o.organization_code=e.organization_code
+            JOIN reconforge.legal_entities le ON le.tenant_id=e.tenant_id AND le.organization_id=o.id AND le.entity_code=e.entity_code
+            WHERE e.tenant_id=%s AND e.id=ANY(%s) ORDER BY e.id""", (self.tenant_id, entry_ids)))
+        lines = rows("finance_entry_lines", "entry_id=ANY(%s) ORDER BY entry_id,line_number", (entry_ids,))
+        line_ids = [row["id"] for row in lines]
+        pins = rows("pb_account_pins", "invoice_id=%s ORDER BY role", (source["id"],))
+        projects = rows("hc_projects", "id=ANY(%s) ORDER BY id", (list(v["calculation"]["project_minor"]),))
+        claims = rows("pb_claim_events", "time_id=ANY(%s) ORDER BY time_id,sequence", (v["calculation"]["time_ids"],))
+        effects = rows("finance_posting_effects", "entry_id=ANY(%s) ORDER BY id", (entry_ids,))
+        prices = rows("pb_prices", "id=ANY(%s) ORDER BY id", (v["calculation"]["price_ids"],))
+        audit_ids: set[str] = set()
+        outbox_ids: set[str] = set()
+        for row in [*plans, *prices, *claims]:
+            for key, value in row.items():
+                if value and (key == "audit_id" or key.endswith("_audit_id")):
+                    audit_ids.add(value)
+                if value and (key == "outbox_id" or key.endswith("_outbox_id")):
+                    outbox_ids.add(value)
+        audit_ids.update(row["audit_event_id"] for row in effects)
+        outbox_ids.update(row["outbox_event_id"] for row in effects)
+        return {
+            "plans": plans, "prices": prices, "entries": entries, "effects": effects, "entry_lines": lines,
+            "entry_dimensions": rows("finance_entry_line_dimensions", "entry_line_id=ANY(%s) ORDER BY entry_line_id,dimension_id", (line_ids,)),
+            "account_pins": pins, "accounts": rows("finance_accounts", "id=ANY(%s) ORDER BY id", ([row["account_id"] for row in pins],)),
+            "projects": projects,
+            "customers": records(self.connection.execute("""SELECT tenant_id,id,workspace_id,organization_id,legal_entity_id,
+                customer_code,currency_code,status FROM reconforge.ar_customers WHERE tenant_id=%s AND id=%s""", (self.tenant_id, v["customer_id"]))),
+            "organizations": rows("organizations", "id=%s", (source["organization_id"],)),
+            "entities": rows("legal_entities", "id=%s", (source["legal_entity_id"],)),
+            "journals": rows("finance_journals", "id=ANY(%s) ORDER BY id", ([row["journal_id"] for row in entries],)),
+            "periods": rows("fiscal_periods", "id=ANY(%s) ORDER BY id", ([row["period_id"] for row in entries],)),
+            "dimensions": rows("finance_dimensions", "id=ANY(%s) ORDER BY id", ([row["dimension_id"] for row in projects],)),
+            "dimension_values": rows("finance_dimension_values", "id=ANY(%s) ORDER BY id", ([row["value_id"] for row in projects],)),
+            "times": rows("hc_times", "id=ANY(%s) ORDER BY id", (v["calculation"]["time_ids"],)),
+            "time_claims": rows("pb_time_claims", "time_id=ANY(%s) ORDER BY time_id,invoice_id", (v["calculation"]["time_ids"],)),
+            "claim_events": claims, "claim_heads": rows("pb_claim_heads", "time_id=ANY(%s) ORDER BY time_id", (v["calculation"]["time_ids"],)),
+            "ar_invoices": rows("ar_invoices", "id=%s", (source["ar_invoice_id"],)),
+            "ar_lines": records(self.connection.execute("""SELECT tenant_id,id,invoice_id,line_number,description,quantity::TEXT AS quantity,
+                quantity_text,unit_price_minor,tax_minor,line_total_minor,created_at FROM reconforge.ar_invoice_lines
+                WHERE tenant_id=%s AND invoice_id=%s ORDER BY line_number""", (self.tenant_id, source["ar_invoice_id"]))),
+            "ar_receipts": rows("ar_receipts", "id=ANY(%s) ORDER BY id", (receipt_ids,)),
+            "ar_allocations": rows("ar_receipt_allocations", "invoice_id=%s ORDER BY receipt_id", (source["ar_invoice_id"],)),
+            "commands": rows("pb_commands", "response_json->>'id'=ANY(%s) ORDER BY command_id", ([row["id"] for row in [*plans, *prices]],)),
+            "audits": rows("domain_audit_events", "id=ANY(%s) ORDER BY id", (sorted(audit_ids),)),
+            "outbox": rows("outbox_events", "event_id=ANY(%s) ORDER BY event_id", (sorted(outbox_ids),)),
+        }
+
     def evidence(self, invoice_id: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():
             source = self._row(invoice_id, share=True)
@@ -397,6 +455,14 @@ class PostgresProjectTimeBillingRepository:
             self.connection.execute("SELECT reconforge.pb_close(%s,%s)", (self.tenant_id, invoice_id))
             plans = [source, *records(self.connection.execute("SELECT * FROM reconforge.pb_plans WHERE tenant_id=%s AND parent_id=%s ORDER BY id", (self.tenant_id, invoice_id)))]
             return {"schema_version": "project-billing-evidence-v1", "invoice": self._view(source),
+                "qualified_scope": {"tenant_id": self.tenant_id, **{key: source[key] for key in ("workspace_id", "organization_id", "legal_entity_id")}},
+                "registry_snapshot": records(self.connection.execute("SELECT snapshot_json FROM reconforge.currency_registry_snapshots WHERE tenant_id=%s AND registry_digest=%s",
+                    (self.tenant_id, source["payload"]["monetary_policy"]["currency_registry_digest"])))[0]["snapshot_json"],
+                "original_rows": self._original_rows(source, plans),
+                "observed_native_balances": {row["account_code"]: str(int(row["balance"])) for row in records(self.connection.execute("""SELECT a.account_code,sum(l.debit_minor-l.credit_minor) AS balance
+                    FROM reconforge.finance_entry_lines l JOIN reconforge.finance_posting_effects e ON e.tenant_id=l.tenant_id AND e.entry_id=l.entry_id
+                    JOIN reconforge.finance_accounts a ON a.tenant_id=l.tenant_id AND a.id=l.account_id
+                    WHERE l.tenant_id=%s AND l.entry_id=ANY(%s) GROUP BY a.account_code""", (self.tenant_id, [row["entry_id"] for row in plans])))},
                 "collections": [self._view(row) for row in plans[1:]], "ar_invoice": self.ar.get_invoice(source["ar_invoice_id"]),
                 "native_effects": [self.owner.posting.get_effect(row["effect_id"], actor=actor) for row in plans if row["effect_id"]],
                 "claims": records(self.connection.execute("SELECT * FROM reconforge.pb_claim_events WHERE tenant_id=%s AND invoice_id=%s ORDER BY time_id,sequence", (self.tenant_id, invoice_id))),

@@ -22,11 +22,11 @@ def verify_restore(runtime: Any, source_id: str) -> dict[str, Any]:
     assert container, "Mandatory native restore requires the explicitly owned correctness container"
     original_db = psycopg.conninfo.conninfo_to_dict(runtime.base.admin_dsn)["dbname"]
     target = "reconforge_icfx_restore_" + uuid4().hex[:16]
-    before = database_snapshot(runtime.base.admin_dsn)
     with runtime.actor("poster") as (_, repository, actor):
         original_report = repository.report(source_id, actor=actor)
         source = repository.get_source(source_id, actor=actor)
         original_evidence = {plan["id"]: digest(repository.evidence(plan["id"], actor=actor)) for plan in source["plans"]}
+    before = database_snapshot(runtime.base.admin_dsn)
     dump = subprocess.run(["docker", "exec", container, "pg_dump", "--username=postgres", "--dbname=" + original_db, "--format=custom"],
         capture_output=True, check=True, timeout=120).stdout  # nosec B603 B607
     assert dump.startswith(b"PGDMP")
@@ -39,7 +39,11 @@ def verify_restore(runtime: Any, source_id: str) -> dict[str, Any]:
             created = True
         subprocess.run(["docker", "exec", "-i", container, "pg_restore", "--username=postgres", "--exit-on-error", "--dbname=" + target],
             input=dump, capture_output=True, check=True, timeout=180)  # nosec B603 B607
-        assert database_snapshot(admin_dsn) == before
+        after = database_snapshot(admin_dsn)
+        if after != before:
+            differences = {"tables": {key: {"before": value, "after": after["tables"].get(key)} for key, value in before["tables"].items() if value != after["tables"].get(key)},
+                "objects": {key: {"before": value, "after": after["objects"].get(key)} for key, value in before["objects"].items() if value != after["objects"].get(key)}, "head": [before["head"], after["head"]]}
+            raise AssertionError("Actual populated restore fingerprint difference: " + json.dumps(differences, sort_keys=True))
         restored = type(runtime)(ReceiptRuntime(PostgresConnectionFactory(PostgresSettings(dsn=app_dsn, require_tls=False)), admin_dsn, runtime.base.tenant, runtime.base.password))
         with restored.actor("poster") as (connection, repository, actor):
             assert repository.report(source_id, actor=actor) == original_report
@@ -65,12 +69,15 @@ def verify_restore(runtime: Any, source_id: str) -> dict[str, Any]:
             original = source["plans"][0]
             from tests.test_postgres_intercompany_fx import preparation
             assert repository.prepare(preparation(), command_id="prepare-original", actor=actor)["plan_digest"] == original["plan_digest"]
-        assert database_snapshot(admin_dsn) == before
+        reread = database_snapshot(admin_dsn)
+        assert reread["objects"] == after["objects"] and reread["head"] == after["head"]
+        assert all(reread["tables"][table] == after["tables"][table] for table in after["tables"] if table != "identity_users")
         result = {"schema_version": "intercompany-fx-native-populated-restore-v2", "status": "passed", "head": before["head"],
             "table_count": len(before["tables"]), "all_table_snapshot_sha256": digest(before["tables"]), "table_row_hashes": before["tables"],
             "objects": before["objects"], "dump_sha256": hashlib.sha256(dump).hexdigest(), "dump_bytes": len(dump), "native_role": flags,
             "source_effect_evidence_hashes": original_evidence, "report_digest": original_report["report_digest"], "tamper_refusals": rejected,
-            "unscoped_foreign_workspace_concealed": True, "exact_original_command_replayed": True, "performance_measurement": False}
+            "unscoped_foreign_workspace_concealed": True, "exact_original_command_replayed": True,
+            "post_restore_password_authentication_updates": ["identity_users.last_login_at"], "performance_measurement": False}
     finally:
         if created:
             with psycopg.connect(runtime.base.admin_dsn, autocommit=True) as admin:

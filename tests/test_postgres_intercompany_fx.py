@@ -36,14 +36,14 @@ class FxRuntime:
     base: ReceiptRuntime
 
     @contextmanager
-    def actor(self, name: str, *, entities: frozenset[str] = ENTITIES) -> Iterator[tuple[Any, PostgresIntercompanyFxRepository, PostingActor]]:
+    def actor(self, name: str, *, entities: frozenset[str] = ENTITIES, organization_id: str | None = "org") -> Iterator[tuple[Any, PostgresIntercompanyFxRepository, PostingActor]]:
         boundary = PostgresTenantBoundary(self.base.factory)
         with boundary.transaction(self.base.tenant) as connection:
             identities = PostgresIdentityRepository(connection)
             user = identities.authenticate_user(tenant_id=self.base.tenant, username=name, password=self.base.password)
             assert user is not None
             permissions = identities.user_permissions(tenant_id=self.base.tenant, user_id=user.id)
-        with boundary.transaction(self.base.tenant, workspace_id="work", organization_id="org") as connection:
+        with boundary.transaction(self.base.tenant, workspace_id="work", organization_id=organization_id) as connection:
             principal = ServerPrincipal(user=user, permissions=permissions, step_up_active=True,
                 authorized_tenant_ids=frozenset({self.base.tenant}), authorized_workspace_ids=frozenset({"work"}),
                 authorized_organization_ids=frozenset({"org"}), authorized_legal_entity_ids=entities)
@@ -63,7 +63,8 @@ def intercompany_fx_database(receipt_database: tuple[str, str]) -> tuple[str, st
     with psycopg.connect(receipt_database[0]) as admin:
         if admin.execute("SELECT to_regprocedure('reconforge.fx_convert_inverse(numeric,numeric,integer,integer)')").fetchone()[0] is None:
             admin.execute(INVERSE_SQL)
-        admin.execute(UPGRADE_SQL)
+        if admin.execute("SELECT to_regclass('reconforge.intercompany_fx_sources')").fetchone()[0] is None:
+            admin.execute(UPGRADE_SQL)
         app_user = psycopg.conninfo.conninfo_to_dict(receipt_database[1])["user"]
         admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {}").format(sql.Identifier(app_user)))
     return receipt_database
@@ -72,6 +73,10 @@ def intercompany_fx_database(receipt_database: tuple[str, str]) -> tuple[str, st
 @pytest.fixture
 def runtime(intercompany_fx_database: tuple[str, str]) -> FxRuntime:
     base = create_receipt_runtime(intercompany_fx_database)
+    return seed_intercompany_fx_masters(base)
+
+
+def seed_intercompany_fx_masters(base: ReceiptRuntime) -> FxRuntime:
     with PostgresTenantBoundary(base.factory).transaction(base.tenant) as connection:
         for code in ("EUR", "GBP"):
             connection.execute("INSERT INTO reconforge.currencies(tenant_id,code,name,minor_units) VALUES(%s,%s,%s,2)", (base.tenant, code, code))
@@ -86,19 +91,22 @@ def runtime(intercompany_fx_database: tuple[str, str]) -> FxRuntime:
             finance.upsert_journal(journal_code="IC2_" + currency, name="Captured " + currency,
                 organization_code="ORG", currency_code=currency, workspace="work")
         identities = PostgresIdentityRepository(connection)
-        for permission in ("finance_core.read", "intercompany_fx.read", "intercompany_fx.prepare", "intercompany_fx.review", "intercompany_fx.post"):
+        for permission in ("finance_core.read", "master_data.manage", "intercompany_fx.read", "intercompany_fx.prepare", "intercompany_fx.review", "intercompany_fx.post"):
             identities.create_permission(tenant_id=base.tenant, permission_name=permission)
             identities.grant_permission(tenant_id=base.tenant, role_name="receipt-operator", permission_name=permission)
         authority = PostgresScopeAuthorityRepository(connection)
         for person in ("maker", "checker", "poster"):
             for kind, identifier in (("workspace", "work"), ("organization", "org"), *(("legal_entity", entity) for entity in sorted(ENTITIES))):
+                if connection.execute("SELECT 1 FROM reconforge.principal_scope_grants WHERE tenant_id=%s AND principal_type='user' AND principal_id=%s AND scope_type=%s AND scope_id=%s AND revoked_at IS NULL",
+                    (base.tenant, person, kind, identifier)).fetchone() is not None:
+                    continue
                 authority.grant(tenant_id=base.tenant, grant_id=f"ic2-{person}-{identifier}", principal_type="user", principal_id=person,
                     scope_type=kind, scope_id=identifier, actor_id=person)
     return FxRuntime(base)
 
 
-def preparation():
-    original = pure_preparation()
+def preparation(amount: int = 10001):
+    original = pure_preparation(amount=amount)
     return replace(original, seller=replace(original.seller, legal_entity_id="seller", entity_code="SELLER"))
 
 
@@ -176,16 +184,7 @@ def test_native_partial_revalue_translation_elimination_reports_actual_cta(runti
         assert report["cta_minor"] == -291
         assert len(report["source_effect_ids"]) == 6 and len(report["native_adjustment_effect_ids"]) == 1
         assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.base.tenant,)).fetchone()["n"] == 7
-        import json
-        import os
-        from pathlib import Path
-        from uuid import uuid4
-
-        if directory := os.environ.get("RECONFORGE_ICFX_PROOF_DIR"):
-            proof = {"schema_version": "intercompany-fx-original-cycle-proof-v2", "performance_measurement": False,
-                "native_role": dict(connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()),
-                "stages": [repository.evidence(stage["id"], actor=actor) for stage in (original, settled, valued, adjustment)], "report": report}
-            Path(directory, "cycle-" + uuid4().hex + ".json").write_text(json.dumps(proof, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+        export_cycle(connection, repository, actor, [original, settled, valued, adjustment], report)
 
 
 def test_direct_native_partial_review_and_manual_publication_refused(runtime: FxRuntime) -> None:
@@ -214,9 +213,22 @@ def backing_digest(connection: Any, tenant: str) -> str:
     return digest_payload({table: [row["payload"] for row in connection.execute(sql.SQL("SELECT to_jsonb(t) payload FROM reconforge.{} t WHERE tenant_id=%s ORDER BY to_jsonb(t)::text").format(sql.Identifier(table)), (tenant,))] for table in tables})
 
 
+def export_cycle(connection: Any, repository: PostgresIntercompanyFxRepository, actor: PostingActor, stages: list[dict[str, Any]], report: dict[str, Any] | None = None) -> None:
+    import json
+    import os
+    from pathlib import Path
+    from uuid import uuid4
+
+    if directory := os.environ.get("RECONFORGE_ICFX_PROOF_DIR"):
+        proof = {"schema_version": "intercompany-fx-original-cycle-proof-v2", "performance_measurement": False,
+            "native_role": dict(connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()),
+            "stages": [repository.evidence(stage["id"], actor=actor) for stage in stages], "report": report}
+        Path(directory, "cycle-" + uuid4().hex + ".json").write_text(json.dumps(proof, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+
+
 def test_full_settlement_after_governed_revaluation_inverse(runtime: FxRuntime) -> None:
     original = recognize(runtime)
-    cash(runtime, original["source_id"])
+    first_cash = cash(runtime, original["source_id"])
     valued = revalue(runtime, original["source_id"])
     with runtime.actor("maker") as (_, repository, actor):
         inverse = repository.prepare_revaluation_reversal(original["source_id"], original_revaluation_id=valued["id"], period_ids=PERIODS,
@@ -238,6 +250,7 @@ def test_full_settlement_after_governed_revaluation_inverse(runtime: FxRuntime) 
                 JOIN reconforge.finance_accounts a ON a.tenant_id=f.tenant_id AND a.id=n->>'account_id'
                 WHERE f.tenant_id=%s AND f.legal_entity_id=%s AND a.account_code=%s""", (runtime.base.tenant, entity["legal_entity_id"], entity["accounts"]["party"])).fetchone()["balance"]
             assert balance == 0
+        export_cycle(connection, repository, actor, [original, first_cash, valued, reversed_plan, final])
         with pytest.raises(FinancePostingError, match="residual"):
             repository.prepare_revaluation(original["source_id"], rates={"seller": rate("1.32", "2026-10-08"), "buyer": rate("0.82", "2026-10-08")},
                 period_ids=PERIODS, posting_date="2026-10-08", reason="No residual", command_id="no-residual", actor=actor)
@@ -362,15 +375,16 @@ def test_scoped_fiscal_close_and_reasoned_reopen_preserve_original_commands(runt
     )
 
     original = recognize(runtime)
-    with runtime.actor("poster") as (connection, _, actor):
+    with runtime.actor("poster", organization_id=None) as (connection, _, actor):
         masters = PostgresMasterDataRepository(connection)
+        masters.set_period_status(tenant_id=runtime.base.tenant, period_id="period", status="Soft Closed", reason="Reviewed soft close", actor_id=actor.user_id)
         masters.set_period_status(tenant_id=runtime.base.tenant, period_id="period", status="Closed", reason="Reviewed period closure", actor_id=actor.user_id)
     with runtime.actor("maker") as (_, repository, actor):
         assert repository.prepare(preparation(), command_id="prepare-original", actor=actor)["phase"] == 0
         with pytest.raises(FinancePostingError, match="open"):
             repository.prepare_settlement(original["source_id"], transaction_minor=3000, rates={"seller": rate("1.3", "2026-10-04"), "buyer": rate("0.78", "2026-10-04")},
                 period_ids=PERIODS, posting_date="2026-10-04", reason="Locked period", command_id="locked-cash", actor=actor)
-    with runtime.actor("checker") as (connection, _, actor):
+    with runtime.actor("checker", organization_id=None) as (connection, _, actor):
         masters = PostgresMasterDataRepository(connection)
         with pytest.raises(PostgresMasterDataValidationError, match="reason"):
             masters.set_period_status(tenant_id=runtime.base.tenant, period_id="period", status="Open", actor_id=actor.user_id)
@@ -400,3 +414,171 @@ def test_populated_downgrade_refuses_to_drop_retained_source_history(runtime: Fx
         admin.execute(DOWNGRADE_SQL)
     with runtime.actor("poster") as (_, repository, actor):
         assert repository.get_plan(original["id"], actor=actor) == original
+
+
+@pytest.mark.parametrize("identifier,number", [("ic2-orphan", "ORDINARY"), ("IC2R-orphan", "ORDINARY"), ("ordinary-orphan", "ic2s-orphan"), ("ordinary-orphan", "ic2e-orphan")])
+def test_reserved_upper_and_lower_ids_and_numbers_require_exact_source_owner(runtime: FxRuntime, identifier: str, number: str) -> None:
+    import psycopg
+
+    with runtime.actor("maker") as (_, repository, actor):
+        plan = repository.prepare(preparation(), command_id="prepare-original", actor=actor)
+    with pytest.raises(psycopg.errors.CheckViolation) as denied, runtime.actor("maker") as (connection, _, _):
+        connection.execute("""INSERT INTO reconforge.finance_entries SELECT (jsonb_populate_record(NULL::reconforge.finance_entries,
+            to_jsonb(e)||jsonb_build_object('id',%s::text,'entry_number',%s::text))).* FROM reconforge.finance_entries e WHERE e.tenant_id=%s AND e.id=%s""",
+            (identifier, number, runtime.base.tenant, plan["entries"][0]["entry_id"]))
+        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    assert denied.value.diag.constraint_name == "intercompany_fx_owner"
+
+
+def test_direct_inverse_command_checks_current_reverse_permission(runtime: FxRuntime) -> None:
+    import psycopg
+
+    original = recognize(runtime)
+    cash(runtime, original["source_id"])
+    valued = revalue(runtime, original["source_id"])
+    with runtime.actor("maker") as (_, repository, actor):
+        inverse = repository.prepare_revaluation_reversal(original["source_id"], original_revaluation_id=valued["id"], period_ids=PERIODS,
+            posting_date="2026-10-06", reason="Retained exact inverse", command_id="prepare-inverse", actor=actor)
+    with PostgresTenantBoundary(runtime.base.factory).transaction(runtime.base.tenant) as connection:
+        connection.execute("UPDATE reconforge.identity_role_permissions SET active=false,revoked_at=now(),revoked_by='poster',revocation_reason_code='access_change' WHERE tenant_id=%s AND permission_name='finance_core.reverse'", (runtime.base.tenant,))
+    with pytest.raises(psycopg.errors.CheckViolation, match="reverse permission"), runtime.actor("maker") as (connection, _, actor):
+        connection.execute("""INSERT INTO reconforge.intercompany_fx_commands SELECT
+            tenant_id,workspace_id,organization_id,seller_entity_id,buyer_entity_id,adjustment_entity_id,plan_id,'review',%s,%s,
+            request_digest,request_json,response_json FROM reconforge.intercompany_fx_commands WHERE tenant_id=%s AND plan_id=%s AND operation='prepare'""",
+            ("forged-inverse-review", actor.user_id, runtime.base.tenant, inverse["id"]))
+
+
+def test_canonical_inverse_native_half_up_ties_large_coefficient_and_overflow(runtime: FxRuntime) -> None:
+    from fractions import Fraction
+
+    import psycopg
+
+    def rounded(value: Fraction) -> int:
+        sign = -1 if value < 0 else 1
+        whole, remainder = divmod(abs(value).numerator, abs(value).denominator)
+        return sign * (whole + (2 * remainder >= abs(value).denominator))
+
+    vectors = [(minor, ratio, base, quote) for minor in (0, 1, -1, 2, -2, 10001, 9_000_000_000_000_000_000)
+        for ratio, base, quote in (("2", 2, 2), ("1.999999999999", 0, 0), ("2.000000000001", 0, 0), ("999999999999.999999999999", 8, 0))]
+    vectors.append((9_000_000_000_000_000_000, "0.000000000001", 0, 8))
+    with runtime.actor("poster") as (connection, _, _):
+        for amount, ratio, base, quote in vectors:
+            expected = rounded(Fraction(amount) / Fraction(ratio) * Fraction(10 ** quote, 10 ** base))
+            if abs(expected) > 9_000_000_000_000_000_000:
+                with pytest.raises(psycopg.errors.CheckViolation, match="native minor-unit bound"), connection.transaction():
+                    connection.execute("SELECT reconforge.fx_convert_inverse(%s::numeric,%s::numeric,%s,%s)", (str(amount), ratio, base, quote))
+            else:
+                actual = connection.execute("SELECT reconforge.fx_convert_inverse(%s::numeric,%s::numeric,%s,%s) amount", (str(amount), ratio, base, quote)).fetchone()["amount"]
+                assert actual == expected
+
+
+def test_native_two_installments_preserve_actual_half_up_final_carry(runtime: FxRuntime) -> None:
+    with runtime.actor("maker") as (_, repository, actor):
+        initial = repository.prepare(preparation(amount=2), command_id="prepare-original", actor=actor)
+    original = publish(runtime, initial, "original")
+    assert original["equation"]["positions"]["seller"]["original_functional_minor"] == 3
+    first = cash(runtime, original["source_id"], transaction_minor=1)
+    second = cash(runtime, original["source_id"], transaction_minor=1, day="2026-10-05", suffix="final")
+    assert first["equation"]["positions"]["seller"]["historical_release_minor"] == 1
+    assert second["equation"]["positions"]["seller"]["historical_release_minor"] == 2
+    with runtime.actor("poster") as (connection, repository, actor):
+        export_cycle(connection, repository, actor, [original, first, second])
+
+
+def test_emitted_source_history_rechecks_current_revalued_amount_ceiling(runtime: FxRuntime, monkeypatch: pytest.MonkeyPatch) -> None:
+    from decimal import Decimal
+
+    import reconforge.infrastructure.postgres_operational_finance as authority
+    from reconforge.auth.policy import evaluate_principal_access
+
+    cfg = preparation()
+    cfg = replace(cfg, seller_original_rate=rate("1.425", "2026-10-03"))
+    with runtime.actor("maker") as (_, repository, actor):
+        prepared = repository.prepare(cfg, command_id="prepare-original", actor=actor)
+    original = publish(runtime, prepared, "original")
+    assert original["equation"]["positions"]["seller"]["original_functional_minor"] == 14251
+    with runtime.actor("maker") as (_, repository, actor):
+        value = repository.prepare_revaluation(original["source_id"], rates={"seller": rate("2.052", "2026-10-04"), "buyer": rate("0.82", "2026-10-04")}, period_ids=PERIODS,
+            posting_date="2026-10-04", reason="Explicit current exposure", command_id="prepare-revalue", actor=actor)
+    publish(runtime, value, "revalue")
+    assert value["equation"]["positions"]["seller"]["valued_outstanding_minor"] == 20522
+
+    def ceiling(principal: Any, **context: Any) -> Any:
+        return evaluate_principal_access(principal, maximum_amount=Decimal("150"), **context)
+
+    with monkeypatch.context() as patch, runtime.actor("poster") as (_, repository, actor):
+        patch.setattr(authority, "evaluate_principal_access", ceiling)
+        with pytest.raises(FinancePostingError, match="denied"):
+            repository.get_source(original["source_id"], actor=actor)
+        with pytest.raises(FinancePostingError, match="denied"):
+            repository.get_plan(value["id"], actor=actor)
+
+
+def test_sorted_period_locks_precede_currency_binding_during_actual_wait(runtime: FxRuntime) -> None:
+    from queue import Queue
+    from time import monotonic, sleep
+
+    from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
+
+    pids: Queue[int] = Queue()
+
+    def prepare() -> dict[str, Any]:
+        with runtime.actor("maker") as (connection, repository, actor):
+            pids.put(connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"])
+            return repository.prepare(preparation(), command_id="prepare-original", actor=actor)
+
+    blocker = runtime.base.factory.connect()
+    blocker.execute("SELECT set_config('app.tenant_id',%s,true),set_config('app.workspace_id','work',true),set_config('app.organization_id','org',true)", (runtime.base.tenant,))
+    blocker.execute("SELECT id FROM reconforge.fiscal_periods WHERE tenant_id=%s AND id='period' FOR UPDATE", (runtime.base.tenant,))
+    blocker_pid = blocker.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+    try:
+        with ThreadPoolExecutor(max_workers=1) as workers:
+            future = workers.submit(prepare)
+            pid = pids.get(timeout=10)
+            with PostgresTenantBoundary(runtime.base.factory).transaction(runtime.base.tenant) as control:
+                deadline = monotonic() + 10
+                while blocker_pid not in control.execute("SELECT pg_blocking_pids(%s) pids", (pid,)).fetchone()["pids"]:
+                    assert monotonic() < deadline, "Actual fiscal-period lock wait was not established"
+                    sleep(.02)
+                control.execute("SET LOCAL statement_timeout='1s'")
+                FinancePolicyStore(control, tenant_id=runtime.base.tenant).lock_binding("work")
+            blocker.rollback()
+            assert future.result(timeout=20)["phase"] == 0
+    finally:
+        blocker.rollback()
+        blocker.close()
+
+
+def test_ordinary_manual_native_inverse_needs_no_intercompany_table_select(runtime: FxRuntime) -> None:
+    import psycopg
+    from psycopg import sql
+
+    with runtime.actor("maker") as (_, repository, actor):
+        entry = repository.owner.finance.create_entry(entry_number="ORDINARY-ORIGINAL", organization_code="ORG", entity_code="SELLER",
+            journal_code="IC2_EUR", period_id="period", posting_date="2026-10-03", description="Ordinary native source", workspace="work",
+            actor_label=actor.username, lines=[{"account_code": "IC2_CASH", "debit": "1", "credit": "0", "description": "Ordinary"},
+                {"account_code": "IC2_EXP", "debit": "0", "credit": "1", "description": "Ordinary"}])
+    with runtime.actor("checker") as (_, repository, actor):
+        repository.owner.finance.validate_entry(entry["id"], reason="Ordinary independent review", actor_label=actor.username)
+    with runtime.actor("poster") as (_, repository, actor):
+        preview = repository.owner.posting.preview(entry["id"], actor=actor)
+        original = repository.owner.posting.post(entry["id"], command_id="ordinary-post", expected_validation_digest=preview["validation_digest"], reason="Ordinary publication", actor=actor)
+    role = psycopg.conninfo.conninfo_to_dict(runtime.base.factory.settings.dsn)["user"]
+    tables = ("intercompany_fx_sources", "intercompany_fx_plans", "intercompany_fx_reviews", "intercompany_fx_links", "intercompany_fx_post_evidence", "intercompany_fx_commands")
+    with psycopg.connect(runtime.base.admin_dsn) as admin:
+        for table in tables:
+            admin.execute(sql.SQL("REVOKE SELECT ON reconforge.{} FROM {}").format(sql.Identifier(table), sql.Identifier(role)))
+    try:
+        with runtime.actor("maker") as (_, repository, actor):
+            inverse = repository.owner.posting.prepare_reversal(original["id"], command_id="ordinary-inverse", entry_number="ORDINARY-INVERSE",
+                period_id="period", posting_date="2026-10-04", reason="Ordinary native inverse", actor=actor)
+        with runtime.actor("checker") as (_, repository, actor):
+            repository.owner.finance.validate_entry(inverse["entry_id"], reason="Ordinary inverse review", actor_label=actor.username)
+        with runtime.actor("poster") as (_, repository, actor):
+            preview = repository.owner.posting.preview(inverse["entry_id"], actor=actor)
+            effect = repository.owner.posting.post(inverse["entry_id"], command_id="ordinary-inverse-post", expected_validation_digest=preview["validation_digest"], reason="Ordinary inverse publication", actor=actor)
+            assert effect["reverses_effect_id"] == original["id"]
+    finally:
+        with psycopg.connect(runtime.base.admin_dsn) as admin:
+            for table in tables:
+                admin.execute(sql.SQL("GRANT SELECT ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(role)))

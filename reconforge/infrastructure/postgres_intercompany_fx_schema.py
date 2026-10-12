@@ -74,9 +74,17 @@ END $icfx$;
 CREATE FUNCTION reconforge.icfx_command_actor() RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $icfx$
 DECLARE p RECORD;permission TEXT;entity TEXT;period TEXT;
 BEGIN
+ SELECT* INTO p FROM reconforge.intercompany_fx_plans WHERE tenant_id=NEW.tenant_id AND id=NEW.plan_id;
  permission:=CASE NEW.operation WHEN'prepare' THEN'finance_core.manage' WHEN'review' THEN'finance_core.validate' ELSE'finance_core.post' END;
  PERFORM reconforge.icfx_assert(reconforge.sales_revenue_actor(NEW.tenant_id,NEW.actor_id,permission)
  AND reconforge.sales_revenue_actor(NEW.tenant_id,NEW.actor_id,'intercompany_fx.'||NEW.operation), 'Current independent human owner permission is required');
+ IF p.kind='reverse_revaluation' THEN
+  PERFORM 1 FROM reconforge.identity_role_permissions rp JOIN reconforge.identity_user_roles ur
+   ON ur.tenant_id=rp.tenant_id AND ur.role_id=rp.role_id WHERE rp.tenant_id=NEW.tenant_id AND ur.user_id=NEW.actor_id
+   AND ur.active AND rp.active AND rp.permission_name='finance_core.reverse' FOR SHARE OF rp,ur;
+  PERFORM reconforge.icfx_assert(reconforge.sales_revenue_actor(NEW.tenant_id,NEW.actor_id,'finance_core.reverse'),
+   'Every new inverse phase requires current persisted native reverse permission');
+ END IF;
  PERFORM 1 FROM reconforge.principal_scope_grants WHERE tenant_id=NEW.tenant_id AND principal_type='user' AND principal_id=NEW.actor_id
  AND revoked_at IS NULL ORDER BY scope_type,scope_id FOR SHARE;
  PERFORM reconforge.icfx_assert((SELECT count(DISTINCT(scope_type,scope_id)) FROM reconforge.principal_scope_grants
@@ -84,7 +92,6 @@ BEGIN
  AND((scope_type='workspace' AND scope_id=NEW.workspace_id) OR(scope_type='organization' AND scope_id=NEW.organization_id)
  OR(scope_type='legal_entity' AND scope_id IN(NEW.seller_entity_id,NEW.buyer_entity_id,NEW.adjustment_entity_id))))=5,
  'Paired FX command requires all three current persisted entity grants and parent scopes');
- SELECT* INTO p FROM reconforge.intercompany_fx_plans WHERE tenant_id=NEW.tenant_id AND id=NEW.plan_id;
  FOR period IN SELECT DISTINCT value FROM jsonb_each_text(p.payload->'period_ids') LOOP
   PERFORM 1 FROM reconforge.fiscal_periods WHERE tenant_id=NEW.tenant_id AND id=period FOR SHARE;
   PERFORM reconforge.icfx_assert(EXISTS(SELECT 1 FROM reconforge.fiscal_periods WHERE tenant_id=NEW.tenant_id AND id=period
@@ -412,14 +419,19 @@ BEGIN
  END LOOP;
 END $icfx$;
 CREATE FUNCTION reconforge.icfx_reverse_close() RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $icfx$
-DECLARE changed JSONB;entry TEXT;original TEXT;number TEXT;plan RECORD;selected TEXT;inverse RECORD;
+DECLARE changed JSONB;entry TEXT;original TEXT;number TEXT;plan RECORD;selected TEXT;inverse RECORD;original_number TEXT;original_entry TEXT;
 BEGIN
  FOR changed IN SELECT value FROM jsonb_array_elements(CASE TG_OP WHEN'INSERT' THEN jsonb_build_array(to_jsonb(NEW)) WHEN'DELETE' THEN jsonb_build_array(to_jsonb(OLD)) ELSE jsonb_build_array(to_jsonb(OLD),to_jsonb(NEW)) END) LOOP
   selected:=changed->>'tenant_id';entry:=NULL;original:=NULL;
   IF TG_TABLE_NAME='finance_entries' THEN entry:=changed->>'id';original:=changed->>'reverses_posting_id';
   ELSIF TG_TABLE_NAME IN('finance_entry_lines','finance_posting_effects') THEN entry:=changed->>'entry_id';original:=changed->>'reverses_effect_id';
   ELSIF TG_TABLE_NAME='finance_entry_line_dimensions' THEN SELECT entry_id INTO entry FROM reconforge.finance_entry_lines WHERE tenant_id=selected AND id=changed->>'entry_line_id';END IF;
-  IF original IS NOT NULL AND EXISTS(SELECT 1 FROM reconforge.intercompany_fx_links WHERE tenant_id=selected AND posting_effect_id=original) THEN
+  original_number:=NULL;original_entry:=NULL;
+  IF original IS NOT NULL THEN SELECT e.entry_number,e.id INTO original_number,original_entry FROM reconforge.finance_posting_effects f
+   JOIN reconforge.finance_entries e ON e.tenant_id=f.tenant_id AND e.id=f.entry_id WHERE f.tenant_id=selected AND f.id=original;END IF;
+  IF original IS NOT NULL AND(upper(coalesce(original_number,''))~'^IC2[SRE]?-' OR upper(coalesce(original_entry,''))~'^IC2[SRE]?-') THEN
+   PERFORM reconforge.icfx_assert(EXISTS(SELECT 1 FROM reconforge.intercompany_fx_links WHERE tenant_id=selected AND posting_effect_id=original),
+    'A reserved native original effect requires its exact paired owner');
    SELECT* INTO inverse FROM reconforge.intercompany_fx_plans p WHERE p.tenant_id=selected AND p.kind='reverse_revaluation'
     AND EXISTS(SELECT 1 FROM jsonb_array_elements(p.payload->'entries')x WHERE x->>'entry_id'=entry AND x->>'reverses_effect_id'=original);
    PERFORM reconforge.icfx_assert(inverse.id IS NOT NULL,'A detached native inverse cannot bypass the exact reviewed paired closing owner');
@@ -427,7 +439,7 @@ BEGIN
   END IF;
   IF TG_TABLE_NAME IN('finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects') THEN
    IF entry IS NULL THEN CONTINUE;END IF;SELECT entry_number INTO number FROM reconforge.finance_entries WHERE tenant_id=selected AND id=entry;
-   IF coalesce(number,'')!~'^IC2[SRE]?-' AND NOT(TG_TABLE_NAME='finance_entries' AND coalesce(changed->>'entry_number','')~'^IC2[SRE]?-') THEN CONTINUE;END IF;
+   IF upper(coalesce(number,''))!~'^IC2[SRE]?-' AND upper(coalesce(entry,''))!~'^IC2[SRE]?-' AND NOT(TG_TABLE_NAME='finance_entries' AND upper(coalesce(changed->>'entry_number',''))~'^IC2[SRE]?-') THEN CONTINUE;END IF;
    SELECT* INTO plan FROM reconforge.intercompany_fx_plans p WHERE p.tenant_id=selected AND EXISTS(SELECT 1 FROM jsonb_array_elements(p.payload->'entries')x WHERE x->>'entry_id'=entry);
    PERFORM reconforge.icfx_assert(plan.id IS NOT NULL,'The IC2 namespace requires its complete source owner');PERFORM reconforge.icfx_close(selected,plan.id);CONTINUE;
   END IF;

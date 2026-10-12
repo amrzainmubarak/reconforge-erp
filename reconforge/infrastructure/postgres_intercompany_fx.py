@@ -71,13 +71,13 @@ class PostgresIntercompanyFxRepository:
         self.owner = PostgresOperationalFinanceRepository(connection, tenant_id)
         self._participant: _IntercompanyFxPostingParticipant | None = None
 
-    def _peek(self, kind: str, identifier: str, *, lock: bool = False) -> dict[str, Any]:
+    def _peek(self, kind: str, identifier: str, *, lock: bool = False, share: bool = False) -> dict[str, Any]:
         statement = {
             ("source", False): "SELECT payload FROM reconforge.intercompany_fx_sources WHERE tenant_id=%s AND id=%s",
             ("source", True): "SELECT payload FROM reconforge.intercompany_fx_sources WHERE tenant_id=%s AND id=%s FOR UPDATE",
             ("plan", False): "SELECT payload,phase FROM reconforge.intercompany_fx_plans WHERE tenant_id=%s AND id=%s",
             ("plan", True): "SELECT payload,phase FROM reconforge.intercompany_fx_plans WHERE tenant_id=%s AND id=%s FOR UPDATE",
-        }[(kind, lock)]
+        }[(kind, lock)] + (" FOR SHARE" if share and not lock else "")
         rows = records(self.connection.execute(statement, (self.tenant_id, text(identifier, kind + "_id"))))
         if not rows:
             fail("Paired FX source is absent or outside the complete authorized entity group.", "intercompany_fx_not_found")
@@ -99,6 +99,9 @@ class PostgresIntercompanyFxRepository:
                 position = (plan or {}).get("equation", {}).get("positions", {}).get(book, {})
                 amount = max(original, position.get("amount_minor", 0), position.get("valued_outstanding_minor", 0),
                              position.get("historical_outstanding_minor", 0))
+                translated = (plan or {}).get("equation", {}).get("translations", {}).get(book, {})
+                amount = max([amount, *(abs(row["native_balance_minor"]) for row in translated.get("accounts", [])
+                                       if row["native_balance_minor"] is not None)])
                 if amount > 0:
                     scope.update(amount_minor=amount, currency_precision=source["policies"][book]["currency_precision"])
             for permission in ("intercompany_fx." + operation, PERMISSIONS[operation]):
@@ -120,12 +123,12 @@ class PostgresIntercompanyFxRepository:
     def _parents(self, request: Mapping[str, Any], period_ids: Mapping[str, str], *, require_open: bool = True) -> None:
         if set(period_ids) != set(BOOKS):
             fail("Retain explicit seller, buyer and adjustment period identities.")
-        FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(request["workspace_id"])
         for period_id in sorted(set(period_ids.values())):
             row = self.connection.execute("SELECT id,status FROM reconforge.fiscal_periods WHERE tenant_id=%s AND id=%s AND application_workspace_id=%s FOR SHARE",
                 (self.tenant_id, text(period_id, "period_id"), request["workspace_id"])).fetchone()
             if row is None or require_open and row["status"] != "Open":
                 fail("Every retained native period must be present and open for mutation.", "intercompany_fx_period_locked")
+        FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(request["workspace_id"])
         entities = records(self.connection.execute("""SELECT e.id,e.entity_code,e.currency_code,e.active,o.organization_code,o.active AS organization_active
             FROM reconforge.legal_entities e JOIN reconforge.organizations o ON o.tenant_id=e.tenant_id AND o.id=e.organization_id
             WHERE e.tenant_id=%s AND e.organization_id=%s AND o.application_workspace_id=%s AND e.id=ANY(%s)
@@ -467,10 +470,13 @@ class PostgresIntercompanyFxRepository:
 
     def get_source(self, source_id: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():
-            source = self._peek("source", source_id)
-            self._authorize(actor, "read", source)
-            return {**source, "state": self._state(source_id), "plans": [self._view(row["id"]) for row in records(self.connection.execute(
-                "SELECT id FROM reconforge.intercompany_fx_plans WHERE tenant_id=%s AND source_id=%s ORDER BY sequence LIMIT 65", (self.tenant_id, source_id)))]}
+            source = self._peek("source", source_id, share=True)
+            self._authorize(actor, "read", source, lock=True)
+            plans = [self._view(row["id"]) for row in records(self.connection.execute(
+                "SELECT id FROM reconforge.intercompany_fx_plans WHERE tenant_id=%s AND source_id=%s ORDER BY sequence LIMIT 65", (self.tenant_id, source_id)))]
+            for plan in plans:
+                self._authorize(actor, "read", source, plan, lock=True)
+            return {**source, "state": self._state(source_id), "plans": plans}
 
     def list_sources(self, *, workspace_id: str, organization_id: str, after: str, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():
@@ -517,7 +523,7 @@ class PostgresIntercompanyFxRepository:
 
     def report(self, source_id: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():
-            source = self._peek("source", source_id)
+            source = self.get_source(source_id, actor=actor)
             self._authorize(actor, "read", source)
             rows = records(self.connection.execute("SELECT id FROM reconforge.intercompany_fx_plans WHERE tenant_id=%s AND source_id=%s AND kind='eliminate' AND phase=2", (self.tenant_id, source_id)))
             if len(rows) != 1:

@@ -284,6 +284,10 @@ BEGIN
  AND b.period_id=e.period_id AND (b.currency_code,b.currency_precision,b.currency_rounding_policy,b.currency_registry_version,b.currency_registry_digest)
  =(e.currency_code,e.currency_precision,e.currency_rounding_policy,e.currency_registry_version,e.currency_registry_digest),
  'Payroll budget must retain canonical source scope/currency/period and captured monetary policy');
+ PERFORM reconforge.hc_assert((SELECT count(*) FROM (VALUES(v->>'expense_account_code','Expense'),(v->>'liability_account_code','Liability'),(v->>'cash_account_code','Asset')) roles(code,kind)
+  JOIN reconforge.finance_accounts account ON account.tenant_id=t AND account.workspace_id=p.workspace_id AND account.account_code=roles.code AND account.account_type=roles.kind
+  JOIN reconforge.finance_journals journal ON journal.tenant_id=account.tenant_id AND journal.id=e.journal_id AND journal.chart_id=account.chart_id)=3,
+  'Wages require distinct native expense liability and cash asset roles in the original journal chart');
  PERFORM reconforge.hc_assert((SELECT count(*) FROM reconforge.budget_commitment_events WHERE tenant_id=t AND commitment_id=p.commitment_id AND operation='Reserve'
  AND source_reference=p.id AND amount_minor=p.amount_minor)=1,'Payrun needs exactly one native reserve event');
  PERFORM reconforge.hc_assert((SELECT count(*) FROM reconforge.budget_commitment_events WHERE tenant_id=t AND commitment_id=p.commitment_id AND operation='Consume')
@@ -555,6 +559,24 @@ BEGIN
   IF source_id IS NOT NULL THEN PERFORM reconforge.hc_close(changed->>'tenant_id',source_id);END IF;
  END LOOP;RETURN NULL;
 END $hc$;
+CREATE FUNCTION reconforge.hc_account_guard() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $hc$
+BEGIN
+ -- This uses only aggregate public source references. Ordinary finance
+ -- metadata maintenance must not acquire access to private rates or wages.
+ IF TG_OP='UPDATE' THEN
+  IF (NEW.tenant_id,NEW.id,NEW.workspace_id,NEW.chart_id,NEW.account_code,NEW.account_type)
+   IS NOT DISTINCT FROM (OLD.tenant_id,OLD.id,OLD.workspace_id,OLD.chart_id,OLD.account_code,OLD.account_type) THEN RETURN NEW;END IF;
+ END IF;
+ IF EXISTS(SELECT 1 FROM reconforge.hc_payruns p WHERE p.tenant_id=OLD.tenant_id AND p.workspace_id=OLD.workspace_id
+  AND OLD.account_code IN(p.payload->>'expense_account_code',p.payload->>'liability_account_code',p.payload->>'cash_account_code')) THEN
+  IF TG_OP='DELETE' THEN PERFORM reconforge.hc_assert(FALSE,'Original workforce account identity cannot be discarded');END IF;
+  PERFORM reconforge.hc_assert((NEW.tenant_id,NEW.id,NEW.workspace_id,NEW.chart_id,NEW.account_code,NEW.account_type)
+   =(OLD.tenant_id,OLD.id,OLD.workspace_id,OLD.chart_id,OLD.account_code,OLD.account_type),'Original workforce account identity chart and role are immutable');
+ END IF;
+ IF TG_OP='DELETE' THEN RETURN OLD;END IF;
+ RETURN NEW;
+END $hc$;
+CREATE TRIGGER hc_original_account BEFORE UPDATE OR DELETE ON reconforge.finance_accounts FOR EACH ROW EXECUTE FUNCTION reconforge.hc_account_guard();
 DO $hc$ DECLARE n TEXT; BEGIN
  FOREACH n IN ARRAY ARRAY['hc_employees','hc_employee_private','hc_employments','hc_rates','hc_projects','hc_times','hc_payruns','hc_payrun_private',
  'hc_payments','hc_payment_private','hc_time_claims','hc_claim_events','hc_claim_heads','hc_commands'] LOOP
@@ -583,6 +605,7 @@ DO $hc$ BEGIN
  THEN RAISE EXCEPTION 'Populated workforce/payroll history requires restore; destructive downgrade refused';END IF;
 END $hc$;
 DROP TRIGGER IF EXISTS hc_source_close ON reconforge.finance_entries;
+DROP TRIGGER IF EXISTS hc_original_account ON reconforge.finance_accounts;
 DROP TRIGGER IF EXISTS hc_source_close ON reconforge.finance_dimensions;
 DROP TRIGGER IF EXISTS hc_source_close ON reconforge.finance_dimension_values;
 DROP TRIGGER IF EXISTS hc_source_close ON reconforge.finance_entry_lines;
@@ -595,6 +618,7 @@ DROP TABLE reconforge.hc_commands,reconforge.hc_claim_heads,reconforge.hc_claim_
  reconforge.hc_payment_private,reconforge.hc_payments,reconforge.hc_payrun_private,reconforge.hc_payruns,reconforge.hc_times,
  reconforge.hc_projects,reconforge.hc_rates,reconforge.hc_employments,reconforge.hc_employee_private,reconforge.hc_employees;
 DROP FUNCTION reconforge.hc_reverse_close(),reconforge.hc_payment_close(TEXT,TEXT),reconforge.hc_close(TEXT,TEXT),reconforge.hc_calculate(TEXT,TEXT),
+ reconforge.hc_account_guard(),
  reconforge.hc_input_close(TEXT,TEXT,TEXT),reconforge.hc_phases(TEXT,JSONB,BOOLEAN),reconforge.hc_audit(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT),
  reconforge.hc_claim(TEXT,TEXT,TEXT,TEXT,TEXT),reconforge.hc_source_guard(),reconforge.hc_guard_immutable(),reconforge.hc_even(NUMERIC,NUMERIC),
  reconforge.hc_actor(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT),reconforge.hc_private(),reconforge.hc_assert(BOOLEAN,TEXT);

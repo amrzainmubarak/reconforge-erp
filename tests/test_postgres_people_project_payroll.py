@@ -354,3 +354,55 @@ def test_sql_head_cannot_advance_without_its_original_append_only_event(people: 
     with people.actor("maker") as (connection,_,_):
         assert {row["sequence"] for row in connection.execute("SELECT sequence FROM reconforge.hc_claim_heads WHERE tenant_id=%s",(people.base.tenant,))}=={1}
     assert commit(people,plan,"missing-event")["phase"]==2
+
+
+def test_wrong_expense_role_rolls_back_entire_reservation(people: PeopleRuntime) -> None:
+    import psycopg
+    budget,times=approved_budget(people),approved_time(people)
+    with pytest.raises(psycopg.errors.CheckViolation), people.actor("maker") as (_,repository,actor):
+        repository.prepare_payrun(SCOPE,time_ids=times,budget_id=budget["id"],expected_budget_version=budget["row_version"],
+            period_id="period",posting_date="2026-10-04",journal_code="STOCK",expense_account_code="INVENTORY",liability_account_code="WAGES",cash_account_code="CASH",command_id="wrong-role",actor=actor)
+    with people.actor("maker") as (connection,_,_):
+        assert connection.execute("SELECT count(*) AS n FROM reconforge.hc_payruns WHERE tenant_id=%s",(people.base.tenant,)).fetchone()["n"]==0
+        assert connection.execute("SELECT reserved_minor FROM reconforge.budget_envelopes WHERE tenant_id=%s AND id=%s",(people.base.tenant,budget["id"])).fetchone()["reserved_minor"]==0
+
+
+def test_ordinary_account_metadata_edit_preserves_role_and_private_boundary(people: PeopleRuntime) -> None:
+    import psycopg
+    budget,times=approved_budget(people),approved_time(people)
+    plan=prepare(people,times,budget)
+    with people.actor("maker",private=False) as (connection,_,_):
+        connection.execute("SELECT set_config('app.entity_id','',true),set_config('app.legal_entity_id','',true)")
+        assert connection.execute("UPDATE reconforge.finance_accounts SET name='Synthetic renamed labor' WHERE tenant_id=%s AND account_code='LABOR'",(people.base.tenant,)).rowcount==1
+        assert connection.execute("SELECT count(*) AS n FROM reconforge.hc_rates").fetchone()["n"]==0
+    with pytest.raises(psycopg.errors.CheckViolation), people.actor("maker",private=False) as (connection,_,_):
+        connection.execute("SELECT set_config('app.entity_id','',true),set_config('app.legal_entity_id','',true)")
+        connection.execute("UPDATE reconforge.finance_accounts SET account_type='Asset' WHERE tenant_id=%s AND account_code='LABOR'",(people.base.tenant,))
+    assert commit(people,plan,"preserved-role")["phase"]==2
+
+
+def test_unreferenced_account_delete_is_not_silently_cancelled(people: PeopleRuntime) -> None:
+    with people.actor("maker",private=False) as (connection,_,_):
+        connection.execute("SELECT set_config('app.entity_id','',true),set_config('app.legal_entity_id','',true)")
+        finance=PostgresFinanceCoreRepository(connection,people.base.tenant)
+        finance.upsert_account(account_code="UNUSED",name="Synthetic unused",account_type="Expense",chart_code="DEFAULT",workspace="work")
+        assert connection.execute("DELETE FROM reconforge.finance_accounts WHERE tenant_id=%s AND account_code='UNUSED'",(people.base.tenant,)).rowcount==1
+
+
+def test_name_only_account_edit_does_not_require_workforce_source_select(people: PeopleRuntime) -> None:
+    import psycopg
+    from psycopg import sql
+    plan=prepare(people,approved_time(people),approved_budget(people))
+    ordinary=psycopg.conninfo.conninfo_to_dict(people.base.factory.settings.dsn)["user"]
+    with psycopg.connect(people.base.admin_dsn) as admin:
+        admin.execute(sql.SQL("REVOKE SELECT ON reconforge.hc_payruns FROM {}").format(sql.Identifier(ordinary)))
+    try:
+        with people.actor("maker",private=False) as (connection,_,_):
+            connection.execute("SELECT set_config('app.entity_id','',true),set_config('app.legal_entity_id','',true)")
+            assert connection.execute("UPDATE reconforge.finance_accounts SET name='No workforce access needed' WHERE tenant_id=%s AND account_code='LABOR'",(people.base.tenant,)).rowcount==1
+            with pytest.raises(psycopg.errors.InsufficientPrivilege),connection.transaction():
+                connection.execute("SELECT 1 FROM reconforge.hc_payruns")
+    finally:
+        with psycopg.connect(people.base.admin_dsn) as admin:
+            admin.execute(sql.SQL("GRANT SELECT ON reconforge.hc_payruns TO {}").format(sql.Identifier(ordinary)))
+    assert commit(people,plan,"no-workforce-select")["phase"]==2

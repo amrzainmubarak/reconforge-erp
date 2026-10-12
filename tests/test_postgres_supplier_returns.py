@@ -506,6 +506,10 @@ def test_actual_ordered_empty_rollback_and_populated_refusal_keep_original_nativ
         with psycopg.connect(database[0]) as admin:
             for table in ("supplier_return_plans", "supplier_return_events", "supplier_return_commands", "ap_supplier_invoice_credits"):
                 admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(role)))
+            # Later empty migrations recreate Finance Core's non-personnel
+            # ownership metadata; restore only the native inverse prerequisites.
+            admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE ON reconforge.financial_effect_claim_gates TO {}").format(sql.Identifier(role)))
+            admin.execute(sql.SQL("GRANT SELECT ON reconforge.financial_effect_ownership_guards,reconforge.financial_effect_ownership_releases TO {}").format(sql.Identifier(role)))
         assert snapshot(selected) == before
         plan = prepare(selected, purchase)
         retained = snapshot(selected)

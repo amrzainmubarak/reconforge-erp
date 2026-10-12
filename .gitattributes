@@ -20,3 +20,8 @@ docs/security/gitleaks-public-source-digests-wave4.v1.json -text -eol
 docs/execution/wave5-evidence/** -text -eol
 .gitleaksignore text eol=lf
 docs/security/gitleaks-public-source-digests-wave5.v1.json -text -eol
+
+# These pinned raw capture records retain CRLF bytes; check all other whitespace normally.
+docs/execution/wave5-evidence/capsules/copy-verification.json whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/execution/wave5-evidence/capsules/copy-verification-v2.json whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/execution/wave5-evidence/capsules/source-lineage-checkpoint.json whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

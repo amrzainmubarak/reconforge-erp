@@ -24,7 +24,7 @@ tasks:
     title: Atomic paired books and settlement with native group elimination and reviewed report maps
     status: in_progress
     depends_on: [AMR-WAVE4-003]
-    exit_evidence: Bounded IC1 accepted in e8e native73 gate and actual8513 HTTPS/270-table restore: paired10001, cash3000, residual7001, elimination17002, five native effects and group nets zero. Final hosted gate pending; reporting FX, NCI and correction governance remain gaps.
+    exit_evidence: "Bounded IC1 accepted in e8e native73 gate and actual8513 HTTPS/270-table restore: paired10001, cash3000, residual7001, elimination17002, five native effects and group nets zero. Final hosted gate pending; reporting FX, NCI and correction governance remain gaps."
   - id: AMR-WAVE5-003
     priority: P0
     area: procurement-sourcing

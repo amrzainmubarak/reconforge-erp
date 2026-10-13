@@ -17,9 +17,14 @@ SHARDS = {
     "commercial-integrity", "supply-integrity", "finance-integrity",
     "supplier-returns", "fx-revaluation",
     "manufacturing-execution", "intercompany-operations", "procurement-sourcing",
-    "people-project-payroll", "accrual-deferral", "project-source-reconciliation",
+    "people-project-payroll", "accrual-deferral", "manufacturing-supply-plan", "project-time-billing", "project-source-reconciliation",
 }
 INTEGRITY_FILES = {
+    "manufacturing-supply-plan": ("tests/test_postgres_manufacturing_supply_plan.py",),
+    "project-time-billing": (
+        "tests/test_postgres_project_time_billing.py", "tests/test_postgres_project_time_billing_api.py",
+        "tests/test_postgres_project_time_billing_restore.py", "tests/test_postgres_project_time_billing_read_authority.py",
+    ),
     "project-source-reconciliation": (
         "tests/test_postgres_project_source_reconciliation.py", "tests/test_postgres_project_source_reconciliation_api.py",
         "tests/test_postgres_project_source_reconciliation_browser_fixture.py",
@@ -143,7 +148,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 59  # Retain all56 original commands, the accrual owner and two source-report owners.
+    assert len(commands) == 61  # Retain all56 original commands, three M2 owners and two source-report owners.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -244,7 +249,7 @@ def test_enterprise_browser_matrix_requires_every_real_https_and_populated_resto
         "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets",
         "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax",
         "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "people-project-payroll", "procurement-sourcing",
-        "accrual-deferral", "project-source-reconciliation",
+        "accrual-deferral", "project-time-billing", "project-source-reconciliation",
     ]
     assert job["strategy"]["fail-fast"] is False
     assert "continue-on-error" not in job

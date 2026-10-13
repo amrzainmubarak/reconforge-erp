@@ -30,7 +30,12 @@ test("actual read-only source cashflow original bytes Arabic mobile and source c
   expect(view.qualified_scope.tenant_id).toBe(tenant); expect(view.cashflow.operating_net_minor).toBe("0"); expect(view.cashflow.fx_on_cash_minor).toBe("101"); expect(view.cashflow.closing_minor).toBe("101");
   await expect(page.getByRole("heading", { name: "Source cash reconciliation", exact: true })).toBeVisible(); await expect(page.getByText("1.01 USD", { exact: true })).toHaveCount(2);
   await writeFile(join(artifacts!, "cashflow-view.json"), JSON.stringify(view));
-  const downloaded = page.waitForEvent("download"); await page.getByRole("button", { name: "Download unchanged original bytes", exact: true }).click(); const path = join(artifacts!, "cashflow-original.json"); await (await downloaded).saveAs(path);
+  const exported = page.waitForResponse(response => new URL(response.url()).pathname === `/api/v1/intercompany-source-cashflow/sources/${id}/evidence/export`);
+  const downloaded = page.waitForEvent("download"); await page.getByRole("button", { name: "Download unchanged original bytes", exact: true }).click();
+  const originalWire = await exported, wireHeaders = originalWire.headers();
+  await writeFile(join(artifacts!, "cashflow-original-wire.json"), JSON.stringify({ status: originalWire.status(), content_type: wireHeaders["content-type"], content_length: wireHeaders["content-length"], original_sha256: wireHeaders["x-reconforge-evidence-sha256"] }));
+  expect(originalWire.status()).toBe(200); expect(wireHeaders["content-length"]).toBe(String(view.evidence_bytes)); expect(wireHeaders["x-reconforge-evidence-sha256"]).toBe(view.evidence_sha256);
+  const path = join(artifacts!, "cashflow-original.json"); await (await downloaded).saveAs(path);
   const raw = await readFile(path); expect(raw.length).toBe(view.evidence_bytes); expect(createHash("sha256").update(raw).digest("hex")).toBe(view.evidence_sha256);
   await expect(page.getByText("Original raw bytes verified and downloaded", { exact: true })).toBeVisible(); expect((await new AxeBuilder({ page }).include("#main-content").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   await page.setViewportSize({ width: 390, height: 844 }); await page.getByRole("button", { name: "Switch language", exact: true }).click();

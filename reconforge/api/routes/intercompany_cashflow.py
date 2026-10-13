@@ -11,7 +11,7 @@ from reconforge.api.routes.finance_posting import _actor
 from reconforge.api.routes.fixed_assets import project
 from reconforge.api.routes.intercompany_fx import Read, authority
 from reconforge.api.server_finance_core import execute_postgres_finance_core_scoped, server_finance_core_enabled
-from reconforge.application.accrual_deferral_evidence import evidence_chunks, evidence_digest, evidence_size
+from reconforge.application.accrual_deferral_evidence import evidence_digest, evidence_size, evidence_transport_chunks
 from reconforge.application.intercompany_cashflow import IntercompanyCashflowApplicationService
 from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.intercompany_cashflow import SourceCashOpening
@@ -69,6 +69,6 @@ def export(source_id: str, request: Request, user: Read, opening: Annotated[Open
         raise APIError(status_code=413 if "too_large" in exc.code else 400, code=exc.code, message=str(exc)) from exc
     # Complete authorization and immutable native capture occur before headers;
     # the generator never retains a database connection or performs lazy reads.
-    return StreamingResponse(evidence_chunks(retained), media_type="application/json",
+    return StreamingResponse(evidence_transport_chunks(retained), media_type="application/json",
         headers={"Content-Length": str(length), "Content-Disposition": 'attachment; filename="intercompany-source-cashflow-evidence.json"',
             "X-ReconForge-Evidence-SHA256": sha})

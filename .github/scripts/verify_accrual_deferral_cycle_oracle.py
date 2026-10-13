@@ -43,7 +43,7 @@ def normalize(value: Any, field: str = "") -> Any:
         return {key: normalize(item, key) for key, item in value.items()}
     if isinstance(value, list):
         return [normalize(item) for item in value]
-    return integer(value, signed=field == "cash_changed_minor") if field.endswith("_minor") else value
+    return integer(value, signed=field == "cash_changed_minor") if field.endswith("_minor") or field == "weight" else value
 
 
 def line(account: str, debit: int, credit: int, dimensions: dict[str, str]) -> dict[str, Any]:

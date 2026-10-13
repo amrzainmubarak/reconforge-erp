@@ -10,7 +10,6 @@ from starlette.responses import StreamingResponse
 from reconforge.api.dependencies import enforce_server_scoped_permissions
 from reconforge.api.errors import APIError
 from reconforge.api.routes.finance_posting import _actor
-from reconforge.api.routes.fixed_assets import project
 from reconforge.api.routes.procurement_operations import required
 from reconforge.api.server_finance_core import (
     FinanceCoreExecutionScope,
@@ -128,6 +127,15 @@ def execute(request: Request, user: LocalUser,
             raise APIError(status_code=409, code="accrual_deferral_state_conflict", message=str(exc)) from exc
 
     return execute_postgres_finance_core_scoped(request, invoke)
+
+
+def project(value: Any, key: str = "") -> Any:
+    """Exact API text preserves large native money and allocation weights."""
+    if isinstance(value, dict):
+        return {field: project(item, field) for field, item in value.items()}
+    if isinstance(value, list):
+        return [project(item) for item in value]
+    return str(value) if type(value) is int and (key.endswith("_minor") or key == "weight") else value
 
 
 @router.get("/catalog")

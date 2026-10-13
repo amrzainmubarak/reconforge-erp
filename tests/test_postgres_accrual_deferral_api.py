@@ -105,6 +105,7 @@ def test_actual_http_source_three_humans_tranche_exact_inverse_and_evidence(runt
 def test_actual_http_strict_money_stepup_and_cached_grant_revocation_refuse_new_and_replayed_commands(runtime: ScheduleRuntime, accrual_deferral_database: tuple[str, str], tmp_path: Path) -> None:
     with client(runtime, accrual_deferral_database, tmp_path / "without-stepup", "maker", step_up=False) as (session, headers):
         assert session.post(ROOT + "/sources", headers=headers, json=body()).status_code == 403
+
     with client(runtime, accrual_deferral_database, tmp_path / "strict", "maker") as (session, headers):
         assert session.post(ROOT + "/sources", headers=headers, json={**body(), "amount_minor": 10001}).status_code == 422
         result = session.post(ROOT + "/sources", headers=headers, json=body())
@@ -116,3 +117,24 @@ def test_actual_http_strict_money_stepup_and_cached_grant_revocation_refuse_new_
         assert session.get(ROOT + "/sources/" + source + "/evidence/export", headers=headers).status_code == 403
         assert session.get(ROOT + "/plans/" + result.json()["plan"]["id"] + "/evidence/export", headers=headers).status_code == 403
         assert session.post(ROOT + "/sources", headers=headers, json=body()).status_code == 403
+
+
+def test_actual_http_large_allocation_weights_preserve_native_integer_seals_as_text(runtime: ScheduleRuntime, accrual_deferral_database: tuple[str, str], tmp_path: Path) -> None:
+    from reconforge.domain.finance_posting import digest_payload
+
+    request = body()
+    for tranche in request["tranches"]:
+        tranche["weight"] = "9000000000000000000"
+    with client(runtime, accrual_deferral_database, tmp_path / "large-weights", "maker") as (session, headers):
+        result = session.post(ROOT + "/sources", headers=headers, json=request)
+        assert result.status_code == 200, result.text
+        plan = result.json()["plan"]
+        assert all(row["weight"] == "9000000000000000000" for row in plan["command_request"]["original_request"]["tranches"])
+        public = session.get(ROOT + "/sources/" + plan["source_id"], headers=headers).json()["source"]
+        assert all(row["weight"] == "9000000000000000000" for row in public["request"]["tranches"])
+    with runtime.actor("maker") as (_, repository, actor):
+        native = repository.get_source(plan["source_id"], actor=actor)
+        assert all(row["weight"] == 9_000_000_000_000_000_000 for row in native["request"]["tranches"])
+        sealed = {key: value for key, value in native.items() if key not in {"source_digest", "plans", "claims", "cancelled"}}
+        assert digest_payload(sealed) == public["source_digest"]
+        assert [row["amount_minor"] for row in native["request"]["tranches"]] == [3334, 3334, 3333]

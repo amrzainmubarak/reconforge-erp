@@ -10,7 +10,9 @@ import hashlib
 import importlib
 import json
 import os
+import re
 import secrets
+import shutil
 import socket
 import ssl
 import subprocess  # nosec B404
@@ -30,6 +32,7 @@ from psycopg import sql
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+from tests import browser_diagnostic_redaction as diagnostic_redaction  # noqa: E402
 from tests.erp_expansion_browser_restore import (  # noqa: E402
     EXPANSION_TABLES,
     verify_expansion_cycles,
@@ -38,6 +41,204 @@ from tests.erp_expansion_browser_restore import (  # noqa: E402
 from tests.erp_expansion_browser_seed import seed_expansion_browser  # noqa: E402
 
 IMAGE = "postgres:17.11-alpine@sha256:aa90e97ee862e558111d34cfb8b2c4bec768c2b039fb791341686928560263b3"
+PUBLIC_ORIGINAL_JSON = re.compile(
+    r"(?:\.last-run|"
+    r"cashflow-(?:view|original|original-wire|browser-read-boundary)|"
+    r"group-diagnostic-(?:view|original|original-wire|browser-read-boundary|source-capture-reads)|"
+    r"project-source-(?:view|original|close-view|close-original|browser-boundary)|"
+    r"(?:fx-proof|ic-proof|fixed-asset-proof)-[a-z0-9-]+|ic-group-report|"
+    r"intercompany-fx-(?:stage-[0-9]+|management-report|report-download|proof-ar-mobile)|"
+    r"accrual-deferral-native-proof-en|manufacturing-supply-original-replay-custody|"
+    r"(?:hc1|pb1)-original-native-financial-evidence(?:-[a-z0-9]+)?|"
+    r"wire-request-timings(?:-[a-z0-9]+)?|snapshot-mobile-overflow-(?:ar|en)(?:-[a-z0-9]+)?|"
+    r"captured-statements-(?:ar-rtl|en)-390px(?:-[a-z0-9]+)?|"
+    r"native-financial-snapshot-oracle(?:-[a-z0-9]+)?)\.json",
+    re.IGNORECASE,
+)
+
+
+def private_diagnostics_directory(output: Path) -> Path:
+    """Fresh private run, outside the exact public browser artifact directory."""
+    sibling = output.parent / (output.name + "-private-diagnostics")
+    if sibling.is_symlink():
+        raise ValueError("Private browser diagnostic storage cannot be a symlink.")
+    sibling.mkdir(mode=0o700, parents=True, exist_ok=True)
+    private = sibling / uuid4().hex
+    private.mkdir(mode=0o700)
+    return private
+
+
+def _public_diagnostic_paths(output: Path) -> list[Path]:
+    paths = [output / name for name in ("browser.log", "playwright.json")]
+    artifacts = output / "playwright-artifacts"
+    if artifacts.is_symlink():
+        raise ValueError("Public browser artifact storage cannot be a symlink.")
+    if artifacts.is_dir():
+        # A reused output must not leave an old trace/network container in the
+        # upload directory merely because the current child writes privately.
+        paths.extend(path for path in sorted(artifacts.rglob("*"))
+            if path.is_symlink() or path.is_file() and (path.name == "error-context.md"
+                or not _unchanged_original_artifact_name(path)))
+    return [path for path in paths if path.exists() or path.is_symlink()]
+
+
+def _unchanged_original_artifact_name(path: Path) -> bool:
+    return path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp", ".sql"} or PUBLIC_ORIGINAL_JSON.fullmatch(path.name) is not None
+
+
+def _quarantine_public_diagnostics(output: Path, private: Path) -> dict[str, Path]:
+    retained = {}
+    for path in _public_diagnostic_paths(output):
+        relative = path.relative_to(output).as_posix()
+        destination = private / "public-originals" / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if destination.exists() or destination.is_symlink():
+            raise ValueError("An original browser diagnostic cannot be overwritten.")
+        path.rename(destination)  # Same parent filesystem; preserve original bytes before publication.
+        retained[relative] = destination
+    return retained
+
+
+def _quarantine_public_output(output: Path, private: Path) -> None:
+    # Last resort for a failed individual move. Verify the exact selected output
+    # and sibling target before moving a populated directory; never move a repo.
+    selected, target = output.resolve(), (private / "quarantined-public-output").resolve()
+    if (selected == ROOT.resolve() or ROOT.resolve().is_relative_to(selected)
+            or not target.is_relative_to(selected.parent) or target.is_relative_to(selected)
+            or target.exists() or output.is_symlink()):
+        raise RuntimeError("Public browser diagnostic quarantine target is refused.")
+    output.rename(target)
+    output.mkdir()
+
+
+def _file_identity(path: Path) -> dict[str, Any]:
+    digest, length = hashlib.sha256(), 0
+    with path.open("rb") as stream:
+        while chunk := stream.read(65_536):
+            digest.update(chunk)
+            length += len(chunk)
+    return {"bytes": length, "sha256": digest.hexdigest()}
+
+
+def _stage_original_browser_artifacts(output: Path, private: Path, known_private_values: list[str]) -> tuple[list[tuple[Path, Path]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Mirror original attachments byte-for-byte, without a financial parser."""
+    artifacts = private / "playwright-artifacts"
+    if artifacts.is_symlink():
+        raise ValueError("Private browser artifact storage cannot be a symlink.")
+    staged: list[tuple[Path, Path]] = []
+    receipts = []
+    private_receipts: list[dict[str, Any]] = []
+    for source in sorted(artifacts.rglob("*")):
+        if source.is_symlink():
+            raise ValueError("A browser artifact cannot traverse a symbolic link.")
+        if not source.is_file() or source.name == "error-context.md":
+            continue
+        # Trace/HAR/network containers can retain authentication headers. They
+        # remain original private files, even when a future config enables them.
+        suffix, basename = source.suffix.lower(), source.name.lower()
+        if (suffix in {".zip", ".har", ".network", ".trace", ".webm", ".mp4"}
+                or basename in {"trace.json", "network.json"}):
+            private_receipts.append({"artifact_index": len(private_receipts),
+                "kind": "private-browser-diagnostic-container", "original": _file_identity(source), "published": False})
+            continue
+        if not _unchanged_original_artifact_name(source):
+            raise ValueError("Browser attachment is outside the unchanged-original publication allowlist.")
+        name = "playwright-artifacts/" + source.relative_to(artifacts).as_posix()
+        if diagnostic_redaction.redact_browser_text(name, known_private_values) != name:
+            raise ValueError("An original browser artifact path cannot be published safely.")
+        destination = output / name
+        if destination.is_symlink() or not destination.resolve().is_relative_to(output.resolve()):
+            raise ValueError("An original browser artifact destination escapes its output.")
+        identity = _file_identity(source)
+        if destination.exists():
+            if not destination.is_file() or _file_identity(destination) != identity:
+                raise ValueError("An existing original browser artifact cannot be overwritten.")
+        else:
+            copy = private / "unchanged-public" / name
+            copy.parent.mkdir(parents=True, exist_ok=True)
+            with source.open("rb") as original, copy.open("xb") as target:
+                shutil.copyfileobj(original, target, length=65_536)
+            if _file_identity(copy) != identity or _file_identity(source) != identity:
+                raise ValueError("An original browser artifact changed during byte-preserving capture.")
+            staged.append((copy, destination))
+        receipts.append({"relative_path": name, "original": identity, "public_copy": identity, "content_transform": False})
+    return staged, receipts, private_receipts
+
+
+def publish_browser_diagnostics(output: Path, private: Path, known_private_values: list[str]) -> dict[str, Any]:
+    """Publish only complete derived diagnostics; financial bytes are excluded."""
+    helper_source = Path(diagnostic_redaction.__file__).read_bytes()
+    helper_sha = hashlib.sha256(helper_source).hexdigest()
+    writer_source = Path(__file__).read_bytes()
+    receipt: dict[str, Any] = {"schema_version": "browser-diagnostic-publication-v1",
+        "sanitizer": {"version": diagnostic_redaction.SANITIZER_VERSION, "source_sha256": helper_sha, "source_bytes": len(helper_source)},
+        "writer": {"source_sha256": hashlib.sha256(writer_source).hexdigest(), "source_bytes": len(writer_source)},
+        "private_storage": "sibling-outside-public-browser-artifact-directory", "private_run_id": private.name,
+        "financial_artifacts_sanitized": False, "artifacts": [], "original_custody": [],
+        "unchanged_browser_artifacts": [], "private_browser_artifacts": [], "status": "quarantined"}
+    try:
+        quarantined = _quarantine_public_diagnostics(output, private)
+        inputs = {name: private / name for name in ("browser.log", "playwright.json") if (private / name).exists()}
+        inputs.update({name: path for name, path in quarantined.items() if name.startswith("playwright-artifacts/")})
+        if (private / "playwright-artifacts").is_symlink():
+            raise ValueError("Private browser artifact storage cannot be a symlink.")
+        inputs.update({path.relative_to(private).as_posix(): path
+            for path in sorted((private / "playwright-artifacts").rglob("error-context.md"))})
+        staged = []
+        for name, path in sorted(inputs.items()):
+            if (path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(private.resolve())
+                    or any(parent.is_symlink() for parent in path.parents if parent.is_relative_to(private))):
+                raise ValueError("An original browser diagnostic must be a regular owned file.")
+            with path.open("rb") as stream:
+                raw = stream.read(diagnostic_redaction.MAX_DIAGNOSTIC_BYTES + 1)
+            receipt["original_custody"].append({"artifact_index": len(receipt["original_custody"]),
+                "original_bytes": path.stat().st_size,
+                "original_sha256": hashlib.sha256(raw).hexdigest() if len(raw) <= diagnostic_redaction.MAX_DIAGNOSTIC_BYTES else None})
+            derived = diagnostic_redaction.derive_browser_diagnostic(name, raw,
+                sanitizer_source_sha256=helper_sha, known_private_values=known_private_values)
+            destination = private / "derived-public" / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with destination.open("xb") as stream:
+                stream.write(derived.content)
+            staged.append((destination, output / name))
+            receipt["artifacts"].append(derived.receipt)
+        unchanged_staged, unchanged_receipts, private_receipts = _stage_original_browser_artifacts(output, private, known_private_values)
+        receipt["private_browser_artifacts"] = private_receipts
+        staged.extend(unchanged_staged)
+        # Every sanitizer completed before the first public diagnostic appears.
+        for source, destination in staged:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            if destination.exists() or destination.is_symlink():
+                raise ValueError("A public browser diagnostic appeared during publication.")
+            source.rename(destination)
+        receipt["status"] = "published"
+        receipt["unchanged_browser_artifacts"] = unchanged_receipts
+    except Exception:
+        # Never echo the exception; it may contain a private value or header.
+        try:
+            _quarantine_public_diagnostics(output, private / "failed-publication")
+        except Exception:
+            _quarantine_public_output(output, private)
+        receipt["artifacts"] = []
+    receipt["public_custody_file"] = "browser-diagnostic-custody-" + private.name + ".json"
+    with (output / receipt["public_custody_file"]).open("x", encoding="utf8") as stream:
+        json.dump(receipt, stream, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return receipt
+
+
+def run_browser_process(argv: list[str], *, environment: dict[str, str], private: Path) -> subprocess.CompletedProcess[bytes]:
+    """Keep exact stdout/stderr bytes private, including an interrupted process."""
+    try:
+        result = subprocess.run(argv, cwd=ROOT, env=environment, capture_output=True, timeout=600)  # nosec B603
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout if isinstance(exc.stdout, bytes) else (exc.stdout or "").encode("utf8")
+        stderr = exc.stderr if isinstance(exc.stderr, bytes) else (exc.stderr or "").encode("utf8")
+        with (private / "browser.log").open("xb") as stream:
+            stream.write(stdout + stderr)
+        raise RuntimeError("Owned browser execution timed out; private diagnostics retained.") from None
+    with (private / "browser.log").open("xb") as stream:
+        stream.write(result.stdout + result.stderr)
+    return result
 
 
 def source_digest(directory: Path = ROOT) -> str:
@@ -81,10 +282,10 @@ def main() -> int:
     parser.add_argument("--output", type=Path, default=ROOT / "output/erp-expansion-20261009/browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
     args = parser.parse_args()
-    seed = seed_expansion_browser
-    verify_cycles = verify_expansion_cycles
+    seed: Callable[[str, str], Any] = seed_expansion_browser
+    verify_cycles: Callable[[Any], dict[str, Any]] = verify_expansion_cycles
     configuration = "apps/web/live/erp-expansion.playwright.config.ts"
-    extension_tables = EXPANSION_TABLES
+    extension_tables: tuple[str, ...] = EXPANSION_TABLES
     tamper_actor: Callable[..., Any] | None = None
     personnel_dsn: Callable[..., str] | None = None
     workspace_probe_tables: tuple[str, ...] | None = None
@@ -407,6 +608,7 @@ def main() -> int:
         raise ValueError("Run the expansion harness from its exact integrated runtime checkout.")
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
+    private_diagnostics = private_diagnostics_directory(output)
     if not (args.web_root / "index.html").is_file():
         raise ValueError("Build the integrated Studio before running browser acceptance.")
     name = "reconforge-erp-expansion-browser-" + uuid4().hex[:12]
@@ -435,15 +637,22 @@ def main() -> int:
         "reconforge.infrastructure.postgres_commercial_collections", "reconforge.infrastructure.postgres_landed_cost",
         "reconforge.infrastructure.postgres_fixed_assets",
         "tests.erp_expansion_browser_restore",
+        "tests.browser_diagnostic_redaction",
     ):
-        origin = Path(importlib.import_module(module_name).__file__).resolve()
+        origin_file = importlib.import_module(module_name).__file__
+        if origin_file is None:
+            raise ValueError("Expansion module has no captured source file.")
+        origin = Path(origin_file).resolve()
         if not origin.is_relative_to(runtime_root):
             raise ValueError("Expansion module origin is outside the integrated runtime checkout.")
         module_origins[module_name] = {"path": str(origin), "sha256": hashlib.sha256(origin.read_bytes()).hexdigest()}
     if args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan"}:
         owner_module = "reconforge.infrastructure.postgres_intercompany_cashflow" if args.scenario == "intercompany-source-cashflow" else "reconforge.infrastructure.postgres_" + args.scenario.replace("-", "_")
         for module_name in dict.fromkeys((owner_module, seed.__module__, verify_cycles.__module__)):
-            origin = Path(importlib.import_module(module_name).__file__).resolve()
+            origin_file = importlib.import_module(module_name).__file__
+            if origin_file is None:
+                raise ValueError("New enterprise module has no captured source file.")
+            origin = Path(origin_file).resolve()
             if not origin.is_relative_to(runtime_root):
                 raise ValueError("New enterprise module origin is outside the integrated runtime checkout.")
             module_origins[module_name] = {"path": str(origin), "sha256": hashlib.sha256(origin.read_bytes()).hexdigest()}
@@ -466,12 +675,15 @@ def main() -> int:
         port = run(["docker", "port", container, "5432/tcp"]).stdout.strip().rsplit(":", 1)[1]
         admin_dsn = f"postgresql://postgres:{admin_password}@127.0.0.1:{port}/postgres?connect_timeout=5"
         app_dsn = f"postgresql://gfo_browser_app:{app_password}@127.0.0.1:{port}/postgres?connect_timeout=5"
+        secret_values.extend((admin_dsn, app_dsn))
         deadline = time.monotonic() + 60
         while True:
             try:
                 with psycopg.connect(admin_dsn, autocommit=True) as admin:
                     admin.execute(sql.SQL("CREATE ROLE gfo_browser_app LOGIN PASSWORD {}").format(sql.Literal(app_password)))
-                    report["postgres_version"] = admin.execute("SHOW server_version").fetchone()[0]
+                    version_row = admin.execute("SHOW server_version").fetchone()
+                    assert version_row is not None
+                    report["postgres_version"] = version_row[0]
                 break
             except psycopg.OperationalError:
                 if time.monotonic() >= deadline:
@@ -484,9 +696,13 @@ def main() -> int:
             admin.execute("GRANT USAGE ON SCHEMA reconforge TO gfo_browser_app")
             admin.execute("GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO gfo_browser_app")
             admin.execute("GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA reconforge TO gfo_browser_app")
-            report["revision"] = admin.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+            revision_row = admin.execute("SELECT version_num FROM alembic_version").fetchone()
+            assert revision_row is not None
+            report["revision"] = revision_row[0]
         with psycopg.connect(app_dsn) as connection:
-            role_flags = list(connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone())
+            role_row = connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()
+            assert role_row is not None
+            role_flags = list(role_row)
             assert role_flags == [False, False]
             report["role_privileges"] = role_flags
         runtime = seed(admin_dsn, app_dsn)
@@ -505,14 +721,19 @@ def main() -> int:
             raise RuntimeError("No owned dynamic HTTPS port is available.")
         url = f"https://localhost:{https_port}"
         environment.update(RECONFORGE_ERP_LIVE_URL=url, RECONFORGE_ERP_TENANT=runtime.tenant,
-            RECONFORGE_ERP_PASSWORD=runtime.password, RECONFORGE_ERP_BROWSER_REPORT=str(output / "playwright.json"),
-            RECONFORGE_ERP_BROWSER_ARTIFACTS=str(output / "playwright-artifacts"),
+            RECONFORGE_ERP_PASSWORD=runtime.password, RECONFORGE_ERP_BROWSER_REPORT=str(private_diagnostics / "playwright.json"),
+            RECONFORGE_ERP_BROWSER_ARTIFACTS=str(private_diagnostics / "playwright-artifacts"),
             RECONFORGE_GFO_APP_DSN=app_dsn, RECONFORGE_GFO_WEB_ROOT=str(args.web_root.resolve()),
             RECONFORGE_GFO_HTTPS_PORT=str(https_port))
         if personnel_dsn is not None:
             # The dedicated credential stays in the owned child's environment;
             # no public report or process argument carries it.
-            environment["RECONFORGE_PERSONNEL_POSTGRES_DSN"] = personnel_dsn(runtime)
+            personnel_connection = personnel_dsn(runtime)
+            environment["RECONFORGE_PERSONNEL_POSTGRES_DSN"] = personnel_connection
+            secret_values.append(personnel_connection)
+            personnel_password = psycopg.conninfo.conninfo_to_dict(personnel_connection).get("password", "")
+            if isinstance(personnel_password, str):
+                secret_values.append(personnel_password)
         if args.scenario == "manufacturing-execution-v2":
             from tests.manufacturing_execution_v2_browser import manufacturing_execution_v2_browser_configuration
             environment["RECONFORGE_MANUFACTURING_V2_SOURCE"] = json.dumps(manufacturing_execution_v2_browser_configuration(runtime))
@@ -548,14 +769,14 @@ def main() -> int:
                         raise RuntimeError("Owned HTTPS readiness timeout") from None
                     time.sleep(.2)
             executable = "npx.cmd" if os.name == "nt" else "npx"
-            browser = run([executable, "--prefix", "apps/web", "playwright", "test", "--config", configuration], environment=environment, check=False)
-            (output / "browser.log").write_text(browser.stdout + browser.stderr, encoding="utf-8")
+            browser = run_browser_process([executable, "--prefix", "apps/web", "playwright", "test", "--config", configuration],
+                environment=environment, private=private_diagnostics)
             report["browser_exit_code"] = browser.returncode
         server.terminate()
         server.wait(timeout=15)
         report["owned_https_process_stopped"] = True
-        if (output / "playwright.json").is_file():
-            report["browser_counts"] = json.loads((output / "playwright.json").read_text(encoding="utf-8"))["stats"]
+        if (private_diagnostics / "playwright.json").is_file():
+            report["browser_counts"] = json.loads((private_diagnostics / "playwright.json").read_text(encoding="utf-8"))["stats"]
         if browser.returncode == 0:
             require_browser_acceptance(report.get("browser_counts"))
             report["persisted_effects"] = verify_cycles(runtime)
@@ -574,10 +795,9 @@ def main() -> int:
         if status_before or status_after:
             report["error"] = "Tracked checkout is dirty; inspect tracked_status_before and tracked_status_after."
     except Exception as exc:
-        diagnostic = str(exc)
-        for value in secret_values:
-            diagnostic = diagnostic.replace(value, "[redacted]")
-        report["error"] = diagnostic
+        with (private_diagnostics / "runner-error.txt").open("xb") as stream:
+            stream.write(str(exc).encode("utf8"))
+        report["error"] = "Owned acceptance failed; inspect retained private diagnostics and available derived browser diagnostics."
     finally:
         if server is not None and server.poll() is None:
             server.terminate()
@@ -596,6 +816,11 @@ def main() -> int:
                     break
                 time.sleep(.1)
         report["wall_seconds"] = round(time.monotonic() - started, 3)
+        publication = publish_browser_diagnostics(output, private_diagnostics, secret_values)
+        report["browser_diagnostics"] = publication
+        if publication["status"] != "published":
+            report["status"] = "failed"
+            report["error"] = "Browser diagnostic publication refused; private originals are quarantined."
         for filename in ("browser.log", "playwright.json", "https-runtime.log", "migration.log"):
             path = output / filename
             if path.exists():

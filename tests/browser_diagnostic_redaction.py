@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any
 
-SANITIZER_VERSION = "browser-diagnostic-redaction-v1"
+SANITIZER_VERSION = "browser-diagnostic-redaction-v2"
 MAX_DIAGNOSTIC_BYTES = 64 * 1024 * 1024
 MAX_JSON_NODES = 1_000_000
 REDACTED = "[redacted]"
@@ -34,6 +34,7 @@ _PLAIN_FIELD = re.compile(
 _LINE_BREAK = re.compile(r"\r\n|[\r\n]|\\+r(?:\\+n)?|\\+n")
 _QUOTE_START = re.compile(r"(?P<slashes>\\{0,31})(?P<quote>[\"'])")
 _JSON_START = re.compile(r"(?m)^[ \t]*[\[{]")
+_DIAGNOSTIC_SGR = re.compile(r"(?:\x1b|(?<!\\)\\+(?:u001[bB]|x1[bB]))\[[0-9;:]*m")
 
 
 @dataclass(frozen=True)
@@ -49,12 +50,15 @@ def _private_variants(values: Iterable[str]) -> tuple[str, ...]:
             raise ValueError("Known private browser values must be strings.")
         if not value:
             continue
-        variants.add(value)
-        for ascii_only in (False, True):
-            escaped = value
-            for _ in range(4):
-                escaped = json.dumps(escaped, ensure_ascii=ascii_only)[1:-1]
-                variants.add(escaped)
+        for original in {value, _DIAGNOSTIC_SGR.sub("", value)}:
+            if not original:
+                continue
+            variants.add(original)
+            for ascii_only in (False, True):
+                escaped = original
+                for _ in range(4):
+                    escaped = json.dumps(escaped, ensure_ascii=ascii_only)[1:-1]
+                    variants.add(escaped)
     if any(value in REDACTED for value in variants):
         raise ValueError("Known private browser value conflicts with the redaction marker.")
     return tuple(sorted(variants, key=lambda value: (-len(value), value)))
@@ -114,6 +118,10 @@ def redact_browser_text(value: str, known_private_values: Iterable[str] = ()) ->
     """Remove header values and known credentials without decoding trace text."""
     if not isinstance(value, str):
         raise ValueError("Browser diagnostic text must be a string.")
+    # Playwright places ANSI dim/reset SGR before its indented header lines.
+    # Normalize actual and JSON-reescaped diagnostic styling before parsing;
+    # never decode arbitrary Unicode escapes or alter an original artifact.
+    value = _DIAGNOSTIC_SGR.sub("", value)
     private = tuple(known_private_values)
     variants = _private_variants(private)
     # Playwright's JSON reporter can be embedded after ordinary stdout. Parse
@@ -164,12 +172,12 @@ def redact_playwright_value(value: Any, known_private_values: Iterable[str] = ()
         if isinstance(current, list):
             return [walk(item, force=force, depth=depth + 1) for item in current]
         if isinstance(current, dict):
-            named_header = isinstance(current.get("name"), str) and current["name"].lower() in PRIVATE_HEADERS
+            named_header = isinstance(current.get("name"), str) and _DIAGNOSTIC_SGR.sub("", current["name"]).lower() in PRIVATE_HEADERS
             result = {}
             for key, item in current.items():
-                if not isinstance(key, str) or any(variant in key for variant in variants):
+                if not isinstance(key, str) or any(variant in key or variant in _DIAGNOSTIC_SGR.sub("", key) for variant in variants):
                     raise ValueError("Playwright diagnostic field name cannot be published safely.")
-                result[key] = walk(item, force=force or key.lower() in PRIVATE_HEADERS
+                result[key] = walk(item, force=force or _DIAGNOSTIC_SGR.sub("", key).lower() in PRIVATE_HEADERS
                                    or named_header and key == "value", depth=depth + 1)
             return result
         if current is None or type(current) in (int, float, bool):
@@ -215,7 +223,7 @@ def derive_browser_diagnostic(
     if not isinstance(sanitizer_source_sha256, str) or re.fullmatch(r"[0-9a-f]{64}", sanitizer_source_sha256) is None:
         raise ValueError("A captured sanitizer source identity is required.")
     private = tuple(known_private_values)
-    if any(variant in relative_path for variant in _private_variants(private)):
+    if any(variant in relative_path or variant in _DIAGNOSTIC_SGR.sub("", relative_path) for variant in _private_variants(private)):
         raise ValueError("Browser diagnostic artifact path cannot be published safely.")
     try:
         text = original.decode("utf-8")

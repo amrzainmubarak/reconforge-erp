@@ -181,3 +181,58 @@ def test_helper_is_stdlib_pure_and_receipt_never_echoes_original_values():
     derived = derive_browser_diagnostic("browser.log", original, sanitizer_source_sha256=hashlib.sha256(source).hexdigest())
     assert SECRET not in json.dumps(derived.receipt)
     assert derived.receipt["original_mutated"] is False and derived.receipt["financial_artifacts_sanitized"] is False
+
+
+@pytest.mark.parametrize("layers", range(7))
+@pytest.mark.parametrize("kind", ["browser.log", "playwright.json", "playwright-artifacts/ansi-case/error-context.md"])
+def test_ansi_prefixed_and_reescaped_real_playwright_header_shape_refuses_synthetic_value_leak(layers, kind):
+    secrets = ["fresh-ansi-synthetic-" + str(index) + "-token-314159" for index in range(len(PRIVATE_HEADERS))]
+    lines = ["route.fetch timeout15000ms GET /api/v1/report"]
+    for header, secret in zip(sorted(PRIVATE_HEADERS), secrets, strict=True):
+        # The actual cloud reporter uses dim SGR before its indented dash and
+        # resets SGR after the header value. Split-name color is also admitted.
+        colored = header[:2] + "\x1b[38:2::255:0:128m" + header[2:]
+        lines.append("\x1b[2m    - " + colored + ": " + secret + "\x1b[22m")
+    lines.extend(["\x1b[33mstatus:408 latency:14999.75 count:7\x1b[0m", "at original-report.spec.ts:42:9"])
+    message = "\n".join(lines)
+    for _ in range(layers):
+        message = json.dumps(message)[1:-1]
+    stats = {"expected": 0, "unexpected": 1, "skipped": 0, "flaky": 0, "duration": 15001.125}
+    original = (json.dumps({"stats": stats, "suites": [{"error": {"message": message, "status": 408,
+        "stack": "original-report.spec.ts:42:9", "exact_minor": 9000000000000000000}}]}).encode()
+        if kind == "playwright.json" else message.encode())
+    before = hashlib.sha256(original).hexdigest()
+    result = derive_browser_diagnostic(kind, original, sanitizer_source_sha256=IDENTITY)
+    text = result.content.decode()
+    assert all(secret not in text for secret in secrets)
+    assert "/api/v1/report" in text and "14999.75" in text and "original-report.spec.ts:42:9" in text
+    if kind == "playwright.json":
+        parsed = json.loads(text)
+        assert parsed["stats"] == stats and parsed["suites"][0]["error"]["exact_minor"] == 9000000000000000000
+    assert hashlib.sha256(original).hexdigest() == before == result.receipt["original_sha256"]
+
+
+def test_ansi_named_header_records_and_colored_known_credential_are_classified_before_string_normalization():
+    token = "fresh-colored-synthetic-value-271828"
+    original = {"stats": {"duration": 12.75, "unexpected": 1}, "suites": [{"headers": [
+        {"name": "\x1b[2mCookie\x1b[22m", "value": token},
+        {"\x1b[2mX-ReconForge-CSRF\x1b[22m": token}],
+        "message": "password=" + token[:10] + "\x1b[2m" + token[10:] + "\x1b[m status408"}]}
+    result = derive_browser_diagnostic("playwright.json", json.dumps(original).encode(),
+        sanitizer_source_sha256=IDENTITY, known_private_values=(token,))
+    parsed = json.loads(result.content)
+    assert token not in result.content.decode() and parsed["stats"] == original["stats"]
+    assert parsed["suites"][0]["headers"][0] == {"name": "Cookie", "value": REDACTED}
+    assert set(parsed["suites"][0]["headers"][1]) == set(original["suites"][0]["headers"][1])
+    assert parsed["suites"][0]["headers"][1]["\x1b[2mX-ReconForge-CSRF\x1b[22m"] == REDACTED
+
+
+@pytest.mark.parametrize("location", ["field_name", "artifact_path"])
+def test_colored_known_private_field_or_path_is_refused_before_public_custody(location):
+    token = "fresh-colored-private-location-161803"
+    colored = token[:12] + "\x1b[2m" + token[12:] + "\x1b[22m"
+    name = "playwright.json" if location == "field_name" else "playwright-artifacts/" + colored + "/error-context.md"
+    raw = json.dumps({"stats": {}, "suites": [], colored: "unknown"}).encode() if location == "field_name" else b"safe"
+    with pytest.raises(ValueError) as refused:
+        derive_browser_diagnostic(name, raw, sanitizer_source_sha256=IDENTITY, known_private_values=(token,))
+    assert token not in str(refused.value)

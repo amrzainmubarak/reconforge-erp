@@ -1526,3 +1526,5 @@ include tests/test_original_browser_download_verification.py
 include tests/test_postgres_intercompany_fx_reporting_authority.py
 
 include tests/test_postgres_intercompany_reporting_currency_precision.py
+
+include tests/test_optional_postgres_driver.py

@@ -69,6 +69,8 @@ def test_actual_authenticated_view_and_original_export_require_explicit_opening_
         assert export.status_code == 200, export.text
         assert int(export.headers["content-length"]) == len(export.content)
         assert export.headers["X-ReconForge-Evidence-SHA256"] == hashlib.sha256(export.content).hexdigest()
+        assert result.json()["evidence_sha256"] == hashlib.sha256(export.content).hexdigest()
+        assert result.json()["evidence_bytes"] == len(export.content)
         proof = export.json()
         assert proof == original_capture
         assert proof["cashflow"]["cashflow_digest"] == result.json()["cashflow"]["cashflow_digest"]

@@ -55,7 +55,8 @@ def capture(source_id: str, request: Request, user: Read, opening: OpeningQuery)
 def view(source_id: str, request: Request, user: Read, opening: Annotated[OpeningQuery, Query()]) -> dict[str, Any]:
     retained = capture(source_id, request, user, opening)
     return {"cashflow": project(retained["cashflow"]), "evidence_digest": retained["evidence_digest"],
-        "qualified_scope": retained["qualified_scope"]}
+        "qualified_scope": retained["qualified_scope"], "evidence_sha256": evidence_digest(retained),
+        "evidence_bytes": evidence_size(retained)}
 
 
 @router.get("/sources/{source_id}/evidence/export")

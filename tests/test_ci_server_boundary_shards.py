@@ -17,9 +17,14 @@ SHARDS = {
     "commercial-integrity", "supply-integrity", "finance-integrity",
     "supplier-returns", "fx-revaluation",
     "manufacturing-execution", "intercompany-operations", "procurement-sourcing",
-    "people-project-payroll",
+    "people-project-payroll", "accrual-deferral",
 }
 INTEGRITY_FILES = {
+    "accrual-deferral": (
+        "tests/test_postgres_accrual_deferral.py", "tests/test_postgres_accrual_deferral_api.py",
+        "tests/test_postgres_accrual_deferral_guards.py", "tests/test_postgres_accrual_deferral_ownership.py",
+        "tests/test_postgres_accrual_deferral_restore.py",
+    ),
     "commercial-integrity": (
         "tests/test_postgres_commercial_collections.py", "tests/test_postgres_commercial_collection_cancellation.py",
         "tests/test_postgres_customer_returns.py",
@@ -131,7 +136,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 56  # Retain all52 original, three Wave5 and one new workforce owner commands.
+    assert len(commands) == 57  # Retain all56 original commands and one complete accrual owner command.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -232,6 +237,7 @@ def test_enterprise_browser_matrix_requires_every_real_https_and_populated_resto
         "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets",
         "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax",
         "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing",
+        "accrual-deferral",
     ]
     assert job["strategy"]["fail-fast"] is False
     assert "continue-on-error" not in job

@@ -73,6 +73,11 @@ jobs:
           --ignore=tests/test_postgres_people_project_payroll_api.py
           --ignore=tests/test_postgres_people_project_payroll_restore.py --ignore=tests/test_postgres_people_project_dimension_pins.py --ignore=tests/test_postgres_people_project_read_authority.py --ignore=tests/test_postgres_financial_source_roles.py
           --ignore=tests/test_postgres_enterprise_migrations.py
+          --ignore=tests/test_postgres_accrual_deferral.py
+          --ignore=tests/test_postgres_accrual_deferral_api.py
+          --ignore=tests/test_postgres_accrual_deferral_guards.py
+          --ignore=tests/test_postgres_accrual_deferral_ownership.py
+          --ignore=tests/test_postgres_accrual_deferral_restore.py
           --ignore=tests/test_postgres_inventory_scope.py
           --ignore=tests/test_postgres_intercompany_operations.py
           --ignore=tests/test_postgres_intercompany_operations_api.py
@@ -230,7 +235,7 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets, procurement-commitments, customer-returns, supplier-returns, operational-fx-tax, manufacturing-execution, manufacturing-execution-v2, intercompany-operations, intercompany-fx, people-project-payroll, procurement-sourcing]
+        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets, procurement-commitments, customer-returns, supplier-returns, operational-fx-tax, manufacturing-execution, manufacturing-execution-v2, intercompany-operations, intercompany-fx, people-project-payroll, procurement-sourcing, accrual-deferral]
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -392,6 +397,7 @@ jobs:
           - commercial-integrity
           - supply-integrity
           - finance-integrity
+          - accrual-deferral
           - supplier-returns
           - manufacturing-execution
           - intercompany-operations
@@ -709,6 +715,9 @@ jobs:
             finance-reporting)
               uv run --no-sync pytest tests/test_postgres_financial_installments.py tests/test_postgres_financial_reporting.py tests/test_postgres_financial_reporting_api.py -q
               uv run --no-sync pytest tests/test_postgres_financial_reporting_snapshots.py tests/test_postgres_financial_snapshot_recovery.py tests/test_postgres_financial_snapshot_migration.py -q
+              ;;
+            accrual-deferral)
+              uv run --no-sync pytest tests/test_postgres_accrual_deferral.py tests/test_postgres_accrual_deferral_api.py tests/test_postgres_accrual_deferral_guards.py tests/test_postgres_accrual_deferral_ownership.py tests/test_postgres_accrual_deferral_restore.py -q
               ;;
             *) echo "Unknown server-boundary shard" >&2; exit 2 ;;
           esac

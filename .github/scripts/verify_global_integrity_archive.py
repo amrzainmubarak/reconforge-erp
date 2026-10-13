@@ -20,6 +20,7 @@ HELPERS = (
     "operational_fx_tax_browser_seed", "erp_supplier_returns_browser",
     "manufacturing_execution_browser", "intercompany_operations_browser_seed", "procurement_sourcing_browser",
     "manufacturing_execution_v2_browser", "intercompany_fx_browser_seed", "people_project_payroll_browser",
+    "accrual_deferral_browser", "project_time_billing_browser",
 )
 DIAGNOSTIC_HELPERS = (
     ".github/scripts/benchmark_wave5_profile_diagnostics.py",
@@ -473,6 +474,21 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         *("apps/web/src/components/" + name + ".tsx" for name in ("IntercompanyFxPage", "PeopleProjectPayrollPage", "ManufacturingExecutionV2Page")),
 
         "docs/execution/GLOBAL_ENTERPRISE_PROGRAM_CONTRACTS_2026-10-12.md",
+        "alembic/versions/0141_postgres_accrual_deferral.py",
+        ".github/scripts/verify_accrual_deferral_cycle_oracle.py",
+        ".github/scripts/verify_project_time_billing_cycle_oracle.py",
+        "tests/fixtures/accrual-deferral-native-v1.json", "tests/fixtures/project-time-billing-native-v1.json",
+        "tests/test_accrual_deferral_oracle.py", "tests/test_project_time_billing_cycle_oracle.py",
+        "tests/test_postgres_accrual_deferral_restore.py", "tests/test_postgres_project_time_billing_restore.py",
+        "reconforge/application/accrual_deferral_evidence.py",
+        *("reconforge/" + layer + "/" + name + ".py" for layer in ("domain", "application")
+          for name in ("accrual_deferral", "project_time_billing")),
+        *("reconforge/infrastructure/postgres_" + name + suffix + ".py" for suffix in ("", "_schema")
+          for name in ("accrual_deferral", "project_time_billing")),
+        *("docs/modules/" + name + ".yaml" for name in ("accrual-deferral", "project-time-billing")),
+        *("apps/web/src/components/" + name + ".tsx" for name in ("AccrualDeferralPage", "ProjectTimeBillingPage")),
+        *("apps/web/live/" + name + suffix for name in ("accrual-deferral", "project-time-billing")
+          for suffix in ("-cycles.spec.ts", ".playwright.config.ts")),
         "LICENSE", "README.md", "MANIFEST.in", "pyproject.toml", "alembic.ini", "reconforge_migration_sql.py",
         "alembic/env.py", "alembic/script.py.mako", "tests/__init__.py", INDEX_PATH,
         "tests/mandatory_native_gate.py", "tests/test_mandatory_native_gate.py",
@@ -636,8 +652,8 @@ def main() -> int:
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--index-count", type=int, default=22)
-    parser.add_argument("--migration-count", type=int, default=139)
-    parser.add_argument("--migration-head", default="0140_pg_people_project_payroll")
+    parser.add_argument("--migration-count", type=int, default=140)
+    parser.add_argument("--migration-head", default="0141_pg_accrual_deferral")
     parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
     parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
     parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")

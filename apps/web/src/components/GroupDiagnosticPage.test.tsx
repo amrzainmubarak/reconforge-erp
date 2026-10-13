@@ -21,6 +21,7 @@ function install(f: Fixture, override?: (path: string) => Promise<Response | und
     if (!selected) throw new Error("unknown_original_request");
     if (path.includes("/intercompany-source-cashflow/")) return response(selected.cashflowView);
     if (path.endsWith("/report")) return response({ report: selected.report });
+    if (path.endsWith("/native-evidence-bundle")) return response({ bundle: { schema_version: "intercompany-fx-source-native-evidence-bundle-v1", complete_source: true, source: selected.detail, plan_evidence: selected.stages } });
     if (path.includes("/plans/")) return response({ evidence: selected.stages.find(stage => path.includes(stage.plan.id)) });
     return response({ source: selected.detail });
   })); return calls;

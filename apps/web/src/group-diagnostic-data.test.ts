@@ -1,11 +1,36 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cashflowSha } from "./intercompany-cashflow-data";
 import { canonicalIc } from "./intercompany-operations-data";
-import { downloadGroupOriginal, groupSelection, verifyGroupView } from "./group-diagnostic-data";
+import { captureGroupOriginal, downloadGroupOriginal, groupSelection, verifyGroupView } from "./group-diagnostic-data";
 import { groupFixture } from "./group-diagnostic-test-fixture";
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 describe("selected original group bridge and raw custody", () => {
+  it("captures all original native seals with exactly bundle, report and current Cashflow reads", async () => {
+    const f = await groupFixture(), selected = f.sources[0], calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: unknown) => { const path = String(url); calls.push(path); return new Response(JSON.stringify(
+      path.endsWith("/native-evidence-bundle") ? { bundle: { schema_version: "intercompany-fx-source-native-evidence-bundle-v1", complete_source: true, source: selected.detail, plan_evidence: selected.stages } }
+        : path.endsWith("/report") ? { report: selected.report } : selected.cashflowView)); }));
+    const captured = await captureGroupOriginal({ tenantId: f.tenant, csrfToken: "", expiresAt: "2099-01-01" }, f.scope, selected.detail.id, true);
+    expect(captured).toEqual(f.originals[0]);
+    expect(calls).toHaveLength(3); expect(calls[0]).toContain("/native-evidence-bundle"); expect(calls[1]).toMatch(/\/report$/); expect(calls[2]).toContain("/intercompany-source-cashflow/sources/");
+    expect(calls.some(path => path.includes("/plans/"))).toBe(false);
+  });
+  it.each(["incomplete", "omit", "extra", "order", "foreign_source", "phase", "native_effect", "canonical_snapshot"])("refuses bundled %s without publishing or dropping original proof", async attack => {
+    const f = await groupFixture(), selected = structuredClone(f.sources[0]);
+    const bundle = { schema_version: "intercompany-fx-source-native-evidence-bundle-v1", complete_source: true, source: selected.detail, plan_evidence: selected.stages };
+    if (attack === "incomplete") bundle.complete_source = false;
+    if (attack === "omit") bundle.plan_evidence.pop();
+    if (attack === "extra") bundle.plan_evidence.push(structuredClone(bundle.plan_evidence[0]));
+    if (attack === "order") bundle.plan_evidence.reverse();
+    if (attack === "foreign_source") bundle.plan_evidence[0].source = f.sources[1].stages[0].source;
+    if (attack === "phase") bundle.plan_evidence[0].phases.pop();
+    if (attack === "native_effect") bundle.plan_evidence[0].native_effects.pop();
+    if (attack === "canonical_snapshot") (bundle.plan_evidence[0] as unknown as { canonical_snapshot_jsons: string[] }).canonical_snapshot_jsons[0] += " ";
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ bundle }))); vi.stubGlobal("fetch", fetch);
+    await expect(captureGroupOriginal({ tenantId: f.tenant, csrfToken: "", expiresAt: "2099-01-01" }, f.scope, selected.detail.id, true)).rejects.toThrow();
+    expect(fetch).toHaveBeenCalledOnce();
+  });
   it("binds two actual original source reports and separate translated/native adjustment Cash", async () => {
     const f = await groupFixture(); expect(await verifyGroupView(f.view, f.originals, f.scope, f.tenant)).toBe(f.view);
     const cash = f.view.diagnostic.trial_balance_bridge.find(row => row.role === "cash")!;

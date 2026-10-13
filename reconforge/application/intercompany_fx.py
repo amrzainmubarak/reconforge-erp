@@ -32,6 +32,7 @@ class IntercompanyFxRepositoryProtocol(Protocol):
     def list_sources(self, *, workspace_id: str, organization_id: str, after: str, actor: PostingActor) -> dict[str, Any]: ...
     def get_plan(self, plan_id: str, *, actor: PostingActor) -> dict[str, Any]: ...
     def evidence(self, plan_id: str, *, actor: PostingActor) -> dict[str, Any]: ...
+    def native_evidence_bundle(self, source_id: str, *, actor: PostingActor) -> dict[str, Any]: ...
     def report(self, source_id: str, *, actor: PostingActor) -> dict[str, Any]: ...
 
 
@@ -49,6 +50,9 @@ class IntercompanyFxService:
 
     def post(self, plan_id: str, *, expected_plan_digest: str, reason: str, command_id: str, actor: PostingActor) -> dict[str, Any]:
         return self.repository.post(plan_id, expected_plan_digest=expected_plan_digest, reason=reason, command_id=command_id, actor=actor)
+
+    def native_evidence_bundle(self, source_id: str, *, actor: PostingActor) -> dict[str, Any]:
+        return self.repository.native_evidence_bundle(source_id, actor=actor)
 
     def prepare_settlement(self, source_id: str, *, transaction_minor: int, rates: Mapping[str, HistoricalRate],
                            period_ids: Mapping[str, str], posting_date: str, reason: str, command_id: str, actor: PostingActor) -> dict[str, Any]:

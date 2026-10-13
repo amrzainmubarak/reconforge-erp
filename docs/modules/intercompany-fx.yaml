@@ -23,11 +23,11 @@ domain_invariants:
   - Native group elimination equals both reviewed translated original trade and residual party balances
   - Translated membership and CTA remain explicit management reporting effects; actual group journals are separately identified
 domain_events: [intercompany_fx_prepared, intercompany_fx_reviewed, intercompany_fx_posted]
-api_routes: [/api/v1/intercompany-fx]
+api_routes: [/api/v1/intercompany-fx, '/api/v1/intercompany-fx/sources/{source_id}/native-evidence-bundle']
 cli_commands: [.github/scripts/verify_intercompany_fx_cycle_oracle.py]
 ui_routes: [intercompany-fx]
 import_schemas: [intercompany-fx-source-v2, intercompany-fx-plan-v2]
-export_schemas: [intercompany-fx-native-evidence-v2, intercompany-fx-management-report-v2, intercompany-fx-independent-oracle-v2]
+export_schemas: [intercompany-fx-native-evidence-v2, intercompany-fx-management-report-v2, intercompany-fx-independent-oracle-v2, intercompany-fx-source-native-evidence-bundle-v1]
 synthetic_fixtures: [tests/intercompany_fx_fixture.py, tests/test_postgres_intercompany_fx.py]
 threat_model:
   - Tampered source rates, account maps, residuals, GL snapshots, elimination translations or effect membership

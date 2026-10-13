@@ -36,11 +36,14 @@ export function groupQuery(originals: readonly GroupOriginal[]): string { const 
 /** Original source/report/phase seals, never a browser FX calculator. */
 export async function captureGroupOriginal(session: BrowserAdminSession, scope: FxScope, id: string, knownZero: true, signal?: AbortSignal): Promise<GroupOriginal> {
   if (knownZero !== true) invalid();
-  const raw = await fxRequest(session, scope, `/api/v1/intercompany-fx/sources/${encodeURIComponent(id)}`, undefined, signal), detail = parseFxDetail(raw.source, scope);
+  const raw = await fxRequest(session, scope, `/api/v1/intercompany-fx/sources/${encodeURIComponent(id)}/native-evidence-bundle`, undefined, signal);
+  if (!object(raw.bundle) || raw.bundle.schema_version !== "intercompany-fx-source-native-evidence-bundle-v1" || raw.bundle.complete_source !== true || !Array.isArray(raw.bundle.plan_evidence)) invalid();
+  const detail = parseFxDetail(raw.bundle.source, scope);
   if (detail.id !== id || !detail.state.closed || detail.plans.some(plan => plan.phase !== 2) || detail.plans[0]?.kind !== "recognize" || detail.plans.at(-1)?.kind !== "eliminate") invalid();
+  if (raw.bundle.plan_evidence.length !== detail.plans.length) invalid();
   const { plans: _plans, state: _state, ...source } = detail;
-  for (const plan of detail.plans) {
-    const proof = await fxRequest(session, scope, `/api/v1/intercompany-fx/plans/${encodeURIComponent(plan.id)}/evidence`, undefined, signal), verified = await verifyFxEvidence(proof.evidence, scope, plan);
+  for (const [index, plan] of detail.plans.entries()) {
+    const verified = await verifyFxEvidence(raw.bundle.plan_evidence[index], scope, plan);
     if (canonicalIc(verified.source) !== canonicalIc(source)) invalid();
   }
   const reported = await fxRequest(session, scope, `/api/v1/intercompany-fx/sources/${encodeURIComponent(id)}/report`, undefined, signal), report = await verifyFxReport(reported.report, detail);

@@ -132,3 +132,13 @@ the common populated database archive/restore check remain root-owned acceptance
 gates and are not counted as passed by this fixture or the browser contract.
 PostgreSQL is required and SQLite is explicitly unavailable. Country statutory
 packs remain zero, and comparative performance measurement remains deferred.
+
+The source capture now consumes the additive complete IC2 native evidence bundle,
+the original management report and the current source Cashflow view: exactly
+three HTTP reads for each selected source instead of source plus four individual
+native-evidence reads plus report and Cashflow. The browser still verifies every
+original plan/effect/three-human phase seal and rejects omitted, extra, reordered
+or foreign evidence before publishing a selection. The data/component gate has
+39 passing cases and a passing TypeScript check. These request-count facts do not
+qualify throughput, latency or resource use. The new transport path still needs
+its root-owned actual HTTPS and populated restore acceptance.

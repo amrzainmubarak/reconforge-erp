@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import uuid4
 
+from reconforge.application.accrual_deferral_evidence import evidence_size
 from reconforge.domain.finance_posting import PostingActor, canonical_json, digest_payload, text, validation_digest
 from reconforge.domain.intercompany_fx import (
     MAX_EFFECT_LINES,
@@ -535,11 +536,87 @@ class PostgresIntercompanyFxRepository:
                 JOIN reconforge.outbox_events o ON o.tenant_id=a.tenant_id AND o.aggregate_type=a.object_type
                 AND o.aggregate_id=a.object_id AND o.event_type=a.action
                 WHERE a.tenant_id=%s AND a.object_type='operational_finance' AND a.object_id=%s ORDER BY a.sequence""", (self.tenant_id, plan_id)))
-            return {"schema_version": "intercompany-fx-native-evidence-v2", "source": source, "plan": plan,
+            return self._native_evidence(source, plan, effects, phases)
+
+    @staticmethod
+    def _native_evidence(source: dict[str, Any], plan: dict[str, Any], effects: list[dict[str, Any]],
+                         phases: list[dict[str, Any]]) -> dict[str, Any]:
+        return {"schema_version": "intercompany-fx-native-evidence-v2", "source": source, "plan": plan,
                 "canonical_source_json": canonical_json({key: value for key, value in source.items() if key != "source_digest"}),
                 "canonical_plan_json": canonical_json({key: value for key, value in plan.items() if key not in {"phase", "status", "reviewer_actor_id", "posted_actor_id", "posting_effect_ids", "plan_digest"}}),
                 "canonical_snapshot_jsons": [canonical_json(entry["snapshot"]) for entry in plan["entries"]],
                 "native_effects": effects, "phases": phases}
+
+    def native_evidence_bundle(self, source_id: str, *, actor: PostingActor) -> dict[str, Any]:
+        """Capture every original phase/effect in one authorized source transaction.
+
+        The source SHARE lock follows existing source reads and prevents any
+        writer from changing lifecycle membership during the batched capture.
+        Native evidence v2 and existing source projections remain unchanged.
+        """
+        with self.owner._transaction():
+            source = self._peek("source", source_id, share=True)
+            self._authorize(actor, "read", source, lock=True)
+            rows = records(self.connection.execute("""SELECT id,payload,phase FROM reconforge.intercompany_fx_plans
+                WHERE tenant_id=%s AND source_id=%s ORDER BY sequence LIMIT 65""", (self.tenant_id, source["id"])))
+            state = self._state(source["id"])
+            if (not 1 <= len(rows) <= MAX_OPERATIONS or not state["closed"] or state["sequence"] != len(rows)
+                    or any(row["phase"] != 2 or row["payload"]["sequence"] != index for index, row in enumerate(rows))
+                    or rows[0]["payload"]["kind"] != "recognize" or rows[-1]["payload"]["kind"] != "eliminate"):
+                fail("A native bundle requires one complete bounded posted source through elimination.", "intercompany_fx_bundle_incomplete")
+            ids = [row["id"] for row in rows]
+            reviews = records(self.connection.execute("""SELECT plan_id,reviewer_actor_id FROM reconforge.intercompany_fx_reviews
+                WHERE tenant_id=%s AND plan_id=ANY(%s) ORDER BY plan_id""", (self.tenant_id, ids)))
+            links = records(self.connection.execute("""SELECT plan_id,book,posting_effect_id,posted_actor_id FROM reconforge.intercompany_fx_links
+                WHERE tenant_id=%s AND plan_id=ANY(%s) ORDER BY plan_id,book""", (self.tenant_id, ids)))
+            effects = records(self.connection.execute("""SELECT l.plan_id,f.id,f.entry_id,f.validation_digest,f.snapshot_json AS snapshot,
+                f.posted_actor_id,f.audit_event_id,f.outbox_event_id,f.reverses_effect_id FROM reconforge.finance_posting_effects f
+                JOIN reconforge.intercompany_fx_links l ON l.tenant_id=f.tenant_id AND l.posting_effect_id=f.id
+                WHERE l.tenant_id=%s AND l.plan_id=ANY(%s) ORDER BY l.plan_id,l.book""", (self.tenant_id, ids)))
+            phases = records(self.connection.execute("""SELECT a.object_id AS plan_id,a.action,a.actor_user_id AS actor_id,a.id AS audit_event_id,
+                o.event_id AS outbox_event_id,a.metadata_json FROM reconforge.domain_audit_events a
+                JOIN reconforge.outbox_events o ON o.tenant_id=a.tenant_id AND o.aggregate_type=a.object_type
+                AND o.aggregate_id=a.object_id AND o.event_type=a.action
+                WHERE a.tenant_id=%s AND a.object_type='operational_finance' AND a.object_id=ANY(%s)
+                ORDER BY a.object_id,a.sequence""", (self.tenant_id, ids)))
+            def members(population: list[dict[str, Any]], plan_id: str) -> list[dict[str, Any]]:
+                return [{key: value for key, value in row.items() if key != "plan_id"}
+                        for row in population if row["plan_id"] == plan_id]
+            plans, evidence = [], []
+            all_effect_ids: set[str] = set()
+            for row in rows:
+                plan_id = row["id"]
+                reviewed, linked = members(reviews, plan_id), members(links, plan_id)
+                native, events = members(effects, plan_id), members(phases, plan_id)
+                if len(reviewed) != 1 or not linked:
+                    fail("Every original operation requires complete native owner membership.", "intercompany_fx_bundle_incomplete")
+                plan = {**row["payload"], "phase": row["phase"], "status": "Posted",
+                    "reviewer_actor_id": reviewed[0]["reviewer_actor_id"], "posted_actor_id": linked[0]["posted_actor_id"],
+                    "posting_effect_ids": {link["book"]: link["posting_effect_id"] for link in linked}}
+                self._authorize(actor, "read", source, plan, lock=True)
+                self.connection.execute("SELECT reconforge.icfx_close(%s,%s)", (self.tenant_id, plan_id))
+                actors = [plan["preparer_actor_id"], plan["reviewer_actor_id"], plan["posted_actor_id"]]
+                if (len(set(actors)) != 3 or len(events) != 3 or [event["actor_id"] for event in events] != actors
+                        or [event["action"] for event in events] != ["intercompany_fx_prepared", "intercompany_fx_reviewed", "intercompany_fx_posted"]
+                        or any(not event["audit_event_id"] or not event["outbox_event_id"] for event in events)
+                        or len({event["audit_event_id"] for event in events}) != 3 or len({event["outbox_event_id"] for event in events}) != 3
+                        or len(linked) != len(plan["entries"]) or len(native) != len(plan["entries"])):
+                    fail("A native bundle cannot omit any original human phase or financial effect.", "intercompany_fx_bundle_incomplete")
+                by_entry = {effect["entry_id"]: effect for effect in native}
+                for entry in plan["entries"]:
+                    effect = by_entry.get(entry["entry_id"])
+                    if (effect is None or effect["id"] in all_effect_ids or effect["snapshot"] != entry["snapshot"]
+                            or effect["validation_digest"] != entry["validation_digest"] or effect["posted_actor_id"] != actors[2]
+                            or effect["id"] != plan["posting_effect_ids"].get(entry["book"])
+                            or not effect["audit_event_id"] or not effect["outbox_event_id"]):
+                        fail("Each original native effect must match its exact retained plan snapshot.", "intercompany_fx_bundle_incomplete")
+                    all_effect_ids.add(effect["id"])
+                plans.append(plan)
+                evidence.append(self._native_evidence(source, plan, native, events))
+            bundle = {"schema_version": "intercompany-fx-source-native-evidence-bundle-v1", "complete_source": True,
+                "source": {**source, "state": state, "plans": plans}, "plan_evidence": evidence}
+            evidence_size(bundle)  # Refuse the entire capture; never truncate any original member.
+            return bundle
 
     def report(self, source_id: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():

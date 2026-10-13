@@ -111,3 +111,42 @@ These sources inform the bounded management design. This implementation does not
 qualify a statutory accounting framework, currency exchangeability assessment,
 NCI, investment elimination, profit-in-stock, hyperinflation, USGAAP or country-tax
 pack. Performance measurement remains deferred to the user.
+
+## Complete original native evidence bundle
+
+The additive authenticated GET
+`/api/v1/intercompany-fx/sources/{source_id}/native-evidence-bundle`
+returns `bundle` with schema `intercompany-fx-source-native-evidence-bundle-v1`.
+It requires both existing read permissions and the complete current workspace,
+organization and three-entity grants. A single repository transaction holds the
+original source SHARE lock, retains the existing initial source amount checks,
+and reauthorizes every original plan in its captured functional, transaction and
+reporting contexts. A current amount ceiling still refuses an initial adjustment
+context whose amount is absent; the bundle does not substitute a numeric zero.
+
+Only a complete source through posted elimination is admitted: 1..64 contiguous
+posted plans, every original native effect, and all three human phase audit/outbox
+references. Plans, reviews, owner links, effects and phase events are captured in
+bounded batches. `source` is the existing source view and `plan_evidence` contains
+each existing native evidence v2 envelope in sequence. Their canonical source,
+plan and snapshot strings and old evidence projections remain unchanged. The
+entire primitive/node/64MiB artifact budget is checked before response headers;
+an oversized or incomplete capture is refused rather than partially returned.
+Shared transport chunks are at most64KiB and never retain a database connection.
+
+The first native development gate passed six cases with no skips, including
+actual HTTP equivalence to every old evidence envelope, independent isolated
+normal/optimized Fraction verification of four operations and seven effects,
+source-lock-wait grant revocation, both current read permission revocations,
+incomplete-source refusal and whole-artifact refusal. This is a request batching
+mechanism qualification; comparative performance remains deferred.
+
+Two further native cases qualify the same bundle with EUR/GBP/transaction
+precision2 and independently captured JPY reporting precision0 or KWD precision3.
+For each reporting currency, both read permissions admit the exact original
+bundle at a seller-scoped amount ceiling200 and refuse its reported Cash200 at
+ceiling199; native seller and transaction amounts still fit both ceilings. Other
+entity scopes are legitimately uncapped in that test, so the existing absent
+initial adjustment amount is never fabricated. The original three-operation,
+five-effect captures pass the isolated normal/optimized Fraction verifier. These
+currency examples qualify captured precision, without a country accounting claim.

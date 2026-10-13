@@ -15,7 +15,7 @@ from reconforge.api.server_finance_core import (
     execute_postgres_finance_core_scoped,
     server_finance_core_enabled,
 )
-from reconforge.application.accrual_deferral_evidence import evidence_chunks, evidence_size
+from reconforge.application.accrual_deferral_evidence import evidence_chunks, evidence_size, evidence_transport_chunks
 from reconforge.application.project_source_reconciliation import ProjectSourceReconciliationService
 from reconforge.auth.models import LocalUser
 from reconforge.domain.finance_posting import FinancePostingError
@@ -93,7 +93,7 @@ def evidence(
     for chunk in evidence_chunks(retained):
         raw_digest.update(chunk)
     return StreamingResponse(
-        evidence_chunks(retained),
+        evidence_transport_chunks(retained),
         media_type="application/json",
         headers={
             "Content-Length": str(length),

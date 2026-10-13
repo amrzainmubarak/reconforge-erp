@@ -30,6 +30,13 @@ skip/xfail/xpass. Original packets remain under `output/m2-core-legacy-quantity1
 Earlier prerequisite and diagnostic setup failures remain retained separately.
 These source-qualified gates do not replace final frozen-source CI and recovery.
 
+At clean commit `50739082733ea625d99533e1ff407353cea8f904`, the thirteen
+quantity/scope/Core cases passed. Two return roundtrip tests initially hit the
+private runner's conninfo-versus-URI setup error before their assertions; the
+original negative packet is retained. Correcting only that ignored runner
+produced two actual passes without skip/xfail/xpass at the same unchanged head:
+`output/m2-quantity144-frozen-507-migrations-v2`.
+
 Empty customer/supplier return downgrade/upgrades recreate coordination
 metadata. Their test operator restores explicit table rights; the customer gate
 versions reset while every original financial/source population stays byte-exact.

@@ -77,6 +77,38 @@ def test_actual_native_original_namespace_boundary_preserves_ordinary_voucher_an
         assert repository.owner.posting._get_effect(original["id"]) == original
 
 
+def test_browser_seed_keeps_all_source_claims_and_native_financial_effects_empty(accrual_deferral_database: tuple[str, str]) -> None:
+    from psycopg import sql
+
+    from tests.accrual_deferral_browser import ACCRUAL_DEFERRAL_BROWSER_TABLES, seed_accrual_deferral_browser
+
+    base = seed_accrual_deferral_browser(*accrual_deferral_database)
+    for person in ("maker", "checker", "poster"):
+        with ScheduleRuntime(base).actor(person) as (connection, repository, actor):
+            repository._authorize(actor, "read", {"workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity"})
+            for table in (*ACCRUAL_DEFERRAL_BROWSER_TABLES, "finance_posting_effects"):
+                assert connection.execute(sql.SQL("SELECT count(*) AS n FROM {} WHERE tenant_id=%s").format(sql.Identifier("reconforge", table)), (base.tenant,)).fetchone()["n"] == 0
+            assert native_balances(connection, base.tenant) == {}
+
+
+def test_browser_restore_probes_reach_retained_source_command_and_claim_immutability(runtime: ScheduleRuntime) -> None:
+    import psycopg
+
+    from tests.accrual_deferral_browser import ACCRUAL_DEFERRAL_RESTORE_TAMPER
+
+    with runtime.actor("maker") as (_, repository, actor):
+        prepared = repository.prepare_source(preparation(), command_id="meaningful-browser-probe", actor=actor)
+    posted = publish(runtime, prepared, "meaningful-browser-probe")
+    with runtime.actor("poster") as (connection, repository, actor):
+        before = repository.evidence(posted["source_id"], actor=actor)
+        for statement in ACCRUAL_DEFERRAL_RESTORE_TAMPER:
+            with pytest.raises(psycopg.errors.CheckViolation) as refused, connection.transaction():
+                connection.execute(statement, (runtime.base.tenant,))
+            assert "immutable" in str(refused.value).lower()
+            assert refused.value.diag.constraint_name == "accrual_deferral_owner"
+            assert repository.evidence(posted["source_id"], actor=actor) == before
+
+
 def test_actual_populated_restore_preserves_original_cash_claims_and_resumes_remaining_tranches(runtime: ScheduleRuntime) -> None:
     import psycopg
     from psycopg import sql

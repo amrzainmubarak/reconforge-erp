@@ -61,7 +61,8 @@ api_routes:
   - POST /api/v1/accrual-deferral/plans/{plan_id}/review
   - POST /api/v1/accrual-deferral/plans/{plan_id}/post
 cli_commands: []
-ui_routes: []
+ui_routes:
+  - /accrual-deferral
 import_schemas:
   - accrual-deferral-source-v1
 export_schemas:
@@ -94,7 +95,10 @@ test_matrix:
   artifact_followup: 18 additional pure artifact/canonical-dimension cases passed; full and partial export paths passed inside two actual native TestClient contracts
   native_dimension_followup: 2 actual paid-expense/prepaid attachment cases preserve native Project and separate Cash BRANCH references; both full cycles passed without another Cash effect
   independent_oracle: 5 original native exports passed 10 isolated normal/optimized executions; current qualified-scope original six-effect export passed both modes; stdlib only
-  browser: pending
+  studio: Actual17 targeted data/component cases pass with typecheck; exact source/tenant/native effects/phase-command seals, independent users, lost ACK and stale session protection; integrated navigation and wire acceptance separate
+  browser_contract: One collected and typed HTTPS spec; two actual native cases prove all10 source tables/effects empty for all three seed users and three meaningful tamper probes reach exact immutable-owner constraint while whole evidence stays unchanged; actual browser execution pending
+  exact_weight_wire: Actual3 native TestClient contracts pass;9e18 weights stay exact text while native integer source seals and3334,3334,3333 allocation remain unchanged
+  browser: pending_real_wire_and_restored_browser_execution
 backends:
   postgresql: experimental_development_native_proven_final_acceptance_pending
   sqlite: unavailable

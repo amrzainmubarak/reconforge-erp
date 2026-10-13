@@ -28,6 +28,14 @@ platform_services:
   - {file: payables_payment_link.py, service: PayablesPaymentLinkService, status: compatibility_adapter}
   - {file: receivables.py, service: ReceivablesService, status: compatibility_adapter}
 application_services:
+  - file: intercompany_cashflow.py
+    service: IntercompanyCashflowApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_intercompany_cashflow.PostgresIntercompanyCashflowRepository
+  - file: project_source_reconciliation.py
+    service: ProjectSourceReconciliationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_project_source_reconciliation.PostgresProjectSourceReconciliationRepository
   - file: manufacturing_supply_plan.py
     service: ManufacturingSupplyPlanService
     status: backend_neutral
@@ -316,4 +324,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 21
-  backend_neutral_application: 69
+  backend_neutral_application: 71

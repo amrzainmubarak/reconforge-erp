@@ -364,6 +364,17 @@ for _method, _path, _phase in (
     _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/intercompany-fx" + _path)] = ("all", tuple(sorted(_icfx_permissions)))
 
 
+for _cashflow_path in ("/sources/{source_id}", "/sources/{source_id}/evidence/export"):
+    _CRITICAL_ROUTE_CONTRACTS[("GET", "/api/v1/intercompany-source-cashflow" + _cashflow_path)] = (
+        "all", ("finance_core.read", "intercompany_fx.read"),
+    )
+
+for _project_source_path in ("/report", "/evidence"):
+    _CRITICAL_ROUTE_CONTRACTS[("GET", "/api/v1/project-source-reconciliation" + _project_source_path)] = (
+        "all", ("finance_core.read", "people_project_payroll.read", "project_time_billing.read", "receivables.read"),
+    )
+
+
 for _method, _path, _phase in (
     ("GET", "/catalog", "read"), ("GET", "/sources", "read"), ("GET", "/sources/{source_id}", "read"),
     ("GET", "/sources/{source_id}/evidence", "read"), ("GET", "/plans/{plan_id}", "read"),

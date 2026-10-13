@@ -40,6 +40,14 @@ def test_live_ci_general_gate_collects_every_advertised_contract() -> None:
         for path in [row.get("test"), *row.get("additional_tests", [])] if path
     }
     assert delegated == {
+        "tests/test_postgres_project_source_reconciliation.py": "project-source-reconciliation",
+        "tests/test_postgres_project_source_reconciliation_api.py": "project-source-reconciliation",
+        "tests/test_postgres_project_source_reconciliation_browser_fixture.py": "project-source-reconciliation",
+        "tests/test_postgres_intercompany_cashflow.py": "intercompany-operations",
+        "tests/test_postgres_intercompany_cashflow_api.py": "intercompany-operations",
+        "tests/test_postgres_intercompany_cashflow_authority.py": "intercompany-operations",
+        "tests/test_postgres_intercompany_cashflow_restore.py": "intercompany-operations",
+        "tests/test_intercompany_cashflow_browser_fixture.py": "intercompany-operations",
         "tests/test_postgres_accrual_deferral.py": "accrual-deferral",
         "tests/test_postgres_accrual_deferral_api.py": "accrual-deferral",
         "tests/test_postgres_accrual_deferral_guards.py": "accrual-deferral",

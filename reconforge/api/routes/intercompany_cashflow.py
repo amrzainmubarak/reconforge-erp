@@ -12,6 +12,7 @@ from reconforge.api.routes.fixed_assets import project
 from reconforge.api.routes.intercompany_fx import Read, authority
 from reconforge.api.server_finance_core import execute_postgres_finance_core_scoped, server_finance_core_enabled
 from reconforge.application.accrual_deferral_evidence import evidence_chunks, evidence_digest, evidence_size
+from reconforge.application.intercompany_cashflow import IntercompanyCashflowApplicationService
 from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.intercompany_cashflow import SourceCashOpening
 from reconforge.infrastructure.postgres_intercompany_cashflow import PostgresIntercompanyCashflowRepository
@@ -42,7 +43,7 @@ def capture(source_id: str, request: Request, user: Read, opening: OpeningQuery)
 
     def invoke(finance: Any, scope: Any) -> dict[str, Any]:
         try:
-            return PostgresIntercompanyCashflowRepository(finance.connection, scope.tenant_id).evidence(
+            return IntercompanyCashflowApplicationService(PostgresIntercompanyCashflowRepository(finance.connection, scope.tenant_id)).evidence(
                 source_id, opening=opening.retained(source_id), actor=actor)
         except FinancePostingError as exc:
             status = 403 if "denied" in exc.code else 404 if "not_found" in exc.code else 413 if "too_large" in exc.code else 400

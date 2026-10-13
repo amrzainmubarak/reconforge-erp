@@ -1474,6 +1474,15 @@ include docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.md
 include docs/execution/GLOBAL_ENTERPRISE_PROGRAM_CONTRACTS_2026-10-12.md
 include docs/adr/0855-versioned-enterprise-cost-fx-and-time-ownership.md
 include .github/scripts/verify_intercompany_fx_cycle_oracle.py
+include .github/scripts/verify_intercompany_cashflow_oracle.py
+include .github/scripts/verify_project_source_reconciliation.py
+include docs/architecture/PROJECT_SOURCE_RECONCILIATION.md
+include docs/operator/intercompany-source-cashflow.md
+include tests/fixtures/project_source_reconciliation_original_golden.json
+include tests/fixtures/project_source_reconciliation_original_golden_v2.json
+include tests/intercompany_cashflow_fixture.py
+include tests/intercompany_cashflow_browser.py
+include tests/fixtures/intercompany-source-cashflow-native-v1.json
 include tests/verify_people_project_payroll_oracle.py
 include tests/intercompany_fx_fixture.py
 include tests/intercompany_fx_native_restore.py

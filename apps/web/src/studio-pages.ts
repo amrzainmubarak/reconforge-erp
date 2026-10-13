@@ -15,6 +15,8 @@ const operationalLabels: Partial<Record<StudioPage, MessageKey>> = {
   intercompanyOperations: "intercompanyOperations",
   manufacturingExecutionV2: "manufacturingExecutionV2",
   intercompanyFx: "intercompanyFx",
+  intercompanyCashflow: "intercompanyCashflow",
+  projectSourceReconciliation: "projectSourceReconciliation",
   peopleProjectPayroll: "peopleProjectPayroll",
   projectTimeBilling: "projectTimeBilling",
   accrualDeferral: "accrualDeferral",

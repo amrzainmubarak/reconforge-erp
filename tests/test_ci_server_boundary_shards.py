@@ -17,9 +17,13 @@ SHARDS = {
     "commercial-integrity", "supply-integrity", "finance-integrity",
     "supplier-returns", "fx-revaluation",
     "manufacturing-execution", "intercompany-operations", "procurement-sourcing",
-    "people-project-payroll", "accrual-deferral",
+    "people-project-payroll", "accrual-deferral", "project-source-reconciliation",
 }
 INTEGRITY_FILES = {
+    "project-source-reconciliation": (
+        "tests/test_postgres_project_source_reconciliation.py", "tests/test_postgres_project_source_reconciliation_api.py",
+        "tests/test_postgres_project_source_reconciliation_browser_fixture.py",
+    ),
     "accrual-deferral": (
         "tests/test_postgres_accrual_deferral.py", "tests/test_postgres_accrual_deferral_api.py",
         "tests/test_postgres_accrual_deferral_guards.py", "tests/test_postgres_accrual_deferral_ownership.py",
@@ -50,7 +54,10 @@ INTEGRITY_FILES = {
         "tests/test_postgres_manufacturing_execution_v2.py", "tests/test_postgres_enterprise_migrations.py",
     ),
     "intercompany-operations": ("tests/test_postgres_intercompany_operations.py", "tests/test_postgres_intercompany_operations_api.py",
-                               "tests/test_postgres_intercompany_fx.py", "tests/test_postgres_intercompany_fx_api.py"),
+                               "tests/test_postgres_intercompany_fx.py", "tests/test_postgres_intercompany_fx_api.py",
+                               "tests/test_postgres_intercompany_cashflow.py", "tests/test_postgres_intercompany_cashflow_api.py",
+                               "tests/test_postgres_intercompany_cashflow_authority.py", "tests/test_postgres_intercompany_cashflow_restore.py",
+                               "tests/test_intercompany_cashflow_browser_fixture.py"),
     "people-project-payroll": ("tests/test_postgres_people_project_payroll.py", "tests/test_postgres_people_project_payroll_api.py", "tests/test_postgres_people_project_payroll_restore.py", "tests/test_postgres_people_project_dimension_pins.py", "tests/test_postgres_people_project_read_authority.py"),
     "procurement-sourcing": ("tests/test_postgres_procurement_sourcing.py", "tests/test_postgres_procurement_sourcing_api.py", "tests/test_postgres_manufacturing_sourcing.py"),
 }
@@ -136,7 +143,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 57  # Retain all56 original commands and one complete accrual owner command.
+    assert len(commands) == 59  # Retain all56 original commands, the accrual owner and two source-report owners.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -236,8 +243,8 @@ def test_enterprise_browser_matrix_requires_every_real_https_and_populated_resto
     assert job["strategy"]["matrix"]["scenario"] == [
         "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets",
         "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax",
-        "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing",
-        "accrual-deferral",
+        "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "people-project-payroll", "procurement-sourcing",
+        "accrual-deferral", "project-source-reconciliation",
     ]
     assert job["strategy"]["fail-fast"] is False
     assert "continue-on-error" not in job

@@ -67,6 +67,7 @@ from reconforge.api.routes import (
     health,
     identity_administration,
     individual_cashflow,
+    intercompany_cashflow,
     intercompany_fx,
     intercompany_operations,
     inventory_core,
@@ -92,6 +93,7 @@ from reconforge.api.routes import (
     procurement_partial,
     procurement_sourcing,
     professional_invoice_payment,
+    project_source_reconciliation,
     project_time_billing,
     receivables,
     reconciliation,
@@ -466,6 +468,8 @@ def create_api_app(
     app.include_router(customer_returns.router, prefix="/api/v1")
     app.include_router(intercompany_operations.router, prefix="/api/v1")
     app.include_router(intercompany_fx.router, prefix="/api/v1")
+    app.include_router(intercompany_cashflow.router, prefix="/api/v1")
+    app.include_router(project_source_reconciliation.router, prefix="/api/v1")
     app.include_router(accrual_deferral.router, prefix="/api/v1")
     app.include_router(manufacturing_execution.router, prefix="/api/v1")
     app.include_router(manufacturing_execution_v2.router, prefix="/api/v1")
@@ -541,6 +545,8 @@ def create_api_app(
         customer_returns.router,
         intercompany_operations.router,
         intercompany_fx.router,
+        intercompany_cashflow.router,
+        project_source_reconciliation.router,
         accrual_deferral.router,
         manufacturing_execution.router,
         manufacturing_execution_v2.router,

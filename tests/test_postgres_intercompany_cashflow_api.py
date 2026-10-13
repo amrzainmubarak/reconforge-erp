@@ -3,7 +3,6 @@
 import hashlib
 from pathlib import Path
 
-from reconforge.api.routes.intercompany_cashflow import router
 from reconforge.domain.finance_posting import digest_payload
 from reconforge.infrastructure.postgres_intercompany_cashflow import PostgresIntercompanyCashflowRepository
 from tests.test_postgres_intercompany_cashflow import opening, write_original
@@ -45,7 +44,7 @@ def test_actual_authenticated_view_and_original_export_require_explicit_opening_
     revalue(runtime, original["source_id"])
     eliminate(runtime, original["source_id"])
     with client(runtime, intercompany_fx_database, tmp_path, "poster", step_up=False) as (session, headers):
-        session.app.include_router(router, prefix="/api/v1")
+        assert ROOT + "{source_id}" in session.app.openapi()["paths"]
         # client_for first provisions its unrelated original entity grant and
         # audit event. Capture the baseline after that setup, before any view.
         with runtime.actor("poster") as (connection, _, actor):
@@ -95,7 +94,7 @@ def test_actual_cached_api_reader_refuses_withdrawn_original_group_authority(run
     revalue(runtime, original["source_id"])
     eliminate(runtime, original["source_id"])
     with client(runtime, intercompany_fx_database, tmp_path, "poster", step_up=False) as (session, headers):
-        session.app.include_router(router, prefix="/api/v1")
+        assert ROOT + "{source_id}/evidence/export" in session.app.openapi()["paths"]
         path = ROOT + original["source_id"]
         assert session.get(path, params=params, headers=headers).status_code == 200
         with psycopg.connect(runtime.base.admin_dsn) as admin:

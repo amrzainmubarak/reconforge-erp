@@ -76,7 +76,7 @@ def require_browser_acceptance(stats: object) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-native-restore", action="store_true")
-    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax", "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing"), default="expansion")
+    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax", "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation"), default="expansion")
     parser.add_argument("--runtime-root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "output/erp-expansion-20261009/browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
@@ -170,6 +170,21 @@ def main() -> int:
         extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + INTERCOMPANY_BROWSER_TABLES))
         tamper_statements = INTERCOMPANY_RESTORE_TAMPER
         tamper_actor = intercompany_restore_tamper_actor
+    elif args.scenario == "intercompany-source-cashflow":
+        from tests.intercompany_cashflow_browser import (
+            INTERCOMPANY_CASHFLOW_BROWSER_TABLES,
+            INTERCOMPANY_CASHFLOW_RESTORE_TAMPER,
+            INTERCOMPANY_CASHFLOW_WORKSPACE_PROBE_TABLES,
+            intercompany_cashflow_restore_tamper_actor,
+            seed_intercompany_cashflow_browser,
+            verify_intercompany_cashflow_browser,
+        )
+        seed, verify_cycles = seed_intercompany_cashflow_browser, verify_intercompany_cashflow_browser
+        configuration = "apps/web/live/intercompany-cashflow.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + INTERCOMPANY_CASHFLOW_BROWSER_TABLES))
+        workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + INTERCOMPANY_CASHFLOW_WORKSPACE_PROBE_TABLES))
+        tamper_statements = INTERCOMPANY_CASHFLOW_RESTORE_TAMPER
+        tamper_actor = intercompany_cashflow_restore_tamper_actor
     elif args.scenario == "intercompany-fx":
         from tests.intercompany_fx_browser_seed import (
             INTERCOMPANY_FX_BROWSER_TABLES,
@@ -215,6 +230,21 @@ def main() -> int:
         workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + ACCRUAL_DEFERRAL_WORKSPACE_PROBE_TABLES))
         tamper_statements = ACCRUAL_DEFERRAL_RESTORE_TAMPER
         tamper_actor = accrual_deferral_restore_tamper_actor
+    elif args.scenario == "project-source-reconciliation":
+        from tests.project_source_reconciliation_browser import (
+            PROJECT_SOURCE_RECONCILIATION_TABLES,
+            PROJECT_SOURCE_RECONCILIATION_TAMPER,
+            PROJECT_SOURCE_RECONCILIATION_WORKSPACE_PROBE_TABLES,
+            project_source_reconciliation_restore_tamper_actor,
+            seed_project_source_reconciliation_browser,
+            verify_project_source_reconciliation_browser,
+        )
+        seed, verify_cycles = seed_project_source_reconciliation_browser, verify_project_source_reconciliation_browser
+        configuration = "apps/web/live/project-source-reconciliation.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + PROJECT_SOURCE_RECONCILIATION_TABLES))
+        workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + PROJECT_SOURCE_RECONCILIATION_WORKSPACE_PROBE_TABLES))
+        tamper_statements = PROJECT_SOURCE_RECONCILIATION_TAMPER
+        tamper_actor = project_source_reconciliation_restore_tamper_actor
     elif args.scenario == "project-time-billing":
         from tests.project_time_billing_browser import (
             PROJECT_TIME_BILLING_TABLES,
@@ -382,8 +412,8 @@ def main() -> int:
         if not origin.is_relative_to(runtime_root):
             raise ValueError("Expansion module origin is outside the integrated runtime checkout.")
         module_origins[module_name] = {"path": str(origin), "sha256": hashlib.sha256(origin.read_bytes()).hexdigest()}
-    if args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing"}:
-        owner_module = "reconforge.infrastructure.postgres_" + args.scenario.replace("-", "_")
+    if args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation"}:
+        owner_module = "reconforge.infrastructure.postgres_intercompany_cashflow" if args.scenario == "intercompany-source-cashflow" else "reconforge.infrastructure.postgres_" + args.scenario.replace("-", "_")
         for module_name in dict.fromkeys((owner_module, seed.__module__, verify_cycles.__module__)):
             origin = Path(importlib.import_module(module_name).__file__).resolve()
             if not origin.is_relative_to(runtime_root):

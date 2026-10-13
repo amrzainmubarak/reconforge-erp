@@ -5,7 +5,6 @@ import json
 
 from fastapi.testclient import TestClient
 
-from reconforge.api.routes.project_source_reconciliation import router
 from tests.test_postgres_people_project_payroll_api import application, sessions
 from tests.test_postgres_project_source_reconciliation import completed_pair
 from tests.test_postgres_project_time_billing import PeopleRuntime
@@ -17,10 +16,9 @@ ROOT = "/api/v1/project-source-reconciliation"
 def test_actual_ordinary_http_report_raw_evidence_foreign_scope_and_missing_selection(billing: PeopleRuntime, tmp_path):
     wage, invoice, project = completed_pair(billing)
     app = application(billing, tmp_path, private=False)
-    if ROOT + "/report" not in app.openapi()["paths"]:
-        app.include_router(router, prefix="/api/v1")
-    # The owned router is mounted explicitly for this contract. Central root
-    # critical-route registration is a separate integrated gate.
+    assert {ROOT + "/report", ROOT + "/evidence"} <= set(app.openapi()["paths"])
+    # Exercise the production factory and its current central GET contracts;
+    # a test cannot substitute an independently mounted router.
     with TestClient(app, base_url="https://testserver") as client:
         headers = sessions(client, billing)["maker"]
         params = {"payrun_id": wage, "invoice_id": invoice, "project_id": project, "period_id": "period"}

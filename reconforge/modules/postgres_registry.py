@@ -87,6 +87,28 @@ def _descriptor(
 
 _POSTGRES_MODULES = (
     _descriptor(
+        module_id="finance.intercompany-source-cashflow", name="Original paired-trade management cashflow",
+        revision="0139_pg_intercompany_fx", namespace="intercompany_fx", actions=("read",),
+        manifest="docs/modules/intercompany-source-cashflow.yaml",
+        dependencies=("platform.core", "finance.core", "finance.intercompany-fx"),
+        tests=("tests/test_intercompany_cashflow.py", "tests/test_postgres_intercompany_cashflow.py", "tests/test_postgres_intercompany_cashflow_authority.py"),
+        summary="Read-only complete original IC2 source operating flow, closing cash and explicit FX-on-cash reconciliation.",
+        gaps=("Frozen-source HTTPS, source custody and final integration gates remain pending.",
+              "Explicit zero opening and one source do not constitute whole-group or statutory cashflow statements."),
+    ).model_copy(update={"permissions": ("intercompany_fx.read", "finance_core.read"),
+                         "import_contracts": (), "export_contracts": ("intercompany-source-cashflow.evidence.v1",)}),
+    _descriptor(
+        module_id="projects.source-reconciliation", name="Original Project cost and revenue evidence",
+        revision="0143_pg_project_billing", namespace="project_time_billing", actions=("read",),
+        manifest="docs/modules/project-source-reconciliation.yaml",
+        dependencies=("platform.core", "finance.core", "people.project-payroll", "projects.time-billing"),
+        tests=("tests/test_project_source_reconciliation_oracle.py", "tests/test_postgres_project_source_reconciliation.py"),
+        summary="Read-only original wage and approved billed time, Project source margin and separately qualified whole-document settlement.",
+        gaps=("Final registered source and real HTTPS integration acceptance remains pending.",
+              "No private wage export, invented Project cash allocation, whole-Project P&L or statutory pack is provided."),
+    ).model_copy(update={"permissions": ("people_project_payroll.read", "project_time_billing.read", "finance_core.read", "receivables.read"),
+                         "import_contracts": (), "export_contracts": ("project-source-reconciliation.evidence.v1",)}),
+    _descriptor(
         module_id="manufacturing.supply-plan", name="Original net supply and production handoff",
         revision="0142_pg_manufacturing_supply", namespace="manufacturing_supply_plan",
         actions=("read", "manage", "approve", "post"), manifest="docs/modules/manufacturing-supply-plan.yaml",

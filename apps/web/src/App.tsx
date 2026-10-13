@@ -25,6 +25,8 @@ const ManufacturingExecutionPage = lazy(() => import("./components/Manufacturing
 const IntercompanyOperationsPage = lazy(() => import("./components/IntercompanyOperationsPage"));
 const ManufacturingExecutionV2Page = lazy(() => import("./components/ManufacturingExecutionV2Page").then((module) => ({ default: module.ManufacturingExecutionV2Page })));
 const IntercompanyFxPage = lazy(() => import("./components/IntercompanyFxPage"));
+const IntercompanyCashflowPage = lazy(() => import("./components/IntercompanyCashflowPage"));
+const ProjectSourceReconciliationPage = lazy(() => import("./components/ProjectSourceReconciliationPage").then((module) => ({ default: module.ProjectSourceReconciliationPage })));
 const PeopleProjectPayrollPage = lazy(() => import("./components/PeopleProjectPayrollPage").then((module) => ({ default: module.PeopleProjectPayrollPage })));
 const ProjectTimeBillingPage = lazy(() => import("./components/ProjectTimeBillingPage").then((module) => ({ default: module.ProjectTimeBillingPage })));
 const AccrualDeferralPage = lazy(() => import("./components/AccrualDeferralPage").then((module) => ({ default: module.AccrualDeferralPage })));
@@ -79,6 +81,8 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/intercompany-operations")) return "intercompanyOperations";
   if (normalized.endsWith("/manufacturing-execution-v2")) return "manufacturingExecutionV2";
   if (normalized.endsWith("/intercompany-fx")) return "intercompanyFx";
+  if (normalized.endsWith("/intercompany-source-cashflow")) return "intercompanyCashflow";
+  if (normalized.endsWith("/project-source-reconciliation")) return "projectSourceReconciliation";
   if (normalized.endsWith("/people-project-payroll")) return "peopleProjectPayroll";
   if (normalized.endsWith("/project-time-billing")) return "projectTimeBilling";
   if (normalized.endsWith("/accrual-deferral")) return "accrualDeferral";
@@ -112,6 +116,8 @@ function pathForPage(page: StudioPage): string {
     intercompanyOperations: "intercompany-operations",
     manufacturingExecutionV2: "manufacturing-execution-v2",
     intercompanyFx: "intercompany-fx",
+    intercompanyCashflow: "intercompany-source-cashflow",
+    projectSourceReconciliation: "project-source-reconciliation",
     peopleProjectPayroll: "people-project-payroll",
     projectTimeBilling: "project-time-billing",
     accrualDeferral: "accrual-deferral",
@@ -258,6 +264,8 @@ function StudioApp() {
         {activePage === "intercompanyOperations" ? <Suspense fallback={<LoadingView translate={t} />}><IntercompanyOperationsPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "manufacturingExecutionV2" ? <Suspense fallback={<LoadingView translate={t} />}><ManufacturingExecutionV2Page locale={preferences.locale} /></Suspense> : null}
         {activePage === "intercompanyFx" ? <Suspense fallback={<LoadingView translate={t} />}><IntercompanyFxPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "intercompanyCashflow" ? <Suspense fallback={<LoadingView translate={t} />}><IntercompanyCashflowPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "projectSourceReconciliation" ? <Suspense fallback={<LoadingView translate={t} />}><ProjectSourceReconciliationPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "peopleProjectPayroll" ? <Suspense fallback={<LoadingView translate={t} />}><PeopleProjectPayrollPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "projectTimeBilling" ? <Suspense fallback={<LoadingView translate={t} />}><ProjectTimeBillingPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "accrualDeferral" ? <Suspense fallback={<LoadingView translate={t} />}><AccrualDeferralPage locale={preferences.locale} /></Suspense> : null}

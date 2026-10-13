@@ -6,6 +6,8 @@ from dataclasses import asdict
 from typing import Any
 from uuid import uuid4
 
+from psycopg import sql
+
 from reconforge.domain.finance_posting import PostingActor, canonical_json, digest_payload, text, validation_digest
 from reconforge.domain.operational_finance import exact_minor_text
 from reconforge.domain.people_project_payroll import PeopleScope
@@ -432,8 +434,9 @@ class PostgresProjectTimeBillingRepository:
         v = source["payload"]
         def rows(table: str, where: str, parameters: tuple[Any, ...]) -> list[dict[str, Any]]:
             # All identifiers and predicates below are internal closed literals.
-            return records(self.connection.execute("SELECT * FROM reconforge." + table +
-                " WHERE tenant_id=%s AND " + where, (self.tenant_id, *parameters)))
+            statement = sql.SQL("SELECT * FROM reconforge.{} WHERE tenant_id=%s AND {}").format(
+                sql.Identifier(table), sql.SQL(where))
+            return records(self.connection.execute(statement, (self.tenant_id, *parameters)))
         entries = records(self.connection.execute("""SELECT e.*,o.id AS organization_id,le.id AS legal_entity_id
             FROM reconforge.finance_entries e JOIN reconforge.organizations o ON o.tenant_id=e.tenant_id
              AND o.application_workspace_id=e.workspace_id AND o.organization_code=e.organization_code

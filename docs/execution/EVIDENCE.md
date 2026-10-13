@@ -23359,3 +23359,22 @@ Current source fixes are backed by actual native6+10 dimension custody,
 Counts are separate source-qualified receipts, not a summed independent full
 regression total. Original failed packets and initial hosted16a78f6b failures
 are retained. Final frozen-source all-gate receipts remain pending.
+
+## M2 actual ordered0141 accrual Studio and native recovery
+
+`output/m2-https-ad1-ordered141-v2/report.json`, SHA256
+`bace2163431c38814ae3e9f653c5a7b116d3b5150bba9a4d3ba682fcf2bf9ab4`,
+is the original clean-source `d507b9ffc3060e10560bd51e6c13644b48a7fa3e`
+report. One actual TLS browser case passed with zero skips, failures or
+flakiness; whole populated database row/catalog/owner/ACL/FORCE-RLS snapshots
+were equal after pg_dump/pg_restore, with50 selected financial scope probes
+and3 native tamper refusals. Original dump SHA256
+`813bd6d489e7a5712790f7506823e7e238e6880e32cdb9a6ed2e3fc5c00a1982`.
+The independent original oracle reproduced10001 minor units allocated as
+3334/3334/3333 and6 source-owned effects, including exact inverse/replacement;
+expense10001/prepaid0/cash-10001. Audit-chain recomputation is explicitly
+false; no external attestation or comparative performance is inferred.
+The originalv1 failed only at mobile axe keyboard focus after running the
+business cycle; its receipt/artifacts are retained and are not counted as
+accepted. Focusable labelled allocation region,17 targeted React cases,
+typecheck/build and the realv2 repeat closed that failure without weakening axe.

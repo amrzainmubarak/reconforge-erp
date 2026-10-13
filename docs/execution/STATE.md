@@ -12420,3 +12420,18 @@ authorization contracts now receive the same exact permission-drift check as
 critical writes; the accepted492 route digest remains unchanged. These are
 targeted development gates. Integrated Studio, populated restore and final
 frozen-source M2 acceptance remain pending. Benchmarks are deferred by the owner.
+
+### M2 original AD1 Studio / recovery checkpoint
+
+Source `d507b9ffc3060e10560bd51e6c13644b48a7fa3e` passed the actual
+ordered0141 HTTPS/Chromium cycle and populated PostgreSQL17.11 restore:
+one required browser execution, zero skipped/unexpected/flaky cases, ordinary
+non-bypass runtime, three native tamper refusals, unchanged clean tracked
+source/build and owned process/container cleanup. The independent original
+oracle reproduced prepaid10001, tranches3334/3334/3333, exact inverse and
+replacement, six native effects, expense10001/prepaid0/cash-10001. Mobile
+Arabic RTL and keyboard accessibility passed after fixing the original
+scroll-region failure; the failedv1 packet remains. This is a development
+checkpoint, not acceptance of pending ordered142/143 or the final M2 source.
+All-country statutory packs remain unproven, comparative performance remains
+deferred, and operation cost is unknown.

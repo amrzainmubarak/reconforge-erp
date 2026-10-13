@@ -19,7 +19,7 @@ writer = importlib.util.module_from_spec(specification)
 specification.loader.exec_module(writer)
 TOKEN = "synthetic-session-a17-private"
 CSRF = "synthetic-csrf-b29-private"
-PASSWORD = "synthetic-pass-c31-private"
+PASSWORD = "dummy-pass"
 
 
 def inputs(tmp_path: Path, *, unexpected: int = 0) -> tuple[Path, Path, dict[str, bytes], dict[str, Any]]:

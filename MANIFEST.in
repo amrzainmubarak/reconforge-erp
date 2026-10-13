@@ -1489,3 +1489,11 @@ include tests/test_manufacturing_v2_cycle_oracle.py
 include tests/fixtures/manufacturing_v2_original_golden.json
 include tests/fixtures/manufacturing_v2_original_quality_hold.json
 include tests/fixtures/accrual-deferral-native-v1.json
+include tests/fixtures/project-time-billing-native-v1.json
+include tests/fixtures/manufacturing_supply_original_golden.json
+include .github/scripts/verify_accrual_deferral_cycle_oracle.py
+include .github/scripts/verify_project_time_billing_cycle_oracle.py
+include .github/scripts/verify_manufacturing_supply_cycle_oracle.py
+include docs/operator/manufacturing-supply-plan.md
+
+include docs/execution/ENTERPRISE_COMPLETION_M2_2026-10-13.md

@@ -20,7 +20,7 @@ SHARDS = {
     "people-project-payroll", "accrual-deferral", "manufacturing-supply-plan", "project-time-billing",
 }
 INTEGRITY_FILES = {
-    "manufacturing-supply-plan": ("tests/test_postgres_manufacturing_supply_plan.py",),
+    "manufacturing-supply-plan": ("tests/test_postgres_manufacturing_supply_plan.py", "tests/test_postgres_manufacturing_supply_browser_seed.py"),
     "project-time-billing": (
         "tests/test_postgres_project_time_billing.py", "tests/test_postgres_project_time_billing_api.py",
         "tests/test_postgres_project_time_billing_restore.py", "tests/test_postgres_project_time_billing_read_authority.py",
@@ -242,7 +242,7 @@ def test_enterprise_browser_matrix_requires_every_real_https_and_populated_resto
         "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets",
         "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax",
         "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing",
-        "accrual-deferral", "project-time-billing",
+        "accrual-deferral", "project-time-billing", "manufacturing-supply-plan",
     ]
     assert job["strategy"]["fail-fast"] is False
     assert "continue-on-error" not in job

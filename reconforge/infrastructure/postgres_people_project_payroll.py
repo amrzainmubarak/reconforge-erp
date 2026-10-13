@@ -60,9 +60,15 @@ class PostgresPeopleProjectPayrollRepository:
         if action in {"personnel", "read_sensitive"}:
             self.owner._actor(actor, "people_project_payroll.read_sensitive", scope, mutation=False)
             self.connection.execute("SELECT set_config('app.personnel_actor_id',%s,true)", (actor.user_id,))
-        if mutation or action == "read_sensitive":
+        # Read requests also recheck and lock the persisted hierarchy grants;
+        # a previously authenticated principal is not a revocation lease.
+        try:
             self.connection.execute("SELECT reconforge.hc_actor(%s,%s,%s,%s,%s,%s)",
                 (self.tenant_id, scope["workspace_id"], scope["organization_id"], scope["legal_entity_id"], actor.user_id, permission))
+        except Exception as exc:
+            if getattr(exc, "sqlstate", None) == "23514":
+                fail("Current persisted workforce permission and hierarchy grants are required.", "people_permission_denied")
+            raise
         principal = current_server_principal()
         if principal is None:
             fail("Current authenticated principal is required.", "people_permission_denied")

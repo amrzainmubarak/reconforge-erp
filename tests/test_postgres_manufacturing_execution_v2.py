@@ -184,6 +184,9 @@ def test_original_expense_backed_material_wip_quality_hold_then_actual_saleable_
             before_cancelled_attacks = business_snapshot(result)
             with result.actor("poster") as (connection, _, _):
                 artifacts = cancelled["receipt_plan"]["artifacts"]
+                retained_review = connection.execute("SELECT review_digest FROM reconforge.inventory_receipt_reviews WHERE tenant_id=%s AND plan_id=%s",
+                    (result.tenant, cancelled["receipt_plan"]["plan_id"])).fetchone()
+                assert retained_review is not None
                 for table, identifier in (("finance_entries", artifacts["finance_entry_id"]),
                         ("finance_posting_effects", artifacts["posting_effect_id"]), ("inventory_cost_layers", artifacts["cost_layer_id"]),
                         ("inventory_movements", artifacts["movement_id"])):
@@ -192,7 +195,7 @@ def test_original_expense_backed_material_wip_quality_hold_then_actual_saleable_
                         (result.tenant, identifier)).fetchone()["n"] == 0
             with pytest.raises(InventoryReceiptPostingError), result.actor("poster") as (_, receipts, actor):
                 receipts.commit(cancelled["receipt_plan"]["plan_id"], command_id="detached-cancelled-commit",
-                    expected_review_digest="0" * 64, reason="Cancelled inspection cannot post through public native IRP", actor=actor)
+                    expected_review_digest=retained_review["review_digest"], reason="Cancelled inspection cannot post through public native IRP", actor=actor)
             with pytest.raises(psycopg.errors.CheckViolation), result.actor("poster") as (connection, _, actor):
                 connection.execute("SELECT set_config('app.manufacturing_execution_v2_actor_id',%s,true)", (actor.user_id,))
                 connection.execute("UPDATE reconforge.manufacturing_execution_v2_inspections SET phase=2 WHERE tenant_id=%s AND id=%s",
@@ -272,6 +275,8 @@ def test_active_original_claim_refuses_native_reversal_and_direct_sql_source_mut
         receipts.finance.prepare_reversal(labor["effect_id"], command_id="claimed-original-inverse", entry_number="CLAIMED-ORIGINAL-INVERSE",
             period_id="period", posting_date="2026-10-08", reason="Cannot detach original active production expense", actor=actor)
     assert business_snapshot(result) == before
+
+
     for statement, parameters in [
         ("UPDATE reconforge.manufacturing_execution_v2_cost_claims SET amount_minor=amount_minor+1 WHERE tenant_id=%s", (result.tenant,)),
         ("DELETE FROM reconforge.financial_effect_ownership_guards WHERE tenant_id=%s", (result.tenant,)),
@@ -286,6 +291,46 @@ def test_active_original_claim_refuses_native_reversal_and_direct_sql_source_mut
     with pytest.raises(psycopg.Error), result.actor("maker") as (connection, _, _):
         connection.execute("DELETE FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s", (result.tenant, prepared["cost_entry"]["entry_id"]))
     assert business_snapshot(result) == before
+
+
+def test_unrelated_native_draft_updates_retain_new_amounts_and_dimensions(manufacturing_v2_database: tuple[str, str]) -> None:
+    result = system(manufacturing_v2_database)
+    # Shared master references retain the native workspace/org-wide seed scope;
+    # the actual financial mutation below uses the narrow authenticated entity.
+    with PostgresTenantBoundary(result.factory).transaction(result.tenant) as connection:
+        finance = PostgresFinanceCoreRepository(connection, result.tenant)
+        dimension = finance.upsert_dimension(dimension_code="ORDINARY-COST", name="Ordinary draft allocation", workspace="work", organization_code="ORG")
+        values = {code: finance.upsert_dimension_value(dimension_code="ORDINARY-COST", value_code=code, name=code, workspace="work",
+            actor_label="synthetic-seed") for code in ("BEFORE", "AFTER")}
+    with result.actor("maker") as (connection, receipts, actor):
+        finance = receipts.finance.finance
+        draft = finance.create_entry(entry_number="ORDINARY-DRAFT-UPDATE", organization_code="ORG", entity_code="ENTITY", period_id="period",
+            journal_code="STOCK", posting_date="2026-10-04", workspace="work", description="Unrelated original native draft", actor_label=actor.username,
+            lines=[{"account_code": "LABOR", "debit": "1.00", "dimensions": {"ORDINARY-COST": "BEFORE"}},
+                {"account_code": "ACCRUAL", "credit": "1.00", "dimensions": {"ORDINARY-COST": "BEFORE"}}])
+        changed = connection.execute("""UPDATE reconforge.finance_entry_lines SET debit_minor=CASE WHEN debit_minor>0 THEN 250 ELSE 0 END,
+            credit_minor=CASE WHEN credit_minor>0 THEN 250 ELSE 0 END,description='Actual changed ordinary draft' WHERE tenant_id=%s AND entry_id=%s
+            RETURNING id,debit_minor,credit_minor,description""", (result.tenant, draft["id"])).fetchall()
+        assert len(changed) == 2 and sum(row["debit_minor"] for row in changed) == sum(row["credit_minor"] for row in changed) == 250
+        assert all(row["description"] == "Actual changed ordinary draft" for row in changed)
+        changed_dimensions = connection.execute("""UPDATE reconforge.finance_entry_line_dimensions SET dimension_value_id=%s
+            WHERE tenant_id=%s AND dimension_id=%s AND entry_line_id=ANY(%s) RETURNING dimension_value_id""",
+            (values["AFTER"]["id"], result.tenant, dimension["id"], [row["id"] for row in changed])).fetchall()
+        assert len(changed_dimensions) == 2 and all(row["dimension_value_id"] == values["AFTER"]["id"] for row in changed_dimensions)
+        connection.execute("UPDATE reconforge.finance_entries SET total_debit_minor=250,total_credit_minor=250 WHERE tenant_id=%s AND id=%s",
+            (result.tenant, draft["id"]))
+        retained = finance.get_entry(draft["id"])
+        assert retained["total_debit_minor"] == retained["total_credit_minor"] == 250
+        assert all(row["dimensions"] == {"ORDINARY-COST": "AFTER"} for row in retained["lines"])
+        assert sum(row["debit_minor"] for row in retained["lines"]) == sum(row["credit_minor"] for row in retained["lines"]) == 250
+    with result.actor("checker") as (_, receipts, actor):
+        receipts.finance.finance.validate_entry(draft["id"], reason="Review actual updated balanced ordinary draft", actor_label=actor.username)
+        reviewed = receipts.finance.preview(draft["id"], actor=actor)
+    with result.actor("poster") as (_, receipts, actor):
+        effect = receipts.finance.post(draft["id"], command_id="ordinary-draft-update-post", expected_validation_digest=reviewed["validation_digest"],
+            reason="Post exact ordinary draft changes", actor=actor)
+        assert sum(row["debit_minor"] for row in effect["snapshot"]["lines"]) == sum(row["credit_minor"] for row in effect["snapshot"]["lines"]) == 250
+        assert all(row["dimensions"] == {dimension["id"]: values["AFTER"]["id"]} for row in effect["snapshot"]["lines"])
 
 
 def test_two_current_orders_cannot_overclaim_one_original_expense_under_concurrency(manufacturing_v2_database: tuple[str, str]) -> None:

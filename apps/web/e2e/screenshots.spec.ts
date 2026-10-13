@@ -94,7 +94,7 @@ test("Rule Studio requires same-version tests and independent human approval", a
   await page.getByRole("button", { name: "Approve tested draft" }).click();
   await expect(page.getByText("Approved by reviewer")).toBeVisible();
   await page.getByRole("button", { name: "Create new version" }).click();
-  await expect(page.getByText(/v2/)).toBeVisible();
+  await expect(page.getByText("v2 · Author: preparer", { exact: true })).toBeVisible();
   await expect(page.getByText("Approved by reviewer")).toHaveCount(0);
 });
 

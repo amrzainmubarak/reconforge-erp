@@ -23341,3 +23341,21 @@ v1-v3 receipts. Checking critical GET permission drift before mutation filtering
 closes the discovered read-contract verification gap without altering runtime
 permission dependencies or the492 accepted-route digest. Studio, populated
 restore, peer integration, full CI and comparative performance are not inferred.
+
+## Enterprise M1 original HTTPS and targeted integration receipts (2026-10-13)
+
+IC2 e4dc9205 and HC1 07a3831b original HTTPS/301-table restore receipts are
+qualified in the M1 progress matrix. ME2 bff14c96 original reportSHA is
+a1498acd08025c38ff5c72d8e90ee04e6b564e6c828f2fa059a063859ec28e3a.
+Each browser expected1/skipped0/unexpected0/flaky0, native nonowner flags false/
+false, restore3 tamper refusals, unchanged source and owned process/container
+cleanup. ME2 independent issued2900+claimed900=3800, FG3420+loss380+WIP0,
+nine native effects and25933 balanced turnover. No comparative performance or
+external attestation is implied by these same-host synthetic receipts.
+
+Current source fixes are backed by actual native6+10 dimension custody,
+9 HCM read-authority,6 original IC2 SQL attack,1 ordinary Draft update,
+1 supplier and3 customer/linear migration,5 ordinary Finance inverse targets.
+Counts are separate source-qualified receipts, not a summed independent full
+regression total. Original failed packets and initial hosted16a78f6b failures
+are retained. Final frozen-source all-gate receipts remain pending.

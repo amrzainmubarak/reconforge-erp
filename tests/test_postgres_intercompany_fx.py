@@ -312,6 +312,9 @@ def test_direct_sql_source_rates_maps_equations_and_old_header_relevance(runtime
 
     with runtime.actor("maker") as (_, repository, actor):
         plan = repository.prepare(preparation(), command_id="prepare-original", actor=actor)
+    if mutation == "line_amount":
+        verify_native_line_update_refusal(runtime, plan)
+        return
     with pytest.raises(psycopg.errors.CheckViolation), runtime.actor("maker") as (connection, _, _):
         if mutation in {"source_rate", "source_map"}:
             path = "{request,seller_original_rate,rate}" if mutation == "source_rate" else "{native_accounts,seller,party,account_code}"
@@ -320,11 +323,58 @@ def test_direct_sql_source_rates_maps_equations_and_old_header_relevance(runtime
             connection.execute("UPDATE reconforge.intercompany_fx_plans SET payload=jsonb_set(payload,'{equation,transaction_minor}','10002') WHERE tenant_id=%s AND id=%s", (runtime.base.tenant, plan["id"]))
         elif mutation == "rename":
             connection.execute("UPDATE reconforge.finance_entries SET entry_number='LAUNDERED' WHERE tenant_id=%s AND id=%s", (runtime.base.tenant, plan["entries"][0]["entry_id"]))
-        elif mutation == "line_amount":
-            connection.execute("UPDATE reconforge.finance_entry_lines SET debit_minor=debit_minor+1 WHERE tenant_id=%s AND entry_id=%s AND debit_minor>0", (runtime.base.tenant, plan["entries"][0]["entry_id"]))
         else:
             connection.execute("DELETE FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s", (runtime.base.tenant, plan["entries"][0]["entry_id"]))
         connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+
+
+def verify_native_line_update_refusal(runtime: FxRuntime, plan: dict[str, Any]) -> None:
+    import json
+    from pathlib import Path
+    from uuid import uuid4
+
+    import psycopg
+
+    entry = plan["entries"][0]
+    with runtime.actor("maker") as (connection, _, _):
+        def original_rows() -> list[dict[str, Any]]:
+            return [dict(row) for row in connection.execute("SELECT id,line_number,debit_minor,credit_minor,currency_code FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s ORDER BY line_number",
+                (runtime.base.tenant, entry["entry_id"]))]
+
+        before = original_rows()
+        assert len(before) == len(entry["snapshot"]["lines"]) and sum(row["debit_minor"] > 0 for row in before) == 1
+        group_touched = None
+        group_guard_refused = False
+        try:
+            with connection.transaction():
+                group_touched = connection.execute("UPDATE reconforge.finance_entry_lines SET debit_minor=debit_minor+1 WHERE tenant_id=%s AND entry_id=%s AND debit_minor>0 RETURNING id",
+                    (runtime.base.tenant, entry["entry_id"])).rowcount
+                assert group_touched in {0, 1}
+                connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+        except psycopg.errors.CheckViolation:
+            group_guard_refused = True
+        assert group_guard_refused or group_touched == 0
+        assert original_rows() == before
+        # A zero-row group-context UPDATE is RLS refusal, not execution of the
+        # financial closure. Exercise the visible native book separately.
+        native_touched = None
+        with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+            entity = entry["snapshot"]["entry"]["legal_entity_id"]
+            connection.execute("SELECT set_config('app.entity_id',%s,true),set_config('app.legal_entity_id',%s,true)", (entity, entity))
+            assert original_rows() == before
+            native_touched = connection.execute("UPDATE reconforge.finance_entry_lines SET debit_minor=debit_minor+1 WHERE tenant_id=%s AND entry_id=%s AND debit_minor>0 RETURNING id",
+                (runtime.base.tenant, entry["entry_id"])).rowcount
+            assert native_touched == 1
+            connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+        assert original_rows() == before
+        directory = Path(__file__).resolve().parents[1] / "output/m1-ic2-line-mutation"
+        directory.mkdir(parents=True, exist_ok=True)
+        proof = {"schema_version": "ic2-native-line-refusal-v1", "group_touched_rows": group_touched,
+            "group_guard_refused": group_guard_refused, "native_book_touched_rows": native_touched,
+            "native_guard_refused_before_returning": native_touched is None, "original_population": len(before),
+            "original_rows_sha256": digest_payload(before), "original_rows_unchanged": True}
+        with (directory / ("original-line-refusal-" + uuid4().hex + ".json")).open("x", encoding="utf8") as handle:
+            json.dump(proof, handle, sort_keys=True, separators=(",", ":"))
 
 
 def test_current_grant_revocation_after_actual_source_wait_refuses_review(runtime: FxRuntime) -> None:

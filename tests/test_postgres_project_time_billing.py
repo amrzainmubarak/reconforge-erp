@@ -340,5 +340,3 @@ def test_unposted_evidence_applies_separate_financial_read_ceiling_with_module_r
     with billing.actor("maker", private=False) as (connection, _, actor), pytest.raises(FinancePostingError) as refused:
         PostgresProjectTimeBillingRepository(connection, billing.base.tenant).evidence(plan["id"], actor=actor)
     assert "denied" in refused.value.code and observed == [Decimal("62.36")]
-
-

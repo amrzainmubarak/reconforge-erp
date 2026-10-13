@@ -142,3 +142,15 @@ authorization-red and corrected packets are retained separately under
 `output/msp-fractional-authority-native-*`; they are development verification.
 The unsupported `0.001 × 3001` example is explicitly retained as an exact-minor
 input rejection, and no rounding or procurement domain contract is changed.
+
+Studio binds the original budget's full monetary policy after normalizing its
+public projection: the budget envelope carries `currency_code` at envelope
+level, while MSP captures it inside `monetary_policy`. All five captured values
+(currency, precision, rounding policy, registry version and registry digest)
+must match, along with the original budget ID and selected hierarchy. Valid
+native budget evidence enables the shortage form; any altered binding or
+current denied read keeps native sourcing disabled. The original approved
+source/budget projection regression is in
+`apps/web/src/components/ManufacturingSupplyPurchasing.test.tsx` and retains the
+same raw original proof SHA as the supply oracle. The root-owned actual TLS
+failure and the focused Studio red/green remain separate evidence packets.

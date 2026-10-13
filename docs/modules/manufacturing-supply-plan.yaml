@@ -49,7 +49,7 @@ test_matrix:
   pure: tests/test_manufacturing_supply_plan.py
   postgresql: tests/test_postgres_manufacturing_supply_plan.py
   api: tests/test_manufacturing_supply_plan_api_contract.py
-  studio: apps/web/src/manufacturing-supply-data.test.ts; apps/web/src/components/ManufacturingSupplyPlanPage.test.tsx
+  studio: apps/web/src/manufacturing-supply-data.test.ts; apps/web/src/components/ManufacturingSupplyPlanPage.test.tsx; apps/web/src/components/ManufacturingSupplyPurchasing.test.tsx
   original_oracle: tests/test_manufacturing_supply_cycle_oracle.py
   required_native_browser: apps/web/live/manufacturing-supply-cycles.spec.ts
   browser_seed_and_restore: tests/manufacturing_supply_browser.py

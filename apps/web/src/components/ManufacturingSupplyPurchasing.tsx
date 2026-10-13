@@ -26,8 +26,9 @@ export function ManufacturingSupplyPurchasing({ locale, source, scope, identity,
     setReading(true); setFailure(false); setDetail(null); setPurchase(null); setBudgetVersion(null);
     (async () => {
       const budget = await loadBudgetDetail(session, scope, source.budget_id, abort.signal);
+      const budgetPolicy = { currency_code: budget.currency_code, ...budget.monetary_policy };
       if (budget.id !== source.budget_id || budget.currency_code !== source.currency_code
-          || Object.entries(source.monetary_policy).some(([key, value]) => (budget.monetary_policy as unknown as Record<string, unknown>)[key] !== value)) throw new Error("wrong_original_budget");
+          || Object.entries(source.monetary_policy).some(([key, value]) => (budgetPolicy as unknown as Record<string, unknown>)[key] !== value)) throw new Error("wrong_original_budget");
       let nextDetail: SourcingDetail | null = null, nextPurchase: PartialDetail | null = null;
       if (requisitionId) { nextDetail = await parseSourcingDetail(await supplyRequest(session, scope, `${base}/requisitions/${requisitionId}`, undefined, abort.signal), procurementScope, requisitionId);
         if (nextDetail.head.order_id) {

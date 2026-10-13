@@ -105,5 +105,30 @@ money comparing equal to string money under canonical projection; its red receip
 is retained and every displayed minor field now requires a canonical integer
 string. Root registration, socket HTTPS and populated restore remain separate
 gates for this diagnostic.
+
+The browser fixture now provisions two actual complete originals through existing
+native IC2 preparation/review/post paths, with distinct test maker/checker/poster
+principals. These are eight native owner operations and fourteen native effects.
+The browser itself performs only reads. A separate native fixture case passes on
+the actual ordered 143 development schema using an ordinary nonowner, nonbypass
+runtime. It checks the callback's complete original source/period byte SHA before
+and after three valid-format source amount, original link reason and retained
+command digest mutations. Each mutation is refused by the exact
+`intercompany_fx_owner` constraint and the complete callback remains equal.
+Its final original capture is 789543 bytes with SHA256
+`70618cc82cb8570a79efc0355efdf746fbc75df4850061ca97bbd994ba3f60f0`.
+Independent isolated normal/optimized CLI verification both accept those exact
+bytes with equal output SHA256
+`a4e474a2e4da5fcc35b0ec201e58a1b5bc2881250e903d6953c512d984f7bd16`.
+The earlier fixture capture and its independent outputs are preserved separately.
+
+The required Playwright contract explicitly selects both original source pins and
+their known-zero basis, verifies the separate Cash bridge (translated 202, native
+adjustment 0, combined 202), and downloads unchanged original bytes with the same
+view SHA and length. It also checks Arabic/mobile layout, accessibility and absence
+of financial mutation requests. One test is collected and its TypeScript contract
+passes; collection is not execution. Shared registration, actual socket HTTPS and
+the common populated database archive/restore check remain root-owned acceptance
+gates and are not counted as passed by this fixture or the browser contract.
 PostgreSQL is required and SQLite is explicitly unavailable. Country statutory
 packs remain zero, and comparative performance measurement remains deferred.

@@ -21,10 +21,11 @@ from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_manufacturing_supply_plan import PostgresManufacturingSupplyPlanRepository
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime
 from tests.test_postgres_inventory_receipt_posting import receipt_database as baseline_receipt_database
+from tests.test_postgres_inventory_receipt_posting import receipt_database as msp_receipt_database
 from tests.test_postgres_inventory_transfer import TABLES, transfer_runtime
 from tests.test_postgres_manufacturing_supply_plan import planning_runtime, seed_partial_stock
 
-_ = baseline_receipt_database
+_ = (baseline_receipt_database, msp_receipt_database)
 HEAD = "0146_pg_inventory_transfer"
 PREVIOUS = "0145_pg_supply_closure"
 ROOT = Path(__file__).resolve().parents[1]
@@ -176,9 +177,11 @@ def test_ordinary_native_metadata_has_no_private_transfer_dependency(ordinary_wi
 
 
 @pytest.fixture(scope="module")
-def msp_originals(integration_database: tuple[str, str]) -> tuple[Any, dict[str, Any], bytes]:
-    _migrate(integration_database, "downgrade", PREVIOUS)
-    system, request = planning_runtime(integration_database)
+def msp_originals(msp_receipt_database: tuple[str, str]) -> tuple[Any, dict[str, Any], bytes]:
+    # Independent full migration fixture: the other native fixture deliberately
+    # retains IT1 permission grants, which rightly prevent catalog downgrade.
+    _migrate(msp_receipt_database, "downgrade", PREVIOUS)
+    system, request = planning_runtime(msp_receipt_database)
     seed_partial_stock(system)
     with system.actor("maker") as (connection, _, actor):
         source = PostgresManufacturingSupplyPlanRepository(connection, system.tenant).create(request, command_id="146-msp-create", actor=actor)["source"]
@@ -187,7 +190,7 @@ def msp_originals(integration_database: tuple[str, str]) -> tuple[Any, dict[str,
             command_id="146-msp-approve", reason="Original145 approved stock custody", actor=actor)["source"]
         assert len(source["stock_claims"]) == 2
         before = _rows(connection, system.tenant, MSP_TABLES)
-    _migrate(integration_database, "upgrade", HEAD)
+    _migrate(msp_receipt_database, "upgrade", HEAD)
     return system, source, before
 
 

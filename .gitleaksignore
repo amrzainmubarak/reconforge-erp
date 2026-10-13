@@ -1023,6 +1023,7 @@ docs/execution/wave5-evidence/sourcing-oracle/initial-failure/report.json:generi
 b7801291b182fd11f4e22b1e7994461e0c4fecc0:docs/execution/wave5-evidence/sourcing-oracle/initial-failure/report.json:generic-api-key:1565
 docs/execution/wave5-evidence/sourcing-oracle/initial-failure/report.json:generic-api-key:1574
 b7801291b182fd11f4e22b1e7994461e0c4fecc0:docs/execution/wave5-evidence/sourcing-oracle/initial-failure/report.json:generic-api-key:1574
-# Exact immutable historical false positive: synthetic diagnostic fixture;
-# current-tree dummy value stays scanned. See ADR 0857.
+
+# Exact reviewed historical diagnostic fixtures; current-tree values stay scanned (ADR 0857).
 21fcd925db15dd9925cac650c129ab63beba199e:tests/test_browser_diagnostic_writer.py:generic-api-key:22
+6eca23f47a082a438f32db80503569b814b431f2:tests/test_browser_diagnostic_writer.py:generic-api-key:22

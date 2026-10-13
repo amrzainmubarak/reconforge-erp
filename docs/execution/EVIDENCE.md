@@ -23411,3 +23411,26 @@ are retained; invoice-post interception actually exceeded20s. No latency or
 resource acceptance is inferred from native correctness.
 Actual downloaded Group78 original SHA51f750d2b371f18a51b08ab4f3d5c22c1265c763484b5f8540d5d045959b8bca,
 789543bytes; original stdlib-I/-I-O output SHA c875ef4d36271eda05b5001a89c4d87679c68778d654b1265b543eeaa4916a67.
+
+2026-10-14 corrected source custody (qualified checkpoints, final CI pending):
+MSP5130 actual report d22159c0b7337a965257012c73c4ac9940f19fa86751f004b00f046f61d69680;
+whole effects12 including AP2/ME2 projection10, restore328/tamper3/lost-reply9.
+f506 captured reporting-currency authority native12/zero skip, XML
+37f85dcbf8504c8a30d718e3af59910ef0a5f080d1562f69ea0880bb32ed5cc6.
+Corrected6db current-head inverse/retained-privilege native2/zero skip, XML
+f1aa6090a20591864f923131cd08fa5f4d0241c762ef2665f40119f766aae48d;
+actual installed145 and owned database removed.
+Community optional-driver original red and candidate green receipts retained;
+the isolated child actually invokes doctor with psycopg import unavailable.
+Original f506 Docker/security/migration failures are retained independently.
+
+M3 actual265 wire report SHA256s: Project78f2089354fa5c92d313bb2afb8994301308f866c05ab9234f8d4ee51d6defdc;
+Group5199d2fa405c4c04ed299357bfb086fdc3964e9299bf8e11e1cf7e90474259b9;
+Cashflow8ff02807915739775dd6ba512c0c3a59a2563944228f949bcc54dcc3f2ffe94e.
+Each restores328 tables/refuses3tampers with zero browser skips/unexpected/flaky;
+4/2/2 actual isolated original-download runs. These qualify old265 custody,
+not the subsequently corrected final verifier/publisher.
+Root155 new custody/publication cases XML
+9f99136e813aad44899b11c135b81e525096e5d24049718fc12f9bb5709f53ff.
+Actual late-original, output, command and publication counterexamples remain
+retained privately; no raw header/network diagnostics are public evidence.

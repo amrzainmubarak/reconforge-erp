@@ -602,6 +602,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         ".github/scripts/validate_supply_chain_policy.py", ".gitleaks.toml", ".gitleaksignore",
         "docs/security/gitleaks-public-source-digests-wave4.v1.json",
         "docs/security/gitleaks-public-source-digests-wave5.v1.json", "tests/test_supply_chain_policy.py",
+        "docs/security/gitleaks-synthetic-diagnostics-m2.v1.json",
         *(WAVE4_POSTING_EVIDENCE + "/" + name + ".json" for name in
           ("1-baseline", "1-candidate", "2-candidate", "2-baseline", "3-baseline", "3-candidate")),
         *(FX_EVIDENCE + "/" + name for name in FX_RETAINED_SHA),

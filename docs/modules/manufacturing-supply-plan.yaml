@@ -1,0 +1,62 @@
+id: manufacturing-supply-plan
+name: Original pre-stock manufacturing demand and exclusive supply custody
+version: 1.0.0
+maturity: experimental
+owner: ReconForge manufacturing
+dependencies: [manufacturing-execution, manufacturing-execution-v2, procurement-sourcing, procurement-commitments, procurement-partial, inventory-core, inventory-receipt-posting, finance-posting, budget-control, identity, scope-authority]
+incompatible_versions: []
+data_classification: authorized-financial-operational-records-and-synthetic-fixtures
+retention_policy: immutable-original-demand-coverage-claims-commands-native-audit-history
+permissions: [manufacturing_supply_plan.read, manufacturing_supply_plan.manage, manufacturing_supply_plan.approve, manufacturing_supply_plan.post]
+default_roles: []
+migrations: []
+domain_invariants:
+  - One actual approved BOM/routing pair creates engineering demand without inventing a movement, reservation or financial effect.
+  - Gross requirements expand exactly in retained original base UOM and precision; free physical stock and unallocated valued FIFO bound exclusive on-hand custody.
+  - Cumulative requisitions claim only the original net shortage and retain ordinary SRC source contracts through a versioned planned-origin companion.
+  - Original source IDs, price ceilings, scope, currency policy and effective engineering remain immutable.
+  - Actual independently posted receipts alone create source-owned received quantities and Core quantity guards.
+  - Native three-human receipt and AP publication retain exact historical ACK, audit and outbox.
+  - Native AP publication and budget commitment consumption occur atomically through BPC.
+  - Handoff requires complete original stock coverage and fully accrued original awarded shortage; native ME1 INSERT transfers exact guards before existing reservations/capacity checks in one transaction.
+  - Actual production date is explicitly recorded in the handoff request and cannot precede original planning or any acquired receipt; original planning digest is preserved.
+  - Failed native ME2 expense admission rolls back ME1 creation and all quantity custody releases.
+  - Every original stock release requires the exact terminal source command, human, reason, version and native target.
+  - Generic unowned SRC/PP paths refuse the planned namespace before protected planner queries; ordinary sources preserve original paths.
+domain_events: [create, approve, cancel, source-create, source-open-rfq, source-quote, source-review-selection, source-award, source-cancel, purchase-submit, purchase-approve, receive-prepare, receive-review, receive-commit, invoice-match, invoice-approve, invoice-prepare, invoice-review, invoice-post, handoff]
+api_routes:
+  - /api/v1/manufacturing-supply-plan/plans
+  - /api/v1/manufacturing-supply-plan/plans/{id}
+  - /api/v1/manufacturing-supply-plan/requirements/{id}
+  - /api/v1/manufacturing-supply-plan/plans/{id}/approve
+  - /api/v1/manufacturing-supply-plan/plans/{id}/cancel
+  - /api/v1/manufacturing-supply-plan/plans/{id}/handoff
+  - /api/v1/manufacturing-supply-plan/plans/{id}/requisitions
+  - /api/v1/manufacturing-supply-plan/plans/{id}/requisitions/{requisition_id}/{operation}
+  - /api/v1/manufacturing-supply-plan/plans/{id}/purchases/{order_id}
+  - /api/v1/manufacturing-supply-plan/plans/{id}/purchases/{order_id}/{operation}
+cli_commands: []
+ui_routes: [/manufacturing-supply-plan]
+import_schemas: [manufacturing-supply-plan-v1, manufacturing-planned-requirement-v1, manufacturing-supply-coverage-v1, manufacturing-planned-origin-v2]
+export_schemas: [manufacturing-supply-plan-v1]
+synthetic_fixtures:
+  - Original BOM10 needs ITEM2EA and MATERIAL3KG; actual starting ITEM1EA/value1200 and MATERIAL0.500KG/value50 produce shortage ITEM1EA and MATERIAL2.500KG/value1450.
+  - Planned golden material2700 plus labor600 plus overhead300 equals accepted FG3240 plus abnormal loss360 plus WIP0; final native gate is explicitly source-qualified.
+threat_model: [duplicate-net-demand, unrelated-receipt-custody, hidden-master-reinterpretation, unowned-native-command-bypass, stale-human-scope-or-amount-authority, detached-stock-release, self-approval, failed-native-handoff, altered-native-ACK, repeated-financial-effect]
+benchmarks: []
+rollback_plan: Empty additive schema rollback restores Core dispatch; populated original source or quantity history refuses atomically. No deletion or fabricated inverse is supplied.
+test_matrix:
+  pure: tests/test_manufacturing_supply_plan.py
+  postgresql: tests/test_postgres_manufacturing_supply_plan.py
+  api: tests/test_manufacturing_supply_plan_api_contract.py
+  studio: apps/web/src/manufacturing-supply-data.test.ts; apps/web/src/components/ManufacturingSupplyPlanPage.test.tsx
+backend_support:
+  postgres: native-owner-development
+  sqlite: unavailable-native-ME1-and-SRC-dependencies
+claim_boundary: Experimental bounded actual native owner development; ordered migration, central registration, authenticated HTTP/TLS browser, restore and frozen integrated source acceptance are root-owned pending gates. No MRP capacity optimizer, throughput, banking, statutory or ERP replacement claim.
+runtime_acceptance:
+  - Actual source-qualified complete native shortage cycle passed1 case with0 skips, xfails or xpasses at development source digest9c4b1db9a90109066d2d591d219d886fb5ebda6305eaf185ef7590b14ef4a703.
+  - Actual partial receipts and two AP invoices consumed1450 from the native budget; original failed handoff rolled back target order and all source custody releases.
+  - Material2700 plus Labor600 plus Overhead300 equals FG3240 plus abnormal loss360 plus residual WIP0;9 actual accepted units and1 rejected unit.
+  - Original native full-cycle handoff fixture verifies its exact source and requirement/coverage seals in the Studio parser.
+  - Thirty focused pure/API cases, eleven Studio data/React cases and TypeScript typecheck passed developmentally; root integration gates remain separate.

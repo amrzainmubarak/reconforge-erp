@@ -14,7 +14,9 @@ async function login(page: Page, username: string) {
   await page.getByRole("button", { name: "Confirm and continue", exact: true }).click(); expect((await response).status()).toBe(200);
 }
 async function enter(page: Page, identifier = "", production = false) {
-  await page.goto(`${base}/${production ? "manufacturing-execution-v2" : "manufacturing-supply-plan"}`);
+  await page.getByRole("navigation", { name: "Primary navigation", exact: true }).getByRole("button", {
+    name: production ? "Manufacturing execution v2" : "Manufacturing supply and planned procurement", exact: true,
+  }).click();
   await expect(page.getByRole("heading", { name: production ? "Expense-backed manufacturing and quality" : "Manufacturing supply planning", exact: true })).toBeVisible();
   const form = page.getByRole("form", { name: "Apply scope", exact: true });
   for (const [label, value] of Object.entries({ "Workspace ID": "work", "Organization ID": "org", "Legal entity ID": "entity" })) { const field = form.getByLabel(label, { exact: true }); await expect(field).toBeEnabled(); await field.fill(value); }

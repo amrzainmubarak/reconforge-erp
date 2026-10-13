@@ -118,7 +118,7 @@ CREATE CONSTRAINT TRIGGER financial_source_close AFTER INSERT ON reconforge.accr
  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.financial_source_directory_deferred();
 """
 
-UPGRADE_SQL = DDL + "\n" + directory + "\n" + deferred
+UPGRADE_SQL = "\n".join((DDL, directory, deferred))
 DOWNGRADE_SQL = r"""
 DO $ownership$ BEGIN
  IF EXISTS(SELECT 1 FROM reconforge.financial_effect_ownership_guards WHERE owner_namespace='AD1')

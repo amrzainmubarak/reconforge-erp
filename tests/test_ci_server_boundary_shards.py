@@ -184,6 +184,7 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
     unit = next(step for step in workflow["jobs"]["test"]["steps"] if step["name"] == "Pytest")
     assert "if" not in unit and "continue-on-error" not in unit
     ignored = {
+        "tests/test_postgres_financial_source_roles.py",
         "tests/test_postgres_stock_sales.py", "tests/test_postgres_stock_sales_api.py",
         "tests/test_postgres_stock_commerce.py", "tests/test_postgres_stock_commerce_api.py",
         "tests/test_postgres_stock_commerce_migrations.py",
@@ -201,7 +202,8 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
     for path in ignored:
         assert [owner for owner, commands in groups.items()
                 for command in commands if path in shlex.split(command)] == [
-                    owners.get(path, "finance-reporting" if "financial_" in path else "erp-expansion")]
+                    owners.get(path, "finance-posting" if path == "tests/test_postgres_financial_source_roles.py"
+                               else "finance-reporting" if "financial_" in path else "erp-expansion")]
 
 
 def test_integrity_owners_execute_complete_files_once_without_filtered_admission() -> None:

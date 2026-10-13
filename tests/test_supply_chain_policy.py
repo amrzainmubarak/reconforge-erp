@@ -68,6 +68,7 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         "docs/security/container-runtime.openvex.json",
         "docs/security/gitleaks-public-source-digests-wave4.v1.json",
         "docs/security/gitleaks-public-source-digests-wave5.v1.json",
+        "docs/security/gitleaks-synthetic-diagnostics-m2.v1.json",
         "docs/execution/wave5-evidence/sourcing-oracle/accepted/report.json",
         "docs/execution/wave5-evidence/sourcing-oracle/initial-failure/report.json",
         "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
@@ -188,7 +189,7 @@ def test_reviewed_public_digest_ignores_reject_substitution_and_inventory_drift(
 
 def test_wave5_public_digest_ignores_close_exact_population_and_baseline_bytes() -> None:
     registry = _json(ROOT / POLICY_MODULE._GITLEAKS_WAVE5_REGISTRY)
-    raw = (ROOT / ".gitleaksignore").read_bytes()
+    raw = POLICY_MODULE._reviewed_complete_ignore_baseline(ROOT, (ROOT / ".gitleaksignore").read_bytes())
     assert registry["finding_count"] == 166
     assert registry["distinct_original_sources"] == 83
     assert {report["finding_count"] for report in registry["reports"]} == {83}
@@ -198,6 +199,23 @@ def test_wave5_public_digest_ignores_close_exact_population_and_baseline_bytes()
     assert len(raw[78266:].splitlines()) == 332
     assert hashlib.sha256(raw).hexdigest() == POLICY_MODULE._GITLEAKS_COMPLETE_IGNORE_SHA256
     POLICY_MODULE._validate_gitleaks_config(ROOT)
+
+
+@pytest.mark.parametrize("mutation", ["new_history", "current_tree_fingerprint", "review_registry"])
+def test_diagnostic_secret_supplement_refuses_unreviewed_or_current_tree_exceptions(tmp_path: Path, mutation: str) -> None:
+    root = _copy_policy_project(tmp_path)
+    ignore = root / ".gitleaksignore"
+    if mutation == "new_history":
+        ignore.write_bytes(ignore.read_bytes() + b"0000000000000000000000000000000000000000:tests/unreviewed.py:generic-api-key:1\n")
+    elif mutation == "current_tree_fingerprint":
+        ignore.write_bytes(ignore.read_bytes() + b"tests/test_browser_diagnostic_writer.py:generic-api-key:22\n")
+    else:
+        path = root / POLICY_MODULE._GITLEAKS_DIAGNOSTIC_REGISTRY
+        value = _json(path)
+        value["records"][0]["history_fingerprint"] = "tests/test_browser_diagnostic_writer.py:generic-api-key:22"
+        _write_json(path, value)
+    with pytest.raises(SupplyChainPolicyError, match="reviewed"):
+        POLICY_MODULE._validate_gitleaks_config(root)
 
 
 @pytest.mark.parametrize(

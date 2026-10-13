@@ -50,6 +50,17 @@ Core2MiB posting and IC2 per-plan1MiB limits remain unchanged. A maximal source
 does not imply every possible envelope fits: oversized evidence is refused
 before download headers.
 
+The owned Arabic/English read-only Studio component requires explicit confirmation
+of the complete source's known zero opening. It binds the original source and every
+native stage seal, the reviewed report, exact Cash memberships and the displayed
+integer reconciliation. It does not recompute FX conversion independently; that
+remains the canonical server and stdlib CLI boundary. The view supplies the full
+original export SHA256 and byte length. Bounded streamed downloads preserve those
+bytes without parsing native integers into JavaScript numbers. Current source,
+scope and session changes invalidate pending responses. Thirty targeted component
+and data cases plus TypeScript pass; actual TLS/navigation execution is pending
+ROOT integration and is not inferred from those component tests.
+
 Run the standalone verifier with an externally retained original raw SHA:
 
 ```text

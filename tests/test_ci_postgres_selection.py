@@ -45,7 +45,6 @@ def test_live_ci_general_gate_collects_every_advertised_contract() -> None:
         "tests/test_postgres_manufacturing_supply_closure_authority.py": "manufacturing-supply-plan",
         "tests/test_postgres_manufacturing_supply_read_authority.py": "manufacturing-supply-plan",
         "tests/test_postgres_manufacturing_supply_browser_seed.py": "manufacturing-supply-plan",
-        "tests/test_postgres_manufacturing_supply_read_authority.py": "manufacturing-supply-plan",
         "tests/test_postgres_intercompany_group_diagnostic.py": "intercompany-operations",
         "tests/test_postgres_intercompany_group_diagnostic_api.py": "intercompany-operations",
         "tests/test_intercompany_group_diagnostic_browser_fixture.py": "intercompany-operations",

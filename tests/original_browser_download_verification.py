@@ -206,7 +206,8 @@ def verify_original_browser_downloads(output: Path, scenario: str, persisted_eff
     destination = output.resolve(strict=True) / "original-browser-download-verification"
     destination.mkdir(exist_ok=False)
     interpreter = Path(getattr(sys, "_base_executable", sys.executable)).resolve(strict=True)
-    results = []
+    results: list[dict[str, Any]] = []
+    generated: list[dict[str, Any]] = []
     for index, (path, raw, _proof, helper, helper_raw, kind) in enumerate(admitted, 1):
         outputs = []
         for optimized in (False, True):
@@ -219,10 +220,13 @@ def verify_original_browser_downloads(output: Path, scenario: str, persisted_eff
             args += ["--output", str(result_path)]
             require(read(path, root, MAX_BYTES) == raw and read(helper, ROOT, MAX_METADATA_BYTES) == helper_raw,
                     "original input or reviewed verifier source changed before execution")
-            with (destination / (tag + ".command.json")).open("xb") as handle:
-                handle.write(canonical({"schema_version": "original-browser-oracle-command-v1", "argv": args,
-                    "original": record(path, raw), "helper": record(helper, helper_raw), "optimized": optimized,
-                    "environment_captured": False, "shell": False, "timeout_seconds": ORACLE_TIMEOUT_SECONDS}))
+            command_raw = canonical({"schema_version": "original-browser-oracle-command-v1", "argv": args,
+                "original": record(path, raw), "helper": record(helper, helper_raw), "optimized": optimized,
+                "environment_captured": False, "shell": False, "timeout_seconds": ORACLE_TIMEOUT_SECONDS})
+            command_path = destination / (tag + ".command.json")
+            with command_path.open("xb") as handle:
+                handle.write(command_raw)
+            generated.append(record(command_path, command_raw))
             try:
                 process = subprocess.run(args, cwd=ROOT, capture_output=True, timeout=ORACLE_TIMEOUT_SECONDS, check=False)
             except subprocess.TimeoutExpired as exc:
@@ -234,12 +238,17 @@ def verify_original_browser_downloads(output: Path, scenario: str, persisted_eff
                 raise ValueError("Original browser download refused: isolated verifier timeout") from exc
             for suffix, data in (("stdout", process.stdout), ("stderr", process.stderr)):
                 require(len(data) <= MAX_METADATA_BYTES, "oracle log byte budget")
-                with (destination / (tag + "." + suffix + ".log")).open("xb") as handle:
+                log_path = destination / (tag + "." + suffix + ".log")
+                with log_path.open("xb") as handle:
                     handle.write(data)
-            with (destination / (tag + ".execution.json")).open("xb") as handle:
-                handle.write(canonical({"timed_out": False, "returncode": process.returncode,
-                    "stdout": record(destination / (tag + ".stdout.log"), process.stdout),
-                    "stderr": record(destination / (tag + ".stderr.log"), process.stderr)}))
+                generated.append(record(log_path, data))
+            execution_raw = canonical({"timed_out": False, "returncode": process.returncode,
+                "stdout": record(destination / (tag + ".stdout.log"), process.stdout),
+                "stderr": record(destination / (tag + ".stderr.log"), process.stderr)})
+            execution_path = destination / (tag + ".execution.json")
+            with execution_path.open("xb") as handle:
+                handle.write(execution_raw)
+            generated.append(record(execution_path, execution_raw))
             require(process.returncode == 0, "isolated original verifier failed")
             result_raw = read(result_path, destination, MAX_METADATA_BYTES)
             result = parse(result_raw)
@@ -264,12 +273,28 @@ def verify_original_browser_downloads(output: Path, scenario: str, persisted_eff
                         "normal": record(destination / f"{index}-I.json", outputs[0]),
                         "optimized": record(destination / f"{index}-IO.json", outputs[1]),
                         "normal_optimized_byte_equal": True})
+    # A later oracle must not invalidate an earlier completed artifact pair.
+    # Pin the whole admitted bundle again before publishing successful custody.
+    for path, raw, _proof, helper, helper_raw, _kind in admitted:
+        require(read(path, root, MAX_BYTES) == raw and read(helper, ROOT, MAX_METADATA_BYTES) == helper_raw,
+                "original input or reviewed verifier source changed before completed custody")
+    for artifact in results:
+        for mode in ("normal", "optimized"):
+            retained_output = artifact[mode]
+            path = destination / retained_output["path"]
+            exact(record(path, read(path, destination, MAX_METADATA_BYTES)), retained_output,
+                  "isolated oracle output changed before completed custody")
+    for retained_artifact in generated:
+        path = destination / retained_artifact["path"]
+        exact(record(path, read(path, destination, MAX_METADATA_BYTES)), retained_artifact,
+              "isolated oracle execution artifact changed before completed custody")
     for retained in metadata:
         path = root / retained["path"]
         exact(record(path, read(path, root, MAX_METADATA_BYTES)), retained,
               "original observed HTTP anchor changed during verification")
     result = {"schema_version": "original-browser-download-verification-v1", "scenario": scenario,
-              "artifacts": results, "observed_anchor_artifacts": metadata, "financial_raw_bytes_unchanged": True,
+              "artifacts": results, "observed_anchor_artifacts": metadata,
+              "retained_execution_artifacts": generated, "financial_raw_bytes_unchanged": True,
               "stable_original_callback_membership_equal": True, "isolated_oracle_executions": 2 * len(results),
               "python_executable": str(interpreter), "current_authority_proven_by_this_file_verifier": False,
               "browser_tls_execution_proven_by_this_file_verifier": False, "financial_writes": False,

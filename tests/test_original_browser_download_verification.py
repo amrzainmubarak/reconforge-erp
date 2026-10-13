@@ -287,3 +287,41 @@ def test_observed_http_anchor_drift_during_cli_refuses_completed_custody(tmp_pat
     with pytest.raises(ValueError, match="original observed HTTP anchor changed"):
         verifier.verify_original_browser_downloads(output, "intercompany-source-cashflow", callback)
     assert not (output / "original-browser-download-verification/custody.json").exists()
+
+
+@pytest.mark.parametrize("changed_member", ["original", "oracle", "command"])
+def test_earlier_original_or_oracle_drift_during_later_cli_refuses_completed_custody(
+    tmp_path, monkeypatch, changed_member,
+):
+    output, root, callback = setup_case(tmp_path, "project-source-reconciliation")
+    original_run = subprocess.run
+    first_original = root / "project-source-original.json"
+    first_before = first_original.read_bytes()
+    executions = []
+
+    def changed(args, **kwargs):
+        result = original_run(args, **kwargs)
+        executions.append(result.returncode)
+        if "close" in args and "-O" not in args:
+            target = (first_original if changed_member == "original" else
+                      output / "original-browser-download-verification" /
+                      ("1-I.command.json" if changed_member == "command" else "1-I.json"))
+            if changed_member == "command":
+                command = json.loads(target.read_bytes())
+                command["argv"][1] = "-O"
+                write(target, command)
+            else:
+                # Valid JSON whitespace changes byte custody after the first
+                # completed pair; the later actual close oracle still passes.
+                target.write_bytes(target.read_bytes() + b" ")
+        return result
+
+    monkeypatch.setattr(verifier.subprocess, "run", changed)
+    with pytest.raises(ValueError, match="changed before completed custody"):
+        verifier.verify_original_browser_downloads(output, "project-source-reconciliation", callback)
+    assert executions == [0, 0, 0, 0]
+    assert not (output / "original-browser-download-verification/custody.json").exists()
+    if changed_member == "original":
+        assert first_original.read_bytes() == first_before + b" "
+    else:
+        assert first_original.read_bytes() == first_before

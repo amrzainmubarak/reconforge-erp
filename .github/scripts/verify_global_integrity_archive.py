@@ -514,9 +514,6 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/fixtures/project_source_close_final_native_v1.json",
         "tests/test_postgres_project_source_close.py",
         "tests/test_project_source_close_oracle.py",
-        "tests/browser_diagnostic_redaction.py",
-        "tests/test_browser_diagnostic_redaction.py",
-        "tests/test_browser_diagnostic_writer.py",
         "tests/original_browser_download_verification.py",
         "tests/test_original_browser_download_verification.py",
         "tests/fixtures/intercompany-group-diagnostic-native-v1.json",
@@ -602,6 +599,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         ".github/scripts/validate_supply_chain_policy.py", ".gitleaks.toml", ".gitleaksignore",
         "docs/security/gitleaks-public-source-digests-wave4.v1.json",
         "docs/security/gitleaks-public-source-digests-wave5.v1.json", "tests/test_supply_chain_policy.py",
+        "docs/security/gitleaks-synthetic-diagnostics-m2.v1.json",
         *(WAVE4_POSTING_EVIDENCE + "/" + name + ".json" for name in
           ("1-baseline", "1-candidate", "2-candidate", "2-baseline", "3-baseline", "3-candidate")),
         *(FX_EVIDENCE + "/" + name for name in FX_RETAINED_SHA),

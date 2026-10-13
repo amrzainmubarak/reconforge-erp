@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "classification": "exact-historical-synthetic-fixture-fingerprint",
+  "baseline_complete_ignore_bytes": 115246,
+  "baseline_complete_ignore_sha256": "8b58ab3f98d251a2e77c95e5569baf4f5ab2cb37fc12780486f61778a8e71460",
+  "complete_ignore_sha256": "16b256759a1334fe006322e6a6e2a2fef6830c94dc7a56c39a535da1098e2dd3",
+  "exact_suffix_utf8": "\n# Exact reviewed historical diagnostic fixtures; current-tree values stay scanned (ADR 0857).\n21fcd925db15dd9925cac650c129ab63beba199e:tests/test_browser_diagnostic_writer.py:generic-api-key:22\n6eca23f47a082a438f32db80503569b814b431f2:tests/test_browser_diagnostic_writer.py:generic-api-key:22\n",
+  "finding_count": 2,
+  "records": [
+    {
+      "commit": "21fcd925db15dd9925cac650c129ab63beba199e",
+      "path": "tests/test_browser_diagnostic_writer.py",
+      "rule_id": "generic-api-key",
+      "line": 22,
+      "history_fingerprint": "21fcd925db15dd9925cac650c129ab63beba199e:tests/test_browser_diagnostic_writer.py:generic-api-key:22",
+      "source_blob_sha256": "3074c0b0c2dbc3210a6f824f6458138449f1494d44e81a9a6a61bcfb5faafcbd",
+      "source_line_sha256": "9bb02a07774d1535e467e2d26d1359396a94196607bd48c98a91dba4be1efdee",
+      "classification": "synthetic-test-fixture-never-a-service-credential"
+    },
+    {
+      "commit": "6eca23f47a082a438f32db80503569b814b431f2",
+      "path": "tests/test_browser_diagnostic_writer.py",
+      "rule_id": "generic-api-key",
+      "line": 22,
+      "history_fingerprint": "6eca23f47a082a438f32db80503569b814b431f2:tests/test_browser_diagnostic_writer.py:generic-api-key:22",
+      "source_blob_sha256": "3074c0b0c2dbc3210a6f824f6458138449f1494d44e81a9a6a61bcfb5faafcbd",
+      "source_line_sha256": "9bb02a07774d1535e467e2d26d1359396a94196607bd48c98a91dba4be1efdee",
+      "classification": "synthetic-test-fixture-never-a-service-credential"
+    }
+  ],
+  "original_redacted_finding_artifacts": [
+    {
+      "run_id": 38475492554,
+      "artifact_id": 11854470102,
+      "zip_sha256": "163369b0d3268fd8cb42341e7500be297a045251b50aa44c05586ad71f120dd1",
+      "zip_bytes": 655
+    },
+    {
+      "run_id": 38477704143,
+      "artifact_id": 11856565136,
+      "zip_sha256": "8ed843610e66809dec5ae0cdb48d75a438b87b6313dd3a264d43a21724657b19",
+      "zip_bytes": 712
+    }
+  ],
+  "review_scope": "Exact original Git blob and line compared independently; no current-tree fingerprints, rule changes or path exclusions."
+}

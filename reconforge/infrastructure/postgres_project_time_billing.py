@@ -6,8 +6,6 @@ from dataclasses import asdict
 from typing import Any
 from uuid import uuid4
 
-from psycopg import sql
-
 from reconforge.domain.finance_posting import PostingActor, canonical_json, digest_payload, text, validation_digest
 from reconforge.domain.operational_finance import exact_minor_text
 from reconforge.domain.people_project_payroll import PeopleScope
@@ -429,6 +427,8 @@ class PostgresProjectTimeBillingRepository:
 
     def _original_rows(self, source: Mapping[str, Any], plans: list[dict[str, Any]]) -> dict[str, Any]:
         """Authorized public source and native financial rows, never personnel pay fields."""
+        from psycopg import sql
+
         entry_ids = [row["entry_id"] for row in plans]
         receipt_ids = [row["receipt_id"] for row in plans if row["receipt_id"]]
         v = source["payload"]

@@ -12473,3 +12473,43 @@ Final bundle/close TLS and integration gates remain pending. Diagnostic ANSI
 header gap is reproduced and being fixed; original raw reports stay private.
 Comparative performance deferred; transaction cost null; country packs0;
 100K/1M/multi-region HA/DR and whole-platform completion remain unproven.
+
+### Corrected enterprise acceptance source — 2026-10-14
+
+M2 PR134 is still a draft above accepted PR133. Source-qualified actual5130
+MSP HTTPS passed with nine deliberate lost responses, exact sealed command
+replay, clean unchanged source/web, owned cleanup and328-table restore with
+three tamper refusals. The WHOLE original5130 population contains12 effects,
+including2 AP effects; its ME2-only projection contains10. Earlier separate
+13-effect fixtures remain qualified to their own original populations.
+Cost3600=FG3240+scrap360+WIP0; obligation/AP1450. No latency acceptance.
+
+Actual f506 translated-amount and captured JPY/KWD precision authority gates:
+12 mandatory native passes, zero skips. Its original hosted failures are
+retained: eager optional psycopg import during Community doctor, stale native
+migration143/142 expectations against actual145/144, and one deliberately
+synthetic historical diagnostic-password scan finding. Source6db8d0f3 fixes
+these causes without removing guards or rollback/retained-privilege assertions.
+Actual optional-driver doctor red1→green1 and corrected mandatory migration
+roundtrips2 pass; current-tree dummy fixtures remain scanned. New6db Docker
+passed, while full CI and security closure are still pending; this is not
+final M2 acceptance.
+
+M3 draft PR135 adds selected original cashflow/group/project source reporting.
+All three actual265 HTTPS runs passed English/Arabic/current-source contracts,
+328-table restore/3tampers each and eight isolated downloaded-original oracle
+runs. An independent review then reproduced late whole-bundle and publication
+custody drift. The new utility checks all original/helper/proof and write-time
+command/execution/log bytes; the publisher compares the trusted returned
+manifest, refuses drift and quarantines partial output privately.155 focused
+composed cases pass; new frozen-source wire/CI acceptance is in progress.
+
+M4 same-entity inventory transfer is development only. The owned preliminary
+Draft/replay/empty-inverse cases passed2; Root's ordered146 finite structural
+MSP1/IT1 pins and two-location native dispatch require actual qualification.
+Full posting, compensation, current grants, SQL/concurrency and Studio gates
+remain pending. Unsupported reversal/correction cost classes are explicitly
+being bounded before admission. No transfer or full-ERP completion is claimed.
+Comparative performance remains deferred; cost per operation null; statutory
+country packs0. Main and the two original primary-worktree file hashes were
+reverified unchanged on2026-10-14.

@@ -13539,6 +13539,29 @@ identity; current authority denial clears displayed financial source data.
 Root owns the shared contracts, migrations, registrations and final gate.
 Comparative benchmarks remain deferred by the explicit owner instruction.
 
+### 2026-10-14 — Original custody and corrected source admission
+
+Read-only reporting must verify the bytes actually downloaded, both independent
+oracle modes, whole original membership and write-time audit artifacts. A later
+oracle or copy cannot rebaseline an earlier original/output/command. Publication
+uses the successful in-memory manifest and privately retains refused partials.
+Current authority is separately enforced by the original DB/API contracts;
+a file-only oracle is not authorization, formal close or external attestation.
+
+Keep the PostgreSQL driver optional for Community startup: import its safe SQL
+composer only in actual native evidence use. Current migration tests must assert
+the actual ordered head/count while retaining complete inverse, FORCE RLS and
+privilege-refusal checks. Exact immutable synthetic scanner fingerprints are
+reviewed individually; current source stays scanned by unchanged rules.
+
+IT1 is a finite same-entity physical transfer over existing InventoryCore. It
+cannot create valuation or GL effects, reinterpret warehouse FIFO ownership,
+silently refresh reviewed costs or admit unsupported correction histories.
+Core structural quantity FKs must bind only MSP1/IT1 and preserve MSP originals;
+all item pools precede both canonically sorted physical gates. Every posted
+inverse is independently governed and preserves the original movement.
+No new-country, performance or whole-platform claim follows from these changes.
+
 
 ### 2026-10-13 — Compatible native coordination and unknown outcome recovery
 

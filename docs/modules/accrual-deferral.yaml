@@ -1,0 +1,111 @@
+id: accrual_deferral
+name: Governed functional-currency voucher schedules
+version: 1.0.0
+maturity: experimental
+owner: Finance Core source owner
+dependencies:
+  - finance_core
+  - master_data
+  - native_financial_source_ownership_directory
+incompatible_versions: []
+data_classification: confidential_financial
+retention_policy: Immutable source, original effect membership, claims, native snapshots, commands, audit and outbox; no automatic deletion
+permissions:
+  - accrual_deferral.read
+  - accrual_deferral.prepare
+  - accrual_deferral.review
+  - accrual_deferral.post
+  - finance_core.read
+  - finance_core.manage
+  - finance_core.validate
+  - finance_core.post
+  - finance_core.reverse
+default_roles: []
+migrations:
+  - revision: 0141_pg_accrual_deferral
+    follows: 0140_pg_people_project_payroll
+    status: implementation_pending_native_migration_acceptance
+owned_tables: 10
+domain_invariants:
+  - Explicit functional currency and reviewed workspace registry snapshot binding
+  - New prepaid cash voucher, paid expense attachment, prepaid voucher attachment and expense accrual estimate are separate source modes
+  - Attachment retains exact ordinary two-line original paid voucher and never credits cash again
+  - Immutable original monetary policy, native account identity and type, dimensions, fiscal calendar tuple, source weights and exact allocation
+  - Existing Hamilton allocator with stable source ID tie break; actual currency ROUND_HALF_UP stays unchanged
+  - One to36 positive explicit tranches, at most160 plans and16 events per tranche
+  - Whole original attachment is exclusive against active ME2 or AD1 ownership under the existing serialized Core claim gate
+  - Three current distinct authenticated humans for source approval and each review/post phase
+  - Every inverse phase additionally requires current finance_core.reverse
+  - Exact posted native tranche inverse releases only its original tranche claim
+  - Cancellation release requires three-person posted cancellation and no source or tranche financial consumption
+  - Consumed source cancellation and generic attached-original inverse are refused
+  - Head references the exact latest immutable claim event through a deferred composite FK
+  - Tenant workspace organization and legal entity FORCE RLS boundaries
+  - Original native effects, claims, phase receipts, audit and outbox close in one transaction
+domain_events:
+  - accrual_deferral_prepare
+  - accrual_deferral_review
+  - accrual_deferral_post
+api_routes:
+  - GET /api/v1/accrual-deferral/catalog
+  - GET /api/v1/accrual-deferral/sources
+  - POST /api/v1/accrual-deferral/sources
+  - GET /api/v1/accrual-deferral/sources/{source_id}
+  - GET /api/v1/accrual-deferral/sources/{source_id}/evidence
+  - GET /api/v1/accrual-deferral/sources/{source_id}/evidence/export
+  - GET /api/v1/accrual-deferral/plans/{plan_id}/evidence/export
+  - GET /api/v1/accrual-deferral/plans/{plan_id}
+  - POST /api/v1/accrual-deferral/sources/{source_id}/tranches
+  - POST /api/v1/accrual-deferral/sources/{source_id}/reversals
+  - POST /api/v1/accrual-deferral/sources/{source_id}/cancellations
+  - POST /api/v1/accrual-deferral/plans/{plan_id}/review
+  - POST /api/v1/accrual-deferral/plans/{plan_id}/post
+cli_commands: []
+ui_routes:
+  - /accrual-deferral
+import_schemas:
+  - accrual-deferral-source-v1
+export_schemas:
+  - accrual-deferral-native-evidence-v1
+  - accrual-deferral-plan-evidence-v1
+synthetic_fixtures:
+  - Actual synthetic development native prepaid10001 distributed3334,3334,3333 with exact second-tranche inverse and replacement
+  - Exact existing paid expense attachment preserves original cash and Project dimensions
+  - Exact existing prepaid attachment records original membership without a fabricated additional native effect
+  - Expense accrual estimate retains explicit later next-period reversal identities
+threat_model:
+  - Duplicate cash charge through implicit original attachment
+  - Orphan Manual native GL or source inverse through reserved number or entry ID
+  - Original effect shared with manufacturing capacity or another whole original owner
+  - Current permission, grant, period or account-role changes after waits
+  - Replayed command with another actor, digest, scope or request
+  - Detached native effects, source claims, phase audit, outbox or acknowledgement
+  - Forged missing latest claim event or calendar mutation behind RLS
+benchmarks: Human comparative measurements deferred; no throughput or resource acceptance
+rollback_plan: Refuse destructive populated downgrade; restore and verify original data and separate Core directory prerequisites
+test_matrix:
+  pure: 34 original cases plus 18 artifact cases, 8 PB1/PB1C original namespace cases and 7 finite restore catalog equivalence cases; all actual passing
+  oracle_adversarial: 27 actual passing raw-anchor, isolated normal/optimized CLI, tenant, account, calendar, native-effect, inverse and claim mutations over byte-exact synthetic native fixture
+  typing_lint: actual passing Ruff and mypy on owned production files
+  native_sql: 8 actual passing development cases on current140 plus manually installed owned schema/Core fragment; an additional current qualified-scope six-effect export target passed after additive tenant projection
+  native_migration_restore: Actual complete logical empty down/reup equality and populated PG17.11 archive restore on current140 plus owned schema; all table histories and selected logical catalog matched except six frozen legacy nested-AND parse forms; ACL/owners excluded; ordered141 integration separately qualified
+  native_guard_ownership_followup: Actual frozen35 cases pass without skips; seven whole-population SQL attacks, four exact native line bounds, sixteen current read/scope checks, current inverse permission, period close/reopen, two cancellation/exclusivity orders and four RC/RR coordination races
+  native_restore_followup: Actual2 cases pass without skips; case-insensitive finite original namespace SQL boundary and restored original paid expense cycle preserves Cash10001 credit while completing five native effects
+  api: 2 actual authenticated PostgreSQL TestClient contracts passed; central registration and real wire browser acceptance pending
+  artifact_followup: 18 additional pure artifact/canonical-dimension cases passed; full and partial export paths passed inside two actual native TestClient contracts
+  native_dimension_followup: 2 actual paid-expense/prepaid attachment cases preserve native Project and separate Cash BRANCH references; both full cycles passed without another Cash effect
+  independent_oracle: 5 original native exports passed 10 isolated normal/optimized executions; current qualified-scope original six-effect export passed both modes; stdlib only
+  studio: Actual17 targeted data/component cases pass with typecheck; exact source/tenant/native effects/phase-command seals, independent users, lost ACK and stale session protection; integrated navigation and wire acceptance separate
+  browser_contract: One collected and typed HTTPS spec; two actual native cases prove all10 source tables/effects empty for all three seed users and three meaningful tamper probes reach exact immutable-owner constraint while whole evidence stays unchanged; actual browser execution pending
+  exact_weight_wire: Actual3 native TestClient contracts pass;9e18 weights stay exact text while native integer source seals and3334,3334,3333 allocation remain unchanged
+  browser: pending_real_wire_and_restored_browser_execution
+backends:
+  postgresql: experimental_development_native_proven_final_acceptance_pending
+  sqlite: unavailable
+excluded_claims:
+  - Complete consumed-source correction or reversal
+  - AP invoice or payment owner replacement
+  - Foreign currency schedule translation
+  - Country tax or statutory qualification
+  - Full IFRS or US GAAP accounting qualification
+  - Complete ERP or production qualification

@@ -38,6 +38,7 @@ from reconforge.api.errors import (
 from reconforge.api.routes import (
     access_administration,
     accounts,
+    accrual_deferral,
     audit,
     audit_administration,
     auth,
@@ -77,6 +78,7 @@ from reconforge.api.routes import (
     manufacturing_cost_control,
     manufacturing_execution,
     manufacturing_execution_v2,
+    manufacturing_supply_plan,
     master_data,
     metrics,
     notification_inbox,
@@ -90,6 +92,7 @@ from reconforge.api.routes import (
     procurement_partial,
     procurement_sourcing,
     professional_invoice_payment,
+    project_time_billing,
     receivables,
     reconciliation,
     retail_settlement,
@@ -463,10 +466,13 @@ def create_api_app(
     app.include_router(customer_returns.router, prefix="/api/v1")
     app.include_router(intercompany_operations.router, prefix="/api/v1")
     app.include_router(intercompany_fx.router, prefix="/api/v1")
+    app.include_router(accrual_deferral.router, prefix="/api/v1")
     app.include_router(manufacturing_execution.router, prefix="/api/v1")
     app.include_router(manufacturing_execution_v2.router, prefix="/api/v1")
+    app.include_router(manufacturing_supply_plan.router, prefix="/api/v1")
     app.include_router(procurement_sourcing.router, prefix="/api/v1")
     app.include_router(people_project_payroll.router, prefix="/api/v1")
+    app.include_router(project_time_billing.router, prefix="/api/v1")
     app.include_router(procurement_commitments.router, prefix="/api/v1")
     app.include_router(supplier_returns.router, prefix="/api/v1")
     app.include_router(operational_fx_tax.router, prefix="/api/v1")
@@ -535,10 +541,13 @@ def create_api_app(
         customer_returns.router,
         intercompany_operations.router,
         intercompany_fx.router,
+        accrual_deferral.router,
         manufacturing_execution.router,
         manufacturing_execution_v2.router,
+        manufacturing_supply_plan.router,
         procurement_sourcing.router,
         people_project_payroll.router,
+        project_time_billing.router,
         procurement_commitments.router,
         supplier_returns.router,
         operational_fx_tax.router,

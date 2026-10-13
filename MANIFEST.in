@@ -1442,6 +1442,7 @@ include .github/scripts/verify_stable_power_environment.py
 include tests/test_stable_power_environment_verifier.py
 include docs/security/gitleaks-public-source-digests-wave4.v1.json
 include docs/security/gitleaks-public-source-digests-wave5.v1.json
+include docs/security/gitleaks-synthetic-diagnostics-m2.v1.json
 include .gitleaks.toml
 include .gitleaksignore
 include .github/scripts/validate_supply_chain_policy.py
@@ -1488,3 +1489,23 @@ include tests/manufacturing_execution_v2_browser.py
 include tests/test_manufacturing_v2_cycle_oracle.py
 include tests/fixtures/manufacturing_v2_original_golden.json
 include tests/fixtures/manufacturing_v2_original_quality_hold.json
+include tests/fixtures/accrual-deferral-native-v1.json
+include tests/fixtures/project-time-billing-native-v1.json
+include tests/fixtures/manufacturing_supply_original_golden.json
+include .github/scripts/verify_accrual_deferral_cycle_oracle.py
+include .github/scripts/verify_project_time_billing_cycle_oracle.py
+include .github/scripts/verify_manufacturing_supply_cycle_oracle.py
+include docs/operator/manufacturing-supply-plan.md
+
+include docs/execution/ENTERPRISE_COMPLETION_M2_2026-10-13.md
+include apps/web/src/fixtures/manufacturing-supply-original-command-acks.json
+
+include tests/browser_diagnostic_redaction.py
+include tests/test_browser_diagnostic_redaction.py
+include tests/test_browser_diagnostic_writer.py
+
+include tests/test_postgres_intercompany_fx_reporting_authority.py
+
+include tests/test_postgres_intercompany_reporting_currency_precision.py
+
+include tests/test_optional_postgres_driver.py

@@ -364,6 +364,61 @@ for _method, _path, _phase in (
     _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/intercompany-fx" + _path)] = ("all", tuple(sorted(_icfx_permissions)))
 
 
+for _method, _path, _phase in (
+    ("GET", "/catalog", "read"), ("GET", "/sources", "read"), ("GET", "/sources/{source_id}", "read"),
+    ("GET", "/sources/{source_id}/evidence", "read"), ("GET", "/plans/{plan_id}", "read"),
+    ("GET", "/sources/{source_id}/evidence/export", "read"), ("GET", "/plans/{plan_id}/evidence/export", "read"),
+    ("POST", "/sources", "prepare"), ("POST", "/sources/{source_id}/tranches", "prepare"),
+    ("POST", "/sources/{source_id}/cancellations", "prepare"), ("POST", "/sources/{source_id}/reversals", "reverse"),
+    ("POST", "/plans/{plan_id}/review", "review"), ("POST", "/plans/{plan_id}/post", "post"),
+):
+    _schedule_permissions = {"accrual_deferral." + ("prepare" if _phase == "reverse" else _phase),
+                            "finance_core." + {"read": "read", "prepare": "manage", "review": "validate", "post": "post", "reverse": "manage"}[_phase]}
+    if _phase == "reverse":
+        _schedule_permissions.add("finance_core.reverse")
+    _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/accrual-deferral" + _path)] = ("all", tuple(sorted(_schedule_permissions)))
+
+_SUPPLY_READ_CONTRACT = frozenset({"manufacturing_supply_plan.read", "manufacturing_execution_v2.read",
+    "manufacturing_execution.read", "inventory.read", "finance_core.read", "budget_control.read"})
+_SUPPLY_PHASE_ADDITIONS = {
+    "read": (), "create": ("manufacturing_supply_plan.manage",),
+    "approve": ("manufacturing_supply_plan.approve", "inventory.manage"),
+    "cancel": ("manufacturing_supply_plan.approve", "inventory.manage"),
+    "handoff": ("manufacturing_supply_plan.manage", "inventory.manage", "manufacturing_execution.manage", "manufacturing_execution_v2.manage"),
+    "source-create": ("manufacturing_supply_plan.manage", "procurement_sourcing.manage", "procurement_sourcing.read", "payables.read"),
+    "source-quote": ("manufacturing_supply_plan.manage", "procurement_sourcing.manage", "procurement_sourcing.read", "payables.read"),
+    "source-open-rfq": ("manufacturing_supply_plan.approve", "procurement_sourcing.approve", "procurement_sourcing.read", "payables.read"),
+    "source-review-selection": ("manufacturing_supply_plan.approve", "procurement_sourcing.approve", "procurement_sourcing.read", "payables.read"),
+    "source-cancel": ("manufacturing_supply_plan.approve", "procurement_sourcing.approve", "procurement_sourcing.read", "payables.read"),
+    "source-award": ("manufacturing_supply_plan.post", "procurement_sourcing.award", "procurement_sourcing.read", "payables.manage", "payables.read", "budget_control.manage"),
+    "purchase-submit": ("manufacturing_supply_plan.manage", "budget_control.manage", "payables.manage"),
+    "purchase-approve": ("manufacturing_supply_plan.approve", "budget_control.manage", "payables.approve"),
+    "receive-prepare": ("manufacturing_supply_plan.manage", "budget_control.manage", "payables.manage", "inventory.manage", "inventory.valuation.manage", "finance_core.manage"),
+    "receive-review": ("manufacturing_supply_plan.approve", "budget_control.manage", "payables.approve", "inventory.post", "inventory.valuation.approve", "finance_core.validate"),
+    "receive-commit": ("manufacturing_supply_plan.post", "budget_control.manage", "payables.manage", "inventory.post", "inventory.valuation.approve", "finance_core.post"),
+    "invoice-match": ("manufacturing_supply_plan.manage", "budget_control.manage", "payables.manage", "payables.match"),
+    "invoice-approve": ("manufacturing_supply_plan.approve", "budget_control.manage", "payables.approve"),
+    "invoice-prepare": ("manufacturing_supply_plan.manage", "budget_control.manage", "payables.manage", "finance_core.manage"),
+    "invoice-review": ("manufacturing_supply_plan.approve", "budget_control.manage", "payables.approve", "finance_core.validate"),
+    "invoice-post": ("manufacturing_supply_plan.post", "budget_control.manage", "payables.approve", "finance_core.post"),
+}
+for _method, _path, _phase in (
+    ("GET", "/plans", "read"), ("GET", "/plans/{identifier}", "read"),
+    ("GET", "/requirements/{identifier}", "read"),
+    ("GET", "/plans/{identifier}/requisitions/{requisition_id}", "read"),
+    ("GET", "/plans/{identifier}/purchases/{order_id}", "read"),
+    ("POST", "/plans", "create"), ("POST", "/plans/{identifier}/approve", "approve"),
+    ("POST", "/plans/{identifier}/cancel", "cancel"), ("POST", "/plans/{identifier}/handoff", "handoff"),
+    ("POST", "/plans/{identifier}/requisitions", "source-create"),
+    *(("POST", "/plans/{identifier}/requisitions/{requisition_id}/" + action, "source-" + action)
+      for action in ("open-rfq", "quote", "review-selection", "award", "cancel")),
+    *(("POST", "/plans/{identifier}/purchases/{order_id}/" + action, action)
+      for action in ("purchase-submit", "purchase-approve", "receive-prepare", "receive-review", "receive-commit",
+                     "invoice-match", "invoice-approve", "invoice-prepare", "invoice-review", "invoice-post")),
+):
+    _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/manufacturing-supply-plan" + _path)] = (
+        "all", tuple(sorted(_SUPPLY_READ_CONTRACT | set(_SUPPLY_PHASE_ADDITIONS[_phase]))))
+
 _PEOPLE_PHASE_CONTRACTS = {
     "personnel": frozenset({"people_project_payroll.personnel", "people_project_payroll.read_sensitive"}),
     "manage": frozenset({"people_project_payroll.manage"}),
@@ -375,6 +430,26 @@ _PEOPLE_PHASE_CONTRACTS = {
     "read": frozenset({"people_project_payroll.read"}),
     "read_sensitive": frozenset({"people_project_payroll.read", "people_project_payroll.read_sensitive", "finance_core.read"}),
 }
+_PROJECT_BILLING_PHASE_CONTRACTS = {
+    "read": frozenset({"project_time_billing.read"}),
+    "evidence": frozenset({"project_time_billing.read", "finance_core.read", "people_project_payroll.read", "receivables.read"}),
+    "manage": frozenset({"project_time_billing.manage", "receivables.read"}),
+    "approve_price": frozenset({"project_time_billing.approve_price"}),
+    "prepare": frozenset({"project_time_billing.prepare", "finance_core.manage", "receivables.manage", "people_project_payroll.read"}),
+    "collect": frozenset({"project_time_billing.collect", "finance_core.manage", "receivables.receive"}),
+    "review": frozenset({"project_time_billing.review", "finance_core.validate", "receivables.manage"}),
+    "post": frozenset({"project_time_billing.post", "finance_core.post", "receivables.approve", "receivables.receive"}),
+}
+for _method, _path, _phase in (
+    ("POST", "/prices", "manage"), ("POST", "/prices/{price_id}/approve", "approve_price"),
+    ("POST", "/invoices", "prepare"), ("POST", "/invoices/{invoice_id}/collections", "collect"),
+    ("POST", "/plans/{plan_id}/review", "review"), ("POST", "/plans/{plan_id}/post", "post"),
+    ("POST", "/plans/{plan_id}/cancel", "prepare"), ("GET", "/plans/{plan_id}", "evidence"),
+    ("GET", "/invoices/{invoice_id}/evidence", "evidence"), ("GET", "/catalog", "evidence"),
+):
+    _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/project-time-billing" + _path)] = (
+        "all", tuple(sorted(_PROJECT_BILLING_PHASE_CONTRACTS[_phase])))
+
 for _method, _path, _phase in (
     ("POST", "/employees", "personnel"), ("POST", "/employees/{employee_id}/employment", "personnel"),
     ("POST", "/projects", "manage"), ("POST", "/times", "manage"), ("POST", "/times/{time_id}/approve", "approve_time"),
@@ -474,6 +549,13 @@ def validate_authorization_surface(
 
     for contract in normalized_contracts:
         key = (contract.method, contract.path)
+        expected = _CRITICAL_ROUTE_CONTRACTS.get(key)
+        if expected is not None and (contract.mode, contract.permissions) != expected:
+            raise ValueError(
+                "Critical API route authorization contract drifted: "
+                f"{contract.method} {contract.path} expected {expected}, "
+                f"got {(contract.mode, contract.permissions)}."
+            )
         if contract.method not in _MUTATING_METHODS:
             continue
         if contract.mode == "public" and key not in _PUBLIC_MUTATION_ALLOWLIST:
@@ -484,10 +566,3 @@ def validate_authorization_surface(
             raise ValueError(f"Mutating API route lacks a permission contract: {contract.method} {contract.path}.")
         if contract.mode not in {"all", "any", "dynamic", "identity", "public", "scim"}:
             raise ValueError(f"Mutating API route has unsupported authorization mode: {contract.method} {contract.path}.")
-        expected = _CRITICAL_ROUTE_CONTRACTS.get(key)
-        if expected is not None and (contract.mode, contract.permissions) != expected:
-            raise ValueError(
-                "Critical API route authorization contract drifted: "
-                f"{contract.method} {contract.path} expected {expected}, "
-                f"got {(contract.mode, contract.permissions)}."
-            )

@@ -1,0 +1,5 @@
+.ad-tranche { margin-block: 1rem; padding-block: 1rem; border-block-start: 1px solid var(--border-color, #d5dbe4); }
+.ad-proof { white-space: pre-wrap; overflow-wrap: anywhere; max-block-size: 32rem; overflow: auto; text-align: start; }
+.ad-source-table { overflow-x: auto; }
+.ad-source-table table { width: 100%; border-collapse: collapse; }
+.ad-source-table th, .ad-source-table td { padding: .65rem; text-align: start; border-block-end: 1px solid var(--border-color, #d5dbe4); }

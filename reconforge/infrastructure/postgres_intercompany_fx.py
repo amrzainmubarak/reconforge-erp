@@ -89,6 +89,18 @@ class PostgresIntercompanyFxRepository:
         return {"workspace_id": request["workspace_id"], "organization_id": request["organization_id"],
                 **{book + "_entity_id": request[book]["legal_entity_id"] for book in BOOKS}}
 
+    def _authorize_reporting(self, actor: PostingActor, operation: str, source: Mapping[str, Any], amount: int) -> None:
+        """A whole-source response exposes reporting values across all three books."""
+        if amount <= 0:
+            return
+        request = source["request"]
+        for book in BOOKS:
+            scope = {"workspace_id": request["workspace_id"], "organization_id": request["organization_id"],
+                "legal_entity_id": request[book]["legal_entity_id"], "amount_minor": amount,
+                "currency_precision": source["policies"]["adjustment"]["currency_precision"]}
+            for permission in ("intercompany_fx." + operation, PERMISSIONS[operation]):
+                self.owner._actor(actor, permission, scope, mutation=operation != "read")
+
     def _authorize(self, actor: PostingActor, operation: str, source: Mapping[str, Any], plan: Mapping[str, Any] | None = None, *, lock: bool = False) -> None:
         request = source.get("request", source)
         for book in BOOKS:
@@ -123,6 +135,10 @@ class PostgresIntercompanyFxRepository:
              [request[book]["legal_entity_id"] for book in BOOKS])))
         if len({(row["scope_type"], row["scope_id"]) for row in grants}) != 5:
             fail("Current persisted workspace, organization and three entity grants are required.", "intercompany_fx_scope_denied")
+        translations = (plan or {}).get("equation", {}).get("translations", {})
+        reporting_amount = max([0, *(abs(row["balance_minor"]) for translation in translations.values()
+            for row in translation["accounts"])])
+        self._authorize_reporting(actor, operation, source, reporting_amount)
 
     def _parents(self, request: Mapping[str, Any], period_ids: Mapping[str, str], *, require_open: bool = True) -> None:
         if set(period_ids) != set(BOOKS):
@@ -539,4 +555,9 @@ class PostgresIntercompanyFxRepository:
             result = {**report, "source_effect_ids": sorted({effect for ids in plan["equation"]["native_membership"].values() for effect in ids}),
                 "native_adjustment_effect_ids": sorted({row["effect_id"] for row in adjustment})}
             result.pop("report_digest", None)
+            reporting_amount = max([abs(result["cash_net_movement_minor"]), abs(result["cta_minor"]),
+                *(abs(row["balance_minor"]) for row in result["trial_balance"]),
+                *(abs(value) for key, value in result["balance_sheet"].items() if key.endswith("_minor")),
+                *(abs(value) for value in result["income_statement"].values())])
+            self._authorize_reporting(actor, "read", source, reporting_amount)
             return {**result, "report_digest": digest_payload(result)}

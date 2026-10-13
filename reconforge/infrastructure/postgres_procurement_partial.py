@@ -38,6 +38,7 @@ from reconforge.infrastructure.postgres_procurement_operations import (
     json_value,
 )
 from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope
+from reconforge.infrastructure.source_participant_admission import require_manufacturing_supply_owner
 from reconforge.platform.common import platform_id
 from reconforge.platform.inventory_values import quantity_to_scaled
 
@@ -45,7 +46,7 @@ OPERATIONS = ("submit-order", "approve-order", "review-receipt", "receive", "app
 
 
 class PostgresProcurementPartialRepository:
-    def __init__(self, connection: Any, tenant_id: str) -> None:
+    def __init__(self, connection: Any, tenant_id: str, *, _supply_participant: object | None = None) -> None:
         self.connection = connection
         self.shared = PostgresProcurementOperationsRepository(connection, tenant_id)
         self.tenant_id = self.shared.tenant_id
@@ -53,6 +54,7 @@ class PostgresProcurementPartialRepository:
         self.receipt_after = 0
         self.invoice_after = 0
         self._commitment_participant: object | None = None
+        self._supply_participant = _supply_participant
 
     def _one(self, query: str, arguments: tuple[Any, ...]) -> dict[str, Any]:
         result = self.connection.execute(query, arguments).fetchone()
@@ -66,6 +68,8 @@ class PostgresProcurementPartialRepository:
         return self._one(query, (self.tenant_id, exact_text(order_id)))
 
     def _authorize(self, row: Mapping[str, Any], actor: PostingActor, operation: str) -> None:
+        require_manufacturing_supply_owner(self.connection, self.tenant_id, str(row["id"]),
+                                           str(row.get("number", row["request_json"]["number"])), self._supply_participant)
         self.shared._authorize(row, actor, operation)
         request = row["request_json"]
         if str(request["number"]).startswith("BPC1-"):
@@ -144,6 +148,8 @@ class PostgresProcurementPartialRepository:
             raise ProcurementPartialError("procurement_partial_version_invalid", "A positive expected version is required.")
         self._scope_transaction()
         row = self._order(order_id)
+        require_manufacturing_supply_owner(self.connection, self.tenant_id, order_id,
+                                           row["number"], self._supply_participant)
         authority = {"prepare-receipt-line": "prepare-receipt", "match-invoice-lines": "match-invoice"}.get(operation, operation)
         self._authorize(row, actor, authority)
         digest, replay = self._command(row, command_id, operation, payload, actor)
@@ -191,6 +197,8 @@ class PostgresProcurementPartialRepository:
         return response
 
     def create(self, request: ProcurementPreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
+        require_manufacturing_supply_owner(self.connection, self.tenant_id, request.number,
+                                           request.number, self._supply_participant)
         request = normalize_order(request)
         _, total = line_total(request.quantity, request.unit_price_minor)
         with self.connection.transaction():
@@ -228,6 +236,8 @@ class PostgresProcurementPartialRepository:
         with self.connection.transaction():
             self._scope_transaction()
             parent = self._order(order_id)
+            require_manufacturing_supply_owner(self.connection, self.tenant_id, order_id,
+                                               parent["number"], self._supply_participant)
             if parent.get("multiline", False):
                 raise ProcurementPartialError("procurement_partial_line_required", "Select an actual enterprise purchase line for receiving.")
             request, amount = normalize_part(request, parent["request_json"]["unit_price_minor"])
@@ -303,6 +313,9 @@ class PostgresProcurementPartialRepository:
         reason = exact_text(reason, maximum=500)
         payload = {"expected_version": expected_version, "reason": reason, "document_id": document_id}
         with self.connection.transaction():
+            initial = self._order(order_id)
+            require_manufacturing_supply_owner(self.connection, self.tenant_id, order_id,
+                                               initial["number"], self._supply_participant)
             if operation == "post-accrual":
                 self._scope_transaction()
             if operation == "post-accrual" and str(self._order(order_id)["number"]).startswith("BPC1-"):
@@ -566,6 +579,8 @@ class PostgresProcurementPartialRepository:
             WHERE r.tenant_id=%s AND r.order_id=%s AND p.total_value_minor<>r.total_minor) AS charged""", (self.tenant_id, order_id)).fetchone()["charged"] is True
 
     def create_multiline(self, request: MultilineProcurementPreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
+        require_manufacturing_supply_owner(self.connection, self.tenant_id, request.number,
+                                           request.number, self._supply_participant)
         request, total = normalize_multiline(request)
         header = asdict(request)
         header.pop("lines")
@@ -627,6 +642,9 @@ class PostgresProcurementPartialRepository:
                              command_id: str, actor: PostingActor, _source_owner: object | None = None) -> dict[str, Any]:
         with self.connection.transaction():
             self._scope_transaction()
+            initial = self._order(order_id)
+            require_manufacturing_supply_owner(self.connection, self.tenant_id, order_id,
+                                               initial["number"], self._supply_participant)
             line = self._one("SELECT * FROM reconforge.procurement_partial_order_lines WHERE tenant_id=%s AND order_id=%s AND id=%s",
                 (self.tenant_id, order_id, exact_text(line_id)))
             request, amount = normalize_part(request, line["unit_price_minor"])
@@ -687,6 +705,9 @@ class PostgresProcurementPartialRepository:
         request = normalize_invoice_lines(request)
         with self.connection.transaction():
             self._scope_transaction()
+            initial = self._order(order_id)
+            require_manufacturing_supply_owner(self.connection, self.tenant_id, order_id,
+                                               initial["number"], self._supply_participant)
             normalized = []
             originals = []
             total = 0

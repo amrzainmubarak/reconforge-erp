@@ -1,34 +1,61 @@
 schema_version: 2
-updated_at: "2026-10-13"
+updated_at: "2026-10-14"
 phase: "Phase 4 — Global Capability Expansion"
-active_sprint: "Enterprise M1 operating cycles and separate dependency-driven M2, performance measurement deferred"
+active_sprint: "Accepted M1 code/source gates; M2 original supply schedules and Project AR; separate M3 source reporting; performance deferred"
 snapshot:
-  evidence_base_commit: "542d42822d88613d784a32392416b7acd5e14c2d"
+  evidence_base_commit: "bcc440896e1f499f10095a5cb32a04d98e7e57c1"
   policy_change_commit: "the commit containing this file"
   published: true
-  publication: "Draft PR131 actual542 quality/source closure above PR130 preserves PR129-124; M1 frozen acceptance pending; comparative performance deferred and false"
+  publication: "Draft PR133 bcc44089 code/source gates accepted above PR131; final body publication confirmed by independent original v9 GET; M2/M3 final acceptance pending; performance deferred and false"
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-ENTERPRISE-M2-ACCEPTANCE-014
+    depends_on: [AMR-ENTERPRISE-M2-001, AMR-ENTERPRISE-M2-002, AMR-ENTERPRISE-M2-003]
+    priority: P0
+    area: frozen-enterprise-source-acceptance
+    title: Close original CI Docker security migration and source-qualified financial receipts without counting prior failures as passes
+    status: in_progress
+  - id: AMR-ENTERPRISE-M3-CUSTODY-014
+    depends_on: [AMR-ENTERPRISE-M2-ACCEPTANCE-014]
+    priority: P0
+    area: original-reporting-custody
+    title: Accept actual downloaded group cashflow and Project source-close originals with whole write-time custody and private diagnostic boundaries
+    status: in_progress
+  - id: AMR-ENTERPRISE-M4-TRANSFER-014
+    depends_on: [AMR-ENTERPRISE-M2-002, AMR-ENTERPRISE-M3-CUSTODY-014]
+    priority: P0
+    area: governed-physical-stock-transfer
+    title: Complete same-entity two-warehouse transfer and separately governed inverse with original FIFO GL preservation and finite structural custody
+    status: in_progress
+  - id: AMR-ENTERPRISE-CR2-CONTRACT-014
+    depends_on: [AMR-ENTERPRISE-M4-TRANSFER-014, AMR-WAVE4-001]
+    priority: P1
+    area: cumulative-original-customer-credit-restoration
+    title: Qualify append-only partial original stock credits collections and refunds only after finite native AR and valuation companion contracts
+    status: planned
   - id: AMR-ENTERPRISE-M1-001
     depends_on: [AMR-WAVE5-001]
     priority: P0
     area: manufacturing-quality-costing
     title: Close inspected ME2 production and original expense ownership through Studio native GL concurrency and restore
-    status: in_progress
+    status: completed
+    exit_evidence: "Frozen bcc44089 original CI38330935854/48 jobs, 1620 mandatory native cases,18 original301-table HTTPS restores,6 isolated source oracles; closureSHA6de3768e1ec93f857a6ed754161b1d57255f5e2a49077684a85bf0aa633432fe. Only declared original source cycles are accepted; resources/statutory/global completion remain unproven."
   - id: AMR-ENTERPRISE-M1-002
     depends_on: [AMR-WAVE5-002]
     priority: P0
     area: corporate-fx-consolidation
     title: Close paired foreign trade settlement revaluation translation elimination and original native evidence
-    status: in_progress
+    status: completed
+    exit_evidence: "Frozen bcc44089 original CI38330935854/48 jobs, 1620 mandatory native cases,18 original301-table HTTPS restores,6 isolated source oracles; closureSHA6de3768e1ec93f857a6ed754161b1d57255f5e2a49077684a85bf0aa633432fe. Only declared original source cycles are accepted; resources/statutory/global completion remain unproven."
   - id: AMR-ENTERPRISE-M1-003
     depends_on: [AMR-GLOBAL-001]
     priority: P0
     area: people-project-wage-accounting
     title: Close private personnel approved time budget wages partial cash and role-qualified restored evidence
-    status: in_progress
+    status: completed
+    exit_evidence: "Frozen bcc44089 original CI38330935854/48 jobs, 1620 mandatory native cases,18 original301-table HTTPS restores,6 isolated source oracles; closureSHA6de3768e1ec93f857a6ed754161b1d57255f5e2a49077684a85bf0aa633432fe. Only declared original source cycles are accepted; resources/statutory/global completion remain unproven."
   - id: AMR-ENTERPRISE-M2-001
     depends_on: [AMR-ENTERPRISE-M1-002]
     priority: P0
@@ -40,7 +67,7 @@ tasks:
     priority: P0
     area: supply-planning
     title: Connect approved net material demand to existing sourcing budget purchase receipt and manufacturing reservations
-    status: planned
+    status: in_progress
   - id: AMR-ENTERPRISE-M2-003
     depends_on: [AMR-ENTERPRISE-M1-003]
     priority: P0
@@ -10319,3 +10346,17 @@ tasks:
       available on this Windows host, so full native restore, promotion,
       cross-version recovery, key custody, RPO/RTO, HA/DR, and production
       recovery claims remain open.
+  - id: AMR-ENTERPRISE-M3-001
+    depends_on: [AMR-ENTERPRISE-M1-002, AMR-ENTERPRISE-M2-001]
+    priority: P0
+    area: original-source-cashflow
+    title: Verify explicit original-source operating and FX Cash membership with bounded authenticated export and real HTTPS
+    status: in_progress
+    exit_evidence: "Owned native143 original3 cases and328-table restore pass; root real TLS view200 passed but download gate failed and is under correction. No final M3 acceptance or whole-group statutory claim."
+  - id: AMR-ENTERPRISE-M3-002
+    depends_on: [AMR-ENTERPRISE-M2-003]
+    priority: P0
+    area: project-original-reconciliation
+    title: Reconcile original public approved time wage Project cost customer-priced revenue and separately qualified whole-document Cash
+    status: in_progress
+    exit_evidence: "Owned original native/API source evidence and independent integer oracle; root automatically registered ALL4 GET and bilingual Studio pass targeted contracts51 React cases. Real TLS/final-source gate pending."

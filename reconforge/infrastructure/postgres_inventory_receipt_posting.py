@@ -44,6 +44,7 @@ from reconforge.infrastructure.postgres_finance_posting import (
     records,
 )
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
+from reconforge.infrastructure.postgres_inventory_quantity_coordination import lock_inventory_quantity_pools
 from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope
 from reconforge.infrastructure.source_participant_admission import source_participant_type
 from reconforge.io.inventory_receipt_posting import decode_receipt_json, encode_receipt_json
@@ -514,6 +515,8 @@ class PostgresInventoryReceiptPostingRepository:
 
     def _locks(self, plan: ReceiptPlan) -> None:
         scope, source = plan["scope"], plan["source"]
+        lock_inventory_quantity_pools(self.connection, self.tenant_id, scope["workspace_id"],
+                                      scope["legal_entity_id"], (source["item_id"],))
         # These literals intentionally match legacy physical and FIFO writers.
         for key in (f"{scope['workspace_id']}|{scope['legal_entity_id']}|{source['location_id']}|{source['item_id']}|",
                     f"{scope['legal_entity_id']}|{source['item_id']}|"):

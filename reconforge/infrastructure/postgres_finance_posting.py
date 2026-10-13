@@ -431,12 +431,14 @@ class PostgresFinancePostingRepository:
         reason = text(reason, "reason", maximum=500)
         with self._transaction(write=True):
             entry = posting_entry(self.connection, self.tenant_id, text(entry_id, "entry_id"))
-            if entry["entry_number"].upper().startswith(("ME2W-", "ME2R-", "ME2P-", "ME2K-", "ME2X-")) or entry["id"].upper().startswith(("ME2W-", "ME2R-", "ME2P-", "ME2K-", "ME2X-")):
+            if entry["entry_number"].upper().startswith(("ME2W-", "ME2R-", "ME2P-", "ME2K-", "ME2X-", "MSP1-", "MSP1D-", "MSP1K-", "MSP1Q-")) or entry["id"].upper().startswith(("ME2W-", "ME2R-", "ME2P-", "ME2K-", "ME2X-", "MSP1-", "MSP1D-", "MSP1K-", "MSP1Q-")):
                 raise FinancePostingError("posting_source_unsupported", "Engineering definitions and held production cannot be posted as financial sources.")
             enterprise_sources: tuple[tuple[tuple[str, ...], ParticipantKind], ...] = (
                 (("ME2-", "ME2C-"), "manufacturing-v2-post"),
                 (("IC2-", "IC2S-", "IC2R-", "IC2E-"), "intercompany-fx"),
                 (("HC1-", "HC1P-"), "people-payroll"),
+                (("AD1-", "AD1R-"), "accrual-deferral"),
+                (("PB1-", "PB1C-"), "project-billing"),
             )
             for prefixes, kind in enterprise_sources:
                 if entry["entry_number"].upper().startswith(prefixes) or entry["id"].upper().startswith(prefixes):
@@ -657,6 +659,12 @@ class PostgresFinancePostingRepository:
                     self.connection, self.tenant_id, source["id"], original["id"], number
                 ):
                     raise FinancePostingError("posting_source_unsupported", "Foreign intercompany sources require their exact reviewed native inverse.")
+            if source["entry_number"].upper().startswith(("AD1-", "AD1R-")) or source["id"].upper().startswith(("AD1-", "AD1R-")):
+                participant_type = source_participant_type("accrual-deferral")
+                if participant_type is None or not isinstance(_source_owner, participant_type) or not _source_owner.admits_reversal(
+                    self.connection, self.tenant_id, source["id"], original["id"], number
+                ):
+                    raise FinancePostingError("posting_source_unsupported", "Accrual and deferral sources require their exact reviewed native inverse.")
             if source["entry_number"].upper().startswith("FX1-") or source["id"].upper().startswith("FX1-"):
                 from reconforge.infrastructure.postgres_operational_fx_tax import _FxPostingParticipant
 
@@ -664,7 +672,7 @@ class PostgresFinancePostingRepository:
                     self.connection, self.tenant_id, source["id"], original["id"], number
                 ):
                     raise FinancePostingError("posting_source_unsupported", "Foreign sources require their exact reviewed source-owned inverse.")
-            if source["entry_number"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-", "ME1-", "ME1C-", "IC1-", "ME2-", "ME2C-", "HC1-", "HC1P-")) or source["id"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-", "ME1-", "ME1C-", "IC1-", "ME2-", "ME2C-", "HC1-", "HC1P-")):
+            if source["entry_number"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-", "ME1-", "ME1C-", "IC1-", "ME2-", "ME2C-", "HC1-", "HC1P-", "PB1-", "PB1C-")) or source["id"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-", "ME1-", "ME1C-", "IC1-", "ME2-", "ME2C-", "HC1-", "HC1P-", "PB1-", "PB1C-")):
                 raise FinancePostingError(
                     "posting_source_unsupported", "Operational sources require a reviewed native source inverse."
                 )

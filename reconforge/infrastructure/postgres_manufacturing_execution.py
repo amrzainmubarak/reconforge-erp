@@ -28,6 +28,7 @@ from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.infrastructure.postgres_finance_posting import posting_entry, posting_snapshot, records
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
+from reconforge.infrastructure.postgres_inventory_quantity_coordination import lock_inventory_quantity_pools
 from reconforge.infrastructure.postgres_inventory_receipt_posting import PostgresInventoryReceiptPostingRepository
 from reconforge.infrastructure.postgres_operational_finance import PostgresOperationalFinanceRepository
 from reconforge.platform.common import platform_id
@@ -290,6 +291,8 @@ class PostgresManufacturingExecutionRepository:
     def _inventory_locks(self, order: Mapping[str, Any]) -> None:
         pairs = {(line["item_id"], order["component_location_id"]) for line in order["requirements"]}
         pairs.add((order["output_item_id"], order["finished_location_id"]))
+        lock_inventory_quantity_pools(self.connection, self.tenant_id, str(order["workspace_id"]),
+                                      str(order["legal_entity_id"]), (str(item) for item, _ in pairs))
         for item, location in sorted(pairs):
             self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))", (f"{order['workspace_id']}|{order['legal_entity_id']}|{location}|{item}|",))
         for item in sorted({item for item, _ in pairs}):

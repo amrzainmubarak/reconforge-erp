@@ -1,0 +1,96 @@
+id: manufacturing-supply-plan
+name: Original pre-stock manufacturing demand and exclusive supply custody
+version: 1.0.0
+maturity: experimental
+owner: ReconForge manufacturing
+dependencies: [manufacturing-execution, manufacturing-execution-v2, procurement-sourcing, procurement-commitments, procurement-partial, inventory-core, inventory-receipt-posting, finance-posting, budget-control, identity, scope-authority]
+incompatible_versions: []
+data_classification: authorized-financial-operational-records-and-synthetic-fixtures
+retention_policy: immutable-original-demand-coverage-claims-commands-native-audit-history
+permissions: [manufacturing_supply_plan.read, manufacturing_supply_plan.manage, manufacturing_supply_plan.approve, manufacturing_supply_plan.post]
+default_roles: []
+migrations: [0142_pg_manufacturing_supply]
+domain_invariants:
+  - One actual approved BOM/routing pair creates engineering demand without inventing a movement, reservation or financial effect.
+  - Gross requirements expand exactly in retained original base UOM and precision; free physical stock and unallocated valued FIFO bound exclusive on-hand custody.
+  - Cumulative requisitions claim only the original net shortage and retain ordinary SRC source contracts through a versioned planned-origin companion.
+  - Original source IDs, price ceilings, scope, currency policy and effective engineering remain immutable.
+  - Actual independently posted receipts alone create source-owned received quantities and Core quantity guards.
+  - Native three-human receipt and AP publication retain exact historical ACK, audit and outbox.
+  - Native AP publication and budget commitment consumption occur atomically through BPC.
+  - Handoff requires complete original stock coverage and fully accrued original awarded shortage; native ME1 INSERT transfers exact guards before existing reservations/capacity checks in one transaction.
+  - Actual production date is explicitly recorded in the handoff request and cannot precede original planning or any acquired receipt; original planning digest is preserved.
+  - Failed native ME2 expense admission rolls back ME1 creation and all quantity custody releases.
+  - Every original stock release requires the exact terminal source command, human, reason, version and native target.
+  - Generic unowned SRC/PP paths refuse the planned namespace before protected planner queries; ordinary sources preserve original paths.
+domain_events: [create, approve, cancel, source-create, source-open-rfq, source-quote, source-review-selection, source-award, source-cancel, purchase-submit, purchase-approve, receive-prepare, receive-review, receive-commit, invoice-match, invoice-approve, invoice-prepare, invoice-review, invoice-post, handoff]
+api_routes:
+  - /api/v1/manufacturing-supply-plan/plans
+  - /api/v1/manufacturing-supply-plan/plans/{id}
+  - /api/v1/manufacturing-supply-plan/requirements/{id}
+  - /api/v1/manufacturing-supply-plan/plans/{id}/approve
+  - /api/v1/manufacturing-supply-plan/plans/{id}/cancel
+  - /api/v1/manufacturing-supply-plan/plans/{id}/handoff
+  - /api/v1/manufacturing-supply-plan/plans/{id}/requisitions
+  - /api/v1/manufacturing-supply-plan/plans/{id}/requisitions/{requisition_id}/{operation}
+  - /api/v1/manufacturing-supply-plan/plans/{id}/purchases/{order_id}
+  - /api/v1/manufacturing-supply-plan/plans/{id}/purchases/{order_id}/{operation}
+cli_commands: []
+ui_routes: [/manufacturing-supply-plan]
+import_schemas: [manufacturing-supply-plan-v1, manufacturing-planned-requirement-v1, manufacturing-supply-coverage-v1, manufacturing-planned-origin-v2]
+export_schemas: [manufacturing-supply-plan-v1, manufacturing-supply-proof-v1, manufacturing-supply-oracle-result-v1, manufacturing-supply-command-ack-v1]
+synthetic_fixtures:
+  - Original BOM10 needs ITEM2EA and MATERIAL3KG; actual starting ITEM1EA/value1200 and MATERIAL0.500KG/value50 produce shortage ITEM1EA and MATERIAL2.500KG/value1450.
+  - Planned golden material2700 plus labor600 plus overhead300 equals accepted FG3240 plus abnormal loss360 plus WIP0; final native gate is explicitly source-qualified.
+threat_model: [duplicate-net-demand, unrelated-receipt-custody, hidden-master-reinterpretation, unowned-native-command-bypass, stale-human-scope-or-amount-authority, detached-stock-release, self-approval, failed-native-handoff, altered-native-ACK, repeated-financial-effect]
+benchmarks: []
+rollback_plan: Empty additive schema rollback restores Core dispatch; populated original source or quantity history refuses atomically. No deletion or fabricated inverse is supplied.
+test_matrix:
+  pure: tests/test_manufacturing_supply_plan.py
+  postgresql: tests/test_postgres_manufacturing_supply_plan.py
+  api: tests/test_manufacturing_supply_plan_api_contract.py
+  studio: apps/web/src/manufacturing-supply-data.test.ts; apps/web/src/components/ManufacturingSupplyPlanPage.test.tsx; apps/web/src/components/ManufacturingSupplyPurchasing.test.tsx
+  original_oracle: tests/test_manufacturing_supply_cycle_oracle.py
+  required_native_browser: apps/web/live/manufacturing-supply-cycles.spec.ts
+  browser_seed_and_restore: tests/manufacturing_supply_browser.py
+  native_browser_seed: tests/test_postgres_manufacturing_supply_browser_seed.py
+  native_current_financial_read_authority: tests/test_postgres_manufacturing_supply_read_authority.py
+  optimized_argument_guards: tests/test_manufacturing_supply_argument_guards.py
+  complete_closure_delegation: tests/test_manufacturing_supply_closure_contract.py; tests/test_postgres_manufacturing_supply_closure.py; tests/test_postgres_manufacturing_supply_closure_authority.py
+backend_support:
+  postgres: native-postgresql
+  sqlite: unavailable-native-ME1-and-SRC-dependencies
+closure_candidate:
+  implementation: reconforge/infrastructure/postgres_manufacturing_supply_closure.py
+  adoption: owned-native-qualified-pending-root-ordered-migration-and-integrated-acceptance
+  changes:
+    - Each complete owner invocation validates each distinct requisition once after all original requirements, instead of repeating its full closure for each companion line.
+    - Existing pp_verify_order retains complete native budget commitment closure; the owned purchase closure delegates once without repeating pc_close.
+    - Existing inventory_quantity_check_capacity retains complete native FIFO validation; the owned requirement closure delegates once without repeating its immediately consecutive FIFO check.
+  preserved:
+    - Every deferred source and Core custody trigger still invokes complete current owner closure; no trigger, native source guard, lock, current grant or financial amount check is removed.
+    - Every historical version still invokes the unchanged standalone msp_evidence validator; no cache, custom GUC, temporary result or whole-history helper is adopted.
+    - Original source, native command, historical ACK, audit/outbox and exact monetary/quantity values remain unchanged; populated inverse restores both original function bodies without rewriting records.
+  qualification:
+    - Original on-hand replay and blind native withdrawal/cancel passed2 native cases in the first retained packet; its subsequent restore-comparison harness failure remains recorded separately.
+    - Corrected affected gate passed12 mandatory native cases at frozen Python source929a18fdf16f6aaadef6f9409021d128b0ab5c6528a27c9bf6de6337082c6bff, including full shortage receipts/AP/budget/ME2/GL, seven ordinary-role adversarial restore refusals, populated function inverse, immutable replay, exposed unit-price caps and four queued current permission/entity withdrawals. Every restore refusal preserves all original rows and coordination gate versions.
+    - Exact delegate body/signature/PLpgSQL/VOID/INVOKER/search-path/volatility/parallel metadata admission passed8 actual commented, early-return and metadata drift refusals before either owned function replacement. Actual independent human pool contention passed1 case and recomputed the second plan with zero available on-hand custody after the first committed. Final frozen Python source470890aa7c9225f9c599bf192e1aeb0fb7f8f2315eebde772510056e68c947d6; all9 mandatory cases have0 skips, xfails or xpasses.
+    - Actual fresh original supply SQL export SHAa57e9e2c0a6de9b88fb494a0e2ca06c7fd4cff978bc508716a6fda757be291fb verifies independently with stdlib Python-I and Python-I-O; both produce identical SHA337eccfa025e2e13be3c99fc1966cc1062d49f6de90e4682ebc2a24abd64a19f and exact3600=3240+360+0,13 native GL effects and14350 balanced turnover.
+  latency_boundary: The retained diagnostic native packets establish unresolved deferred commit work; no response latency or performance acceptance is claimed and the browser transport deadline remains 20 seconds.
+claim_boundary: Experimental bounded native supply with ordered142 schema and mounted Studio/API. Authenticated HTTP/TLS browser, populated restore and final frozen integrated acceptance remain root-owned pending gates. No MRP capacity optimizer, throughput, banking, statutory or ERP replacement claim.
+runtime_acceptance:
+  - Actual source-qualified complete native shortage cycle passed1 case with0 skips, xfails or xpasses at development source digest9c4b1db9a90109066d2d591d219d886fb5ebda6305eaf185ef7590b14ef4a703.
+  - Actual partial receipts and two AP invoices consumed1450 from the native budget; original failed handoff rolled back target order and all source custody releases.
+  - Material2700 plus Labor600 plus Overhead300 equals FG3240 plus abnormal loss360 plus residual WIP0;9 actual accepted units and1 rejected unit.
+  - Original native full-cycle handoff fixture verifies its exact source and requirement/coverage seals in the Studio parser.
+  - Thirty-three focused pure/API cases, eleven Studio data/React cases and TypeScript typecheck passed developmentally; root integration gates remain separate.
+  - Final adjacent native gate passed4 cases with0 skips, xfails or xpasses; exact owned native requisition read received a separate passing source-qualified gate.
+  - Standalone original synthetic native snapshot browser QA passed Arabic/English at320/768/1024/1440 with no page overflow, console errors or selected WCAG axe violations; this is explicitly offline fixture QA, not authenticated native HTTP/TLS acceptance.
+  - Original native supply SQL population export passed1 mandatory case without skips/xfails/xpasses on aa8 development Python source d77920055332778acd55de8d891490d7725f11c6b9255541307caa0529ad71c9; exact raw original SHA9f49c6c5c523a0f0d7e65a457c727fc741bcec367cd3d6b98ce6098f90476590 is pinned by thirty adversarial stdlib oracle cases.
+  - Actual independent Python-I and Python-I-O file-only runs derived exact3600=FG3240+loss360+WIP0, complete13 native GL effects and balanced turnover14350 from original SQL populations. This remains synthetic verification, not external attestation or benchmark evidence.
+  - Native browser seed gate passed1 mandatory case without skips/xfails/xpasses at development Python source cc897333c22829c066fcd5467cc3cd67a8e8ebbb08305c978b0a991499dfb4e5; approved masters/budget, starting stock and original expense inputs exist while all planner/purchase/production documents remain absent.
+  - Required real-browser spec collected exactly1 case and TypeScript checks passed; actual authenticated browser cycle and populated restore remain root-owned pending gates.
+  - Fractional native unit-price authority gate passed53 cases with0 skips/xfails/xpasses at frozen Python source49c6fd4520531f636259f0e118b9693a387c315446d6d7aca46cf71bb89c1081; approved KG demand0.001 retains plan unit3000/total3 and quote unit5000/total5 under captured precision2. Original native red is retained; all six read permissions, exact high-cap replay, failed response rollback and four actual queued current-authority refusals are covered. This is bounded synthetic development evidence.
+  - Owned native dispatch uses explicit typed failures in ordinary and optimized Python; actual original missing-budget-version AssertionError is retained as a development red. Fixed retained-command queries bind tenant/workspace/order/command values without runtime SQL identifier construction. Focused Bandit has zero findings without suppression;80 pure/API/oracle cases include ten isolated-I/-O argument-boundary probes. These probes do not replace current-authority or native financial gates.
+  - The affected original shortage/receipt/AP/budget/handoff/issue/QC/FG gate passed1 mandatory case with0 skips/xfails/xpasses at frozen Python source709d6f5c65198b59beed28bdb042f280871392995f9a414bb529f22db28b4556. Each actual reviewed AP invoice refuses a missing budget version with unchanged original source/purchase/budget; correct current versions and immutable replays complete the native3600=3240+360+0 cost cycle. Original red and green logs/XML remain separate.
+  - Complete original two-receipt/two-AP handoff diagnostic passed1 mandatory native case at unchanged Python source49c6fd4520531f636259f0e118b9693a387c315446d6d7aca46cf71bb89c1081; the outer deferred commit exceeded the browser fetch deadline and is under source-closure investigation. Safe query fingerprints and wait samples contain no SQL parameters or auth headers. This is bounded failure diagnosis, not benchmark or final browser acceptance.

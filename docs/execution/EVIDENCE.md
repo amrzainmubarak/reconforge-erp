@@ -23329,6 +23329,19 @@ cryptographic completion and immutable value-bound exact scanner fingerprints,
 then a new fixed-head full hosted run; no skipped/retried financial gate or broad
 scanner exclusion grants acceptance.
 
+### Enterprise M2 ordered source and authorization gate — 2026-10-13
+
+`output/m2-ordered141-migration-v1.xml` records two actual mandatory native
+PostgreSQL tests: linear installation, empty rollback/re-upgrade, selected
+FORCE RLS, ordinary non-superuser isolation, no automatic operating permissions
+and refusal to remove retained personnel grants. The four authorization/boundary
+inventory groups record thirty passes in `m2-shared141-contracts-v4.xml`.
+Earlier route-inventory and critical-GET contract failures remain retained in
+v1-v3 receipts. Checking critical GET permission drift before mutation filtering
+closes the discovered read-contract verification gap without altering runtime
+permission dependencies or the492 accepted-route digest. Studio, populated
+restore, peer integration, full CI and comparative performance are not inferred.
+
 ## Enterprise M1 original HTTPS and targeted integration receipts (2026-10-13)
 
 IC2 e4dc9205 and HC1 07a3831b original HTTPS/301-table restore receipts are
@@ -23346,3 +23359,78 @@ Current source fixes are backed by actual native6+10 dimension custody,
 Counts are separate source-qualified receipts, not a summed independent full
 regression total. Original failed packets and initial hosted16a78f6b failures
 are retained. Final frozen-source all-gate receipts remain pending.
+
+## M2 actual ordered0141 accrual Studio and native recovery
+
+`output/m2-https-ad1-ordered141-v2/report.json`, SHA256
+`bace2163431c38814ae3e9f653c5a7b116d3b5150bba9a4d3ba682fcf2bf9ab4`,
+is the original clean-source `d507b9ffc3060e10560bd51e6c13644b48a7fa3e`
+report. One actual TLS browser case passed with zero skips, failures or
+flakiness; whole populated database row/catalog/owner/ACL/FORCE-RLS snapshots
+were equal after pg_dump/pg_restore, with50 selected financial scope probes
+and3 native tamper refusals. Original dump SHA256
+`813bd6d489e7a5712790f7506823e7e238e6880e32cdb9a6ed2e3fc5c00a1982`.
+The independent original oracle reproduced10001 minor units allocated as
+3334/3334/3333 and6 source-owned effects, including exact inverse/replacement;
+expense10001/prepaid0/cash-10001. Audit-chain recomputation is explicitly
+false; no external attestation or comparative performance is inferred.
+The originalv1 failed only at mobile axe keyboard focus after running the
+business cycle; its receipt/artifacts are retained and are not counted as
+accepted. Focusable labelled allocation region,17 targeted React cases,
+typecheck/build and the realv2 repeat closed that failure without weakening axe.
+
+
+### Original M1 closure and ordered143 supply custody — 2026-10-13
+
+M1 original closure: output/m1-final-ci-bcc/enterprise-m1-original-final-closure-v1.json
+in its independent integration checkout;12,029,592bytes, SHA256
+6de3768e1ec93f857a6ed754161b1d57255f5e2a49077684a85bf0aa633432fe.
+Actual48 CI jobs,20 native partitions (55 pytest sessions/1620 selected),18
+HTTPS reports,3 package receipts and6 original isolated arithmetic executions.
+M2 original ordered143 full-cycle XML/log are
+output/m2-ordered143-native-full-supply-cycle-v1.xml/log at clean aa8f2145:
+2 actual mandatory passes/0 skips/xfails/xpasses. Quantity and migration
+receipts are separately qualified development packets, not final-source CI.
+Native original supply population fixture
+tests/fixtures/manufacturing_supply_original_golden.json SHA256
+9f49c6c5c523a0f0d7e65a457c727fc741bcec367cd3d6b98ce6098f90476590;
+stdlib -I/-I -O independently conserve13 actual effects and the complete
+shortage/receipt/AP/budget/FIFO/WIP/FG/scrap original populations. No new
+performance, statutory, complete-ERP or external-audit claim is inferred.
+
+
+M2 native compatibility144 custody at50739082733ea625d99533e1ff407353cea8f904:
+output/m2-quantity144-frozen-507-v1 (13 actual passes +2 private runner URI
+setup failures retained), output/m2-quantity144-frozen-507-migrations-v2
+(2 actual corrected-runner passes/0skip/xfail/xpass; XML92c70961312ceecaa214573f907dce1ec584f6cecf87769d1028b95c5571aea2).
+Empty return migration fixes independently preserve all61 non-gate selected
+populations; gate2→0→same2 identities, original populated/refused snapshots
+identical. Owner closure6fd4a3cf443b7fa60401fe34175a7a6039232e063694b7003e12d3247dbd19af.
+Original failed cloud38405919474, private MSP artifact and sanitized derivatives
+are retained; invoice-post interception actually exceeded20s. No latency or
+resource acceptance is inferred from native correctness.
+Actual downloaded Group78 original SHA51f750d2b371f18a51b08ab4f3d5c22c1265c763484b5f8540d5d045959b8bca,
+789543bytes; original stdlib-I/-I-O output SHA c875ef4d36271eda05b5001a89c4d87679c68778d654b1265b543eeaa4916a67.
+
+2026-10-14 corrected source custody (qualified checkpoints, final CI pending):
+MSP5130 actual report d22159c0b7337a965257012c73c4ac9940f19fa86751f004b00f046f61d69680;
+whole effects12 including AP2/ME2 projection10, restore328/tamper3/lost-reply9.
+f506 captured reporting-currency authority native12/zero skip, XML
+37f85dcbf8504c8a30d718e3af59910ef0a5f080d1562f69ea0880bb32ed5cc6.
+Corrected6db current-head inverse/retained-privilege native2/zero skip, XML
+f1aa6090a20591864f923131cd08fa5f4d0241c762ef2665f40119f766aae48d;
+actual installed145 and owned database removed.
+Community optional-driver original red and candidate green receipts retained;
+the isolated child actually invokes doctor with psycopg import unavailable.
+Original f506 Docker/security/migration failures are retained independently.
+
+M3 actual265 wire report SHA256s: Project78f2089354fa5c92d313bb2afb8994301308f866c05ab9234f8d4ee51d6defdc;
+Group5199d2fa405c4c04ed299357bfb086fdc3964e9299bf8e11e1cf7e90474259b9;
+Cashflow8ff02807915739775dd6ba512c0c3a59a2563944228f949bcc54dcc3f2ffe94e.
+Each restores328 tables/refuses3tampers with zero browser skips/unexpected/flaky;
+4/2/2 actual isolated original-download runs. These qualify old265 custody,
+not the subsequently corrected final verifier/publisher.
+Root155 new custody/publication cases XML
+9f99136e813aad44899b11c135b81e525096e5d24049718fc12f9bb5709f53ff.
+Actual late-original, output, command and publication counterexamples remain
+retained privately; no raw header/network diagnostics are public evidence.

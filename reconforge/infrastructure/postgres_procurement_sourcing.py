@@ -30,16 +30,20 @@ from reconforge.domain.procurement_sourcing import (
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository
 from reconforge.infrastructure.postgres_procurement_commitments import PostgresProcurementCommitmentRepository
+from reconforge.infrastructure.source_participant_admission import require_manufacturing_supply_owner
 from reconforge.platform.common import platform_id
 from reconforge.platform.inventory_values import quantity_to_scaled
 
 
 class PostgresProcurementSourcingRepository:
-    def __init__(self, connection: Any, tenant_id: str, *, require_live_session_assurance: bool = False) -> None:
+    def __init__(self, connection: Any, tenant_id: str, *, require_live_session_assurance: bool = False,
+                 _supply_participant: object | None = None) -> None:
         self.connection, self.tenant_id = connection, tenant_id
         self.commitments = PostgresProcurementCommitmentRepository(connection, tenant_id,
             require_live_session_assurance=require_live_session_assurance)
         self.purchase, self.budgets = self.commitments.purchase, self.commitments.budgets
+        self._supply_participant = _supply_participant
+        self.purchase._supply_participant = _supply_participant
 
     @staticmethod
     def _scope(row: Mapping[str, Any]) -> BudgetScope:
@@ -172,11 +176,15 @@ class PostgresProcurementSourcingRepository:
         request, total = normalize_requisition(request)
         with self.connection.transaction():
             self.purchase._scope_transaction()
+            require_manufacturing_supply_owner(self.connection, self.tenant_id, request.order.number,
+                                               request.order.number, self._supply_participant)
             scope = self.purchase.shared._codes_scope(request.order.workspace, request.order.organization_code, request.order.entity_code)
+            identifier = platform_id("PSREQ", scope["workspace_id"], request.order.number)
+            require_manufacturing_supply_owner(self.connection, self.tenant_id, identifier,
+                                               request.order.number, self._supply_participant)
             envelope = self.budgets._row(BudgetScope(*(scope[key] for key in ("workspace_id", "organization_id", "legal_entity_id"))), request.budget_id)
             if envelope["status"] != "Approved" or (envelope["currency_code"], envelope["period_id"]) != (request.order.currency_code, request.order.period_id):
                 raise ProcurementPartialError("procurement_sourcing_budget_invalid", "An approved same-scope appropriation with the exact demand currency and fiscal period is required.")
-            identifier = platform_id("PSREQ", scope["workspace_id"], request.order.number)
             payload = {"schema_version": SCHEMA_VERSION, "request": asdict(request), "scope": {key: scope[key] for key in ("workspace_id", "organization_id", "legal_entity_id")},
                        "ceiling_minor": total, "currency_precision": envelope["currency_precision"], "creator_actor_id": actor.user_id}
             row = {**scope, "id": identifier, "ceiling_minor": total, "payload": payload}
@@ -201,6 +209,8 @@ class PostgresProcurementSourcingRepository:
         version(expected_version)
         self.purchase._scope_transaction()
         row = self._row(identifier)
+        require_manufacturing_supply_owner(self.connection, self.tenant_id, identifier,
+                                           row["number"], self._supply_participant)
         self._actor(row, actor, operation)
         digest, replay = self._command(row, operation, command_id, request, actor)
         if replay is not None:
@@ -296,6 +306,9 @@ class PostgresProcurementSourcingRepository:
     def get(self, identifier: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.connection.transaction():
             self.purchase._scope_transaction()
+            preliminary = self._row(identifier)
+            require_manufacturing_supply_owner(self.connection, self.tenant_id, identifier,
+                                               preliminary["number"], self._supply_participant)
             row = self._row(identifier, read_lock=True)
             self._actor(row, actor, "read")
             self.connection.execute("SELECT reconforge.ps_close(%s,%s)", (self.tenant_id, identifier))

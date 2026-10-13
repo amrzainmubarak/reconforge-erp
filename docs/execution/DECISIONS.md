@@ -13522,3 +13522,54 @@ historic22-entry index and accepted source reports immutable.
 ### Wave4 completed stable-power evidence closure — 2026-10-10
 
 Stable six financial/environment proof passed; paircd8c404d/manifest1e67d483 pin original reports/12power sidecars. All371observed samples AC,0battery/unavailable; original6120effects/six fresh servers. Median throughput+42.5851%, combinedCPU/success-27.1300%, p95-23.1873%, batchread-1.3370%, adverse clientCPU+2.8250% and lifetime memory+0.2254%; overall resource/performance acceptance remainsfalse, no post-hoc threshold. Independent normal/optimized proofs byte-identicalac3abc9e;73targeted cases passed with0skips. Previous mixed/failed results remain immutable. 10Kcapacity independently passed5028151631minor;100K/1M unrun; no equivalent competitor comparison. Final source archive/hosted gates are required after evidence integration.
+
+
+### 2026-10-13 — Native quantity source ownership and exact Studio acknowledgements
+
+Use one invoker Core quantity custody directory and sorted pool coordination,
+not a second stock ledger. Physical and approved FIFO coverage must agree;
+structural native item/UOM/scale and nullable organizational master pins
+prevent scope reinterpretation even when the original protected claim is hidden.
+M2 owns one bounded original BOM demand, actual sourcing/AP and atomic existing
+production handoff; full MRP/capacity and payroll cost allocation remain separate.
+An authorized response must bind the immutable original command receipt,
+subject, request, operation, actor, current scope and native response before
+Studio clears a pending command. Lost or unqualified responses retain replay
+identity; current authority denial clears displayed financial source data.
+Root owns the shared contracts, migrations, registrations and final gate.
+Comparative benchmarks remain deferred by the explicit owner instruction.
+
+### 2026-10-14 — Original custody and corrected source admission
+
+Read-only reporting must verify the bytes actually downloaded, both independent
+oracle modes, whole original membership and write-time audit artifacts. A later
+oracle or copy cannot rebaseline an earlier original/output/command. Publication
+uses the successful in-memory manifest and privately retains refused partials.
+Current authority is separately enforced by the original DB/API contracts;
+a file-only oracle is not authorization, formal close or external attestation.
+
+Keep the PostgreSQL driver optional for Community startup: import its safe SQL
+composer only in actual native evidence use. Current migration tests must assert
+the actual ordered head/count while retaining complete inverse, FORCE RLS and
+privilege-refusal checks. Exact immutable synthetic scanner fingerprints are
+reviewed individually; current source stays scanned by unchanged rules.
+
+IT1 is a finite same-entity physical transfer over existing InventoryCore. It
+cannot create valuation or GL effects, reinterpret warehouse FIFO ownership,
+silently refresh reviewed costs or admit unsupported correction histories.
+Core structural quantity FKs must bind only MSP1/IT1 and preserve MSP originals;
+all item pools precede both canonically sorted physical gates. Every posted
+inverse is independently governed and preserves the original movement.
+No new-country, performance or whole-platform claim follows from these changes.
+
+
+### 2026-10-13 — Compatible native coordination and unknown outcome recovery
+
+Generic quantity gates retain actual existing workspace membership plus native
+organization/entity parents under the original Inventory Core scope. Strict
+manufacturing owner custody is unchanged; directSQL/ACL and downgrade refusals
+are actual native gates. A transport timeout establishes no financial outcome:
+resolve only by same actor/command/body replay and original sealed receipt,
+never by substituting a later source GET. Keep20s unchanged and do not convert
+correct replay into a latency claim. Profiled source-history candidates remain
+unadopted until their measured value and all original guards are demonstrated.

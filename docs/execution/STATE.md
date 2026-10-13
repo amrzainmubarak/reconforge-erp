@@ -12408,3 +12408,108 @@ evidence remain open. GitHub publication remains deferred by owner policy.
   full encrypted `pg_dump`/`pg_restore` rehearsal was not counted. It makes no
   backup duration, RPO/RTO, key-custody, cross-version, HA/DR, promotion, or
   production-recovery claim.
+
+## Enterprise M2 integration gate — 2026-10-13
+
+M2 adds original-source accrual/deferral schedules over the existing GL and
+shared source claim directory. Ordered revision0141, empty downgrade/re-upgrade,
+41 selected FORCE-RLS tables, no automatic module grants and retained-grant
+downgrade refusal passed two mandatory native PostgreSQL tests with zero skips.
+Thirty route, repository-boundary and metadata tests passed. Critical read
+authorization contracts now receive the same exact permission-drift check as
+critical writes; the accepted492 route digest remains unchanged. These are
+targeted development gates. Integrated Studio, populated restore and final
+frozen-source M2 acceptance remain pending. Benchmarks are deferred by the owner.
+
+### M2 original AD1 Studio / recovery checkpoint
+
+Source `d507b9ffc3060e10560bd51e6c13644b48a7fa3e` passed the actual
+ordered0141 HTTPS/Chromium cycle and populated PostgreSQL17.11 restore:
+one required browser execution, zero skipped/unexpected/flaky cases, ordinary
+non-bypass runtime, three native tamper refusals, unchanged clean tracked
+source/build and owned process/container cleanup. The independent original
+oracle reproduced prepaid10001, tranches3334/3334/3333, exact inverse and
+replacement, six native effects, expense10001/prepaid0/cash-10001. Mobile
+Arabic RTL and keyboard accessibility passed after fixing the original
+scroll-region failure; the failedv1 packet remains. This is a development
+checkpoint, not acceptance of pending ordered142/143 or the final M2 source.
+All-country statutory packs remain unproven, comparative performance remains
+deferred, and operation cost is unknown.
+
+
+### Enterprise M1 closed / M2 original-source development — 2026-10-13
+
+M1 frozen bcc44089 passed its original48-job CI and separate Docker/CodeQL/manual
+image/security closure;55 mandatory native sessions/1620 cases have zero native
+skips,18 original HTTPS reports restore301 tables, and6 isolated original
+financial oracle runs pass. Original closure SHA256
+6de3768e1ec93f857a6ed754161b1d57255f5e2a49077684a85bf0aa633432fe.
+GitHub PR133 final body was patched and independently reread at original v9; exact body SHA ebe2f3db6893abc229df5a24c912fc9fb6e70a5c7918a2a434eca254fe5af454.
+M2 ordered143 actual complete onhand/partial-shortage manufacture passes2 native
+cases; original independent supply cost3600=FG3240+scrap360+WIP0. Five targeted
+quantity/scope cases and two ordered migration gates pass; new Studio ACK
+subject binding is being corrected before final freeze. This is development,
+not final M2 acceptance. See ENTERPRISE_COMPLETION_M2_2026-10-13.md.
+No local benchmarks; cost per operation null; statutory country packs0.
+
+
+### M2 integration correctness and original replay checkpoint — 2026-10-13
+
+Root50739082 adds ordered144 generic quantity compatibility; source143/142
+owner guards/FKs remain immutable. Actual frozen-source selected gates:13
+quantity/Core/scope passes, then2 return roundtrip passes after fixing only a
+private diagnostic URI setup. The red setup packet remains; no skips/xfails.
+M2 source158883f3 strengthens actual unknown-outcome network-loss replay while
+retaining20s transport bounds; wire acceptance remains pending. AD1/PB source
+qualified ordered143 TLS restores328 tables and refuses3 tampers each.
+Original CI38405919474 failed on its6ad source (7 failed producer jobs plus
+aggregate); its security38405919091 Bandit7 findings were fixed, without
+suppression. Whole local source Bandit0 at07da; final hosted source pending.
+M3 exact original Group78 TLS passed with328-table restore/3tampers; actual
+789543-byte downloaded evidence passed standalone -I/-I-O identically.
+New IC2 bundle8 native cases and Project source-close1 native case pass in
+owned fixed-source trees; Root registered API594/legacy492 digest unchanged.
+Final bundle/close TLS and integration gates remain pending. Diagnostic ANSI
+header gap is reproduced and being fixed; original raw reports stay private.
+Comparative performance deferred; transaction cost null; country packs0;
+100K/1M/multi-region HA/DR and whole-platform completion remain unproven.
+
+### Corrected enterprise acceptance source — 2026-10-14
+
+M2 PR134 is still a draft above accepted PR133. Source-qualified actual5130
+MSP HTTPS passed with nine deliberate lost responses, exact sealed command
+replay, clean unchanged source/web, owned cleanup and328-table restore with
+three tamper refusals. The WHOLE original5130 population contains12 effects,
+including2 AP effects; its ME2-only projection contains10. Earlier separate
+13-effect fixtures remain qualified to their own original populations.
+Cost3600=FG3240+scrap360+WIP0; obligation/AP1450. No latency acceptance.
+
+Actual f506 translated-amount and captured JPY/KWD precision authority gates:
+12 mandatory native passes, zero skips. Its original hosted failures are
+retained: eager optional psycopg import during Community doctor, stale native
+migration143/142 expectations against actual145/144, and one deliberately
+synthetic historical diagnostic-password scan finding. Source6db8d0f3 fixes
+these causes without removing guards or rollback/retained-privilege assertions.
+Actual optional-driver doctor red1→green1 and corrected mandatory migration
+roundtrips2 pass; current-tree dummy fixtures remain scanned. New6db Docker
+passed, while full CI and security closure are still pending; this is not
+final M2 acceptance.
+
+M3 draft PR135 adds selected original cashflow/group/project source reporting.
+All three actual265 HTTPS runs passed English/Arabic/current-source contracts,
+328-table restore/3tampers each and eight isolated downloaded-original oracle
+runs. An independent review then reproduced late whole-bundle and publication
+custody drift. The new utility checks all original/helper/proof and write-time
+command/execution/log bytes; the publisher compares the trusted returned
+manifest, refuses drift and quarantines partial output privately.155 focused
+composed cases pass; new frozen-source wire/CI acceptance is in progress.
+
+M4 same-entity inventory transfer is development only. The owned preliminary
+Draft/replay/empty-inverse cases passed2; Root's ordered146 finite structural
+MSP1/IT1 pins and two-location native dispatch require actual qualification.
+Full posting, compensation, current grants, SQL/concurrency and Studio gates
+remain pending. Unsupported reversal/correction cost classes are explicitly
+being bounded before admission. No transfer or full-ERP completion is claimed.
+Comparative performance remains deferred; cost per operation null; statutory
+country packs0. Main and the two original primary-worktree file hashes were
+reverified unchanged on2026-10-14.

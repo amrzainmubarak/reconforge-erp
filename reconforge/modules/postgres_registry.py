@@ -87,6 +87,35 @@ def _descriptor(
 
 _POSTGRES_MODULES = (
     _descriptor(
+        module_id="manufacturing.supply-plan", name="Original net supply and production handoff",
+        revision="0142_pg_manufacturing_supply", namespace="manufacturing_supply_plan",
+        actions=("read", "manage", "approve", "post"), manifest="docs/modules/manufacturing-supply-plan.yaml",
+        dependencies=("platform.core", "finance.core", "inventory.core", "finance.budget-control", "manufacturing.execution-v2"),
+        tests=("tests/test_manufacturing_supply_plan.py", "tests/test_postgres_manufacturing_supply_plan.py"),
+        summary="Approved original BOM demand, exclusive net inventory supply, native sourcing/purchasing and atomic production reservation handoff.",
+        gaps=("Integrated ordered-source acceptance and resource comparisons are pending.",
+              "One bounded BOM order is not complete MRP, finite capacity planning, forecasting or multi-plant scheduling."),
+    ),
+    _descriptor(
+        module_id="projects.time-billing", name="Approved Project time, native AR and collections",
+        revision="0143_pg_project_billing", namespace="project_time_billing",
+        actions=("read", "manage", "approve_price", "prepare", "collect", "review", "post"),
+        manifest="docs/modules/project-time-billing.yaml", dependencies=("platform.core", "finance.core", "people.project-payroll"),
+        tests=("tests/test_project_time_billing.py", "tests/test_postgres_project_time_billing.py"),
+        summary="Separately approved effective commercial prices, whole approved-time source claims, Project revenue, native AR and partial/final cash.",
+        gaps=("Integrated ordered-source acceptance and resource comparisons are pending.",
+              "Country tax, subscriptions, statutory contracts and comprehensive Project P&L are outside the operating contract."),
+    ),
+    _descriptor(
+        module_id="finance.accrual-deferral", name="Original-source vouchers, deferrals and accrual reversals",
+        revision="0141_pg_accrual_deferral", namespace="accrual_deferral", actions=("read", "prepare", "review", "post"),
+        manifest="docs/modules/accrual-deferral.yaml", dependencies=("platform.core", "finance.core"),
+        tests=("tests/test_accrual_deferral.py", "tests/test_postgres_accrual_deferral.py"),
+        summary="Functional-currency prepaid vouchers, original paid-source attachment, exact service tranches and governed native inverses.",
+        gaps=("Ordered migration, integrated Studio and final source acceptance are pending.",
+              "Statutory recognition rules, foreign-currency schedules and comparative resource benchmarks are not established."),
+    ),
+    _descriptor(
         module_id="manufacturing.execution-v2", name="Inspected production and original cost claims",
         revision="0138_pg_manufacturing_v2", namespace="manufacturing_execution_v2",
         actions=("read", "manage", "approve", "post"), manifest="docs/modules/manufacturing-execution-v2.yaml",

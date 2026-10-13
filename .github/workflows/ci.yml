@@ -86,6 +86,7 @@ jobs:
           --ignore=tests/test_postgres_project_time_billing_restore.py
           --ignore=tests/test_postgres_project_time_billing_read_authority.py
           --ignore=tests/test_postgres_inventory_scope.py
+          --ignore=tests/test_postgres_inventory_quantity_contracts.py
           --ignore=tests/test_postgres_intercompany_operations.py
           --ignore=tests/test_postgres_intercompany_operations_api.py
           --ignore=tests/test_postgres_wave5_migrations.py
@@ -704,7 +705,7 @@ jobs:
               uv run --no-sync pytest tests/test_postgres_operational_fx_tax.py tests/test_postgres_operational_fx_tax_api.py tests/test_postgres_operational_fx_tax_migration.py tests/test_postgres_financial_read_plans.py -q
               ;;
             manufacturing-execution)
-              uv run --no-sync pytest tests/test_postgres_inventory_scope.py tests/test_postgres_manufacturing_execution.py tests/test_postgres_wave5_migrations.py tests/test_postgres_manufacturing_execution_v2.py tests/test_postgres_enterprise_migrations.py -q
+              uv run --no-sync pytest tests/test_postgres_inventory_quantity_contracts.py tests/test_postgres_inventory_scope.py tests/test_postgres_manufacturing_execution.py tests/test_postgres_wave5_migrations.py tests/test_postgres_manufacturing_execution_v2.py tests/test_postgres_enterprise_migrations.py -q
               ;;
             intercompany-operations)
               uv run --no-sync pytest tests/test_postgres_intercompany_operations.py tests/test_postgres_intercompany_operations_api.py tests/test_postgres_intercompany_fx.py tests/test_postgres_intercompany_fx_api.py -q

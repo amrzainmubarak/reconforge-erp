@@ -4,7 +4,7 @@ claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0143_pg_project_billing"
+current_source_migration_head: "0144_pg_inventory_contracts"
 native_source_extensions:
   claim_boundary: Separate native owner kernels compose existing services; these entries do not retroactively increase historical application-service parity counts.
   ci_shard: erp-expansion

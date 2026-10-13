@@ -140,7 +140,10 @@ def inventory_scope_database(isolated_postgres_migration_dsn: str) -> Iterator[d
     if not dsn:
         pytest.skip("requires a nonowner PostgreSQL application DSN")
     config = Config(str(Path("alembic.ini").resolve()))
-    command.upgrade(config, "head")
+    # Seed the actual accepted hierarchy at its original revision, then run
+    # every later migration over the retained native graph. No newer owner
+    # guards are bypassed to fabricate historical inventory.
+    command.upgrade(config, "0136_pg_inventory_scope")
     params = psycopg.conninfo.conninfo_to_dict(dsn)
     params["dbname"] = psycopg.conninfo.conninfo_to_dict(isolated_postgres_migration_dsn)["dbname"]
     with psycopg.connect(isolated_postgres_migration_dsn, autocommit=True) as admin:
@@ -163,6 +166,9 @@ def inventory_scope_database(isolated_postgres_migration_dsn: str) -> Iterator[d
                 _seed_graph(admin, tenant, entity, "other" if org == "c" else "shared", org, entity)
             # The legacy organization was inserted with no authoritative
             # convenience workspace. Retained identity guards are never bypassed.
+    command.upgrade(config, "head")
+    with psycopg.connect(isolated_postgres_migration_dsn, autocommit=True) as admin:
+        admin.execute(psycopg.sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {}").format(role))
     factory = PostgresConnectionFactory(PostgresSettings(dsn=psycopg.conninfo.make_conninfo(**params), require_tls=False))
     yield {"factory": factory, "boundary": PostgresTenantBoundary(factory), "admin": isolated_postgres_migration_dsn}
 

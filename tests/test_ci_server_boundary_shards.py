@@ -51,7 +51,7 @@ INTEGRITY_FILES = {
     "fx-revaluation": ("tests/test_postgres_operational_fx_revaluation.py", "tests/test_postgres_operational_fx_revaluation_migration.py"),
     "manufacturing-execution": (
         "tests/test_postgres_manufacturing_execution.py", "tests/test_postgres_wave5_migrations.py",
-        "tests/test_postgres_inventory_scope.py",
+        "tests/test_postgres_inventory_scope.py", "tests/test_postgres_inventory_quantity_contracts.py",
         "tests/test_postgres_manufacturing_execution_v2.py", "tests/test_postgres_enterprise_migrations.py",
     ),
     "intercompany-operations": ("tests/test_postgres_intercompany_operations.py", "tests/test_postgres_intercompany_operations_api.py",

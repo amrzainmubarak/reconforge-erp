@@ -94,6 +94,8 @@ jobs:
           --ignore=tests/test_postgres_accrual_deferral_ownership.py
           --ignore=tests/test_postgres_accrual_deferral_restore.py
           --ignore=tests/test_postgres_manufacturing_supply_plan.py
+          --ignore=tests/test_postgres_manufacturing_supply_closure.py
+          --ignore=tests/test_postgres_manufacturing_supply_closure_authority.py
           --ignore=tests/test_postgres_manufacturing_supply_browser_seed.py
           --ignore=tests/test_postgres_manufacturing_supply_read_authority.py
           --ignore=tests/test_postgres_project_time_billing.py
@@ -748,7 +750,7 @@ jobs:
               uv run --no-sync pytest tests/test_postgres_accrual_deferral.py tests/test_postgres_accrual_deferral_api.py tests/test_postgres_accrual_deferral_guards.py tests/test_postgres_accrual_deferral_ownership.py tests/test_postgres_accrual_deferral_restore.py -q
               ;;
             manufacturing-supply-plan)
-              uv run --no-sync pytest tests/test_postgres_manufacturing_supply_plan.py tests/test_postgres_manufacturing_supply_browser_seed.py tests/test_postgres_manufacturing_supply_read_authority.py -q
+              uv run --no-sync pytest tests/test_postgres_manufacturing_supply_closure.py tests/test_postgres_manufacturing_supply_closure_authority.py tests/test_postgres_manufacturing_supply_plan.py tests/test_postgres_manufacturing_supply_browser_seed.py tests/test_postgres_manufacturing_supply_read_authority.py -q
               ;;
             project-time-billing)
               uv run --no-sync pytest tests/test_postgres_project_time_billing.py tests/test_postgres_project_time_billing_api.py tests/test_postgres_project_time_billing_restore.py tests/test_postgres_project_time_billing_read_authority.py -q

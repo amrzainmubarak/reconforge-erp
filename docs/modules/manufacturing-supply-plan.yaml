@@ -56,9 +56,27 @@ test_matrix:
   native_browser_seed: tests/test_postgres_manufacturing_supply_browser_seed.py
   native_current_financial_read_authority: tests/test_postgres_manufacturing_supply_read_authority.py
   optimized_argument_guards: tests/test_manufacturing_supply_argument_guards.py
+  complete_closure_delegation: tests/test_manufacturing_supply_closure_contract.py; tests/test_postgres_manufacturing_supply_closure.py; tests/test_postgres_manufacturing_supply_closure_authority.py
 backend_support:
   postgres: native-postgresql
   sqlite: unavailable-native-ME1-and-SRC-dependencies
+closure_candidate:
+  implementation: reconforge/infrastructure/postgres_manufacturing_supply_closure.py
+  adoption: owned-native-qualified-pending-root-ordered-migration-and-integrated-acceptance
+  changes:
+    - Each complete owner invocation validates each distinct requisition once after all original requirements, instead of repeating its full closure for each companion line.
+    - Existing pp_verify_order retains complete native budget commitment closure; the owned purchase closure delegates once without repeating pc_close.
+    - Existing inventory_quantity_check_capacity retains complete native FIFO validation; the owned requirement closure delegates once without repeating its immediately consecutive FIFO check.
+  preserved:
+    - Every deferred source and Core custody trigger still invokes complete current owner closure; no trigger, native source guard, lock, current grant or financial amount check is removed.
+    - Every historical version still invokes the unchanged standalone msp_evidence validator; no cache, custom GUC, temporary result or whole-history helper is adopted.
+    - Original source, native command, historical ACK, audit/outbox and exact monetary/quantity values remain unchanged; populated inverse restores both original function bodies without rewriting records.
+  qualification:
+    - Original on-hand replay and blind native withdrawal/cancel passed2 native cases in the first retained packet; its subsequent restore-comparison harness failure remains recorded separately.
+    - Corrected affected gate passed12 mandatory native cases at frozen Python source929a18fdf16f6aaadef6f9409021d128b0ab5c6528a27c9bf6de6337082c6bff, including full shortage receipts/AP/budget/ME2/GL, seven ordinary-role adversarial restore refusals, populated function inverse, immutable replay, exposed unit-price caps and four queued current permission/entity withdrawals. Every restore refusal preserves all original rows and coordination gate versions.
+    - Exact delegate body/signature/PLpgSQL/VOID/INVOKER/search-path/volatility/parallel metadata admission passed8 actual commented, early-return and metadata drift refusals before either owned function replacement. Actual independent human pool contention passed1 case and recomputed the second plan with zero available on-hand custody after the first committed. Final frozen Python source470890aa7c9225f9c599bf192e1aeb0fb7f8f2315eebde772510056e68c947d6; all9 mandatory cases have0 skips, xfails or xpasses.
+    - Actual fresh original supply SQL export SHAa57e9e2c0a6de9b88fb494a0e2ca06c7fd4cff978bc508716a6fda757be291fb verifies independently with stdlib Python-I and Python-I-O; both produce identical SHA337eccfa025e2e13be3c99fc1966cc1062d49f6de90e4682ebc2a24abd64a19f and exact3600=3240+360+0,13 native GL effects and14350 balanced turnover.
+  latency_boundary: The retained diagnostic native packets establish unresolved deferred commit work; no response latency or performance acceptance is claimed and the browser transport deadline remains 20 seconds.
 claim_boundary: Experimental bounded native supply with ordered142 schema and mounted Studio/API. Authenticated HTTP/TLS browser, populated restore and final frozen integrated acceptance remain root-owned pending gates. No MRP capacity optimizer, throughput, banking, statutory or ERP replacement claim.
 runtime_acceptance:
   - Actual source-qualified complete native shortage cycle passed1 case with0 skips, xfails or xpasses at development source digest9c4b1db9a90109066d2d591d219d886fb5ebda6305eaf185ef7590b14ef4a703.

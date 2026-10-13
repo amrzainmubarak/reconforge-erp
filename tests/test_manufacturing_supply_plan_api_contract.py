@@ -1,6 +1,7 @@
 """Public exact values and explicit owner routes without financial coercion."""
 from datetime import date
 from decimal import Decimal
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -37,3 +38,20 @@ def test_actual_router_contract_has_native_owner_actions_and_strict_money_text()
     ceiling = schema["components"]["schemas"]["PriceCeiling"]
     assert ceiling["properties"]["unit_price_minor"]["type"] == "string" and ceiling["additionalProperties"] is False
     assert schema["components"]["schemas"]["PostInvoiceRequest"]["properties"]["expected_budget_version"]["minimum"] == 1
+
+
+@pytest.mark.parametrize("field,value", [("workspace", "sibling"), ("organization_code", "SIBLING"), ("entity_code", "SIBLING")])
+def test_source_requisition_refuses_conflicting_body_scope_before_native_creation(monkeypatch: pytest.MonkeyPatch, field: str, value: str) -> None:
+    from reconforge.api.errors import APIError
+    from reconforge.api.routes import manufacturing_supply_plan as api
+
+    payload = {"command_id": "original-command", "number": "SRC5-MSP-1234567890ABCDEF", "supplier_code": "SUP", "currency_code": "USD",
+        "posting_date": "2026-10-04", "period_id": "period", "journal_code": "STOCK", "ap_account_code": "AP", "cash_account_code": "CASH",
+        "organization_code": "ORG", "entity_code": "ENTITY", "workspace": "work", "expected_digest": "a" * 64, "budget_id": "budget",
+        "reason": "Preserve actual selected scope", "requirement_ids": ["actual-requirement"],
+        "lines": [{"item_code": "ITEM", "quantity": "1", "unit_price_minor": "1200", "location_code": "MAIN/STOCK", "policy_code": "FIFO"}], field: value}
+    scope = SimpleNamespace(workspace_id="work", organization_code="ORG", entity_code="ENTITY")
+    monkeypatch.setattr(api, "execute", lambda request, user, action: action(object(), object(), scope))
+    with pytest.raises(APIError) as raised:
+        api.create_requisition(None, "actual-plan", api.PlannedRequisitionRequest(**payload), None)  # type: ignore[arg-type]
+    assert raised.value.status_code == 403 and raised.value.code == "manufacturing_supply_scope_alias_denied"

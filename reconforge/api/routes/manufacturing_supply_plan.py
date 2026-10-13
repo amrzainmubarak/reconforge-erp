@@ -202,6 +202,10 @@ def get_purchase(request: Request, identifier: str, order_id: str, user: Read) -
 def create_requisition(request: Request, identifier: str, payload: PlannedRequisitionRequest,
                        user: LocalUser = Depends(required(PERMISSIONS["source-create"]))) -> dict[str, Any]:
     def invoke(service: ManufacturingSupplyPlanService, actor: PostingActor, scope: FinanceCoreExecutionScope) -> dict[str, Any]:
+        if (payload.workspace not in {"default", scope.workspace_id} or payload.organization_code != scope.organization_code
+                or payload.entity_code != scope.entity_code):
+            raise APIError(status_code=403, code="manufacturing_supply_scope_alias_denied",
+                message="Purchase scope aliases must match the current selected original hierarchy.")
         fields = payload.model_dump(exclude={"command_id", "expected_digest", "requirement_ids", "budget_id", "reason", "lines", "workspace", "organization_code", "entity_code"})
         order = MultilineProcurementPreparation(**fields, workspace=scope.workspace_id, organization_code=scope.organization_code, entity_code=scope.entity_code,
             lines=tuple(ProcurementOrderLine(**{**line.model_dump(), "unit_price_minor": int(line.unit_price_minor)}) for line in payload.lines))

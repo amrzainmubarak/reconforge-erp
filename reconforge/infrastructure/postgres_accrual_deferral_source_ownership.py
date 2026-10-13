@@ -118,8 +118,8 @@ CREATE CONSTRAINT TRIGGER financial_source_close AFTER INSERT ON reconforge.accr
  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.financial_source_directory_deferred();
 """
 
-UPGRADE_SQL = DDL + "\n" + directory + "\n" + deferred
-DOWNGRADE_SQL = r"""
+UPGRADE_SQL = "\n".join((DDL, directory, deferred))
+DOWNGRADE_SQL = "\n".join((r"""
 DO $ownership$ BEGIN
  IF EXISTS(SELECT 1 FROM reconforge.financial_effect_ownership_guards WHERE owner_namespace='AD1')
   OR EXISTS(SELECT 1 FROM reconforge.accrual_deferral_sources) THEN
@@ -138,4 +138,5 @@ ALTER TABLE reconforge.financial_effect_ownership_guards
  DROP CONSTRAINT financial_effect_owner_namespace,DROP COLUMN ad1_owner_claim_id,DROP COLUMN me2_owner_claim_id,
  ADD CHECK(owner_namespace='ME2'),
  ADD FOREIGN KEY(tenant_id,owner_claim_id) REFERENCES reconforge.manufacturing_execution_v2_cost_claims(tenant_id,id) DEFERRABLE INITIALLY DEFERRED;
-""" + "\n" + old_directory.replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1) + "\n" + old_deferred.replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1)
+""", old_directory.replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1),
+    old_deferred.replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1)))

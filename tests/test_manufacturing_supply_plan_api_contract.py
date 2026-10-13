@@ -8,7 +8,7 @@ import pytest
 from fastapi import FastAPI
 from pydantic import ValidationError
 
-from reconforge.api.routes.manufacturing_supply_plan import PriceCeiling, project_supply, router
+from reconforge.api.routes.manufacturing_supply_plan import PostInvoiceRequest, PriceCeiling, project_supply, router
 
 
 @pytest.mark.parametrize("value", [True, 1200.0, 1200, "01200", "1.2e3", "0", "-1200", None])
@@ -38,6 +38,13 @@ def test_actual_router_contract_has_native_owner_actions_and_strict_money_text()
     ceiling = schema["components"]["schemas"]["PriceCeiling"]
     assert ceiling["properties"]["unit_price_minor"]["type"] == "string" and ceiling["additionalProperties"] is False
     assert schema["components"]["schemas"]["PostInvoiceRequest"]["properties"]["expected_budget_version"]["minimum"] == 1
+
+
+@pytest.mark.parametrize("value", [None, True, False, 0, -1, 1.0, "1"])
+def test_ap_publication_requires_a_current_exact_budget_version(value: Any) -> None:
+    with pytest.raises(ValidationError):
+        PostInvoiceRequest(command_id="original-ap-publication", expected_version=1, document_id="original-invoice",
+                           reason="Current appropriation version required", expected_budget_version=value)
 
 
 @pytest.mark.parametrize("field,value", [("workspace", "sibling"), ("organization_code", "SIBLING"), ("entity_code", "SIBLING")])

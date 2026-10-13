@@ -367,6 +367,21 @@ def accrue_native_shortage(system: Any, source: dict[str, Any], purchase: dict[s
             if operation == "invoice-post":
                 fields["expected_budget_version"] = PostgresBudgetControlRepository(connection, system.tenant).get(BudgetScope("work", "org", "entity"), source["budget_id"])["row_version"]
             owner = PostgresManufacturingSupplyPlanRepository(connection, system.tenant)
+            if operation == "invoice-post":
+                from reconforge.domain.finance_posting import FinancePostingError
+
+                original_source = owner.get(source["id"], actor=actor)
+                original_purchase = owner.get_purchase(source["id"], purchase["order"]["id"], actor=actor)
+                original_budget = PostgresBudgetControlRepository(connection, system.tenant).get(
+                    BudgetScope("work", "org", "entity"), source["budget_id"])
+                with pytest.raises(FinancePostingError, match="current budget version"), connection.transaction():
+                    owner.procurement_operation(source["id"], purchase["order"]["id"], operation,
+                        expected_version=purchase["order"]["row_version"], command_id=number + "-missing-budget-version",
+                        reason="A current appropriation version is required", actor=actor, document_id=invoice_id)
+                assert owner.get(source["id"], actor=actor) == original_source
+                assert owner.get_purchase(source["id"], purchase["order"]["id"], actor=actor) == original_purchase
+                assert PostgresBudgetControlRepository(connection, system.tenant).get(
+                    BudgetScope("work", "org", "entity"), source["budget_id"]) == original_budget
             arguments = {"expected_version": purchase["order"]["row_version"], "command_id": number + "-" + operation,
                          "reason": "Independent actual AP and budget publication", "actor": actor, "document_id": invoice_id, **fields}
             outcome = owner.procurement_operation(source["id"], purchase["order"]["id"], operation, **arguments)

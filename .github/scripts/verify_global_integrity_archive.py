@@ -492,6 +492,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/fixtures/manufacturing_supply_original_golden.json",
         "tests/test_manufacturing_supply_cycle_oracle.py",
         "tests/test_postgres_manufacturing_supply_browser_seed.py",
+        "tests/test_postgres_manufacturing_supply_read_authority.py",
         "apps/web/live/manufacturing-supply-cycles.spec.ts",
         "apps/web/live/manufacturing-supply.playwright.config.ts",
         "apps/web/src/fixtures/manufacturing-supply-original-command-acks.json",

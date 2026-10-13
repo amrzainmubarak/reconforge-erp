@@ -23397,3 +23397,17 @@ tests/fixtures/manufacturing_supply_original_golden.json SHA256
 stdlib -I/-I -O independently conserve13 actual effects and the complete
 shortage/receipt/AP/budget/FIFO/WIP/FG/scrap original populations. No new
 performance, statutory, complete-ERP or external-audit claim is inferred.
+
+
+M2 native compatibility144 custody at50739082733ea625d99533e1ff407353cea8f904:
+output/m2-quantity144-frozen-507-v1 (13 actual passes +2 private runner URI
+setup failures retained), output/m2-quantity144-frozen-507-migrations-v2
+(2 actual corrected-runner passes/0skip/xfail/xpass; XML92c70961312ceecaa214573f907dce1ec584f6cecf87769d1028b95c5571aea2).
+Empty return migration fixes independently preserve all61 non-gate selected
+populations; gate2→0→same2 identities, original populated/refused snapshots
+identical. Owner closure6fd4a3cf443b7fa60401fe34175a7a6039232e063694b7003e12d3247dbd19af.
+Original failed cloud38405919474, private MSP artifact and sanitized derivatives
+are retained; invoice-post interception actually exceeded20s. No latency or
+resource acceptance is inferred from native correctness.
+Actual downloaded Group78 original SHA51f750d2b371f18a51b08ab4f3d5c22c1265c763484b5f8540d5d045959b8bca,
+789543bytes; original stdlib-I/-I-O output SHA c875ef4d36271eda05b5001a89c4d87679c68778d654b1265b543eeaa4916a67.

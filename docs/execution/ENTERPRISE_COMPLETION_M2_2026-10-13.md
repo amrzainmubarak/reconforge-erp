@@ -48,3 +48,17 @@ currency, gross wages or translated group source reports do not establish IFRS,
 US GAAP or country-law compliance. No completion percentage is fabricated.
 Comparative resource measurement waits for a separately agreed stable quiet
 power window; historical negative/interrupted Wave5 measurements remain visible.
+
+
+Latest source-qualified integration: ordered144 compatibility and actual direct
+SQL/ACL/inverse gates pass at50739082. Empty return roundtrips preserve every
+financial/source row while restoring explicit operator rights and resetting
+only disposable coordination versions. M1 PR133 final body publication is now
+confirmed by independent v9 GET. AD1 dae85/PB52ea real ordered143 TLS and
+328-table recovery pass; MSP source6ad cloud/local20s response-loss interceptors
+failed and original packets remain. Source158 strengthens unknown-outcome same
+POST replay without raising the20s bound; actual wire acceptance is pending.
+M3 selected Group78 real TLS/recovery and independent downloaded arithmetic
+pass; bundle8 native/source-close1 native additions and root API594 are qualified
+checkpoints awaiting final integration. Security diagnostic ANSI gap is actual,
+reproduced and under correction. No final M2/M3, country or resource claim.

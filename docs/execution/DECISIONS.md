@@ -13538,3 +13538,15 @@ Studio clears a pending command. Lost or unqualified responses retain replay
 identity; current authority denial clears displayed financial source data.
 Root owns the shared contracts, migrations, registrations and final gate.
 Comparative benchmarks remain deferred by the explicit owner instruction.
+
+
+### 2026-10-13 — Compatible native coordination and unknown outcome recovery
+
+Generic quantity gates retain actual existing workspace membership plus native
+organization/entity parents under the original Inventory Core scope. Strict
+manufacturing owner custody is unchanged; directSQL/ACL and downgrade refusals
+are actual native gates. A transport timeout establishes no financial outcome:
+resolve only by same actor/command/body replay and original sealed receipt,
+never by substituting a later source GET. Keep20s unchanged and do not convert
+correct replay into a latency claim. Profiled source-history candidates remain
+unadopted until their measured value and all original guards are demonstrated.

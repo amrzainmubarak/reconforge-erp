@@ -12444,10 +12444,32 @@ image/security closure;55 mandatory native sessions/1620 cases have zero native
 skips,18 original HTTPS reports restore301 tables, and6 isolated original
 financial oracle runs pass. Original closure SHA256
 6de3768e1ec93f857a6ed754161b1d57255f5e2a49077684a85bf0aa633432fe.
-GitHub PR-body publication remains unconfirmed after actual TLS failures.
+GitHub PR133 final body was patched and independently reread at original v9; exact body SHA ebe2f3db6893abc229df5a24c912fc9fb6e70a5c7918a2a434eca254fe5af454.
 M2 ordered143 actual complete onhand/partial-shortage manufacture passes2 native
 cases; original independent supply cost3600=FG3240+scrap360+WIP0. Five targeted
 quantity/scope cases and two ordered migration gates pass; new Studio ACK
 subject binding is being corrected before final freeze. This is development,
 not final M2 acceptance. See ENTERPRISE_COMPLETION_M2_2026-10-13.md.
 No local benchmarks; cost per operation null; statutory country packs0.
+
+
+### M2 integration correctness and original replay checkpoint — 2026-10-13
+
+Root50739082 adds ordered144 generic quantity compatibility; source143/142
+owner guards/FKs remain immutable. Actual frozen-source selected gates:13
+quantity/Core/scope passes, then2 return roundtrip passes after fixing only a
+private diagnostic URI setup. The red setup packet remains; no skips/xfails.
+M2 source158883f3 strengthens actual unknown-outcome network-loss replay while
+retaining20s transport bounds; wire acceptance remains pending. AD1/PB source
+qualified ordered143 TLS restores328 tables and refuses3 tampers each.
+Original CI38405919474 failed on its6ad source (7 failed producer jobs plus
+aggregate); its security38405919091 Bandit7 findings were fixed, without
+suppression. Whole local source Bandit0 at07da; final hosted source pending.
+M3 exact original Group78 TLS passed with328-table restore/3tampers; actual
+789543-byte downloaded evidence passed standalone -I/-I-O identically.
+New IC2 bundle8 native cases and Project source-close1 native case pass in
+owned fixed-source trees; Root registered API594/legacy492 digest unchanged.
+Final bundle/close TLS and integration gates remain pending. Diagnostic ANSI
+header gap is reproduced and being fixed; original raw reports stay private.
+Comparative performance deferred; transaction cost null; country packs0;
+100K/1M/multi-region HA/DR and whole-platform completion remain unproven.

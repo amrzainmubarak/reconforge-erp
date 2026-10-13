@@ -1,8 +1,12 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { createHash } from "node:crypto";
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
 const base = process.env.RECONFORGE_ERP_LIVE_URL, tenant = process.env.RECONFORGE_ERP_TENANT, password = process.env.RECONFORGE_ERP_PASSWORD;
 const root = "/api/v1/manufacturing-supply-plan", execution = "/api/v1/manufacturing-execution-v2";
 const source = JSON.parse(process.env.RECONFORGE_MANUFACTURING_SUPPLY_SOURCE ?? "null");
+const transportLosses: { path: string; mode: string; original_request_sha256: string; immutable_ack_replayed: boolean }[] = [];
 async function fill(form: Locator, fields: Record<string, string>) { for (const [label, value] of Object.entries(fields)) await form.getByLabel(label, { exact: true }).fill(value); }
 async function login(page: Page, username: string) {
   await page.goto(`${base}/admin-audit`);
@@ -32,19 +36,36 @@ async function refresh(page: Page) {
   await button.click(); expect((await response).status()).toBe(200);
 }
 async function command(page: Page, form: Locator, label: string, path: string, key: string, lose = false, supply = true) {
-  let retained: unknown, body = "", finish!: () => void;
+  let retained: unknown, body = "", lossMode = "suppressed-committed-response", finish!: () => void;
   const done = new Promise<void>(resolve => { finish = resolve; });
   if (lose) await page.route(`**${path}`, async route => {
     if (route.request().method() !== "POST") { await route.continue(); return; }
-    body = route.request().postData()!; const reply = await route.fetch(); expect(reply.status(), await reply.text()).toBe(200);
-    retained = (await reply.json())[key]; await route.abort("failed"); finish();
+    body = route.request().postData()!;
+    try {
+      const reply = await route.fetch(); expect(reply.status(), await reply.text()).toBe(200);
+      retained = await reply.json();
+    } catch (error) {
+      // The server outcome is unknown until the original retained POST resolves.
+      // Keep the original20s transport bound; all other failures remain failures.
+      if (!(error instanceof Error) || !/^route\.fetch: Timeout 20000ms exceeded\./.test(error.message)) throw error;
+      lossMode = "transport-timeout-outcome-unknown";
+    }
+    await route.abort("failed"); finish();
   }, { times: 1 });
   let response = lose ? null : page.waitForResponse(reply => reply.url().endsWith(path) && reply.request().method() === "POST");
   await expect(form.getByRole("button", { name: label, exact: true })).toBeEnabled(); await form.getByRole("button", { name: label, exact: true }).click();
   if (lose) { await done; const retry = page.getByRole("button", { name: "Retry the same retained command", exact: true }); await expect(retry).toBeVisible(); response = page.waitForResponse(reply => reply.url().endsWith(path) && reply.request().method() === "POST"); await retry.click(); }
   const reply = await response!; expect(reply.status(), await reply.text()).toBe(200);
-  const value = (await reply.json())[key];
-  if (lose) { expect(reply.request().postData()).toBe(body); expect(value).toEqual(retained); }
+  const received = await reply.json(), value = received[key];
+  if (lose) {
+    expect(reply.request().postData()).toBe(body);
+    if (retained !== undefined) expect(received).toEqual(retained);
+    // A fresh same-command replay proves the complete immutable receipt, rather
+    // than substituting a later GET or assuming the timeout committed.
+    const replay = await page.request.fetch(reply.request()); expect(replay.status(), await replay.text()).toBe(200);
+    expect(await replay.json()).toEqual(received);
+    transportLosses.push({ path, mode: lossMode, original_request_sha256: createHash("sha256").update(body).digest("hex"), immutable_ack_replayed: true });
+  }
   if (supply) await refresh(page);
   return value;
 }
@@ -63,6 +84,8 @@ async function executionPhase(page: Page, identifier: string, kind: "order" | "p
 
 test("actual original partial-stock supply RFQ three-human award two receipts AP handoff issue QC FG and restored source oracle", async ({ page }) => {
   test.setTimeout(660_000);
+  const artifacts = process.env.RECONFORGE_ERP_BROWSER_ARTIFACTS;
+  expect(artifacts, "Owned browser artifact directory required").toBeTruthy();
   expect(base && tenant && password && source?.bom_version_id && source?.routing_id && source?.budget_id && source?.cost_claims?.length === 2, "Original native fixture and owned source configuration required").toBeTruthy();
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await login(page, "browser-maker"); await enter(page);
@@ -149,4 +172,11 @@ test("actual original partial-stock supply RFQ three-human award two receipts AP
   await page.setViewportSize({ width: 390, height: 844 }); await page.getByRole("button", { name: "Switch language", exact: true }).click();
   await expect(page.getByRole("heading", { name: "تخطيط إمداد التصنيع", exact: true })).toBeVisible(); await expect(page.locator("main#main-content")).toHaveAttribute("dir", "rtl");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]); expect(errors).toEqual([]);
+  expect(transportLosses).toHaveLength(9);
+  expect(transportLosses.every(value => value.immutable_ack_replayed)).toBe(true);
+  await writeFile(join(artifacts!, "manufacturing-supply-original-replay-custody.json"), JSON.stringify({
+    schema_version: "manufacturing-supply-transport-replay-custody-v1", original_transport_timeout_ms: 20000,
+    losses: transportLosses, financial_accuracy_proven_by: "independent-original-native-cycle-oracle",
+    latency_slo_accepted: false, performance_comparison_accepted: false,
+  }));
 });

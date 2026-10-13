@@ -503,6 +503,9 @@ def test_actual_partial_stock_shortage_partial_receipt_ap_budget_atomic_me2_wip_
         for name, data in (("supply-handoff", {"source": handed["source"]}), ("native-production-final", {"order": final_order}),
                 ("native-shortage-purchase", purchase)):
             (directory / (name + ".json")).write_text(json.dumps(project_supply(data), sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        from tests.manufacturing_supply_browser import export_manufacturing_supply_proof
+
+        export_manufacturing_supply_proof(system)
 
 
 def test_preclaim_native_physical_and_approved_fifo_units_refuse_direct_master_scale_reinterpretation(supply_database: tuple[str, str]) -> None:

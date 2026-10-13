@@ -68,3 +68,45 @@ Studio fixture pins original source digest
 Final integrated acceptance, ordered migration/restore and socket/TLS browser
 verification remain separate root-owned gates. Unit/native gate durations are
 verification evidence, not throughput benchmarks.
+
+The original SQL export is enabled with `RECONFORGE_MSP_NATIVE_PROOF_DIR` on the
+bounded complete native test. `native-supply-original-populations.json` preserves
+all original supply requirements and coverage, starting stock receipts and FIFO,
+SRC quotations and award, BPC commitments and budget events, partial receipts and
+AP, quantity guards/releases, ME1/ME2, quality inspection and the complete native
+GL. The exporter uses the ordinary authenticated tenant role and records its
+non-superuser/non-bypass status. Native `NUMERIC` columns retain exact PostgreSQL
+decimal text; native `BIGINT` columns retain JSON integer tokens. Identities and
+private fixture credentials are excluded.
+
+Run `.github/scripts/verify_manufacturing_supply_cycle_oracle.py` with Python
+`-I` and separately with `-I -O`, supplying `--proof`, its independently retained
+`--proof-sha256`, and a new `--output` file. The file-only stdlib verifier derives
+gross BOM scaling, original partial on-hand and net shortage, exact received
+custody and handoff releases from originals. It admits the independent SRC and
+ME2 stdlib scripts only by source digests captured with those original bytes.
+SRC proves actual quotation/award/AP/budget equations. ME2 proves material FIFO,
+original labor/overhead capacity, issue/WIP, quality hold, accepted FG and loss.
+The ME2 projection excludes precisely the separately verified AP accrual effects;
+its digest and excluded original effect IDs are reported, and the full original
+AP/production native journal lines are checked again before the final GL totals.
+An internal seal is reproducibility evidence; the externally supplied raw SHA
+remains required and this tool does not claim external attestation.
+
+For the real native browser gate, use
+`seed_manufacturing_supply_browser`,
+`manufacturing_supply_browser_configuration`, and
+`verify_manufacturing_supply_browser` from `tests/manufacturing_supply_browser.py`.
+The seed supplies only approved original engineering/budget/masters, two partial
+stock inputs and the original posted labor/overhead expense inputs. It explicitly
+requires zero planner, sourcing, purchase and production documents before the
+browser starts. Pass configuration as `RECONFORGE_MANUFACTURING_SUPPLY_SOURCE`.
+The required single spec/config are `apps/web/live/manufacturing-supply-cycles.spec.ts`
+and `apps/web/live/manufacturing-supply.playwright.config.ts`. They perform actual
+Studio/API demand and coverage, quotation and three-human award, two original
+receipts and two AP/budget publications, atomic native handoff and existing ME2
+issue/quality/FG. Lost-ACK probes reuse the exact original command bytes and human.
+The helper supplies the protected-table union, sibling-workspace probes and three
+restore tamper statements for original net quantity, Core guard release and the
+retained terminal handoff command. The common TLS runner and CI registration are
+root-owned; spec collection alone is not native browser or restore acceptance.

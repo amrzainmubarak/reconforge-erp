@@ -9,7 +9,7 @@ data_classification: authorized-financial-operational-records-and-synthetic-fixt
 retention_policy: immutable-original-demand-coverage-claims-commands-native-audit-history
 permissions: [manufacturing_supply_plan.read, manufacturing_supply_plan.manage, manufacturing_supply_plan.approve, manufacturing_supply_plan.post]
 default_roles: []
-migrations: []
+migrations: [0142_pg_manufacturing_supply]
 domain_invariants:
   - One actual approved BOM/routing pair creates engineering demand without inventing a movement, reservation or financial effect.
   - Gross requirements expand exactly in retained original base UOM and precision; free physical stock and unallocated valued FIFO bound exclusive on-hand custody.
@@ -38,7 +38,7 @@ api_routes:
 cli_commands: []
 ui_routes: [/manufacturing-supply-plan]
 import_schemas: [manufacturing-supply-plan-v1, manufacturing-planned-requirement-v1, manufacturing-supply-coverage-v1, manufacturing-planned-origin-v2]
-export_schemas: [manufacturing-supply-plan-v1]
+export_schemas: [manufacturing-supply-plan-v1, manufacturing-supply-proof-v1, manufacturing-supply-oracle-result-v1]
 synthetic_fixtures:
   - Original BOM10 needs ITEM2EA and MATERIAL3KG; actual starting ITEM1EA/value1200 and MATERIAL0.500KG/value50 produce shortage ITEM1EA and MATERIAL2.500KG/value1450.
   - Planned golden material2700 plus labor600 plus overhead300 equals accepted FG3240 plus abnormal loss360 plus WIP0; final native gate is explicitly source-qualified.
@@ -50,10 +50,14 @@ test_matrix:
   postgresql: tests/test_postgres_manufacturing_supply_plan.py
   api: tests/test_manufacturing_supply_plan_api_contract.py
   studio: apps/web/src/manufacturing-supply-data.test.ts; apps/web/src/components/ManufacturingSupplyPlanPage.test.tsx
+  original_oracle: tests/test_manufacturing_supply_cycle_oracle.py
+  required_native_browser: apps/web/live/manufacturing-supply-cycles.spec.ts
+  browser_seed_and_restore: tests/manufacturing_supply_browser.py
+  native_browser_seed: tests/test_postgres_manufacturing_supply_browser_seed.py
 backend_support:
-  postgres: native-owner-development
+  postgres: native-postgresql
   sqlite: unavailable-native-ME1-and-SRC-dependencies
-claim_boundary: Experimental bounded actual native owner development; ordered migration, central registration, authenticated HTTP/TLS browser, restore and frozen integrated source acceptance are root-owned pending gates. No MRP capacity optimizer, throughput, banking, statutory or ERP replacement claim.
+claim_boundary: Experimental bounded native supply with ordered142 schema and mounted Studio/API. Authenticated HTTP/TLS browser, populated restore and final frozen integrated acceptance remain root-owned pending gates. No MRP capacity optimizer, throughput, banking, statutory or ERP replacement claim.
 runtime_acceptance:
   - Actual source-qualified complete native shortage cycle passed1 case with0 skips, xfails or xpasses at development source digest9c4b1db9a90109066d2d591d219d886fb5ebda6305eaf185ef7590b14ef4a703.
   - Actual partial receipts and two AP invoices consumed1450 from the native budget; original failed handoff rolled back target order and all source custody releases.
@@ -62,3 +66,7 @@ runtime_acceptance:
   - Thirty-three focused pure/API cases, eleven Studio data/React cases and TypeScript typecheck passed developmentally; root integration gates remain separate.
   - Final adjacent native gate passed4 cases with0 skips, xfails or xpasses; exact owned native requisition read received a separate passing source-qualified gate.
   - Standalone original synthetic native snapshot browser QA passed Arabic/English at320/768/1024/1440 with no page overflow, console errors or selected WCAG axe violations; this is explicitly offline fixture QA, not authenticated native HTTP/TLS acceptance.
+  - Original native supply SQL population export passed1 mandatory case without skips/xfails/xpasses on aa8 development Python source d77920055332778acd55de8d891490d7725f11c6b9255541307caa0529ad71c9; exact raw original SHA9f49c6c5c523a0f0d7e65a457c727fc741bcec367cd3d6b98ce6098f90476590 is pinned by thirty adversarial stdlib oracle cases.
+  - Actual independent Python-I and Python-I-O file-only runs derived exact3600=FG3240+loss360+WIP0, complete13 native GL effects and balanced turnover14350 from original SQL populations. This remains synthetic verification, not external attestation or benchmark evidence.
+  - Native browser seed gate passed1 mandatory case without skips/xfails/xpasses at development Python source cc897333c22829c066fcd5467cc3cd67a8e8ebbb08305c978b0a991499dfb4e5; approved masters/budget, starting stock and original expense inputs exist while all planner/purchase/production documents remain absent.
+  - Required real-browser spec collected exactly1 case and TypeScript checks passed; actual authenticated browser cycle and populated restore remain root-owned pending gates.

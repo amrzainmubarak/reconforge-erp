@@ -32,6 +32,26 @@ class PostgresIntercompanyCashflowRepository:
         self.connection, self.tenant_id = connection, tenant_id
         self.ic2 = PostgresIntercompanyFxRepository(connection, tenant_id)
 
+    def _reporting_authority(self, source: dict[str, Any], report: dict[str, Any], result: dict[str, Any], actor: PostingActor) -> None:
+        """Native/transaction ceilings do not substitute for displayed currency."""
+        maxima = {}
+        for book in ("seller", "buyer"):
+            values = [result["books"][book][key] for key in ("opening_minor", "operating_minor", "closing_minor", "fx_on_cash_minor")]
+            values.extend(row["operating_minor"] for row in result["books"][book]["movements"])
+            values.extend(row["balance_minor"] for row in report["entity_translations"][book]["accounts"])
+            maxima[book] = max(abs(value) for value in values)
+        values = [result[key] for key in ("opening_minor", "operating_inflow_minor", "operating_outflow_minor", "operating_net_minor", "fx_on_cash_minor", "closing_minor")]
+        values.extend(row["balance_minor"] for row in report["trial_balance"])
+        values.extend(report["income_statement"].values())
+        values.extend(value for key, value in report["balance_sheet"].items() if key != "balanced")
+        maxima["adjustment"] = max(*maxima.values(), *(abs(value) for value in values))
+        for book in BOOKS:
+            scope = {"workspace_id": source["request"]["workspace_id"], "organization_id": source["request"]["organization_id"],
+                "legal_entity_id": source["request"][book]["legal_entity_id"], "amount_minor": maxima[book],
+                "currency_precision": result["reporting_policy"]["currency_precision"]}
+            for permission in ("intercompany_fx.read", "finance_core.read"):
+                self.ic2.owner._actor(actor, permission, scope, mutation=False)
+
     def evidence(self, source_id: str, *, opening: SourceCashOpening, actor: PostingActor) -> dict[str, Any]:
         with self.ic2.owner._transaction():
             current = self.ic2.get_source(source_id, actor=actor)
@@ -58,6 +78,7 @@ class PostgresIntercompanyCashflowRepository:
             report = self.ic2.report(source_id, actor=actor)
             context = self.ic2._context(source)
             result = classified_cashflow(source, report, stages, opening=opening, context=context)
+            self._reporting_authority(source, report, result, actor)
             plan_ids = [stage["plan"]["id"] for stage in stages]
             effect_ids = result["source_effect_ids"] + result["native_adjustment_effect_ids"]
             effects = records(self.connection.execute("""SELECT * FROM reconforge.finance_posting_effects

@@ -25,7 +25,16 @@ lines. This does not establish bank movement or whole-company Cash101.
 The caller has `intercompany_fx.read` and `finance_core.read`, current tenant,
 workspace and organization authority, and the original three entity grants.
 Existing IC2 authorization checks every emitted retained plan's current exact
-amount scope. Requests select the organization without a single entity alias.
+functional/transaction amount scope. This view additionally checks each party's
+displayed reporting-currency amounts and translated accounts against both read
+permissions, and checks the group maximum over every displayed book/statement
+value using the captured reporting precision. Functional amounts do not replace
+that reporting context: an actual fully settled source with EUR Cash13001 and
+GBP Cash−7801 translated at0.5/0.2 displays USD26002/−39005. The canonical policy
+evaluator with a150 ceiling refused all four finance/module, all/group-only
+contexts after the original missing-refusal receipt was preserved. This is a
+policy projection test over genuine native data, not a persisted-ceiling claim.
+Requests select the organization without a single entity alias.
 Both GET routes require all six opening query fields: `source_digest`,
 `origin_plan_id`, `origin_plan_digest`, `seller_opening_minor`,
 `buyer_opening_minor`, and `opening_basis` with the explicit value
@@ -64,6 +73,16 @@ from actual TLS/Studio execution, which is not yet claimed for this view.
 The TestClient verifies eleven entire business/source/native tables and the
 complete original source evidence unchanged; existing HTTP central-policy
 evaluation audit events may append outside that original membership.
+
+The actual populated restore uses native pg_dump/pg_restore in the explicitly
+owned correctness service. Ordered141 all311 native tables, row hashes, logical
+catalog, ACL/owners and FORCE RLS match before restored authentication, with
+PostgreSQL-native CHECK reparse. The complete original source evidence and Cash
+equation remain equal after authentication; only the existing identity last-login
+metadata may update. Three valid source/link/command tamper probes and an ordinary
+detached original inverse are refused. An unscoped connection sees0 source rows.
+The administrative archive stays private, and the exact unique restore database
+is removed. The restored view creates no financial effect.
 
 For reference, the IFRS Foundation's [IAS7 standard overview](https://www.ifrs.org/issued-standards/list-of-standards/ias-7-statement-of-cash-flows/)
 describes operating/investing/financing classifications and cash reconciliation.

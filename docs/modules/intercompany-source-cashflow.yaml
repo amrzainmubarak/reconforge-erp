@@ -15,6 +15,7 @@ domain_invariants:
   - Explicit known zero opening binds the complete native source origin and original source/plan digests
   - Nonzero, unknown, malformed, stale or another-source opening is refused
   - Every current original source plan is posted by three distinct authorized humans and remains covered by its native effects
+  - Current read amount context covers displayed reporting-currency values as well as original functional and transaction amounts
   - Native account, currency policy, historical/closing rate and report/elimination membership retain their original seals
   - Cash is covered only by the exact original seller receipt and buyer payment settlement lines
   - Uncovered Cash or group adjustment Cash is refused rather than classified or silently omitted
@@ -40,7 +41,7 @@ threat_model:
   - Evidence overwrite, oversized export or lazy database access after response headers
 benchmarks: deferred_human_measurement
 rollback_plan: remove_additive_read_route_and_module_registration_no_native_history_or_DDL_changed
-test_matrix: [pure_opening_and_membership, native_original_cycle, unfinished_source_refusal, current_grant_revocation, authenticated_explicit_opening, original_export_length_and_SHA, unchanged_financial_population, stdlib_Fraction_oracle, rehashed_balanced_business_mutation, raw_anchor, fresh_output, normal_and_optimized_isolation]
+test_matrix: [pure_opening_and_membership, native_original_cycle, unfinished_source_refusal, current_grant_revocation, current_reporting_currency_amount_context, authenticated_explicit_opening, original_export_length_and_SHA, unchanged_financial_population, real_populated_restore_with_catalog_ACL_owners, restored_owner_tamper_and_inverse_refusal, stdlib_Fraction_oracle, rehashed_balanced_business_mutation, raw_anchor, fresh_output, normal_and_optimized_isolation]
 claims:
   allowed: Experimental management cashflow for complete original IC2 paired-trade source membership with evidence-specific verification
   excluded: [whole_company_opening, whole_company_cash_balance, external_bank_transfer, statutory_cashflow, IFRS_or_IAS7_compliance, US_GAAP, investment_classification, financing_classification, ownership_NCI, country_tax, Community_backend_parity, measured_performance]

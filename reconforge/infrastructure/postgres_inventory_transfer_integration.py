@@ -207,7 +207,7 @@ CREATE CONSTRAINT TRIGGER inventory_transfer_native_close AFTER INSERT OR UPDATE
 
 UPGRADE_SQL = "\n".join((_pinned_functions(), STRUCTURAL_UPGRADE_SQL, _directory(), _birth(), _financial_namespace(), NATIVE_ROUTE_SQL))
 
-DOWNGRADE_SQL = "\n".join((r"""
+SOURCE_DOWNGRADE_PREFLIGHT_SQL = r"""
 DO $transfer$ BEGIN
  IF EXISTS(SELECT 1 FROM reconforge.inventory_transfer_sources)
  OR EXISTS(SELECT 1 FROM reconforge.inventory_quantity_source_guards WHERE owner_namespace='IT1')
@@ -216,6 +216,9 @@ DO $transfer$ BEGIN
  OR upper(COALESCE(source_reference,'')) LIKE 'IT1-%') THEN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Retained transfer source custody requires forward compatibility or restore';END IF;
 END $transfer$;
+"""
+
+DOWNGRADE_SQL = "\n".join((SOURCE_DOWNGRADE_PREFLIGHT_SQL, r"""
 DROP TRIGGER inventory_transfer_native_close ON reconforge.inventory_movements;
 DROP TRIGGER inventory_transfer_native_close ON reconforge.inventory_movement_lines;
 DROP TRIGGER a_inventory_0_transfer_native ON reconforge.inventory_movements;

@@ -488,6 +488,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "reconforge/infrastructure/postgres_inventory_transfer_integration.py",
         "tests/test_inventory_transfer.py", "tests/test_inventory_transfer_api_contract.py",
         "tests/test_postgres_inventory_transfer.py", "tests/test_postgres_inventory_transfer_integration.py",
+        "tests/test_postgres_inventory_transfer_read_authority.py",
         "docs/modules/inventory-transfer.yaml", "docs/inventory-transfer.md",
         "reconforge/infrastructure/postgres_manufacturing_supply_closure.py",
         "tests/browser_diagnostic_redaction.py",

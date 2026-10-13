@@ -61,6 +61,16 @@ scope and session changes invalidate pending responses. Thirty targeted componen
 and data cases plus TypeScript pass; actual TLS/navigation execution is pending
 ROOT integration and is not inferred from those component tests.
 
+The dedicated future browser contract uses a genuine governed synthetic native
+IC2 fixture: four reviewed owner operations and seven effects, with three distinct
+test human principals. Its financial operations are provisioned by the native
+owner before the browser read; they are not browser financial writes. The fixture
+qualification executed once with zero skips and preserved its complete original
+evidence through three format-valid tamper refusals. The browser specification is
+typed and collected once; it has not yet executed. It checks explicit opening,
+unchanged raw download, no intercompany mutations, Arabic/mobile accessibility,
+and the same original evidence after populated recovery.
+
 Run the standalone verifier with an externally retained original raw SHA:
 
 ```text

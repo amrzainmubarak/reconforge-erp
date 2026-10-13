@@ -126,10 +126,16 @@ class PostgresManufacturingSupplyPlanRepository:
     def _actor(self, actor: PostingActor, operation: str, source: Mapping[str, Any], *, lock: bool = False) -> None:
         financial = dict(source)
         if "ceiling_minor" in source:
-            quoted = self.connection.execute("""SELECT COALESCE(max(quote.total_minor),0) highest FROM reconforge.procurement_sourcing_quotes quote
+            # Fractional quantities can have a small transaction total while the
+            # retained/public unit price exceeds the reader's current amount cap.
+            # Authorize every original financial value under captured precision.
+            quoted = self.connection.execute("""SELECT GREATEST(COALESCE(max(quote.total_minor),0),
+                COALESCE(max(unit.value::numeric),0)) highest FROM reconforge.procurement_sourcing_quotes quote
                 JOIN reconforge.manufacturing_supply_procurement_claims claim ON claim.tenant_id=quote.tenant_id AND claim.requisition_id=quote.requisition_id
+                LEFT JOIN LATERAL jsonb_array_elements(quote.payload#>'{quotation,unit_prices_minor}') unit(value) ON TRUE
                 WHERE claim.tenant_id=%s AND claim.plan_id=%s""", (self.tenant_id, source["id"])).fetchone()["highest"]
-            financial.update(amount_minor=max(source["ceiling_minor"], int(quoted)), currency_precision=source["monetary_policy"]["precision"])
+            exposed = max(source["ceiling_minor"], int(quoted), *source["unit_price_ceilings_minor"].values())
+            financial.update(amount_minor=exposed, currency_precision=source["monetary_policy"]["precision"])
         permission_operation = operation
         for permission in sorted(PERMISSIONS.get(permission_operation, READ)):
             self.owner._actor(actor, permission, financial, mutation=operation != "read")

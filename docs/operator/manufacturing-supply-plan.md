@@ -123,3 +123,22 @@ command. An unqualified ACK retains the command and triggers no success refresh.
 An authoritative later read may legitimately show progress beyond a historical
 replayed ACK. Current denied reads remove displayed source and purchase evidence;
 an unknown command remains retained for the same human's qualified retry.
+
+Current amount authority covers the largest exposed original financial value,
+including every retained plan unit-price ceiling and native supplier quotation
+unit price, as well as transaction totals. These values use the plan's captured
+monetary precision. Fractional demand does not reduce authority over an exposed
+unit price: the supported original `0.001 KG × 3000 minor = 3 minor` requirement
+still exposes a `30.00` unit price. A retained `5000` unit-price quote has a `5`
+minor-unit total and exposes `50.00`. A lower current read cap refuses whole-source
+reads, lists, child reads, command responses and immutable replay. A refused new
+quote response rolls back its native offer, owner version and command together.
+Current persisted permissions and hierarchy grants are checked again after a
+blocked source lock; historical receipts never restore revoked authority.
+
+The focused native regressions are in
+`tests/test_postgres_manufacturing_supply_read_authority.py`. Original setup-error,
+authorization-red and corrected packets are retained separately under
+`output/msp-fractional-authority-native-*`; they are development verification.
+The unsupported `0.001 × 3001` example is explicitly retained as an exact-minor
+input rejection, and no rounding or procurement domain contract is changed.

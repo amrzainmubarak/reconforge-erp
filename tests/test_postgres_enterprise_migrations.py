@@ -19,8 +19,13 @@ from tests.test_postgres_inventory_receipt_posting import receipt_database as en
 
 _ = enterprise_database
 ROOT = Path(__file__).parents[1]
-HEAD = "0141_pg_accrual_deferral"
+HEAD = "0143_pg_project_billing"
 TABLES = (
+    "manufacturing_supply_plans", "manufacturing_supply_requirements", "manufacturing_supply_stock_claims",
+    "manufacturing_supply_stock_releases", "manufacturing_supply_procurement_claims", "manufacturing_supply_events",
+    "manufacturing_supply_commands", "inventory_quantity_source_guards", "inventory_quantity_source_releases",
+    "inventory_quantity_claim_gates", "pb_prices", "pb_plans", "pb_commands", "pb_time_claims", "pb_claim_events",
+    "pb_claim_heads", "pb_account_pins",
     "accrual_deferral_sources", "accrual_deferral_plans", "accrual_deferral_account_pins", "accrual_deferral_period_pins",
     "accrual_deferral_phase_events", "accrual_deferral_claim_events", "accrual_deferral_claim_heads",
     "accrual_deferral_original_claims", "accrual_deferral_original_releases", "accrual_deferral_commands",
@@ -43,7 +48,7 @@ def migrate(dsn: str, operation: str, revision: str) -> subprocess.CompletedProc
 
 def test_actual_empty_current_head_roundtrip_preserves_original_core(enterprise_database: tuple[str, str]) -> None:
     admin, app = enterprise_database
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 140 and POSTGRES_MIGRATION_REVISIONS[-1] == HEAD
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 142 and POSTGRES_MIGRATION_REVISIONS[-1] == HEAD
     assert not any(revision.startswith("0137_") for revision in POSTGRES_MIGRATION_REVISIONS)
     with psycopg.connect(admin) as connection:
         assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == (HEAD,)
@@ -69,7 +74,8 @@ def test_actual_empty_current_head_roundtrip_preserves_original_core(enterprise_
 
 def test_current_head_catalog_grants_nothing_and_refuses_retained_privileges(enterprise_database: tuple[str, str]) -> None:
     runtime = create_receipt_runtime(enterprise_database)
-    namespaces = ("manufacturing_execution_v2.", "intercompany_fx.", "people_project_payroll.", "accrual_deferral.")
+    namespaces = ("manufacturing_execution_v2.", "intercompany_fx.", "people_project_payroll.", "accrual_deferral.",
+                  "manufacturing_supply_plan.", "project_time_billing.")
     with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
         names = {row["name"] for row in connection.execute("SELECT name FROM reconforge.identity_permissions WHERE tenant_id=%s", (runtime.tenant,))}
         assert names >= CURRENT_TENANT_SEEDED_PERMISSIONS

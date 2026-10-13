@@ -28,6 +28,14 @@ platform_services:
   - {file: payables_payment_link.py, service: PayablesPaymentLinkService, status: compatibility_adapter}
   - {file: receivables.py, service: ReceivablesService, status: compatibility_adapter}
 application_services:
+  - file: manufacturing_supply_plan.py
+    service: ManufacturingSupplyPlanService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_manufacturing_supply_plan.PostgresManufacturingSupplyPlanRepository
+  - file: project_time_billing.py
+    service: ProjectTimeBillingService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_project_time_billing.PostgresProjectTimeBillingRepository
   - file: accrual_deferral.py
     service: AccrualDeferralApplicationService
     status: backend_neutral
@@ -308,4 +316,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 21
-  backend_neutral_application: 67
+  backend_neutral_application: 69

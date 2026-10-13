@@ -7,10 +7,17 @@ withdrawal, including unallocated FIFO mutation before posted stock changes.
 """
 
 UPGRADE_SQL = r"""
-ALTER TABLE reconforge.inventory_items ADD CONSTRAINT quantity_source_item_tuple UNIQUE(tenant_id,id,workspace_id,uom_id,item_type,tracking_mode,inventory_account_id);
+-- Prefix encoding distinguishes NULL from every native identifier, including
+-- the empty string. FK enforcement retains invisible source interpretation;
+-- an invoker trigger cannot enumerate another entity's FORCE-RLS guards.
+ALTER TABLE reconforge.inventory_items ADD COLUMN quantity_source_organization_key TEXT
+ GENERATED ALWAYS AS(CASE WHEN organization_id IS NULL THEN '0'::text ELSE '1'::text||organization_id END) STORED;
+ALTER TABLE reconforge.inventory_warehouses ADD COLUMN quantity_source_entity_key TEXT
+ GENERATED ALWAYS AS(CASE WHEN legal_entity_id IS NULL THEN '0'::text ELSE '1'::text||legal_entity_id END) STORED;
+ALTER TABLE reconforge.inventory_items ADD CONSTRAINT quantity_source_item_tuple UNIQUE(tenant_id,id,workspace_id,uom_id,item_type,tracking_mode,inventory_account_id,quantity_source_organization_key);
 ALTER TABLE reconforge.inventory_units_of_measure ADD CONSTRAINT quantity_source_uom_tuple UNIQUE(tenant_id,id,workspace_id,decimal_places);
 ALTER TABLE reconforge.inventory_locations ADD CONSTRAINT quantity_source_location_tuple UNIQUE(tenant_id,id,warehouse_id);
-ALTER TABLE reconforge.inventory_warehouses ADD CONSTRAINT quantity_source_warehouse_tuple UNIQUE(tenant_id,id,workspace_id,organization_id);
+ALTER TABLE reconforge.inventory_warehouses ADD CONSTRAINT quantity_source_warehouse_tuple UNIQUE(tenant_id,id,workspace_id,organization_id,quantity_source_entity_key);
 CREATE TABLE reconforge.inventory_quantity_source_guards (
  tenant_id TEXT NOT NULL,id TEXT NOT NULL,workspace_id TEXT NOT NULL,organization_id TEXT NOT NULL,legal_entity_id TEXT NOT NULL,
  item_id TEXT NOT NULL,uom_id TEXT NOT NULL,quantity_precision INTEGER NOT NULL CHECK(quantity_precision BETWEEN 0 AND 6),location_id TEXT NOT NULL,
@@ -18,19 +25,20 @@ CREATE TABLE reconforge.inventory_quantity_source_guards (
  owner_namespace TEXT NOT NULL CHECK(owner_namespace='MSP1'),owner_claim_id TEXT NOT NULL,source_receipt_plan_id TEXT,
  warehouse_id TEXT NOT NULL,inventory_account_id TEXT NOT NULL,item_type TEXT NOT NULL CHECK(item_type IN('Stock','Consumable')),
  tracking_mode TEXT NOT NULL DEFAULT 'None' CHECK(tracking_mode='None'),
+ item_organization_key TEXT NOT NULL,warehouse_entity_key TEXT NOT NULL,
  PRIMARY KEY(tenant_id,id),CHECK(id=owner_claim_id),
  FOREIGN KEY(tenant_id,owner_claim_id) REFERENCES reconforge.manufacturing_supply_stock_claims(tenant_id,id),
  FOREIGN KEY(tenant_id,item_id) REFERENCES reconforge.inventory_items(tenant_id,id),
  FOREIGN KEY(tenant_id,uom_id) REFERENCES reconforge.inventory_units_of_measure(tenant_id,id),
  FOREIGN KEY(tenant_id,location_id) REFERENCES reconforge.inventory_locations(tenant_id,id),
  FOREIGN KEY(tenant_id,source_receipt_plan_id) REFERENCES reconforge.inventory_receipt_plans(tenant_id,id)
- ,FOREIGN KEY(tenant_id,item_id,workspace_id,uom_id,item_type,tracking_mode,inventory_account_id)
- REFERENCES reconforge.inventory_items(tenant_id,id,workspace_id,uom_id,item_type,tracking_mode,inventory_account_id)
+ ,FOREIGN KEY(tenant_id,item_id,workspace_id,uom_id,item_type,tracking_mode,inventory_account_id,item_organization_key)
+ REFERENCES reconforge.inventory_items(tenant_id,id,workspace_id,uom_id,item_type,tracking_mode,inventory_account_id,quantity_source_organization_key)
  ,FOREIGN KEY(tenant_id,uom_id,workspace_id,quantity_precision)
  REFERENCES reconforge.inventory_units_of_measure(tenant_id,id,workspace_id,decimal_places)
  ,FOREIGN KEY(tenant_id,location_id,warehouse_id) REFERENCES reconforge.inventory_locations(tenant_id,id,warehouse_id)
- ,FOREIGN KEY(tenant_id,warehouse_id,workspace_id,organization_id)
- REFERENCES reconforge.inventory_warehouses(tenant_id,id,workspace_id,organization_id)
+ ,FOREIGN KEY(tenant_id,warehouse_id,workspace_id,organization_id,warehouse_entity_key)
+ REFERENCES reconforge.inventory_warehouses(tenant_id,id,workspace_id,organization_id,quantity_source_entity_key)
 );
 CREATE INDEX inventory_quantity_source_pool ON reconforge.inventory_quantity_source_guards(tenant_id,workspace_id,legal_entity_id,item_id,location_id);
 CREATE TABLE reconforge.inventory_quantity_source_releases (
@@ -162,13 +170,17 @@ DECLARE g RECORD;metadata RECORD;
 BEGIN
  IF TG_OP<>'INSERT' THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Inventory source guard/release history is immutable';END IF;
  IF TG_TABLE_NAME='inventory_quantity_source_guards' THEN
- SELECT item.item_type,item.inventory_account_id,loc.warehouse_id INTO metadata FROM reconforge.inventory_items item
+ SELECT item.item_type,item.inventory_account_id,item.quantity_source_organization_key,
+ loc.warehouse_id,warehouse.quantity_source_entity_key INTO metadata FROM reconforge.inventory_items item
  JOIN reconforge.inventory_locations loc ON loc.tenant_id=item.tenant_id AND loc.id=NEW.location_id
+ JOIN reconforge.inventory_warehouses warehouse ON warehouse.tenant_id=loc.tenant_id AND warehouse.id=loc.warehouse_id
  WHERE item.tenant_id=NEW.tenant_id AND item.id=NEW.item_id AND item.workspace_id=NEW.workspace_id;
  IF metadata.item_type IS NULL OR metadata.inventory_account_id IS NULL OR metadata.warehouse_id IS NULL THEN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Quantity source needs its actual native item and warehouse';END IF;
  NEW.item_type:=metadata.item_type;NEW.inventory_account_id:=metadata.inventory_account_id;
- NEW.warehouse_id:=metadata.warehouse_id;NEW.tracking_mode:='None';g:=NEW;
+ NEW.warehouse_id:=metadata.warehouse_id;NEW.tracking_mode:='None';
+ NEW.item_organization_key:=metadata.quantity_source_organization_key;
+ NEW.warehouse_entity_key:=metadata.quantity_source_entity_key;g:=NEW;
  ELSE SELECT * INTO g FROM reconforge.inventory_quantity_source_guards WHERE tenant_id=NEW.tenant_id AND id=NEW.guard_id;END IF;
  IF g.id IS NULL THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Inventory release needs its original guard';END IF;
  IF NOT EXISTS(SELECT 1 FROM reconforge.inventory_items item
@@ -385,6 +397,8 @@ ALTER TABLE reconforge.inventory_warehouses DROP CONSTRAINT quantity_source_ware
 ALTER TABLE reconforge.inventory_locations DROP CONSTRAINT quantity_source_location_tuple;
 ALTER TABLE reconforge.inventory_units_of_measure DROP CONSTRAINT quantity_source_uom_tuple;
 ALTER TABLE reconforge.inventory_items DROP CONSTRAINT quantity_source_item_tuple;
+ALTER TABLE reconforge.inventory_warehouses DROP COLUMN quantity_source_entity_key;
+ALTER TABLE reconforge.inventory_items DROP COLUMN quantity_source_organization_key;
 """
 
 # Direct-master UPDATE/DELETE needs ROOT-owned deferred Core-only relevance guards:

@@ -28,6 +28,7 @@ const IntercompanyFxPage = lazy(() => import("./components/IntercompanyFxPage"))
 const PeopleProjectPayrollPage = lazy(() => import("./components/PeopleProjectPayrollPage").then((module) => ({ default: module.PeopleProjectPayrollPage })));
 const ProjectTimeBillingPage = lazy(() => import("./components/ProjectTimeBillingPage").then((module) => ({ default: module.ProjectTimeBillingPage })));
 const AccrualDeferralPage = lazy(() => import("./components/AccrualDeferralPage").then((module) => ({ default: module.AccrualDeferralPage })));
+const ManufacturingSupplyPlanPage = lazy(() => import("./components/ManufacturingSupplyPlanPage").then((module) => ({ default: module.ManufacturingSupplyPlanPage })));
 const ProcurementSourcingPage = lazy(() => import("./components/ProcurementSourcingPage").then((module) => ({ default: module.ProcurementSourcingPage })));
 const Dashboard = lazy(() => import("./components/Dashboard").then((module) => ({ default: module.Dashboard })));
 const ExceptionQueue = lazy(() => import("./components/ExceptionQueue").then((module) => ({ default: module.ExceptionQueue })));
@@ -81,6 +82,7 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/people-project-payroll")) return "peopleProjectPayroll";
   if (normalized.endsWith("/project-time-billing")) return "projectTimeBilling";
   if (normalized.endsWith("/accrual-deferral")) return "accrualDeferral";
+  if (normalized.endsWith("/manufacturing-supply-plan")) return "manufacturingSupplyPlan";
   if (normalized.endsWith("/procurement-sourcing")) return "procurementSourcing";
   if (normalized.endsWith("/procurement-operations")) return "procurementOperations";
   if (normalized.endsWith("/enterprise-finance") || normalized.endsWith("/erp")) return "enterpriseFinance";
@@ -113,6 +115,7 @@ function pathForPage(page: StudioPage): string {
     peopleProjectPayroll: "people-project-payroll",
     projectTimeBilling: "project-time-billing",
     accrualDeferral: "accrual-deferral",
+    manufacturingSupplyPlan: "manufacturing-supply-plan",
     procurementSourcing: "procurement-sourcing",
     procurementOperations: "procurement-operations",
     enterpriseFinance: "enterprise-finance",
@@ -258,6 +261,7 @@ function StudioApp() {
         {activePage === "peopleProjectPayroll" ? <Suspense fallback={<LoadingView translate={t} />}><PeopleProjectPayrollPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "projectTimeBilling" ? <Suspense fallback={<LoadingView translate={t} />}><ProjectTimeBillingPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "accrualDeferral" ? <Suspense fallback={<LoadingView translate={t} />}><AccrualDeferralPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "manufacturingSupplyPlan" ? <Suspense fallback={<LoadingView translate={t} />}><ManufacturingSupplyPlanPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "procurementSourcing" ? <Suspense fallback={<LoadingView translate={t} />}><ProcurementSourcingPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "dashboard" && error ? <ErrorView translate={t} message={error} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
         {activePage === "dashboard" && !error && !data ? <LoadingView translate={t} /> : null}

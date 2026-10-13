@@ -18,6 +18,7 @@ const operationalLabels: Partial<Record<StudioPage, MessageKey>> = {
   peopleProjectPayroll: "peopleProjectPayroll",
   projectTimeBilling: "projectTimeBilling",
   accrualDeferral: "accrualDeferral",
+  manufacturingSupplyPlan: "manufacturingSupplyPlan",
   procurementSourcing: "procurementSourcing",
   receivables: "receivables",
   notifications: "notifications",

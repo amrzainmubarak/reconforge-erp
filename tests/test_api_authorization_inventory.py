@@ -21,8 +21,8 @@ ENTERPRISE_M1_PREFIXES = (
     "/api/v1/manufacturing-execution-v2/", "/api/v1/intercompany-fx/", "/api/v1/people-project-payroll/",
 )
 EXPECTED_ENTERPRISE_M1_ROUTE_COUNT = 45
-ENTERPRISE_M2_PREFIXES = ("/api/v1/accrual-deferral/", "/api/v1/project-time-billing/")
-EXPECTED_ENTERPRISE_M2_ROUTE_COUNT = 23
+ENTERPRISE_M2_PREFIXES = ("/api/v1/accrual-deferral/", "/api/v1/project-time-billing/", "/api/v1/manufacturing-supply-plan/")
+EXPECTED_ENTERPRISE_M2_ROUTE_COUNT = 48
 WAVE5_PREFIXES = ("/api/v1/manufacturing-execution/", "/api/v1/intercompany-operations/", "/api/v1/procurement-sourcing/")
 WAVE4_PREFIXES = (
     "/api/v1/customer-returns/", "/api/v1/procurement-commitments/",
@@ -62,6 +62,7 @@ HANDLER_BOUNDARY_HELPERS = {
     "intercompany_fx.py": frozenset({"authority", "execute"}),
     "accrual_deferral.py": frozenset({"authority", "execute"}),
     "project_time_billing.py": frozenset({"execute", "phase"}),
+    "manufacturing_supply_plan.py": frozenset({"execute"}),
     # Reviewed HC execution chooses only the ordinary scoped GL transaction or
     # the separate role-authenticated personnel transaction; HTTP cannot select it.
     "people_project_payroll.py": frozenset({"execute"}),

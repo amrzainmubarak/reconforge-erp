@@ -9,6 +9,8 @@ _CATALOGS = {
     "manufacturing_execution_v2": ("read", "manage", "approve", "post"),
     "intercompany_fx": ("read", "prepare", "review", "post"),
     "accrual_deferral": ("read", "prepare", "review", "post"),
+    "manufacturing_supply_plan": ("read", "manage", "approve", "post"),
+    "project_time_billing": ("read", "manage", "approve_price", "prepare", "collect", "review", "post"),
     "people_project_payroll": (
         "read", "read_sensitive", "personnel", "manage", "approve_time", "prepare", "review", "post", "pay",
     ),

@@ -78,6 +78,7 @@ from reconforge.api.routes import (
     manufacturing_cost_control,
     manufacturing_execution,
     manufacturing_execution_v2,
+    manufacturing_supply_plan,
     master_data,
     metrics,
     notification_inbox,
@@ -468,6 +469,7 @@ def create_api_app(
     app.include_router(accrual_deferral.router, prefix="/api/v1")
     app.include_router(manufacturing_execution.router, prefix="/api/v1")
     app.include_router(manufacturing_execution_v2.router, prefix="/api/v1")
+    app.include_router(manufacturing_supply_plan.router, prefix="/api/v1")
     app.include_router(procurement_sourcing.router, prefix="/api/v1")
     app.include_router(people_project_payroll.router, prefix="/api/v1")
     app.include_router(project_time_billing.router, prefix="/api/v1")
@@ -542,6 +544,7 @@ def create_api_app(
         accrual_deferral.router,
         manufacturing_execution.router,
         manufacturing_execution_v2.router,
+        manufacturing_supply_plan.router,
         procurement_sourcing.router,
         people_project_payroll.router,
         project_time_billing.router,

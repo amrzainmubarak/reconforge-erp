@@ -480,6 +480,15 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "alembic/versions/0143_postgres_project_billing.py",
         "alembic/versions/0144_postgres_inventory_contracts.py",
         "alembic/versions/0145_postgres_supply_closure.py",
+        "alembic/versions/0146_postgres_inventory_transfer.py",
+        "reconforge/domain/inventory_transfer.py", "reconforge/application/inventory_transfer.py",
+        "reconforge/ports/inventory_transfer.py", "reconforge/api/routes/inventory_transfer.py",
+        "reconforge/infrastructure/postgres_inventory_transfer.py",
+        "reconforge/infrastructure/postgres_inventory_transfer_schema.py",
+        "reconforge/infrastructure/postgres_inventory_transfer_integration.py",
+        "tests/test_inventory_transfer.py", "tests/test_inventory_transfer_api_contract.py",
+        "tests/test_postgres_inventory_transfer.py", "tests/test_postgres_inventory_transfer_integration.py",
+        "docs/modules/inventory-transfer.yaml", "docs/inventory-transfer.md",
         "reconforge/infrastructure/postgres_manufacturing_supply_closure.py",
         "tests/browser_diagnostic_redaction.py",
         "tests/test_browser_diagnostic_redaction.py",
@@ -702,8 +711,8 @@ def main() -> int:
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--index-count", type=int, default=22)
-    parser.add_argument("--migration-count", type=int, default=144)
-    parser.add_argument("--migration-head", default="0145_pg_supply_closure")
+    parser.add_argument("--migration-count", type=int, default=145)
+    parser.add_argument("--migration-head", default="0146_pg_inventory_transfer")
     parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
     parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
     parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")

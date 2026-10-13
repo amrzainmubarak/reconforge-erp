@@ -439,6 +439,19 @@ for _method, _path, _phase in (
     _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/manufacturing-supply-plan" + _path)] = (
         "all", tuple(sorted(_SUPPLY_READ_CONTRACT | set(_SUPPLY_PHASE_ADDITIONS[_phase]))))
 
+_TRANSFER_READ_CONTRACT = frozenset({"inventory_transfer.read", "inventory.read", "inventory.valuation.read", "finance_core.read"})
+for _method, _path, _additional in (
+    ("GET", "/transfers", ()), ("GET", "/transfers/{identifier}", ()),
+    ("GET", "/transfers/{identifier}/evidence", ()),
+    ("POST", "/transfers", ("inventory_transfer.manage", "inventory.manage")),
+    ("POST", "/transfers/{identifier}/inverse", ("inventory_transfer.manage", "inventory.manage")),
+    ("POST", "/transfers/{identifier}/review", ("inventory_transfer.approve", "inventory.manage")),
+    ("POST", "/transfers/{identifier}/cancel", ("inventory_transfer.approve", "inventory.manage")),
+    ("POST", "/transfers/{identifier}/post", ("inventory_transfer.post", "inventory.post")),
+):
+    _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/inventory-transfer" + _path)] = (
+        "all", tuple(sorted(_TRANSFER_READ_CONTRACT | set(_additional))))
+
 _PEOPLE_PHASE_CONTRACTS = {
     "personnel": frozenset({"people_project_payroll.personnel", "people_project_payroll.read_sensitive"}),
     "manage": frozenset({"people_project_payroll.manage"}),

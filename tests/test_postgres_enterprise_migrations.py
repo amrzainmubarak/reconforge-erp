@@ -19,8 +19,10 @@ from tests.test_postgres_inventory_receipt_posting import receipt_database as en
 
 _ = enterprise_database
 ROOT = Path(__file__).parents[1]
-HEAD = "0145_pg_supply_closure"
+HEAD = "0146_pg_inventory_transfer"
 TABLES = (
+    "inventory_transfer_sources", "inventory_transfer_claims", "inventory_transfer_releases",
+    "inventory_transfer_events", "inventory_transfer_commands",
     "manufacturing_supply_plans", "manufacturing_supply_requirements", "manufacturing_supply_stock_claims",
     "manufacturing_supply_stock_releases", "manufacturing_supply_procurement_claims", "manufacturing_supply_events",
     "manufacturing_supply_commands", "inventory_quantity_source_guards", "inventory_quantity_source_releases",
@@ -48,7 +50,7 @@ def migrate(dsn: str, operation: str, revision: str) -> subprocess.CompletedProc
 
 def test_actual_empty_current_head_roundtrip_preserves_original_core(enterprise_database: tuple[str, str]) -> None:
     admin, app = enterprise_database
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 144 and POSTGRES_MIGRATION_REVISIONS[-1] == HEAD
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 145 and POSTGRES_MIGRATION_REVISIONS[-1] == HEAD
     assert not any(revision.startswith("0137_") for revision in POSTGRES_MIGRATION_REVISIONS)
     with psycopg.connect(admin) as connection:
         assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == (HEAD,)
@@ -75,7 +77,7 @@ def test_actual_empty_current_head_roundtrip_preserves_original_core(enterprise_
 def test_current_head_catalog_grants_nothing_and_refuses_retained_privileges(enterprise_database: tuple[str, str]) -> None:
     runtime = create_receipt_runtime(enterprise_database)
     namespaces = ("manufacturing_execution_v2.", "intercompany_fx.", "people_project_payroll.", "accrual_deferral.",
-                  "manufacturing_supply_plan.", "project_time_billing.")
+                  "manufacturing_supply_plan.", "project_time_billing.", "inventory_transfer.")
     with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
         names = {row["name"] for row in connection.execute("SELECT name FROM reconforge.identity_permissions WHERE tenant_id=%s", (runtime.tenant,))}
         assert names >= CURRENT_TENANT_SEEDED_PERMISSIONS

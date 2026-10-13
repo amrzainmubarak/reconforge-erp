@@ -87,6 +87,17 @@ def _descriptor(
 
 _POSTGRES_MODULES = (
     _descriptor(
+        module_id="inventory.governed-transfer", name="Governed original same-entity warehouse transfer",
+        revision="0146_pg_inventory_transfer", namespace="inventory_transfer",
+        actions=("read", "manage", "approve", "post"), manifest="docs/modules/inventory-transfer.yaml",
+        dependencies=("platform.core", "finance.core", "inventory.core"),
+        tests=("tests/test_inventory_transfer.py", "tests/test_postgres_inventory_transfer.py",
+               "tests/test_postgres_inventory_transfer_integration.py"),
+        summary="Independent review, exclusive shared quantity custody and third-human native transfer with unchanged original pooled FIFO and GL.",
+        gaps=("Whole final source, original Oracle and real HTTPS acceptance remain pending.",
+              "One untracked base-UOM item and approved receipt costs within one entity; no lot, serial or cross-entity transfer."),
+    ),
+    _descriptor(
         module_id="finance.intercompany-group-diagnostic", name="Selected original group reporting diagnostic",
         revision="0139_pg_intercompany_fx", namespace="intercompany_fx", actions=("read",),
         manifest="docs/modules/intercompany-group-diagnostic.yaml",

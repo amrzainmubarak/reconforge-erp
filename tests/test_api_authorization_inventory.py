@@ -28,6 +28,8 @@ ENTERPRISE_M3_EXACT_ROUTES = frozenset({
     ("GET", "/api/v1/intercompany-fx/sources/{source_id}/native-evidence-bundle"),
 })
 EXPECTED_ENTERPRISE_M3_ROUTE_COUNT = 9
+ENTERPRISE_M4_PREFIXES = ("/api/v1/inventory-transfer/",)
+EXPECTED_ENTERPRISE_M4_ROUTE_COUNT = 8
 WAVE5_PREFIXES = ("/api/v1/manufacturing-execution/", "/api/v1/intercompany-operations/", "/api/v1/procurement-sourcing/")
 WAVE4_PREFIXES = (
     "/api/v1/customer-returns/", "/api/v1/procurement-commitments/",
@@ -71,6 +73,7 @@ HANDLER_BOUNDARY_HELPERS = {
     "accrual_deferral.py": frozenset({"authority", "execute"}),
     "project_time_billing.py": frozenset({"execute", "phase"}),
     "manufacturing_supply_plan.py": frozenset({"execute"}),
+    "inventory_transfer.py": frozenset({"execute"}),
     # Reviewed HC execution chooses only the ordinary scoped GL transaction or
     # the separate role-authenticated personnel transaction; HTTP cannot select it.
     "people_project_payroll.py": frozenset({"execute"}),
@@ -119,10 +122,10 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
     app = create_api_app(tmp_path / "unused.db")
     contracts = app.state.authorization_contracts
 
-    retained = tuple(contract for contract in contracts if not contract.path.startswith(ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES))
+    retained = tuple(contract for contract in contracts if not contract.path.startswith(ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES + ENTERPRISE_M4_PREFIXES))
     assert len(retained) == EXPECTED_ROUTE_COUNT
     assert authorization_inventory_digest(retained) == EXPECTED_DIGEST
-    assert len(contracts) == EXPECTED_ROUTE_COUNT + EXPECTED_ENTERPRISE_M1_ROUTE_COUNT + EXPECTED_ENTERPRISE_M2_ROUTE_COUNT + EXPECTED_ENTERPRISE_M3_ROUTE_COUNT
+    assert len(contracts) == EXPECTED_ROUTE_COUNT + EXPECTED_ENTERPRISE_M1_ROUTE_COUNT + EXPECTED_ENTERPRISE_M2_ROUTE_COUNT + EXPECTED_ENTERPRISE_M3_ROUTE_COUNT + EXPECTED_ENTERPRISE_M4_ROUTE_COUNT
     assert app.state.authorization_contract_digest == authorization_inventory_digest(contracts)
     assert {contract.mode for contract in contracts} == {"all", "any", "dynamic", "identity", "public", "scim"}
     assert [contract for contract in contracts if contract.mode == "dynamic"] == [
@@ -144,6 +147,10 @@ def test_enterprise_route_cohorts_retain_historical_m1_and_classify_exact_m3_add
                or (contract.method, contract.path) in ENTERPRISE_M3_EXACT_ROUTES)
     assert len(m1) == EXPECTED_ENTERPRISE_M1_ROUTE_COUNT == 45
     assert len(m3) == EXPECTED_ENTERPRISE_M3_ROUTE_COUNT == 9
+    m4 = tuple(contract for contract in contracts if contract.path.startswith(ENTERPRISE_M4_PREFIXES))
+    assert len(m4) == EXPECTED_ENTERPRISE_M4_ROUTE_COUNT == 8
+    transfer_reads = {"inventory_transfer.read", "inventory.read", "inventory.valuation.read", "finance_core.read"}
+    assert all(contract.mode == "all" and transfer_reads <= set(contract.permissions) for contract in m4)
     assert {(contract.method, contract.path) for contract in m1}.isdisjoint(
         {(contract.method, contract.path) for contract in m3})
     assert len([contract for contract in contracts if contract.mode == "scim"]) == 15
@@ -223,7 +230,7 @@ def test_wave3_routes_require_exact_authority_and_preserve_all_accepted_route_co
     actual_added = tuple(contract for contract in contracts if (contract.method, contract.path) in added_keys)
     assert actual_added == expected
     retained = tuple(contract for contract in contracts if (contract.method, contract.path) not in added_keys
-                     and not contract.path.startswith(ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES))
+                     and not contract.path.startswith(ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES + ENTERPRISE_M4_PREFIXES))
     assert len(retained) == 429
     assert authorization_inventory_digest(retained) == "1c1581c2a7d8baf52e80253d5c5e8d026f09de431b250efdb4c89ea1bfd4232d"
     validate_authorization_surface(create_api_app(tmp_path / "complete.db").state.authorization_contracts,
@@ -232,7 +239,7 @@ def test_wave3_routes_require_exact_authority_and_preserve_all_accepted_route_co
 
 def test_wave4_source_routes_preserve_accepted_authority_and_require_exact_permissions(tmp_path: Path) -> None:
     contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
-    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE4_PREFIXES + WAVE5_PREFIXES + ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES))
+    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE4_PREFIXES + WAVE5_PREFIXES + ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES + ENTERPRISE_M4_PREFIXES))
     assert len(retained) == 432
     assert authorization_inventory_digest(retained) == "1444692a691300fa3bd63fef6ab70f1c02d195a0b1b9b15b7673b58c847beb76"
     read = ("finance_core.read", "inventory.read", "receivables.read", "sales.read")
@@ -349,7 +356,7 @@ def test_enterprise_sensitive_contract_refuses_adjacent_authority(
 
 def test_wave5_additions_preserve_every_accepted_wave4_route(tmp_path: Path) -> None:
     contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
-    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE5_PREFIXES + ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES))
+    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE5_PREFIXES + ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES + ENTERPRISE_M4_PREFIXES))
     assert len(retained) == 459
     assert authorization_inventory_digest(retained) == "f41b3007bbcc9cc1285cc836be0cb2e81d2e2c4e03713f83f6d245db27fccc9a"
 
@@ -460,6 +467,8 @@ def test_critical_financial_route_permission_contract_cannot_drift() -> None:
 
 
 @pytest.mark.parametrize("route,permissions", [
+    ("/api/v1/inventory-transfer/transfers/{identifier}/review", ("inventory_transfer.approve", "inventory.manage")),
+    ("/api/v1/inventory-transfer/transfers/{identifier}/post", ("inventory_transfer.post", "inventory.post")),
     ("/api/v1/sales-revenue/documents/{identifier}/invoice/review", ("sales.manage", "finance_core.validate")),
     ("/api/v1/procurement-operations/cycles/{cycle_id}/commands/receive", ("payables.manage", "finance_core.post")),
     ("/api/v1/procurement-operations/cycles/{cycle_id}/commands/pay", ("finance_core.post",)),

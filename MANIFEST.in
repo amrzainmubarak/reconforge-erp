@@ -1529,3 +1529,9 @@ include tests/test_postgres_intercompany_fx_reporting_authority.py
 include tests/test_postgres_intercompany_reporting_currency_precision.py
 
 include tests/test_optional_postgres_driver.py
+include tests/test_postgres_inventory_transfer.py
+include tests/test_postgres_inventory_transfer_integration.py
+include tests/test_inventory_transfer.py
+include tests/test_inventory_transfer_api_contract.py
+include docs/modules/inventory-transfer.yaml
+include docs/inventory-transfer.md

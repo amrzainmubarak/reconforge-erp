@@ -1,10 +1,10 @@
 schema_version: 1
-updated_at: "2026-10-13"
+updated_at: "2026-10-14"
 claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0145_pg_supply_closure"
+current_source_migration_head: "0146_pg_inventory_transfer"
 native_source_extensions:
   claim_boundary: Separate native owner kernels compose existing services; these entries do not retroactively increase historical application-service parity counts.
   ci_shard: erp-expansion
@@ -304,6 +304,7 @@ goal_boundary_gate:
   limitations: [single_node, synthetic_data, no_replication, no_ha, no_rpo_rto_claim, no_host_loss, no_live_provider_or_writeback]
 allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
 boundaries:
+  - {file: inventory_transfer.py, service: InventoryTransferService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_transfer.PostgresInventoryTransferRepository, test: tests/test_postgres_inventory_transfer.py, additional_tests: [tests/test_postgres_inventory_transfer_integration.py], ci_shard: inventory-transfer, risk: bounded_same_entity_two_internal_warehouses_untracked_base_uom_original_irp_fifo_zero_valuation_or_gl_effect_no_serial_lot_or_cross_entity_transfer}
   - {file: intercompany_group_diagnostic.py, service: IntercompanyGroupDiagnosticService, status: live_test_available, adapter: reconforge.infrastructure.postgres_intercompany_group_diagnostic.PostgresIntercompanyGroupDiagnosticRepository, test: tests/test_postgres_intercompany_group_diagnostic.py, additional_tests: [tests/test_postgres_intercompany_group_diagnostic_api.py, tests/test_intercompany_group_diagnostic_browser_fixture.py], ci_shard: intercompany-operations, risk: selected_complete_sources_original_adjustment_bridge_not_whole_group_period_or_formal_close}
   - {file: intercompany_cashflow.py, service: IntercompanyCashflowApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_intercompany_cashflow.PostgresIntercompanyCashflowRepository, test: tests/test_postgres_intercompany_cashflow.py, additional_tests: [tests/test_postgres_intercompany_cashflow_api.py, tests/test_postgres_intercompany_cashflow_authority.py, tests/test_postgres_intercompany_cashflow_restore.py, tests/test_intercompany_cashflow_browser_fixture.py], ci_shard: intercompany-operations, risk: explicit_zero_opening_one_complete_original_source_report_not_whole_group_statutory_cashflow}
   - {file: project_source_reconciliation.py, service: ProjectSourceReconciliationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_project_source_reconciliation.PostgresProjectSourceReconciliationRepository, test: tests/test_postgres_project_source_reconciliation.py, additional_tests: [tests/test_postgres_project_source_close.py, tests/test_postgres_project_source_reconciliation_api.py, tests/test_postgres_project_source_reconciliation_browser_fixture.py], ci_shard: project-source-reconciliation, risk: one_project_period_original_wage_invoice_time_source_pair_whole_document_cash_no_project_cash_allocation_or_statutory_tax}
@@ -377,9 +378,9 @@ boundaries:
   - {file: stock_commerce.py, service: StockCommerceApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_stock_commerce.PostgresStockCommerceRepository, test: tests/test_postgres_stock_commerce.py, additional_tests: [tests/test_postgres_stock_commerce_api.py, tests/test_postgres_stock_commerce_migrations.py], ci_shard: erp-expansion, risk: functional_currency_untracked_products_full_payment_per_tranche_no_customer_return}
   - {file: supplier_returns.py, service: SupplierReturnsService, status: live_test_available, adapter: reconforge.infrastructure.postgres_supplier_returns.PostgresSupplierReturnsRepository, test: tests/test_postgres_supplier_returns.py, additional_tests: [tests/test_postgres_supplier_returns_api.py], ci_shard: supplier-returns, risk: whole_original_unissued_receipt_unpaid_single_line_ap_debit_with_exact_original_fifo_and_optional_landed_charge_expense_no_partial_quantity_or_paid_invoice}
 summary:
-  total: 72
+  total: 73
   live_verified_current: 20
-  live_test_available: 48
+  live_test_available: 49
   absent: 0
   contract_only: 1
   not_applicable: 3

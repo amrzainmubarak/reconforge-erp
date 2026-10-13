@@ -17,9 +17,10 @@ SHARDS = {
     "commercial-integrity", "supply-integrity", "finance-integrity",
     "supplier-returns", "fx-revaluation",
     "manufacturing-execution", "intercompany-operations", "procurement-sourcing",
-    "people-project-payroll", "accrual-deferral", "manufacturing-supply-plan", "project-time-billing", "project-source-reconciliation",
+    "people-project-payroll", "accrual-deferral", "manufacturing-supply-plan", "project-time-billing", "project-source-reconciliation", "inventory-transfer",
 }
 INTEGRITY_FILES = {
+    "inventory-transfer": ("tests/test_postgres_inventory_transfer.py", "tests/test_postgres_inventory_transfer_integration.py"),
     "manufacturing-supply-plan": ("tests/test_postgres_manufacturing_supply_closure.py", "tests/test_postgres_manufacturing_supply_closure_authority.py", "tests/test_postgres_manufacturing_supply_plan.py", "tests/test_postgres_manufacturing_supply_browser_seed.py", "tests/test_postgres_manufacturing_supply_read_authority.py"),
     "project-time-billing": (
         "tests/test_postgres_project_time_billing.py", "tests/test_postgres_project_time_billing_api.py",
@@ -149,7 +150,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 62  # Retain all56 original commands, three M2 owners and three source-report owners.
+    assert len(commands) == 63  # Retain 62 accepted commands and add one complete transfer owner partition.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)

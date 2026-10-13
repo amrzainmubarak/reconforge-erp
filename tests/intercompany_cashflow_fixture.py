@@ -15,7 +15,12 @@ def fixture() -> tuple[dict[str, Any], Any, SourceCashOpening]:
         "account_type": "Asset" if role == "cash" else "Other"} for role, code in source["request"][book]["accounts"].items()}
         for book in ("seller", "buyer", "adjustment")}
     source["source_digest"] = digest_payload({key: value for key, value in source.items() if key != "source_digest"})
-    elimination = elimination_equation(source, translated)
+    for translation in translated.values():
+        for account in translation["accounts"]:
+            for row in account["contributions"]:
+                row["account_id"] = "ACC-" + row["account_code"]
+        translation["translation_digest"] = digest_payload({key: value for key, value in translation.items() if key != "translation_digest"})
+    elimination = {**elimination_equation(source, translated), "translations": translated}
     income = {book: {"2026-10-03": source["request"][book + "_original_rate"], "2026-10-04": cash_rates[book],
         "2026-10-31": closing_rates[book]} for book in ("seller", "buyer")}
     stages = []
@@ -46,17 +51,14 @@ def fixture() -> tuple[dict[str, Any], Any, SourceCashOpening]:
             "command_request": {"closing_rates": closing_rates, "income_rates": income} if kind == "eliminate" else {}}
         plan["plan_digest"] = digest_payload(plan)
         plan.update(phase=2, status="Posted", reviewer_actor_id="checker", posted_actor_id="poster", posting_effect_ids=effect_ids)
-        stages.append({"source": source, "plan": plan, "native_effects": effects})
+        phases = [{"action": "intercompany_fx_" + action, "actor_id": actor,
+            "audit_event_id": f"phase-audit-{sequence}-{action}", "outbox_event_id": f"phase-outbox-{sequence}-{action}",
+            "metadata_json": {"plan_digest": plan["plan_digest"]}} for action, actor in (
+                ("prepared", "maker"), ("reviewed", "checker"), ("posted", "poster"))]
+        stages.append({"source": source, "plan": plan, "native_effects": effects, "phases": phases})
     report = group_report(source, translated, adjustment_rows, plan_digest=stages[-1]["plan"]["plan_digest"])
     report["source_effect_ids"] = sorted(effect for stage in stages[:-1] for effect in stage["plan"]["posting_effect_ids"].values())
     report["native_adjustment_effect_ids"] = sorted(stages[-1]["plan"]["posting_effect_ids"].values())
-    report["report_digest"] = digest_payload({key: value for key, value in report.items() if key != "report_digest"})
-    # The source translation fixtures use original code lookup too; the native
-    # account identity is now explicit for every Cash contribution.
-    for book in ("seller", "buyer"):
-        for account in report["entity_translations"][book]["accounts"]:
-            for row in account["contributions"]:
-                row["account_id"] = "ACC-" + row["account_code"]
     report["report_digest"] = digest_payload({key: value for key, value in report.items() if key != "report_digest"})
     origin = stages[0]["plan"]
     opening = SourceCashOpening(source["id"], source["source_digest"], origin["id"], origin["plan_digest"], 0, 0,

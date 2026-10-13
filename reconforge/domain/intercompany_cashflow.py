@@ -6,15 +6,15 @@ the existing captured-policy FX conversion; no second currency engine exists.
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, NoReturn
 
 from reconforge.domain.finance_policy import FinanceCurrencyPolicy, FinancePolicyError
 from reconforge.domain.finance_posting import FinancePostingError, digest_payload
-from reconforge.domain.intercompany_fx import MAX_EFFECT_LINES, MAX_OPERATIONS, PARTIES, converted, signed
+from reconforge.domain.intercompany_fx import MAX_EFFECT_LINES, MAX_OPERATIONS, PARTIES, converted, minor, signed
 from reconforge.utils.money import CurrencyRegistryContext
 
 
-def refuse(message: str) -> None:
+def refuse(message: str) -> NoReturn:
     raise FinancePostingError("intercompany_cashflow_invalid", message)
 
 
@@ -53,6 +53,9 @@ def classified_cashflow(source: Mapping[str, Any], report: Mapping[str, Any], st
             source["id"], source["source_digest"], source["policies"]["adjustment"]):
         refuse("Reporting policy and source membership differ.")
     request = source["request"]
+    if (set(source["policies"]) != {"transaction", *PARTIES, "adjustment"}
+            or len({request[book]["legal_entity_id"] for book in (*PARTIES, "adjustment")}) != 3):
+        refuse("Three distinct original native books and explicit transaction policy are required.")
     for captured in source["policies"].values():
         try:
             FinanceCurrencyPolicy.verify_record(captured, context)
@@ -81,10 +84,23 @@ def classified_cashflow(source: Mapping[str, Any], report: Mapping[str, Any], st
             "phase", "status", "reviewer_actor_id", "posted_actor_id", "posting_effect_ids", "plan_digest"}}
         if plan["plan_digest"] != digest_payload(sealed):
             refuse("An original operation seal differs.")
+        phases = stage["phases"]
+        if (len(phases) != 3 or [row["action"] for row in phases] != [
+                "intercompany_fx_prepared", "intercompany_fx_reviewed", "intercompany_fx_posted"]
+                or len({row["audit_event_id"] for row in phases}) != 3 or len({row["outbox_event_id"] for row in phases}) != 3
+                or [row["actor_id"] for row in phases] != [plan[field] for field in (
+                    "preparer_actor_id", "reviewer_actor_id", "posted_actor_id")]
+                or not all(row["audit_event_id"] and row["outbox_event_id"]
+                    and row["metadata_json"]["plan_digest"] == plan["plan_digest"] for row in phases)):
+            refuse("Every operation requires its original exact three-person phase evidence.")
         effects = {effect["id"]: effect for effect in stage["native_effects"]}
         if len(effects) != len(stage["native_effects"]) or set(effects) != set(plan["posting_effect_ids"].values()):
             refuse("Every declared native effect must be captured exactly once.")
-        if {entry["book"] for entry in plan["entries"]} != set(plan["posting_effect_ids"]):
+        expected_books = {"adjustment"} if plan["kind"] == "eliminate" else set(PARTIES)
+        if (len(plan["entries"]) != len(expected_books)
+                or {entry["book"] for entry in plan["entries"]} != expected_books
+                or set(plan["posting_effect_ids"]) != expected_books
+                or len(set(plan["posting_effect_ids"].values())) != len(expected_books)):
             refuse("Native book effect membership differs.")
         for entry in plan["entries"]:
             book = entry["book"]
@@ -98,8 +114,21 @@ def classified_cashflow(source: Mapping[str, Any], report: Mapping[str, Any], st
                 "legal_entity_id": request[book]["legal_entity_id"], **source["policies"][book]}
             if (effect["snapshot"] != snapshot or effect["entry_id"] != entry["entry_id"] or header["id"] != entry["entry_id"]
                     or effect["validation_digest"] != entry["validation_digest"] or digest_payload(snapshot) != entry["validation_digest"]
+                    or header["posting_date"] != plan["posting_date"] or header["preparer_actor_id"] != plan["preparer_actor_id"]
+                    or not effect["audit_event_id"] or not effect["outbox_event_id"]
                     or effect["posted_actor_id"] != plan["posted_actor_id"] or any(header[field] != value for field, value in expected.items())):
                 refuse("Original native snapshot, policy or posting membership differs.")
+            native_accounts = source["native_accounts"][book]
+            codes = {row["id"]: row["account_code"] for row in native_accounts.values()}
+            if (len(codes) != len(native_accounts) or any(row["account_id"] not in codes for row in snapshot["lines"])
+                    or any(native_accounts[role]["account_code"] != code
+                    for role, code in request[book]["accounts"].items())):
+                refuse("Original native account mapping differs.")
+            if (sorted((codes[row["account_id"]], row["debit_minor"], row["credit_minor"]) for row in snapshot["lines"])
+                    != sorted((row["account_code"], row["debit_minor"], row["credit_minor"])
+                        for row in plan["equation"]["books"][book])):
+                refuse("Original native lines do not match their reviewed source equation.")
+            balance = 0
             for row in snapshot["lines"]:
                 line_count += 1
                 if line_count > MAX_EFFECT_LINES:
@@ -108,9 +137,11 @@ def classified_cashflow(source: Mapping[str, Any], report: Mapping[str, Any], st
                 if key in identities:
                     refuse("A native line cannot be counted twice.")
                 identities.add(key)
-                debit, credit = signed(row["debit_minor"], "native Cash debit"), signed(row["credit_minor"], "native Cash credit")
+                debit = minor(row["debit_minor"], "native Cash debit", zero=True)
+                credit = minor(row["credit_minor"], "native Cash credit", zero=True)
                 if min(debit, credit) < 0 or (debit > 0) == (credit > 0):
                     refuse("Native lines require exact one-sided nonnegative money.")
+                balance = signed(balance + debit - credit, "native book balance")
                 if row["account_id"] != source["native_accounts"][book]["cash"]["id"]:
                     continue
                 if book == "adjustment" or plan["kind"] != "settle":
@@ -120,12 +151,18 @@ def classified_cashflow(source: Mapping[str, Any], report: Mapping[str, Any], st
                 cash[book].append({"effect_id": effect_id, "entry_id": entry["entry_id"], "line_number": row["line_number"],
                     "account_id": row["account_id"], "account_code": request[book]["accounts"]["cash"],
                     "posting_date": plan["posting_date"], "native_minor": debit - credit})
+            if balance != 0:
+                refuse("Every original native effect must balance before classification.")
     if (set(report["source_effect_ids"]) != effects_by_book["seller"] | effects_by_book["buyer"]
-            or set(report["native_adjustment_effect_ids"]) != effects_by_book["adjustment"]):
+            or len(set(report["source_effect_ids"])) != len(report["source_effect_ids"])
+            or set(report["native_adjustment_effect_ids"]) != effects_by_book["adjustment"]
+            or len(set(report["native_adjustment_effect_ids"])) != len(report["native_adjustment_effect_ids"])):
         refuse("The report omits or introduces native source/adjustment effects.")
     books: dict[str, dict[str, Any]] = {}
     for book in PARTIES:
         translated = report["entity_translations"][book]
+        if translated != elimination["equation"]["translations"][book]:
+            refuse("Reporting translation must retain its exact reviewed original elimination membership.")
         if translated["functional_policy"] != source["policies"][book] or translated["reporting_policy"] != report["currency_policy"]:
             refuse("Captured functional/reporting currency policy differs.")
         closing_rate = elimination["command_request"]["closing_rates"][book]

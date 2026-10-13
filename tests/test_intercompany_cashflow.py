@@ -46,7 +46,7 @@ def test_rehashed_report_historical_rate_must_match_original_reviewed_eliminatio
     cash = next(row for row in report["entity_translations"]["seller"]["accounts"] if row["role"] == "cash")
     cash["contributions"][0]["income_rate"]["rate"] = "1.31"
     report["report_digest"] = digest_payload({key: value for key, value in report.items() if key != "report_digest"})
-    with pytest.raises(FinancePostingError, match="captured historical rate"):
+    with pytest.raises(FinancePostingError, match="exact reviewed original elimination membership"):
         classified_cashflow(evidence["source"], report, evidence["stages"], opening=opening, context=context)
 
 
@@ -58,3 +58,32 @@ def test_uncovered_or_missing_native_effect_membership_is_refused(field: str) ->
     report["report_digest"] = digest_payload({key: value for key, value in report.items() if key != "report_digest"})
     with pytest.raises(FinancePostingError, match="omits or introduces"):
         classified_cashflow(evidence["source"], report, evidence["stages"], opening=opening, context=context)
+
+
+@pytest.mark.parametrize("field", ["source_effect_ids", "native_adjustment_effect_ids"])
+def test_duplicate_native_effect_population_is_refused_even_after_resealing_report(field: str) -> None:
+    evidence, context, opening = fixture()
+    evidence["report"][field].append(evidence["report"][field][0])
+    evidence["report"]["report_digest"] = digest_payload({key: value for key, value in evidence["report"].items() if key != "report_digest"})
+    with pytest.raises(FinancePostingError, match="omits or introduces"):
+        classified_cashflow(evidence["source"], evidence["report"], evidence["stages"], opening=opening, context=context)
+
+
+@pytest.mark.parametrize("attack", ["missing_phase", "wrong_phase_actor", "wrong_phase_digest", "duplicate_phase_audit",
+    "duplicate_phase_outbox", "missing_effect_audit", "missing_effect_outbox"])
+def test_original_phase_and_effect_custody_cannot_be_inferred(attack: str) -> None:
+    evidence, context, opening = fixture()
+    stage = evidence["stages"][1]
+    if attack == "missing_phase":
+        stage["phases"].pop()
+    elif attack == "wrong_phase_actor":
+        stage["phases"][1]["actor_id"] = "maker"
+    elif attack == "wrong_phase_digest":
+        stage["phases"][1]["metadata_json"]["plan_digest"] = "0" * 64
+    elif attack.startswith("duplicate_phase_"):
+        field = "audit_event_id" if attack == "duplicate_phase_audit" else "outbox_event_id"
+        stage["phases"][1][field] = stage["phases"][0][field]
+    else:
+        stage["native_effects"][0]["audit_event_id" if attack == "missing_effect_audit" else "outbox_event_id"] = ""
+    with pytest.raises(FinancePostingError, match="phase evidence|posting membership"):
+        classified_cashflow(evidence["source"], evidence["report"], evidence["stages"], opening=opening, context=context)

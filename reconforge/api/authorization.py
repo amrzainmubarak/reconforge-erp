@@ -369,6 +369,11 @@ for _cashflow_path in ("/sources/{source_id}", "/sources/{source_id}/evidence/ex
         "all", ("finance_core.read", "intercompany_fx.read"),
     )
 
+for _group_path in ("/report", "/evidence"):
+    _CRITICAL_ROUTE_CONTRACTS[("GET", "/api/v1/intercompany-group-diagnostic" + _group_path)] = (
+        "all", ("finance_core.read", "intercompany_fx.read"),
+    )
+
 for _project_source_path in ("/report", "/evidence"):
     _CRITICAL_ROUTE_CONTRACTS[("GET", "/api/v1/project-source-reconciliation" + _project_source_path)] = (
         "all", ("finance_core.read", "people_project_payroll.read", "project_time_billing.read", "receivables.read"),

@@ -74,6 +74,11 @@ jobs:
           --ignore=tests/test_postgres_intercompany_cashflow_authority.py
           --ignore=tests/test_postgres_intercompany_cashflow_restore.py
           --ignore=tests/test_intercompany_cashflow_browser_fixture.py
+          --ignore=tests/test_postgres_intercompany_fx_reporting_authority.py
+          --ignore=tests/test_postgres_intercompany_reporting_currency_precision.py
+          --ignore=tests/test_postgres_intercompany_group_diagnostic.py
+          --ignore=tests/test_postgres_intercompany_group_diagnostic_api.py
+          --ignore=tests/test_intercompany_group_diagnostic_browser_fixture.py
           --ignore=tests/test_postgres_project_source_reconciliation.py
           --ignore=tests/test_postgres_project_source_reconciliation_api.py
           --ignore=tests/test_postgres_project_source_reconciliation_browser_fixture.py
@@ -250,7 +255,7 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets, procurement-commitments, customer-returns, supplier-returns, operational-fx-tax, manufacturing-execution, manufacturing-execution-v2, intercompany-operations, intercompany-fx, intercompany-source-cashflow, people-project-payroll, procurement-sourcing, accrual-deferral, project-time-billing, project-source-reconciliation, manufacturing-supply-plan]
+        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets, procurement-commitments, customer-returns, supplier-returns, operational-fx-tax, manufacturing-execution, manufacturing-execution-v2, intercompany-operations, intercompany-fx, intercompany-source-cashflow, intercompany-group-diagnostic, people-project-payroll, procurement-sourcing, accrual-deferral, project-time-billing, project-source-reconciliation, manufacturing-supply-plan]
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -718,6 +723,7 @@ jobs:
             intercompany-operations)
               uv run --no-sync pytest tests/test_postgres_intercompany_operations.py tests/test_postgres_intercompany_operations_api.py tests/test_postgres_intercompany_fx.py tests/test_postgres_intercompany_fx_api.py -q
               uv run --no-sync pytest tests/test_postgres_intercompany_cashflow.py tests/test_postgres_intercompany_cashflow_api.py tests/test_postgres_intercompany_cashflow_authority.py tests/test_postgres_intercompany_cashflow_restore.py tests/test_intercompany_cashflow_browser_fixture.py -q
+              uv run --no-sync pytest tests/test_postgres_intercompany_group_diagnostic.py tests/test_postgres_intercompany_group_diagnostic_api.py tests/test_intercompany_group_diagnostic_browser_fixture.py tests/test_postgres_intercompany_fx_reporting_authority.py tests/test_postgres_intercompany_reporting_currency_precision.py -q
               ;;
             people-project-payroll)
               uv run --no-sync pytest tests/test_postgres_people_project_payroll.py tests/test_postgres_people_project_payroll_api.py tests/test_postgres_people_project_payroll_restore.py tests/test_postgres_people_project_dimension_pins.py tests/test_postgres_people_project_read_authority.py -q

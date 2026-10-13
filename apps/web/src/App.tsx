@@ -25,6 +25,7 @@ const ManufacturingExecutionPage = lazy(() => import("./components/Manufacturing
 const IntercompanyOperationsPage = lazy(() => import("./components/IntercompanyOperationsPage"));
 const ManufacturingExecutionV2Page = lazy(() => import("./components/ManufacturingExecutionV2Page").then((module) => ({ default: module.ManufacturingExecutionV2Page })));
 const IntercompanyFxPage = lazy(() => import("./components/IntercompanyFxPage"));
+const GroupDiagnosticPage = lazy(() => import("./components/GroupDiagnosticPage"));
 const IntercompanyCashflowPage = lazy(() => import("./components/IntercompanyCashflowPage"));
 const ProjectSourceReconciliationPage = lazy(() => import("./components/ProjectSourceReconciliationPage").then((module) => ({ default: module.ProjectSourceReconciliationPage })));
 const PeopleProjectPayrollPage = lazy(() => import("./components/PeopleProjectPayrollPage").then((module) => ({ default: module.PeopleProjectPayrollPage })));
@@ -81,6 +82,7 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/intercompany-operations")) return "intercompanyOperations";
   if (normalized.endsWith("/manufacturing-execution-v2")) return "manufacturingExecutionV2";
   if (normalized.endsWith("/intercompany-fx")) return "intercompanyFx";
+  if (normalized.endsWith("/intercompany-group-diagnostic")) return "groupDiagnostic";
   if (normalized.endsWith("/intercompany-source-cashflow")) return "intercompanyCashflow";
   if (normalized.endsWith("/project-source-reconciliation")) return "projectSourceReconciliation";
   if (normalized.endsWith("/people-project-payroll")) return "peopleProjectPayroll";
@@ -117,6 +119,7 @@ function pathForPage(page: StudioPage): string {
     manufacturingExecutionV2: "manufacturing-execution-v2",
     intercompanyFx: "intercompany-fx",
     intercompanyCashflow: "intercompany-source-cashflow",
+    groupDiagnostic: "intercompany-group-diagnostic",
     projectSourceReconciliation: "project-source-reconciliation",
     peopleProjectPayroll: "people-project-payroll",
     projectTimeBilling: "project-time-billing",
@@ -264,6 +267,7 @@ function StudioApp() {
         {activePage === "intercompanyOperations" ? <Suspense fallback={<LoadingView translate={t} />}><IntercompanyOperationsPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "manufacturingExecutionV2" ? <Suspense fallback={<LoadingView translate={t} />}><ManufacturingExecutionV2Page locale={preferences.locale} /></Suspense> : null}
         {activePage === "intercompanyFx" ? <Suspense fallback={<LoadingView translate={t} />}><IntercompanyFxPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "groupDiagnostic" ? <Suspense fallback={<LoadingView translate={t} />}><GroupDiagnosticPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "intercompanyCashflow" ? <Suspense fallback={<LoadingView translate={t} />}><IntercompanyCashflowPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "projectSourceReconciliation" ? <Suspense fallback={<LoadingView translate={t} />}><ProjectSourceReconciliationPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "peopleProjectPayroll" ? <Suspense fallback={<LoadingView translate={t} />}><PeopleProjectPayrollPage locale={preferences.locale} /></Suspense> : null}

@@ -4,7 +4,6 @@ import hashlib
 import json
 from dataclasses import asdict
 
-from reconforge.api.routes.intercompany_group_diagnostic import router
 from reconforge.infrastructure.postgres_intercompany_group_diagnostic import (
     PostgresIntercompanyGroupDiagnosticRepository,
 )
@@ -19,7 +18,8 @@ def test_ordinary_authenticated_diagnostic_report_and_original_export_retain_eve
                                                                                                intercompany_fx_database, tmp_path):
     chosen = selection(closed_source(runtime, "authenticated"))
     with client(runtime, intercompany_fx_database, tmp_path, "poster", step_up=False) as (session, headers):
-        session.app.include_router(router, prefix="/api/v1")
+        assert sum(route.path == "/api/v1/intercompany-group-diagnostic/report" for route in session.app.routes) == 1
+        assert sum(route.path == "/api/v1/intercompany-group-diagnostic/evidence" for route in session.app.routes) == 1
         with runtime.actor("poster") as (connection, _, actor):
             before = financial_population(connection, runtime.base.tenant)
             original = PostgresIntercompanyGroupDiagnosticRepository(connection, runtime.base.tenant).evidence(chosen, actor=actor)

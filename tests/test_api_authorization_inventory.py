@@ -23,8 +23,8 @@ ENTERPRISE_M1_PREFIXES = (
 EXPECTED_ENTERPRISE_M1_ROUTE_COUNT = 45
 ENTERPRISE_M2_PREFIXES = ("/api/v1/accrual-deferral/", "/api/v1/project-time-billing/", "/api/v1/manufacturing-supply-plan/")
 EXPECTED_ENTERPRISE_M2_ROUTE_COUNT = 48
-ENTERPRISE_M3_PREFIXES = ("/api/v1/intercompany-source-cashflow/", "/api/v1/project-source-reconciliation/")
-EXPECTED_ENTERPRISE_M3_ROUTE_COUNT = 4
+ENTERPRISE_M3_PREFIXES = ("/api/v1/intercompany-source-cashflow/", "/api/v1/project-source-reconciliation/", "/api/v1/intercompany-group-diagnostic/")
+EXPECTED_ENTERPRISE_M3_ROUTE_COUNT = 6
 WAVE5_PREFIXES = ("/api/v1/manufacturing-execution/", "/api/v1/intercompany-operations/", "/api/v1/procurement-sourcing/")
 WAVE4_PREFIXES = (
     "/api/v1/customer-returns/", "/api/v1/procurement-commitments/",
@@ -63,6 +63,7 @@ HANDLER_BOUNDARY_HELPERS = {
     "intercompany_operations.py": frozenset({"authority", "execute"}),
     "intercompany_fx.py": frozenset({"authority", "execute"}),
     "intercompany_cashflow.py": frozenset({"capture"}),
+    "intercompany_group_diagnostic.py": frozenset({"capture"}),
     "project_source_reconciliation.py": frozenset({"capture"}),
     "accrual_deferral.py": frozenset({"authority", "execute"}),
     "project_time_billing.py": frozenset({"execute", "phase"}),
@@ -309,6 +310,8 @@ def test_mutating_route_modules_declare_a_server_boundary_or_explicit_protocol_c
     ("GET", "/api/v1/project-time-billing/catalog", "receivables.read"),
     ("GET", "/api/v1/intercompany-source-cashflow/sources/{source_id}", "finance_core.read"),
     ("GET", "/api/v1/intercompany-source-cashflow/sources/{source_id}/evidence/export", "intercompany_fx.read"),
+    ("GET", "/api/v1/intercompany-group-diagnostic/report", "finance_core.read"),
+    ("GET", "/api/v1/intercompany-group-diagnostic/evidence", "intercompany_fx.read"),
     ("GET", "/api/v1/project-source-reconciliation/report", "people_project_payroll.read"),
     ("GET", "/api/v1/project-source-reconciliation/evidence", "receivables.read"),
 ])

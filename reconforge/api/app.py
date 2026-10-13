@@ -69,6 +69,7 @@ from reconforge.api.routes import (
     individual_cashflow,
     intercompany_cashflow,
     intercompany_fx,
+    intercompany_group_diagnostic,
     intercompany_operations,
     inventory_core,
     inventory_planning,
@@ -469,6 +470,7 @@ def create_api_app(
     app.include_router(intercompany_operations.router, prefix="/api/v1")
     app.include_router(intercompany_fx.router, prefix="/api/v1")
     app.include_router(intercompany_cashflow.router, prefix="/api/v1")
+    app.include_router(intercompany_group_diagnostic.router, prefix="/api/v1")
     app.include_router(project_source_reconciliation.router, prefix="/api/v1")
     app.include_router(accrual_deferral.router, prefix="/api/v1")
     app.include_router(manufacturing_execution.router, prefix="/api/v1")
@@ -546,6 +548,7 @@ def create_api_app(
         intercompany_operations.router,
         intercompany_fx.router,
         intercompany_cashflow.router,
+        intercompany_group_diagnostic.router,
         project_source_reconciliation.router,
         accrual_deferral.router,
         manufacturing_execution.router,

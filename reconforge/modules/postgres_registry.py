@@ -87,6 +87,17 @@ def _descriptor(
 
 _POSTGRES_MODULES = (
     _descriptor(
+        module_id="finance.intercompany-group-diagnostic", name="Selected original group reporting diagnostic",
+        revision="0139_pg_intercompany_fx", namespace="intercompany_fx", actions=("read",),
+        manifest="docs/modules/intercompany-group-diagnostic.yaml",
+        dependencies=("platform.core", "finance.core", "finance.intercompany-source-cashflow"),
+        tests=("tests/test_intercompany_group_diagnostic.py", "tests/test_postgres_intercompany_group_diagnostic.py"),
+        summary="Explicit original source/report pins, exact reporting and native adjustment membership, observed periods and independent diagnostic evidence.",
+        gaps=("Frozen-source HTTPS, populated restore and final source acceptance remain pending.",
+              "Selected sources and observed periods do not constitute whole-group membership or formal close readiness."),
+    ).model_copy(update={"permissions": ("intercompany_fx.read", "finance_core.read"),
+                         "import_contracts": (), "export_contracts": ("intercompany-group-diagnostic.evidence.v1",)}),
+    _descriptor(
         module_id="finance.intercompany-source-cashflow", name="Original paired-trade management cashflow",
         revision="0139_pg_intercompany_fx", namespace="intercompany_fx", actions=("read",),
         manifest="docs/modules/intercompany-source-cashflow.yaml",

@@ -161,7 +161,10 @@ CREATE FUNCTION reconforge.it1_native_snapshot(t TEXT,i TEXT) RETURNS JSONB LANG
   FROM reconforge.inventory_movement_lines l WHERE l.tenant_id=t AND l.movement_id=i),'[]'::jsonb),
   'audit',COALESCE((SELECT jsonb_agg(to_jsonb(a) ORDER BY a.sequence,a.id) FROM reconforge.domain_audit_events a
    WHERE a.tenant_id=t AND a.object_type='inventory_movement' AND a.object_id=i),'[]'::jsonb),
-  'outbox',COALESCE((SELECT jsonb_agg(to_jsonb(b) ORDER BY b.event_id) FROM reconforge.outbox_events b
+  'outbox',COALESCE((SELECT jsonb_agg(jsonb_build_object('tenant_id',b.tenant_id,'event_id',b.event_id,
+   'event_type',b.event_type,'aggregate_type',b.aggregate_type,'aggregate_id',b.aggregate_id,
+   'workspace_id',b.workspace_id,'organization_id',b.organization_id,'legal_entity_id',b.legal_entity_id,
+   'payload',b.payload,'created_at',b.created_at) ORDER BY b.event_id) FROM reconforge.outbox_events b
    WHERE b.tenant_id=t AND b.aggregate_type='inventory_movement' AND b.aggregate_id=i),'[]'::jsonb))
  FROM reconforge.inventory_movements m WHERE m.tenant_id=t AND m.id=i $it1$;
 CREATE FUNCTION reconforge.it1_public(t TEXT,i TEXT,v INTEGER) RETURNS JSONB LANGUAGE plpgsql STABLE SET search_path=pg_catalog AS $it1$

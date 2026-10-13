@@ -49,7 +49,30 @@ class PostgresInventoryTransferRepository:
     def _scope(self, source: Mapping[str, Any]) -> dict[str, str]:
         return exact_scope(source.get("scope", source))
 
+    def _authority_locks(self, actor: PostingActor, operation: str, source: Mapping[str, Any]) -> None:
+        """Pin current authority before source, metadata and quantity waits."""
+        scope = self._scope(source)
+        permissions = PERMISSIONS.get(operation, READ)
+        if self.connection.execute("""SELECT id FROM reconforge.identity_users WHERE tenant_id=%s AND id=%s
+            AND username=%s AND NOT disabled FOR SHARE""", (self.tenant_id, actor.user_id, actor.username)).fetchone() is None:
+            fail("Transfer requires a current persisted human.", "inventory_transfer_actor_denied")
+        rows = records(self.connection.execute("""SELECT p.permission_name FROM reconforge.identity_user_roles a
+            JOIN reconforge.identity_roles r ON r.tenant_id=a.tenant_id AND r.id=a.role_id
+            JOIN reconforge.identity_role_permissions p ON p.tenant_id=r.tenant_id AND p.role_id=r.id
+            WHERE a.tenant_id=%s AND a.user_id=%s AND a.active AND r.active AND p.active AND p.permission_name=ANY(%s)
+            ORDER BY r.id,p.permission_name FOR SHARE OF a,r,p""", (self.tenant_id, actor.user_id, sorted(permissions))))
+        if {row["permission_name"] for row in rows} != set(permissions):
+            fail("Transfer requires every current persisted read and phase permission.", "inventory_transfer_actor_denied")
+        grants = records(self.connection.execute("""SELECT scope_type,scope_id FROM reconforge.principal_scope_grants WHERE tenant_id=%s
+            AND principal_type='user' AND principal_id=%s AND revoked_at IS NULL
+            AND((scope_type='workspace' AND scope_id=%s) OR(scope_type='organization' AND scope_id=%s)
+                OR(scope_type='legal_entity' AND scope_id=%s)) ORDER BY scope_type,scope_id FOR SHARE""",
+            (self.tenant_id, actor.user_id, scope["workspace_id"], scope["organization_id"], scope["legal_entity_id"])))
+        if len({(row["scope_type"], row["scope_id"]) for row in grants}) != 3:
+            fail("Transfer requires every current persisted original parent grant.", "inventory_transfer_scope_denied")
+
     def _actor(self, actor: PostingActor, operation: str, source: Mapping[str, Any], *, lock: bool = False) -> None:
+        self._authority_locks(actor, operation, source)
         scope: dict[str, Any] = self._scope(source)
         snapshots = [source[key] for key in ("cost_snapshot", "review_cost_json") if source.get(key) is not None]
         original = source.get("original")
@@ -173,6 +196,8 @@ class PostgresInventoryTransferRepository:
             return wire, None
         if retained["request_json"] != wire or retained["request_digest"] != digest_payload(wire):
             fail("This transfer command belongs to another exact actor, body or source.", "inventory_transfer_command_conflict")
+        current = self._row(retained["transfer_id"])
+        self._actor(actor, operation, current, lock=True)
         current = self._row(retained["transfer_id"], read_lock=True)
         # Historical replay needs current financial/scope authority but no new
         # open-period or metadata admission: it has zero new native effects.
@@ -213,6 +238,7 @@ class PostgresInventoryTransferRepository:
         wire, replay = self._command(args, operation, command_id, submitted or args, actor)
         if replay is not None:
             return replay
+        self._authority_locks(actor, operation, args)
         binding = self._binding(args, lock=True)
         identifier = "IT1-S-" + uuid4().hex.upper()
         number = "IT1-" + identifier[-32:]
@@ -248,6 +274,8 @@ class PostgresInventoryTransferRepository:
     def create_inverse(self, request: TransferInversePreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
         submitted = request.payload()
         with self.owner._transaction():
+            original = self._row(request.original_id)
+            self._actor(actor, "inverse-create", original, lock=True)
             original = self._row(request.original_id, read_lock=True)
             self._actor(actor, "inverse-create", original, lock=True)
             args = {key: original[key] for key in ("schema_version", "item_code", "quantity", "scope")}
@@ -346,6 +374,8 @@ class PostgresInventoryTransferRepository:
 
     def get(self, identifier: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():
+            source = self._row(identifier)
+            self._actor(actor, "read", source, lock=True)
             source = self._row(identifier, read_lock=True)
             self._actor(actor, "read", source, lock=True)
             self.connection.execute("SELECT reconforge.it1_close(%s,%s)", (self.tenant_id, identifier))
@@ -364,10 +394,12 @@ class PostgresInventoryTransferRepository:
             return {"transfers": [self.get(row["id"], actor=actor) for row in rows]}
 
     def command_receipt(self, identifier: str, command_id: str, response: Mapping[str, Any], *, actor: PostingActor) -> dict[str, Any]:
-        source = self._row(identifier, read_lock=True)
+        source = self._row(identifier)
         retained = self._one("""SELECT * FROM reconforge.inventory_transfer_commands
             WHERE tenant_id=%s AND workspace_id=%s AND transfer_id=%s AND command_id=%s""",
             (self.tenant_id, source["scope"]["workspace_id"], identifier, command_id))
+        self._actor(actor, retained["operation"], source, lock=True)
+        source = self._row(identifier, read_lock=True)
         self._actor(actor, retained["operation"], source, lock=True)
         if retained["actor_id"] != actor.user_id or retained["response_json"] != dict(response):
             fail("Transfer ACK must be this human's exact original retained command.", "inventory_transfer_command_conflict")

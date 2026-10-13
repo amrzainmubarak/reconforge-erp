@@ -55,6 +55,7 @@ test_matrix:
   browser_seed_and_restore: tests/manufacturing_supply_browser.py
   native_browser_seed: tests/test_postgres_manufacturing_supply_browser_seed.py
   native_current_financial_read_authority: tests/test_postgres_manufacturing_supply_read_authority.py
+  optimized_argument_guards: tests/test_manufacturing_supply_argument_guards.py
 backend_support:
   postgres: native-postgresql
   sqlite: unavailable-native-ME1-and-SRC-dependencies
@@ -72,3 +73,6 @@ runtime_acceptance:
   - Native browser seed gate passed1 mandatory case without skips/xfails/xpasses at development Python source cc897333c22829c066fcd5467cc3cd67a8e8ebbb08305c978b0a991499dfb4e5; approved masters/budget, starting stock and original expense inputs exist while all planner/purchase/production documents remain absent.
   - Required real-browser spec collected exactly1 case and TypeScript checks passed; actual authenticated browser cycle and populated restore remain root-owned pending gates.
   - Fractional native unit-price authority gate passed53 cases with0 skips/xfails/xpasses at frozen Python source49c6fd4520531f636259f0e118b9693a387c315446d6d7aca46cf71bb89c1081; approved KG demand0.001 retains plan unit3000/total3 and quote unit5000/total5 under captured precision2. Original native red is retained; all six read permissions, exact high-cap replay, failed response rollback and four actual queued current-authority refusals are covered. This is bounded synthetic development evidence.
+  - Owned native dispatch uses explicit typed failures in ordinary and optimized Python; actual original missing-budget-version AssertionError is retained as a development red. Fixed retained-command queries bind tenant/workspace/order/command values without runtime SQL identifier construction. Focused Bandit has zero findings without suppression;80 pure/API/oracle cases include ten isolated-I/-O argument-boundary probes. These probes do not replace current-authority or native financial gates.
+  - The affected original shortage/receipt/AP/budget/handoff/issue/QC/FG gate passed1 mandatory case with0 skips/xfails/xpasses at frozen Python source709d6f5c65198b59beed28bdb042f280871392995f9a414bb529f22db28b4556. Each actual reviewed AP invoice refuses a missing budget version with unchanged original source/purchase/budget; correct current versions and immutable replays complete the native3600=3240+360+0 cost cycle. Original red and green logs/XML remain separate.
+  - Complete original two-receipt/two-AP handoff diagnostic passed1 mandatory native case at unchanged Python source49c6fd4520531f636259f0e118b9693a387c315446d6d7aca46cf71bb89c1081; the outer deferred commit exceeded the browser fetch deadline and is under source-closure investigation. Safe query fingerprints and wait samples contain no SQL parameters or auth headers. This is bounded failure diagnosis, not benchmark or final browser acceptance.

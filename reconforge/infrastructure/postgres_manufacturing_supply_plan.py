@@ -620,6 +620,8 @@ class PostgresManufacturingSupplyPlanRepository:
                         or (document_id is None) != (operation in {"purchase-submit", "purchase-approve"})):
                     fail("Native document transition requires one original owned receipt or invoice.")
                 if operation == "invoice-post":
+                    if expected_budget_version is None:
+                        fail("AP publication requires its current budget version.")
                     native_request = {"order_id": order_id, "invoice_id": document_id, "expected_order_version": expected_version,
                                       "expected_budget_version": expected_budget_version, "reason": reason}
             wire, replay = self._command(source, operation, command_id, {"id": identifier, "order_id": order_id,
@@ -632,16 +634,20 @@ class PostgresManufacturingSupplyPlanRepository:
             native_command = platform_id("MSPPP", identifier, command_id)
             with self._purchase_context(source, order_id) as native:
                 if operation == "receive-prepare":
-                    assert quantity_request is not None and line_id is not None
+                    if quantity_request is None or line_id is None:
+                        fail("Receipt preparation requires one exact owned line and typed quantity request.")
                     native.purchase.prepare_receipt_line(order_id, line_id, quantity_request,
                         expected_version=expected_version, command_id=native_command, actor=actor)
                 elif operation == "invoice-match":
-                    assert invoice_request is not None
+                    if invoice_request is None:
+                        fail("Invoice matching requires a complete typed exact native line allocation.")
                     native.purchase.match_invoice_lines(order_id, invoice_request, expected_version=expected_version,
                         command_id=native_command, actor=actor)
                 elif operation == "invoice-post":
-                    assert document_id is not None
-                    assert expected_budget_version is not None
+                    if document_id is None:
+                        fail("AP publication requires its original owned invoice.")
+                    if expected_budget_version is None:
+                        fail("AP publication requires its current budget version.")
                     native.commitments.consume_invoice(order_id, document_id, expected_order_version=expected_version,
                         expected_budget_version=expected_budget_version, command_id=native_command, reason=reason, actor=actor)
                 else:
@@ -664,9 +670,13 @@ class PostgresManufacturingSupplyPlanRepository:
                         receipt_plan_id=receipt["receipt_plan_id"], version=source["row_version"] + 1)
             self.connection.execute("UPDATE reconforge.manufacturing_supply_plans SET row_version=row_version+1 WHERE tenant_id=%s AND id=%s",
                 (self.tenant_id, identifier))
-            retained = self.material._one("SELECT response_json FROM reconforge." + (
-                "procurement_commitment_commands" if operation == "invoice-post" else "procurement_partial_commands") +
-                " WHERE tenant_id=%s AND workspace_id=%s AND order_id=%s AND command_id=%s",
+            retained_query = (
+                "SELECT response_json FROM reconforge.procurement_commitment_commands "
+                "WHERE tenant_id=%s AND workspace_id=%s AND order_id=%s AND command_id=%s"
+                if operation == "invoice-post" else
+                "SELECT response_json FROM reconforge.procurement_partial_commands "
+                "WHERE tenant_id=%s AND workspace_id=%s AND order_id=%s AND command_id=%s")
+            retained = self.material._one(retained_query,
                 (self.tenant_id, source["workspace_id"], order_id, native_command))
             return self._remember(identifier, operation, command_id, wire, actor, reason,
                 native={"kind": "BPC" if operation == "invoice-post" else "PP", "id": order_id,

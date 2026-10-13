@@ -1512,3 +1512,8 @@ include docs/operator/manufacturing-supply-plan.md
 
 include docs/execution/ENTERPRISE_COMPLETION_M2_2026-10-13.md
 include apps/web/src/fixtures/manufacturing-supply-original-command-acks.json
+
+include tests/browser_diagnostic_redaction.py
+include tests/fixtures/project_source_close_partial_native_v1.json
+include tests/fixtures/project_source_close_final_native_v1.json
+include tests/test_project_source_close_oracle.py

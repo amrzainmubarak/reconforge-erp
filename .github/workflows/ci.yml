@@ -75,11 +75,13 @@ jobs:
           --ignore=tests/test_postgres_intercompany_cashflow_restore.py
           --ignore=tests/test_intercompany_cashflow_browser_fixture.py
           --ignore=tests/test_postgres_intercompany_fx_reporting_authority.py
+          --ignore=tests/test_postgres_intercompany_fx_native_evidence_bundle.py
           --ignore=tests/test_postgres_intercompany_reporting_currency_precision.py
           --ignore=tests/test_postgres_intercompany_group_diagnostic.py
           --ignore=tests/test_postgres_intercompany_group_diagnostic_api.py
           --ignore=tests/test_intercompany_group_diagnostic_browser_fixture.py
           --ignore=tests/test_postgres_project_source_reconciliation.py
+          --ignore=tests/test_postgres_project_source_close.py
           --ignore=tests/test_postgres_project_source_reconciliation_api.py
           --ignore=tests/test_postgres_project_source_reconciliation_browser_fixture.py
           --ignore=tests/test_postgres_people_project_payroll.py
@@ -723,7 +725,7 @@ jobs:
             intercompany-operations)
               uv run --no-sync pytest tests/test_postgres_intercompany_operations.py tests/test_postgres_intercompany_operations_api.py tests/test_postgres_intercompany_fx.py tests/test_postgres_intercompany_fx_api.py -q
               uv run --no-sync pytest tests/test_postgres_intercompany_cashflow.py tests/test_postgres_intercompany_cashflow_api.py tests/test_postgres_intercompany_cashflow_authority.py tests/test_postgres_intercompany_cashflow_restore.py tests/test_intercompany_cashflow_browser_fixture.py -q
-              uv run --no-sync pytest tests/test_postgres_intercompany_group_diagnostic.py tests/test_postgres_intercompany_group_diagnostic_api.py tests/test_intercompany_group_diagnostic_browser_fixture.py tests/test_postgres_intercompany_fx_reporting_authority.py tests/test_postgres_intercompany_reporting_currency_precision.py -q
+              uv run --no-sync pytest tests/test_postgres_intercompany_fx_native_evidence_bundle.py tests/test_postgres_intercompany_group_diagnostic.py tests/test_postgres_intercompany_group_diagnostic_api.py tests/test_intercompany_group_diagnostic_browser_fixture.py tests/test_postgres_intercompany_fx_reporting_authority.py tests/test_postgres_intercompany_reporting_currency_precision.py -q
               ;;
             people-project-payroll)
               uv run --no-sync pytest tests/test_postgres_people_project_payroll.py tests/test_postgres_people_project_payroll_api.py tests/test_postgres_people_project_payroll_restore.py tests/test_postgres_people_project_dimension_pins.py tests/test_postgres_people_project_read_authority.py -q
@@ -751,7 +753,7 @@ jobs:
               uv run --no-sync pytest tests/test_postgres_project_time_billing.py tests/test_postgres_project_time_billing_api.py tests/test_postgres_project_time_billing_restore.py tests/test_postgres_project_time_billing_read_authority.py -q
               ;;
             project-source-reconciliation)
-              uv run --no-sync pytest tests/test_postgres_project_source_reconciliation.py tests/test_postgres_project_source_reconciliation_api.py tests/test_postgres_project_source_reconciliation_browser_fixture.py -q
+              uv run --no-sync pytest tests/test_postgres_project_source_close.py tests/test_postgres_project_source_reconciliation.py tests/test_postgres_project_source_reconciliation_api.py tests/test_postgres_project_source_reconciliation_browser_fixture.py -q
               ;;
             *) echo "Unknown server-boundary shard" >&2; exit 2 ;;
           esac

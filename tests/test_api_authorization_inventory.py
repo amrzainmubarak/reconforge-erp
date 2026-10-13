@@ -24,7 +24,10 @@ EXPECTED_ENTERPRISE_M1_ROUTE_COUNT = 45
 ENTERPRISE_M2_PREFIXES = ("/api/v1/accrual-deferral/", "/api/v1/project-time-billing/", "/api/v1/manufacturing-supply-plan/")
 EXPECTED_ENTERPRISE_M2_ROUTE_COUNT = 48
 ENTERPRISE_M3_PREFIXES = ("/api/v1/intercompany-source-cashflow/", "/api/v1/project-source-reconciliation/", "/api/v1/intercompany-group-diagnostic/")
-EXPECTED_ENTERPRISE_M3_ROUTE_COUNT = 6
+ENTERPRISE_M3_EXACT_ROUTES = frozenset({
+    ("GET", "/api/v1/intercompany-fx/sources/{source_id}/native-evidence-bundle"),
+})
+EXPECTED_ENTERPRISE_M3_ROUTE_COUNT = 9
 WAVE5_PREFIXES = ("/api/v1/manufacturing-execution/", "/api/v1/intercompany-operations/", "/api/v1/procurement-sourcing/")
 WAVE4_PREFIXES = (
     "/api/v1/customer-returns/", "/api/v1/procurement-commitments/",
@@ -131,6 +134,18 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
         )
     ]
     assert all(contract.permissions for contract in contracts if contract.mode in {"all", "any"})
+
+
+def test_enterprise_route_cohorts_retain_historical_m1_and_classify_exact_m3_addition(tmp_path: Path) -> None:
+    contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
+    m1 = tuple(contract for contract in contracts if contract.path.startswith(ENTERPRISE_M1_PREFIXES)
+               and (contract.method, contract.path) not in ENTERPRISE_M3_EXACT_ROUTES)
+    m3 = tuple(contract for contract in contracts if contract.path.startswith(ENTERPRISE_M3_PREFIXES)
+               or (contract.method, contract.path) in ENTERPRISE_M3_EXACT_ROUTES)
+    assert len(m1) == EXPECTED_ENTERPRISE_M1_ROUTE_COUNT == 45
+    assert len(m3) == EXPECTED_ENTERPRISE_M3_ROUTE_COUNT == 9
+    assert {(contract.method, contract.path) for contract in m1}.isdisjoint(
+        {(contract.method, contract.path) for contract in m3})
     assert len([contract for contract in contracts if contract.mode == "scim"]) == 15
     emergency_request = next(
         contract
@@ -314,6 +329,10 @@ def test_mutating_route_modules_declare_a_server_boundary_or_explicit_protocol_c
     ("GET", "/api/v1/intercompany-group-diagnostic/evidence", "intercompany_fx.read"),
     ("GET", "/api/v1/project-source-reconciliation/report", "people_project_payroll.read"),
     ("GET", "/api/v1/project-source-reconciliation/evidence", "receivables.read"),
+    ("GET", "/api/v1/project-source-reconciliation/close-diagnostics", "people_project_payroll.read"),
+    ("GET", "/api/v1/project-source-reconciliation/close-diagnostics/evidence", "receivables.read"),
+    ("GET", "/api/v1/intercompany-fx/sources/{source_id}/native-evidence-bundle", "intercompany_fx.read"),
+    ("GET", "/api/v1/intercompany-fx/sources/{source_id}/native-evidence-bundle", "finance_core.read"),
 ])
 def test_enterprise_sensitive_contract_refuses_adjacent_authority(
     tmp_path: Path, method: str, path: str, required: str,

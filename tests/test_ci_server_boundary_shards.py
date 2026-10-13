@@ -26,6 +26,7 @@ INTEGRITY_FILES = {
         "tests/test_postgres_project_time_billing_restore.py", "tests/test_postgres_project_time_billing_read_authority.py",
     ),
     "project-source-reconciliation": (
+        "tests/test_postgres_project_source_close.py",
         "tests/test_postgres_project_source_reconciliation.py", "tests/test_postgres_project_source_reconciliation_api.py",
         "tests/test_postgres_project_source_reconciliation_browser_fixture.py",
     ),
@@ -58,7 +59,7 @@ INTEGRITY_FILES = {
         "tests/test_postgres_inventory_scope.py",
         "tests/test_postgres_manufacturing_execution_v2.py", "tests/test_postgres_enterprise_migrations.py",
     ),
-    "intercompany-operations": ("tests/test_postgres_intercompany_reporting_currency_precision.py", "tests/test_postgres_intercompany_fx_reporting_authority.py", "tests/test_postgres_intercompany_group_diagnostic.py", "tests/test_postgres_intercompany_group_diagnostic_api.py", "tests/test_intercompany_group_diagnostic_browser_fixture.py", "tests/test_postgres_intercompany_operations.py", "tests/test_postgres_intercompany_operations_api.py",
+    "intercompany-operations": ("tests/test_postgres_intercompany_fx_native_evidence_bundle.py", "tests/test_postgres_intercompany_reporting_currency_precision.py", "tests/test_postgres_intercompany_fx_reporting_authority.py", "tests/test_postgres_intercompany_group_diagnostic.py", "tests/test_postgres_intercompany_group_diagnostic_api.py", "tests/test_intercompany_group_diagnostic_browser_fixture.py", "tests/test_postgres_intercompany_operations.py", "tests/test_postgres_intercompany_operations_api.py",
                                "tests/test_postgres_intercompany_fx.py", "tests/test_postgres_intercompany_fx_api.py",
                                "tests/test_postgres_intercompany_cashflow.py", "tests/test_postgres_intercompany_cashflow_api.py",
                                "tests/test_postgres_intercompany_cashflow_authority.py", "tests/test_postgres_intercompany_cashflow_restore.py",

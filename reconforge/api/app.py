@@ -66,6 +66,7 @@ from reconforge.api.routes import (
     health,
     identity_administration,
     individual_cashflow,
+    intercompany_fx,
     intercompany_operations,
     inventory_core,
     inventory_planning,
@@ -75,6 +76,7 @@ from reconforge.api.routes import (
     landed_cost,
     manufacturing_cost_control,
     manufacturing_execution,
+    manufacturing_execution_v2,
     master_data,
     metrics,
     notification_inbox,
@@ -82,6 +84,7 @@ from reconforge.api.routes import (
     operational_fx_tax,
     operations,
     payables,
+    people_project_payroll,
     procurement_commitments,
     procurement_operations,
     procurement_partial,
@@ -172,6 +175,7 @@ def create_api_app(
     redis_url: str | None = None,
     redis_require_tls: bool = True,
     postgres_dsn: str | None = None,
+    postgres_personnel_dsn: str | None = None,
     postgres_require_tls: bool = True,
     postgres_pool_size: int = 8,
     postgres_pool_acquire_timeout_seconds: float = 30.0,
@@ -201,6 +205,12 @@ def create_api_app(
         raise ValueError("allowed_hosts must contain exact DNS names or IPv4 addresses only.")
     if postgres_dsn is not None and tenant_db_root is None:
         raise ValueError("tenant_db_root is required when PostgreSQL server identity is enabled.")
+    if postgres_personnel_dsn is not None:
+        if postgres_dsn is None:
+            raise ValueError("Personnel PostgreSQL requires the server identity profile.")
+        from reconforge.api.server_personnel import validate_personnel_database_pair
+
+        validate_personnel_database_pair(postgres_dsn, postgres_personnel_dsn)
     app = FastAPI(
         title="ReconForge Local REST API",
         version=__version__,
@@ -209,6 +219,7 @@ def create_api_app(
     app.state.db_path = resolved_db_path
     app.state.tenant_db_router = TenantDatabaseRouter.from_root(tenant_db_root) if tenant_db_root is not None else None
     app.state.postgres_identity_factory = None
+    app.state.postgres_personnel_factory = None
     if postgres_dsn is not None:
         app.state.postgres_identity_factory = PostgresRuntimePooledConnectionFactory(
             PostgresSettings(dsn=postgres_dsn, require_tls=postgres_require_tls),
@@ -216,6 +227,13 @@ def create_api_app(
             acquire_timeout_seconds=postgres_pool_acquire_timeout_seconds,
         )
         app.router.add_event_handler("shutdown", app.state.postgres_identity_factory.close)
+    if postgres_personnel_dsn is not None:
+        app.state.postgres_personnel_factory = PostgresRuntimePooledConnectionFactory(
+            PostgresSettings(dsn=postgres_personnel_dsn, require_tls=postgres_require_tls),
+            max_size=postgres_pool_size,
+            acquire_timeout_seconds=postgres_pool_acquire_timeout_seconds,
+        )
+        app.router.add_event_handler("shutdown", app.state.postgres_personnel_factory.close)
     # The bounded PostgreSQL ledger uses the same secured connection factory
     # as server identity, but remains an explicit API capability boundary.
     app.state.postgres_ledger_factory = app.state.postgres_identity_factory
@@ -444,8 +462,11 @@ def create_api_app(
     app.include_router(commercial_collections.router, prefix="/api/v1")
     app.include_router(customer_returns.router, prefix="/api/v1")
     app.include_router(intercompany_operations.router, prefix="/api/v1")
+    app.include_router(intercompany_fx.router, prefix="/api/v1")
     app.include_router(manufacturing_execution.router, prefix="/api/v1")
+    app.include_router(manufacturing_execution_v2.router, prefix="/api/v1")
     app.include_router(procurement_sourcing.router, prefix="/api/v1")
+    app.include_router(people_project_payroll.router, prefix="/api/v1")
     app.include_router(procurement_commitments.router, prefix="/api/v1")
     app.include_router(supplier_returns.router, prefix="/api/v1")
     app.include_router(operational_fx_tax.router, prefix="/api/v1")
@@ -513,8 +534,11 @@ def create_api_app(
         commercial_collections.router,
         customer_returns.router,
         intercompany_operations.router,
+        intercompany_fx.router,
         manufacturing_execution.router,
+        manufacturing_execution_v2.router,
         procurement_sourcing.router,
+        people_project_payroll.router,
         procurement_commitments.router,
         supplier_returns.router,
         operational_fx_tax.router,

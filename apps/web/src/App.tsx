@@ -23,6 +23,9 @@ const CustomerReturnsPage = lazy(() => import("./components/CustomerReturnsPage"
 const OperationalFxTaxPage = lazy(() => import("./components/OperationalFxTaxPage"));
 const ManufacturingExecutionPage = lazy(() => import("./components/ManufacturingExecutionPage").then((module) => ({ default: module.ManufacturingExecutionPage })));
 const IntercompanyOperationsPage = lazy(() => import("./components/IntercompanyOperationsPage"));
+const ManufacturingExecutionV2Page = lazy(() => import("./components/ManufacturingExecutionV2Page").then((module) => ({ default: module.ManufacturingExecutionV2Page })));
+const IntercompanyFxPage = lazy(() => import("./components/IntercompanyFxPage"));
+const PeopleProjectPayrollPage = lazy(() => import("./components/PeopleProjectPayrollPage").then((module) => ({ default: module.PeopleProjectPayrollPage })));
 const ProcurementSourcingPage = lazy(() => import("./components/ProcurementSourcingPage").then((module) => ({ default: module.ProcurementSourcingPage })));
 const Dashboard = lazy(() => import("./components/Dashboard").then((module) => ({ default: module.Dashboard })));
 const ExceptionQueue = lazy(() => import("./components/ExceptionQueue").then((module) => ({ default: module.ExceptionQueue })));
@@ -71,6 +74,9 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/operational-fx-tax")) return "operationalFxTax";
   if (normalized.endsWith("/manufacturing-execution")) return "manufacturingExecution";
   if (normalized.endsWith("/intercompany-operations")) return "intercompanyOperations";
+  if (normalized.endsWith("/manufacturing-execution-v2")) return "manufacturingExecutionV2";
+  if (normalized.endsWith("/intercompany-fx")) return "intercompanyFx";
+  if (normalized.endsWith("/people-project-payroll")) return "peopleProjectPayroll";
   if (normalized.endsWith("/procurement-sourcing")) return "procurementSourcing";
   if (normalized.endsWith("/procurement-operations")) return "procurementOperations";
   if (normalized.endsWith("/enterprise-finance") || normalized.endsWith("/erp")) return "enterpriseFinance";
@@ -98,6 +104,9 @@ function pathForPage(page: StudioPage): string {
     operationalFxTax: "operational-fx-tax",
     manufacturingExecution: "manufacturing-execution",
     intercompanyOperations: "intercompany-operations",
+    manufacturingExecutionV2: "manufacturing-execution-v2",
+    intercompanyFx: "intercompany-fx",
+    peopleProjectPayroll: "people-project-payroll",
     procurementSourcing: "procurement-sourcing",
     procurementOperations: "procurement-operations",
     enterpriseFinance: "enterprise-finance",
@@ -238,6 +247,9 @@ function StudioApp() {
         {activePage === "operationalFxTax" ? <Suspense fallback={<LoadingView translate={t} />}><OperationalFxTaxPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "manufacturingExecution" ? <Suspense fallback={<LoadingView translate={t} />}><ManufacturingExecutionPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "intercompanyOperations" ? <Suspense fallback={<LoadingView translate={t} />}><IntercompanyOperationsPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "manufacturingExecutionV2" ? <Suspense fallback={<LoadingView translate={t} />}><ManufacturingExecutionV2Page locale={preferences.locale} /></Suspense> : null}
+        {activePage === "intercompanyFx" ? <Suspense fallback={<LoadingView translate={t} />}><IntercompanyFxPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "peopleProjectPayroll" ? <Suspense fallback={<LoadingView translate={t} />}><PeopleProjectPayrollPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "procurementSourcing" ? <Suspense fallback={<LoadingView translate={t} />}><ProcurementSourcingPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "dashboard" && error ? <ErrorView translate={t} message={error} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
         {activePage === "dashboard" && !error && !data ? <LoadingView translate={t} /> : null}

@@ -1,5 +1,36 @@
 # Execution State
 
+## Enterprise M1 integrated cycles; final hosted gate pending (2026-10-13)
+
+Draft [PR133](https://github.com/amrzainmubarak/reconforge-erp/pull/133) is above
+accepted Wave5 PR131. Manufacturing inspection/cancel/re-preparation, paired
+foreign trade/translation/elimination and private wage/time/budget/partial cash
+all have actual socket HTTPS/Chromium and301-table populated native restore
+receipts with zero browser skips, three tamper refusals and owned cleanup.
+These belong to their individually recorded commits; they are development
+closure, not final hosted acceptance. Adversarial SQL/current authority and
+legacy posting/rollback issues found by initial CI were repaired and tested.
+The final cohesive source now proceeds to Python/PostgreSQL/React/package/
+HTTPS/security/Docker/CodeQL gates. Source-qualified evidence and remaining
+scope are in ENTERPRISE_M1_PROGRESS_2026-10-13.md. M2 development continues in
+three separate worktrees (141 accrual/deferral,142 supply,143 billing).
+Main and primary dirty files remain unchanged. Performance comparison stays
+deferred by the human; activated statutory country packs remain zero.
+
+## Enterprise program activated after actual Wave5 quality closure (2026-10-13)
+
+Wave5 accepted source542d4282 has actual CI44/44, Docker/CodeQL and manual image
+security5/5; PR131 stays Draft above PR130, with original chain/main/dirty files
+preserved. Local comparative performance remains deferred by the human and false.
+M1 three parallel owner cores are now implemented and integrated for targeted
+PostgreSQL/migration/API/Studio gates; final frozen-source hosted acceptance is
+pending. M2 pure accrual/deferral is separate; project billing and supply planning
+follow dependencies. [Current scoped matrix](ENTERPRISE_M1_PROGRESS_2026-10-13.md)
+records actual development versus ordered-head evidence and remaining gaps.
+All countries remain target; proven activated statutory packs0. The historical
+pending checkpoints below retain their original subjects and are superseded for
+Wave5 quality by the actual542 closure, never for unperformed benchmarks.
+
 ## Source archive diagnostic dependency correction (2026-10-12)
 
 Independent inspection of the original6ce3.12 source-closure report found both

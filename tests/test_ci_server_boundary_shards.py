@@ -17,6 +17,7 @@ SHARDS = {
     "commercial-integrity", "supply-integrity", "finance-integrity",
     "supplier-returns", "fx-revaluation",
     "manufacturing-execution", "intercompany-operations", "procurement-sourcing",
+    "people-project-payroll",
 }
 INTEGRITY_FILES = {
     "commercial-integrity": (
@@ -41,8 +42,11 @@ INTEGRITY_FILES = {
     "manufacturing-execution": (
         "tests/test_postgres_manufacturing_execution.py", "tests/test_postgres_wave5_migrations.py",
         "tests/test_postgres_inventory_scope.py",
+        "tests/test_postgres_manufacturing_execution_v2.py", "tests/test_postgres_enterprise_migrations.py",
     ),
-    "intercompany-operations": ("tests/test_postgres_intercompany_operations.py", "tests/test_postgres_intercompany_operations_api.py"),
+    "intercompany-operations": ("tests/test_postgres_intercompany_operations.py", "tests/test_postgres_intercompany_operations_api.py",
+                               "tests/test_postgres_intercompany_fx.py", "tests/test_postgres_intercompany_fx_api.py"),
+    "people-project-payroll": ("tests/test_postgres_people_project_payroll.py", "tests/test_postgres_people_project_payroll_api.py", "tests/test_postgres_people_project_payroll_restore.py", "tests/test_postgres_people_project_dimension_pins.py", "tests/test_postgres_people_project_read_authority.py"),
     "procurement-sourcing": ("tests/test_postgres_procurement_sourcing.py", "tests/test_postgres_procurement_sourcing_api.py", "tests/test_postgres_manufacturing_sourcing.py"),
 }
 PROOF_OWNERS = {
@@ -127,7 +131,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 55  # Retain all52 original commands plus three complete Wave5 owner commands.
+    assert len(commands) == 56  # Retain all52 original, three Wave5 and one new workforce owner commands.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -180,6 +184,7 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
     unit = next(step for step in workflow["jobs"]["test"]["steps"] if step["name"] == "Pytest")
     assert "if" not in unit and "continue-on-error" not in unit
     ignored = {
+        "tests/test_postgres_financial_source_roles.py",
         "tests/test_postgres_stock_sales.py", "tests/test_postgres_stock_sales_api.py",
         "tests/test_postgres_stock_commerce.py", "tests/test_postgres_stock_commerce_api.py",
         "tests/test_postgres_stock_commerce_migrations.py",
@@ -197,7 +202,8 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
     for path in ignored:
         assert [owner for owner, commands in groups.items()
                 for command in commands if path in shlex.split(command)] == [
-                    owners.get(path, "finance-reporting" if "financial_" in path else "erp-expansion")]
+                    owners.get(path, "finance-posting" if path == "tests/test_postgres_financial_source_roles.py"
+                               else "finance-reporting" if "financial_" in path else "erp-expansion")]
 
 
 def test_integrity_owners_execute_complete_files_once_without_filtered_admission() -> None:
@@ -225,7 +231,7 @@ def test_enterprise_browser_matrix_requires_every_real_https_and_populated_resto
     assert job["strategy"]["matrix"]["scenario"] == [
         "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets",
         "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax",
-        "manufacturing-execution", "intercompany-operations", "procurement-sourcing",
+        "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing",
     ]
     assert job["strategy"]["fail-fast"] is False
     assert "continue-on-error" not in job

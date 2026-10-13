@@ -330,6 +330,64 @@ for _method, _path, _sourcing_permissions in (
         "all", tuple(sorted(_SOURCING_READ | _sourcing_permissions)))
 
 
+for _method, _path, _phase in (
+    ("GET", "/orders", "read"), ("GET", "/orders/{identifier}", "read"),
+    ("POST", "/workcenters", "create"), ("POST", "/routings", "create"),
+    ("POST", "/definitions/{identifier}/approve", "approve-bom"), ("POST", "/orders", "create"),
+    ("POST", "/orders/{identifier}/prepare", "prepare"), ("POST", "/orders/{identifier}/review", "review"),
+    ("POST", "/orders/{identifier}/post", "post"), ("POST", "/orders/{identifier}/cancel", "cancel"),
+    ("POST", "/orders/{identifier}/productions", "prepare"), ("POST", "/productions/{identifier}/review", "review"),
+    ("POST", "/productions/{identifier}/post", "post"), ("POST", "/productions/{identifier}/cancel", "cancel"),
+    ("POST", "/productions/{identifier}/inspections", "prepare"), ("POST", "/inspections/{identifier}/review", "review"),
+    ("POST", "/inspections/{identifier}/post", "post"), ("POST", "/inspections/{identifier}/cancel", "cancel"),
+):
+    _v2_permissions = _MANUFACTURING_OPERATIONS[_phase] | {"manufacturing_execution_v2.read"}
+    if _phase != "read":
+        _v2_permissions = _v2_permissions | {"manufacturing_execution_v2." +
+            {"create": "manage", "prepare": "manage", "review": "approve", "post": "post", "cancel": "approve", "approve-bom": "approve"}[_phase]}
+    _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/manufacturing-execution-v2" + _path)] = ("all", tuple(sorted(_v2_permissions)))
+
+
+for _method, _path, _phase in (
+    ("GET", "/catalog", "read"), ("POST", "/sources", "prepare"), ("GET", "/sources", "read"),
+    ("GET", "/sources/{source_id}", "read"), ("POST", "/sources/{source_id}/settlements", "prepare"),
+    ("POST", "/sources/{source_id}/revaluations", "prepare"),
+    ("POST", "/sources/{source_id}/revaluation-reversals", "reverse"),
+    ("POST", "/sources/{source_id}/eliminations", "prepare"), ("GET", "/plans/{plan_id}", "read"),
+    ("POST", "/plans/{plan_id}/review", "review"), ("POST", "/plans/{plan_id}/post", "post"),
+    ("GET", "/plans/{plan_id}/evidence", "read"), ("GET", "/sources/{source_id}/report", "read"),
+):
+    _icfx_permissions = {"intercompany_fx." + ("prepare" if _phase == "reverse" else _phase),
+                    "finance_core." + {"read": "read", "prepare": "manage", "review": "validate", "post": "post", "reverse": "manage"}[_phase]}
+    if _phase == "reverse":
+        _icfx_permissions.add("finance_core.reverse")
+    _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/intercompany-fx" + _path)] = ("all", tuple(sorted(_icfx_permissions)))
+
+
+_PEOPLE_PHASE_CONTRACTS = {
+    "personnel": frozenset({"people_project_payroll.personnel", "people_project_payroll.read_sensitive"}),
+    "manage": frozenset({"people_project_payroll.manage"}),
+    "approve_time": frozenset({"people_project_payroll.approve_time"}),
+    "prepare": frozenset({"people_project_payroll.prepare", "people_project_payroll.read_sensitive", "finance_core.manage", "budget_control.read", "budget_control.manage"}),
+    "review": frozenset({"people_project_payroll.review", "people_project_payroll.read_sensitive", "finance_core.validate", "budget_control.read"}),
+    "post": frozenset({"people_project_payroll.post", "people_project_payroll.read_sensitive", "finance_core.post", "budget_control.read", "budget_control.manage"}),
+    "pay": frozenset({"people_project_payroll.pay", "people_project_payroll.read_sensitive", "finance_core.manage", "budget_control.read"}),
+    "read": frozenset({"people_project_payroll.read"}),
+    "read_sensitive": frozenset({"people_project_payroll.read", "people_project_payroll.read_sensitive", "finance_core.read"}),
+}
+for _method, _path, _phase in (
+    ("POST", "/employees", "personnel"), ("POST", "/employees/{employee_id}/employment", "personnel"),
+    ("POST", "/projects", "manage"), ("POST", "/times", "manage"), ("POST", "/times/{time_id}/approve", "approve_time"),
+    ("POST", "/payruns", "prepare"), ("POST", "/payruns/{payrun_id}/payments", "pay"),
+    ("POST", "/plans/{plan_id}/review", "review"), ("POST", "/plans/{plan_id}/post", "post"),
+    ("POST", "/payruns/{payrun_id}/cancel", "prepare"), ("GET", "/plans/{plan_id}", "read"),
+    ("GET", "/plans/{plan_id}/private", "read_sensitive"), ("GET", "/payruns/{payrun_id}/evidence", "read_sensitive"),
+    ("GET", "/catalog/{kind}", "read"),
+):
+    _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/people-project-payroll" + _path)] = (
+        "all", tuple(sorted(_PEOPLE_PHASE_CONTRACTS[_phase])))
+
+
 def _dependency_contract(route: APIRoute) -> tuple[str, tuple[str, ...]] | None:
     found: set[tuple[str, tuple[str, ...]]] = set()
     pending = list(route.dependant.dependencies)

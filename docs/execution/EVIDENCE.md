@@ -1,5 +1,18 @@
 # ReconForge Execution Evidence Log
 
+## Actual Wave5 closure and M1 executed integration checkpoints (2026-10-13)
+
+Wave5 original final closure SHA07bc3fd44b6de8b52d77ed35a8624c97cdfecaa754fbafea666dee7aa82c7f98
+records actual542 hosted quality/source gates. It does not accept evolving M1.
+M1 actual native ordered migration roundtrip/catalog2cases0skips; private HTTP
+cycle2cases and deferred wrong-role rollback1case on140; unchanged492-route
+authorization digest plus45 new routes;42 focused React cases/typecheck;
+172 central policy cases and68 modules/money/owner pure cases executed. Actual
+ME2/ICFX2/HC1 development-source native/oracle/restore receipts retain separate
+source labels; no unit test duration is a throughput benchmark. See the
+[matrix](ENTERPRISE_M1_PROGRESS_2026-10-13.md). Final source freeze/full CI and
+socket-TLS browser acceptance remain pending. Earlier failed receipts stay visible.
+
 ## Source archive diagnostic dependency correction (2026-10-12)
 
 Original6ce3.12 hosted report79783871 checks3029 packaged tracked members
@@ -23315,3 +23328,21 @@ source-bound evidence, not acceptance of2ca. Correction requires real async
 cryptographic completion and immutable value-bound exact scanner fingerprints,
 then a new fixed-head full hosted run; no skipped/retried financial gate or broad
 scanner exclusion grants acceptance.
+
+## Enterprise M1 original HTTPS and targeted integration receipts (2026-10-13)
+
+IC2 e4dc9205 and HC1 07a3831b original HTTPS/301-table restore receipts are
+qualified in the M1 progress matrix. ME2 bff14c96 original reportSHA is
+a1498acd08025c38ff5c72d8e90ee04e6b564e6c828f2fa059a063859ec28e3a.
+Each browser expected1/skipped0/unexpected0/flaky0, native nonowner flags false/
+false, restore3 tamper refusals, unchanged source and owned process/container
+cleanup. ME2 independent issued2900+claimed900=3800, FG3420+loss380+WIP0,
+nine native effects and25933 balanced turnover. No comparative performance or
+external attestation is implied by these same-host synthetic receipts.
+
+Current source fixes are backed by actual native6+10 dimension custody,
+9 HCM read-authority,6 original IC2 SQL attack,1 ordinary Draft update,
+1 supplier and3 customer/linear migration,5 ordinary Finance inverse targets.
+Counts are separate source-qualified receipts, not a summed independent full
+regression total. Original failed packets and initial hosted16a78f6b failures
+are retained. Final frozen-source all-gate receipts remain pending.

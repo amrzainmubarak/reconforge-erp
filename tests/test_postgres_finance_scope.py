@@ -113,6 +113,17 @@ def finance_database(isolated_postgres_migration_dsn: str, request: pytest.Fixtu
                 admin.execute(psycopg.sql.SQL(
                     "GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.finance_posting_effects,reconforge.finance_posting_commands TO {}"
                 ).format(psycopg.sql.Identifier(params["user"])))
+            # Ordinary inverses coordinate only through the public Core
+            # effect directory. Historical revision fixtures predate it.
+            if admin.execute("SELECT to_regclass('reconforge.financial_effect_claim_gates')").fetchone()[0] is not None:
+                admin.execute(psycopg.sql.SQL(
+                    "GRANT SELECT,INSERT,UPDATE ON reconforge.financial_effect_claim_gates TO {}"
+                ).format(psycopg.sql.Identifier(params["user"])))
+            for directory in ("financial_effect_ownership_guards", "financial_effect_ownership_releases"):
+                qualified_directory = "reconforge." + directory
+                if admin.execute("SELECT to_regclass(%s)", (qualified_directory,)).fetchone()[0] is not None:
+                    admin.execute(psycopg.sql.SQL("GRANT SELECT ON {} TO {}").format(
+                        psycopg.sql.Identifier("reconforge", directory), psycopg.sql.Identifier(params["user"])))
             # Plain Finance writes run the additive source-closure trigger too.
             # It must read the forced-RLS source index without granting source mutations.
             for dependency in ("operational_finance_plans", "financial_opening_plans", "stock_sales_orders", "stock_sales_issue_claims", "procurement_partial_orders", "procurement_partial_receipts", "procurement_partial_invoices", "procurement_partial_commands"):

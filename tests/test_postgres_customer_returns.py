@@ -297,6 +297,10 @@ def test_forward_upgrade_retains_native_source_empty_rollback_and_populated_cred
             app_user = psycopg.conninfo.conninfo_to_dict(database[1])["user"]
             for table in ("customer_return_plans", "customer_return_events", "customer_return_commands"):
                 admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(app_user)))
+            # Empty later migrations recreate the scoped Finance Core directory.
+            # Restoring inverse prerequisites gives no personnel/module reads.
+            admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE ON reconforge.financial_effect_claim_gates TO {}").format(sql.Identifier(app_user)))
+            admin.execute(sql.SQL("GRANT SELECT ON reconforge.financial_effect_ownership_guards,reconforge.financial_effect_ownership_releases TO {}").format(sql.Identifier(app_user)))
         assert retained_state(runtime) == before
         plan = prepare_return(runtime, source)
         populated = retained_state(runtime)

@@ -76,7 +76,7 @@ def require_browser_acceptance(stats: object) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-native-restore", action="store_true")
-    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax", "manufacturing-execution", "intercompany-operations", "procurement-sourcing"), default="expansion")
+    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax", "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing"), default="expansion")
     parser.add_argument("--runtime-root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "output/erp-expansion-20261009/browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
@@ -86,6 +86,7 @@ def main() -> int:
     configuration = "apps/web/live/erp-expansion.playwright.config.ts"
     extension_tables = EXPANSION_TABLES
     tamper_actor: Callable[..., Any] | None = None
+    personnel_dsn: Callable[..., str] | None = None
     workspace_probe_tables: tuple[str, ...] | None = None
     tamper_statements = (
         "UPDATE reconforge.stock_sales_orders SET total_minor=total_minor+1,row_version=row_version+1 WHERE tenant_id=%s",
@@ -143,6 +144,19 @@ def main() -> int:
         extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + MANUFACTURING_EXECUTION_TABLES))
         tamper_statements = MANUFACTURING_EXECUTION_TAMPER
         workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + MANUFACTURING_EXECUTION_WORKSPACE_PROBE_TABLES))
+    elif args.scenario == "manufacturing-execution-v2":
+        from tests.manufacturing_execution_v2_browser import (
+            MANUFACTURING_EXECUTION_V2_TABLES,
+            MANUFACTURING_EXECUTION_V2_TAMPER,
+            MANUFACTURING_EXECUTION_V2_WORKSPACE_PROBE_TABLES,
+            seed_manufacturing_execution_v2_browser,
+            verify_manufacturing_execution_v2_browser,
+        )
+        seed, verify_cycles = seed_manufacturing_execution_v2_browser, verify_manufacturing_execution_v2_browser
+        configuration = "apps/web/live/manufacturing-execution-v2.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + MANUFACTURING_EXECUTION_V2_TABLES))
+        tamper_statements = MANUFACTURING_EXECUTION_V2_TAMPER
+        workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + MANUFACTURING_EXECUTION_V2_WORKSPACE_PROBE_TABLES))
     elif args.scenario == "intercompany-operations":
         from tests.intercompany_operations_browser_seed import (
             INTERCOMPANY_BROWSER_TABLES,
@@ -156,6 +170,36 @@ def main() -> int:
         extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + INTERCOMPANY_BROWSER_TABLES))
         tamper_statements = INTERCOMPANY_RESTORE_TAMPER
         tamper_actor = intercompany_restore_tamper_actor
+    elif args.scenario == "intercompany-fx":
+        from tests.intercompany_fx_browser_seed import (
+            INTERCOMPANY_FX_BROWSER_TABLES,
+            INTERCOMPANY_FX_RESTORE_TAMPER,
+            intercompany_fx_restore_tamper_actor,
+            seed_intercompany_fx_browser,
+            verify_intercompany_fx_browser,
+        )
+        seed, verify_cycles = seed_intercompany_fx_browser, verify_intercompany_fx_browser
+        configuration = "apps/web/live/intercompany-fx.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + INTERCOMPANY_FX_BROWSER_TABLES))
+        tamper_statements = INTERCOMPANY_FX_RESTORE_TAMPER
+        tamper_actor = intercompany_fx_restore_tamper_actor
+    elif args.scenario == "people-project-payroll":
+        from tests.people_project_payroll_browser import (
+            PEOPLE_PROJECT_PAYROLL_TABLES,
+            PEOPLE_PROJECT_PAYROLL_TAMPER,
+            PEOPLE_PROJECT_PAYROLL_WORKSPACE_PROBE_TABLES,
+            people_project_payroll_restore_tamper_actor,
+            personnel_browser_dsn,
+            seed_people_project_payroll_browser,
+            verify_people_project_payroll_browser,
+        )
+        seed, verify_cycles = seed_people_project_payroll_browser, verify_people_project_payroll_browser
+        configuration = "apps/web/live/people-project-payroll.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + PEOPLE_PROJECT_PAYROLL_TABLES))
+        workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + PEOPLE_PROJECT_PAYROLL_WORKSPACE_PROBE_TABLES))
+        tamper_statements = PEOPLE_PROJECT_PAYROLL_TAMPER
+        tamper_actor = people_project_payroll_restore_tamper_actor
+        personnel_dsn = personnel_browser_dsn
     elif args.scenario == "procurement-sourcing":
         from tests.procurement_sourcing_browser import (
             PROCUREMENT_SOURCING_BROWSER_TABLES,
@@ -282,6 +326,7 @@ def main() -> int:
     status_before = tracked_status(runtime_root)
     report: dict[str, object] = {
         "started_at": datetime.now(UTC).isoformat(), "image": IMAGE,
+        "container_resource_bounds": {"cpus": "2", "memory_bytes": 1073741824},
         "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=runtime_root, text=True).strip(),  # nosec B603 B607
         "source_sha256": source_digest(runtime_root), "runtime_root": str(runtime_root),
         "tooling_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
@@ -304,7 +349,7 @@ def main() -> int:
         if not origin.is_relative_to(runtime_root):
             raise ValueError("Expansion module origin is outside the integrated runtime checkout.")
         module_origins[module_name] = {"path": str(origin), "sha256": hashlib.sha256(origin.read_bytes()).hexdigest()}
-    if args.scenario in {"manufacturing-execution", "intercompany-operations", "procurement-sourcing"}:
+    if args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing"}:
         owner_module = "reconforge.infrastructure.postgres_" + args.scenario.replace("-", "_")
         for module_name in dict.fromkeys((owner_module, seed.__module__, verify_cycles.__module__)):
             origin = Path(importlib.import_module(module_name).__file__).resolve()
@@ -325,7 +370,7 @@ def main() -> int:
         environment = os.environ.copy()
         environment["POSTGRES_PASSWORD"] = admin_password
         container = run(["docker", "run", "--detach", "--rm", "--name", name,
-                         "--label", "reconforge.owner=erp-expansion-browser", "-e", "POSTGRES_PASSWORD",
+                         "--label", "reconforge.owner=erp-expansion-browser", "--cpus", "2", "--memory", "1g", "-e", "POSTGRES_PASSWORD",
                          "-p", "127.0.0.1::5432", IMAGE], environment=environment).stdout.strip()
         port = run(["docker", "port", container, "5432/tcp"]).stdout.strip().rsplit(":", 1)[1]
         admin_dsn = f"postgresql://postgres:{admin_password}@127.0.0.1:{port}/postgres?connect_timeout=5"
@@ -373,6 +418,13 @@ def main() -> int:
             RECONFORGE_ERP_BROWSER_ARTIFACTS=str(output / "playwright-artifacts"),
             RECONFORGE_GFO_APP_DSN=app_dsn, RECONFORGE_GFO_WEB_ROOT=str(args.web_root.resolve()),
             RECONFORGE_GFO_HTTPS_PORT=str(https_port))
+        if personnel_dsn is not None:
+            # The dedicated credential stays in the owned child's environment;
+            # no public report or process argument carries it.
+            environment["RECONFORGE_PERSONNEL_POSTGRES_DSN"] = personnel_dsn(runtime)
+        if args.scenario == "manufacturing-execution-v2":
+            from tests.manufacturing_execution_v2_browser import manufacturing_execution_v2_browser_configuration
+            environment["RECONFORGE_MANUFACTURING_V2_SOURCE"] = json.dumps(manufacturing_execution_v2_browser_configuration(runtime))
         if args.scenario == "snapshots":
             from tests.enterprise_financial_snapshot_browser import financial_snapshot_oracle
             oracle_path = output / "financial-snapshot-oracle.json"

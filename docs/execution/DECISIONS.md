@@ -1,5 +1,18 @@
 # ReconForge Execution Decisions Log
 
+## Enterprise M1 shared contracts (2026-10-13)
+
+Start from actual accepted542, preserve main/primary dirty files and old custody.
+Keep comparative performance deferred. Use one native GL/identity/inventory/
+money engine. [ADR0855](../adr/0855-versioned-enterprise-cost-fx-and-time-ownership.md)
+defines immutable original expense claims, inspected production, captured-rate
+translation and separate personnel credentials. Ordered revisions138/139/140
+follow136 without rejected137;138 identifier is0138_pg_manufacturing_v2 to fit
+the installed32-character version table. Catalog presence grants no roles.
+Current source gates, API45 and additive PostgreSQL metadata do not imply final
+deployment/country/full ERP acceptance. M2 original-effect attachment reuses the
+single core gate/directory and must be exclusive against active other owners.
+
 ## Source archive diagnostic dependency correction (2026-10-12)
 
 Preserve the explicit source-distribution policy; do not infer all Git files are

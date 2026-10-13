@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: "2026-10-11"
+updated_at: "2026-10-13"
 claim_boundary: >-
   This inventory measures source coupling. A partial repository does not prove
   backend neutrality, and only a connection-free application service may be
@@ -28,6 +28,18 @@ platform_services:
   - {file: payables_payment_link.py, service: PayablesPaymentLinkService, status: compatibility_adapter}
   - {file: receivables.py, service: ReceivablesService, status: compatibility_adapter}
 application_services:
+  - file: manufacturing_execution_v2.py
+    service: ManufacturingExecutionV2Service
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_manufacturing_execution_v2.PostgresManufacturingExecutionV2Repository
+  - file: intercompany_fx.py
+    service: IntercompanyFxService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_intercompany_fx.PostgresIntercompanyFxRepository
+  - file: people_project_payroll.py
+    service: PeopleProjectPayrollService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_people_project_payroll.PostgresPeopleProjectPayrollRepository
   - file: manufacturing_execution.py
     service: ManufacturingExecutionService
     status: backend_neutral
@@ -292,4 +304,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 21
-  backend_neutral_application: 63
+  backend_neutral_application: 66

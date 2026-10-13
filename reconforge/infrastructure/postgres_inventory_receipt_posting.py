@@ -45,6 +45,7 @@ from reconforge.infrastructure.postgres_finance_posting import (
 )
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
 from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope
+from reconforge.infrastructure.source_participant_admission import source_participant_type
 from reconforge.io.inventory_receipt_posting import decode_receipt_json, encode_receipt_json
 from reconforge.platform.common import current_server_principal
 from reconforge.platform.inventory_values import code, document_number, quantity_to_scaled, scaled_to_text
@@ -106,6 +107,15 @@ class PostgresInventoryReceiptPostingRepository:
 
     def _manufacturing_source(self, identifier: str, number: str, participant: object | None) -> None:
         """Admit only the exact live completion owner, before receipt row locks."""
+        if number.upper().startswith(("ME2-", "ME2W-", "ME2R-", "ME2P-", "ME2K-", "ME2X-")):
+            fail("Engineering definitions and held production cannot become receipt sources.", "inventory_receipt_owner_required")
+        if number.upper().startswith("ME2C-"):
+            participant_type = source_participant_type("manufacturing-v2-receipt")
+            if participant_type is None or not isinstance(participant, participant_type) or not participant.admits(
+                self.connection, self.tenant_id, identifier
+            ):
+                fail("Inspected production receipts require their complete native quality owner.", "inventory_receipt_owner_required")
+            return
         if not number.upper().startswith("ME1C-"):
             return
         from reconforge.infrastructure.postgres_manufacturing_execution import _ManufacturingReceiptParticipant

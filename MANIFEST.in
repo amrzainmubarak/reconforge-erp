@@ -1472,3 +1472,19 @@ include docs/execution/WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md
 include docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.json
 include docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.md
 include docs/execution/GLOBAL_ENTERPRISE_PROGRAM_CONTRACTS_2026-10-12.md
+include docs/adr/0855-versioned-enterprise-cost-fx-and-time-ownership.md
+include .github/scripts/verify_intercompany_fx_cycle_oracle.py
+include tests/verify_people_project_payroll_oracle.py
+include tests/intercompany_fx_fixture.py
+include tests/intercompany_fx_native_restore.py
+include tests/intercompany_fx_browser_seed.py
+include tests/people_project_payroll_browser.py
+include tests/fixtures/people-project-payroll-native-v1.json
+include docs/operations/PEOPLE_PROJECT_PAYROLL.md
+include docs/execution/ENTERPRISE_M1_PROGRESS_2026-10-13.md
+
+include .github/scripts/verify_manufacturing_v2_cycle_oracle.py
+include tests/manufacturing_execution_v2_browser.py
+include tests/test_manufacturing_v2_cycle_oracle.py
+include tests/fixtures/manufacturing_v2_original_golden.json
+include tests/fixtures/manufacturing_v2_original_quality_hold.json

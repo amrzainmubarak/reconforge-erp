@@ -295,8 +295,18 @@ class PostgresManufacturingExecutionRepository:
         for item in sorted({item for item, _ in pairs}):
             self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))", (f"{order['legal_entity_id']}|{item}|",))
 
-    def create_order(self, request: OrderPreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
+    def create_order(self, request: OrderPreparation, *, command_id: str, actor: PostingActor,
+                     _source_owner: object | None = None) -> dict[str, Any]:
         args = request.payload()
+        execution_owner_id = None
+        if _source_owner is not None:
+            from reconforge.infrastructure.postgres_manufacturing_execution_v2 import (
+                _ManufacturingV2MaterialParticipant,
+            )
+            if not isinstance(_source_owner, _ManufacturingV2MaterialParticipant) or not _source_owner.admits(
+                    self.connection, self.tenant_id, _source_owner.order_id):
+                fail("Material delegation requires the exact active ME2 source owner.")
+            execution_owner_id = _source_owner.order_id
         with self._transaction():
             self._actor(actor, "create", args)
             wire, replay = self._command(args, "create", command_id, args, actor)
@@ -329,10 +339,16 @@ class PostgresManufacturingExecutionRepository:
             self._admit(source)
             self._actor(actor, "create", source)
             self._inventory_locks(source)
-            self.connection.execute("""INSERT INTO reconforge.manufacturing_execution_orders
-                (tenant_id,id,workspace_id,organization_id,legal_entity_id,number,bom_version_id,movement_id,payload,source_digest)
-                VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s)""", (self.tenant_id, identifier, source["workspace_id"], source["organization_id"],
-                source["legal_entity_id"], source["number"], bom["id"], source["movement_id"], canonical_json(source), digest))
+            values = (self.tenant_id, identifier, source["workspace_id"], source["organization_id"],
+                source["legal_entity_id"], source["number"], bom["id"], source["movement_id"], canonical_json(source), digest)
+            if execution_owner_id is None:
+                self.connection.execute("""INSERT INTO reconforge.manufacturing_execution_orders
+                    (tenant_id,id,workspace_id,organization_id,legal_entity_id,number,bom_version_id,movement_id,payload,source_digest)
+                    VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s)""", values)
+            else:
+                self.connection.execute("""INSERT INTO reconforge.manufacturing_execution_orders
+                    (tenant_id,id,workspace_id,organization_id,legal_entity_id,number,bom_version_id,movement_id,payload,source_digest,execution_owner_id)
+                    VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s)""", (*values, execution_owner_id))
             for line in requirements:
                 evidence = requirement_payload(requirement_id=line["requirement_id"], order={**source, "source_digest": digest}, bom=bom, component=line)
                 self.connection.execute("""INSERT INTO reconforge.manufacturing_execution_requirements
@@ -508,6 +524,11 @@ class PostgresManufacturingExecutionRepository:
             self._binding({**order, **args})
             order = self._order(order_id, lock=True)
             self._actor(actor, "prepare", order)
+            native = self._one("SELECT to_jsonb(o)->>'execution_owner_id' AS execution_owner_id FROM reconforge.manufacturing_execution_orders o WHERE tenant_id=%s AND id=%s",
+                (self.tenant_id, order_id))
+            if native["execution_owner_id"] is not None:
+                fail("This material order delegates complete cost and quality disposition to its ME2 owner.",
+                     "manufacturing_execution_source_owner_required")
             self._admit(order)
             self._inventory_locks(order)
             if order["phase"] != 3 or posting_date < order["posting_date"]:
@@ -646,8 +667,22 @@ class PostgresManufacturingExecutionRepository:
                         if backing["effect"] != completion["receipt_effect"]:
                             fail("Retained finished-goods acknowledgement differs from verified native financial backing.")
                 retained.append(completion)
-            return {**order, "completions": retained,
-                    "wip_minor": 0 if order["phase"] not in {3, 4} else order["issue_plan"]["total_cost_minor"] - order["released_cost_minor"]}
+            result = {**order, "completions": retained,
+                      "wip_minor": 0 if order["phase"] not in {3, 4} else order["issue_plan"]["total_cost_minor"] - order["released_cost_minor"]}
+            native = self._one("SELECT to_jsonb(o)->>'execution_owner_id' AS execution_owner_id FROM reconforge.manufacturing_execution_orders o WHERE tenant_id=%s AND id=%s",
+                (self.tenant_id, order_id))
+            if native["execution_owner_id"] is not None:
+                from reconforge.infrastructure.postgres_manufacturing_execution_v2 import (
+                    PostgresManufacturingExecutionV2Repository,
+                )
+                delegated = PostgresManufacturingExecutionV2Repository(self.connection, self.tenant_id)
+                parent = delegated._source(native["execution_owner_id"], read_lock=True)
+                delegated._actor(actor, "read", parent)
+                result.update(execution_version=2, execution_owner={key: parent[key] for key in
+                    ("id", "phase", "source_digest", "total_cost_minor", "produced_quantity_scaled", "disposed_quantity_scaled", "released_cost_minor")},
+                    material_cost_minor=0 if order["issue_plan"] is None else order["issue_plan"]["total_cost_minor"],
+                    wip_minor=parent["total_cost_minor"] - parent["released_cost_minor"] if parent["phase"] in {3, 4} else 0)
+            return result
 
     def get_requirement(self, requirement_id: str, *, actor: PostingActor) -> dict[str, Any]:
         with self._transaction(write=False):

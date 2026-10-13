@@ -9,7 +9,7 @@ import re
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation, localcontext
+from decimal import ROUND_HALF_UP, Decimal, Inexact, InvalidOperation, Rounded, localcontext
 from importlib.resources import files
 from inspect import currentframe
 from pathlib import Path
@@ -229,8 +229,12 @@ def _divide_for_money(
     with localcontext() as context:
         context.prec = required_precision
         context.rounding = _rounding_mode(rounding_policy)
+        # Currency rounding is deliberate; caller diagnostic traps must not turn
+        # a nonterminating but valid quotient into a different financial result.
+        context.traps[Inexact] = False
+        context.traps[Rounded] = False
         quotient = numerator / denominator
-    return _quantize_decimal(quotient, precision=precision, rounding_policy=rounding_policy)
+        return _quantize_decimal(quotient, precision=precision, rounding_policy=rounding_policy)
 
 
 def _normalize_financial_text(
@@ -1530,3 +1534,28 @@ class ExchangeRate:
             )
         converted_amount = _exact_multiply(money.amount, self.rate)
         return Money._from_resolved(converted_amount, self._quote_policy)
+
+    def convert_inverse(self, money: Money) -> Money:
+        """Convert quote to base using the original rate and captured policies.
+
+        Do not serialize a rounded reciprocal: dividing the original amount by
+        its original rate retains the direction/source/date and rounds once at
+        the target currency boundary. Conversion is not a lossless round trip.
+        """
+        if not isinstance(money, Money):
+            raise InvalidAmountError("money must be a Money object")
+        if money.currency != self.quote_currency:
+            raise CurrencyMismatchError(
+                f"Exchange rate quote currency ({self.quote_currency}) does not match money currency ({money.currency})"
+            )
+        if money.currency_policy_digest != self._quote_policy.policy_digest:
+            raise CurrencyPolicyMismatchError(
+                f"Exchange rate quote policy does not match the {self.quote_currency} Money policy"
+            )
+        converted_amount = _divide_for_money(
+            money.amount,
+            self.rate,
+            precision=self._base_policy.spec.minor_units,
+            rounding_policy=self._base_policy.spec.rounding_policy,
+        )
+        return Money._from_resolved(converted_amount, self._base_policy, strict_precision=True)

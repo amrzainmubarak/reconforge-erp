@@ -17,6 +17,10 @@ from reconforge.api.dependencies import require_any_permission, require_permissi
 
 EXPECTED_ROUTE_COUNT = 492
 EXPECTED_DIGEST = "14b516ccedc6622f05971c891af1ab1764ca1c31994aa5c22855b939c074cf83"
+ENTERPRISE_M1_PREFIXES = (
+    "/api/v1/manufacturing-execution-v2/", "/api/v1/intercompany-fx/", "/api/v1/people-project-payroll/",
+)
+EXPECTED_ENTERPRISE_M1_ROUTE_COUNT = 45
 WAVE5_PREFIXES = ("/api/v1/manufacturing-execution/", "/api/v1/intercompany-operations/", "/api/v1/procurement-sourcing/")
 WAVE4_PREFIXES = (
     "/api/v1/customer-returns/", "/api/v1/procurement-commitments/",
@@ -53,7 +57,12 @@ HANDLER_BOUNDARY_HELPERS = {
     "durable_job_operations.py": frozenset({"_command"}),
     "inventory_receipt_posting.py": frozenset({"_execute"}),
     "intercompany_operations.py": frozenset({"authority", "execute"}),
+    "intercompany_fx.py": frozenset({"authority", "execute"}),
+    # Reviewed HC execution chooses only the ordinary scoped GL transaction or
+    # the separate role-authenticated personnel transaction; HTTP cannot select it.
+    "people_project_payroll.py": frozenset({"execute"}),
     "manufacturing_execution.py": frozenset({"execute", "order_phase", "completion_phase"}),
+    "manufacturing_execution_v2.py": frozenset({"execute", "phase"}),
     "procurement_sourcing.py": frozenset({"_execute"}),
     "operational_finance.py": frozenset({"_authority", "_execute"}),
     "sales_revenue.py": frozenset({"_execute", "_transition"}),
@@ -97,8 +106,11 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
     app = create_api_app(tmp_path / "unused.db")
     contracts = app.state.authorization_contracts
 
-    assert len(contracts) == EXPECTED_ROUTE_COUNT
-    assert app.state.authorization_contract_digest == EXPECTED_DIGEST
+    retained = tuple(contract for contract in contracts if not contract.path.startswith(ENTERPRISE_M1_PREFIXES))
+    assert len(retained) == EXPECTED_ROUTE_COUNT
+    assert authorization_inventory_digest(retained) == EXPECTED_DIGEST
+    assert len(contracts) == EXPECTED_ROUTE_COUNT + EXPECTED_ENTERPRISE_M1_ROUTE_COUNT
+    assert app.state.authorization_contract_digest == authorization_inventory_digest(contracts)
     assert {contract.mode for contract in contracts} == {"all", "any", "dynamic", "identity", "public", "scim"}
     assert [contract for contract in contracts if contract.mode == "dynamic"] == [
         next(
@@ -185,7 +197,8 @@ def test_wave3_routes_require_exact_authority_and_preserve_all_accepted_route_co
     added_keys = {(contract.method, contract.path) for contract in expected}
     actual_added = tuple(contract for contract in contracts if (contract.method, contract.path) in added_keys)
     assert actual_added == expected
-    retained = tuple(contract for contract in contracts if (contract.method, contract.path) not in added_keys)
+    retained = tuple(contract for contract in contracts if (contract.method, contract.path) not in added_keys
+                     and not contract.path.startswith(ENTERPRISE_M1_PREFIXES))
     assert len(retained) == 429
     assert authorization_inventory_digest(retained) == "1c1581c2a7d8baf52e80253d5c5e8d026f09de431b250efdb4c89ea1bfd4232d"
     validate_authorization_surface(create_api_app(tmp_path / "complete.db").state.authorization_contracts,
@@ -194,7 +207,7 @@ def test_wave3_routes_require_exact_authority_and_preserve_all_accepted_route_co
 
 def test_wave4_source_routes_preserve_accepted_authority_and_require_exact_permissions(tmp_path: Path) -> None:
     contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
-    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE4_PREFIXES + WAVE5_PREFIXES))
+    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE4_PREFIXES + WAVE5_PREFIXES + ENTERPRISE_M1_PREFIXES))
     assert len(retained) == 432
     assert authorization_inventory_digest(retained) == "1444692a691300fa3bd63fef6ab70f1c02d195a0b1b9b15b7673b58c847beb76"
     read = ("finance_core.read", "inventory.read", "receivables.read", "sales.read")
@@ -273,9 +286,29 @@ def test_mutating_route_modules_declare_a_server_boundary_or_explicit_protocol_c
     )
 
 
+@pytest.mark.parametrize("method,path,required", [
+    ("POST", "/api/v1/people-project-payroll/employees", "people_project_payroll.read_sensitive"),
+    ("POST", "/api/v1/people-project-payroll/payruns", "budget_control.manage"),
+    ("POST", "/api/v1/people-project-payroll/plans/{plan_id}/post", "finance_core.post"),
+    ("POST", "/api/v1/intercompany-fx/sources/{source_id}/revaluation-reversals", "finance_core.reverse"),
+    ("POST", "/api/v1/intercompany-fx/sources/{source_id}/settlements", "finance_core.manage"),
+])
+def test_enterprise_sensitive_contract_refuses_adjacent_authority(
+    tmp_path: Path, method: str, path: str, required: str,
+) -> None:
+    from dataclasses import replace
+
+    contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
+    changed = tuple(replace(item, permissions=tuple(permission for permission in item.permissions if permission != required))
+                    if (item.method, item.path) == (method, path) else item for item in contracts)
+    assert changed != contracts
+    with pytest.raises(ValueError, match="Critical.*contract"):
+        validate_authorization_surface(changed, require_critical_routes=True)
+
+
 def test_wave5_additions_preserve_every_accepted_wave4_route(tmp_path: Path) -> None:
     contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
-    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE5_PREFIXES))
+    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE5_PREFIXES + ENTERPRISE_M1_PREFIXES))
     assert len(retained) == 459
     assert authorization_inventory_digest(retained) == "f41b3007bbcc9cc1285cc836be0cb2e81d2e2c4e03713f83f6d245db27fccc9a"
 

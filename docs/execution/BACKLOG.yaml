@@ -1,16 +1,64 @@
 schema_version: 2
-updated_at: "2026-10-12"
+updated_at: "2026-10-13"
 phase: "Phase 4 — Global Capability Expansion"
-active_sprint: "Wave5 Native Manufacturing, Intercompany and Sourcing with Strict Performance Acceptance"
+active_sprint: "Enterprise M1 operating cycles and separate dependency-driven M2, performance measurement deferred"
 snapshot:
-  evidence_base_commit: "6362724f2337a79c3d7569574f7bf9591a018524"
+  evidence_base_commit: "542d42822d88613d784a32392416b7acd5e14c2d"
   policy_change_commit: "the commit containing this file"
   published: true
-  publication: "Draft PR131 above accepted PR130 and preserved PR129-124; final22 hosted/security/restore gates passed; performance acceptance remains false and original headers retained"
+  publication: "Draft PR131 actual542 quality/source closure above PR130 preserves PR129-124; M1 frozen acceptance pending; comparative performance deferred and false"
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-ENTERPRISE-M1-001
+    depends_on: [AMR-WAVE5-001]
+    priority: P0
+    area: manufacturing-quality-costing
+    title: Close inspected ME2 production and original expense ownership through Studio native GL concurrency and restore
+    status: in_progress
+  - id: AMR-ENTERPRISE-M1-002
+    depends_on: [AMR-WAVE5-002]
+    priority: P0
+    area: corporate-fx-consolidation
+    title: Close paired foreign trade settlement revaluation translation elimination and original native evidence
+    status: in_progress
+  - id: AMR-ENTERPRISE-M1-003
+    depends_on: [AMR-GLOBAL-001]
+    priority: P0
+    area: people-project-wage-accounting
+    title: Close private personnel approved time budget wages partial cash and role-qualified restored evidence
+    status: in_progress
+  - id: AMR-ENTERPRISE-M2-001
+    depends_on: [AMR-ENTERPRISE-M1-002]
+    priority: P0
+    area: accrual-deferral
+    title: Execute approved source vouchers original attachments exact schedule releases and native inverse using one ownership directory
+    status: in_progress
+  - id: AMR-ENTERPRISE-M2-002
+    depends_on: [AMR-ENTERPRISE-M1-001, AMR-WAVE5-003]
+    priority: P0
+    area: supply-planning
+    title: Connect approved net material demand to existing sourcing budget purchase receipt and manufacturing reservations
+    status: planned
+  - id: AMR-ENTERPRISE-M2-003
+    depends_on: [AMR-ENTERPRISE-M1-003]
+    priority: P0
+    area: project-service-billing
+    title: Connect whole approved time customer agreements submitted AR atomic Project revenue and partial Cash AR collections
+    status: in_progress
+  - id: AMR-ENTERPRISE-PERFORMANCE-001
+    depends_on: [AMR-ENTERPRISE-M1-001, AMR-ENTERPRISE-M1-002, AMR-ENTERPRISE-M1-003]
+    priority: P0
+    area: engineering-comparison
+    title: Profile and compare final sources under an explicitly stable power and quiet measurement window without reusing old gains
+    status: deferred
+  - id: AMR-ENTERPRISE-COUNTRIES-001
+    depends_on: [AMR-ENTERPRISE-M1-002, AMR-ENTERPRISE-M1-003]
+    priority: P0
+    area: statutory-localizations
+    title: Build documented country date tax and payroll packs for all countries after generic cycle contracts with independent legal rules and fixtures
+    status: planned
   - id: AMR-WAVE5-001
     priority: P0
     area: native-manufacturing

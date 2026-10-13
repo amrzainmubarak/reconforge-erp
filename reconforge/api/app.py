@@ -38,6 +38,7 @@ from reconforge.api.errors import (
 from reconforge.api.routes import (
     access_administration,
     accounts,
+    accrual_deferral,
     audit,
     audit_administration,
     auth,
@@ -463,6 +464,7 @@ def create_api_app(
     app.include_router(customer_returns.router, prefix="/api/v1")
     app.include_router(intercompany_operations.router, prefix="/api/v1")
     app.include_router(intercompany_fx.router, prefix="/api/v1")
+    app.include_router(accrual_deferral.router, prefix="/api/v1")
     app.include_router(manufacturing_execution.router, prefix="/api/v1")
     app.include_router(manufacturing_execution_v2.router, prefix="/api/v1")
     app.include_router(procurement_sourcing.router, prefix="/api/v1")
@@ -535,6 +537,7 @@ def create_api_app(
         customer_returns.router,
         intercompany_operations.router,
         intercompany_fx.router,
+        accrual_deferral.router,
         manufacturing_execution.router,
         manufacturing_execution_v2.router,
         procurement_sourcing.router,

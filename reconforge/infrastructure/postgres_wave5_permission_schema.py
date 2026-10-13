@@ -8,6 +8,7 @@ _CATALOGS = {
     "procurement_sourcing": ("read", "manage", "approve", "award"),
     "manufacturing_execution_v2": ("read", "manage", "approve", "post"),
     "intercompany_fx": ("read", "prepare", "review", "post"),
+    "accrual_deferral": ("read", "prepare", "review", "post"),
     "people_project_payroll": (
         "read", "read_sensitive", "personnel", "manage", "approve_time", "prepare", "review", "post", "pay",
     ),

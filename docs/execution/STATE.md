@@ -12391,3 +12391,15 @@ evidence remain open. GitHub publication remains deferred by owner policy.
   full encrypted `pg_dump`/`pg_restore` rehearsal was not counted. It makes no
   backup duration, RPO/RTO, key-custody, cross-version, HA/DR, promotion, or
   production-recovery claim.
+
+## Enterprise M2 integration gate — 2026-10-13
+
+M2 adds original-source accrual/deferral schedules over the existing GL and
+shared source claim directory. Ordered revision0141, empty downgrade/re-upgrade,
+41 selected FORCE-RLS tables, no automatic module grants and retained-grant
+downgrade refusal passed two mandatory native PostgreSQL tests with zero skips.
+Thirty route, repository-boundary and metadata tests passed. Critical read
+authorization contracts now receive the same exact permission-drift check as
+critical writes; the accepted492 route digest remains unchanged. These are
+targeted development gates. Integrated Studio, populated restore and final
+frozen-source M2 acceptance remain pending. Benchmarks are deferred by the owner.

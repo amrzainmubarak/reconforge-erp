@@ -14,6 +14,7 @@ CURRENT_TENANT_SEEDED_PERMISSIONS = frozenset({
     "procurement_sourcing.approve", "procurement_sourcing.award",
     "manufacturing_execution_v2.read", "manufacturing_execution_v2.manage",
     "manufacturing_execution_v2.approve", "manufacturing_execution_v2.post",
+    "accrual_deferral.read", "accrual_deferral.prepare", "accrual_deferral.review", "accrual_deferral.post",
     "intercompany_fx.read", "intercompany_fx.prepare", "intercompany_fx.review", "intercompany_fx.post",
     "people_project_payroll.read", "people_project_payroll.read_sensitive", "people_project_payroll.personnel",
     "people_project_payroll.manage", "people_project_payroll.approve_time", "people_project_payroll.prepare",

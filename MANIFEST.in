@@ -1488,3 +1488,4 @@ include tests/manufacturing_execution_v2_browser.py
 include tests/test_manufacturing_v2_cycle_oracle.py
 include tests/fixtures/manufacturing_v2_original_golden.json
 include tests/fixtures/manufacturing_v2_original_quality_hold.json
+include tests/fixtures/accrual-deferral-native-v1.json

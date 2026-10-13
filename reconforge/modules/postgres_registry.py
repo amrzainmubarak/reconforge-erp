@@ -87,6 +87,15 @@ def _descriptor(
 
 _POSTGRES_MODULES = (
     _descriptor(
+        module_id="finance.accrual-deferral", name="Original-source vouchers, deferrals and accrual reversals",
+        revision="0141_pg_accrual_deferral", namespace="accrual_deferral", actions=("read", "prepare", "review", "post"),
+        manifest="docs/modules/accrual-deferral.yaml", dependencies=("platform.core", "finance.core"),
+        tests=("tests/test_accrual_deferral.py", "tests/test_postgres_accrual_deferral.py"),
+        summary="Functional-currency prepaid vouchers, original paid-source attachment, exact service tranches and governed native inverses.",
+        gaps=("Ordered migration, integrated Studio and final source acceptance are pending.",
+              "Statutory recognition rules, foreign-currency schedules and comparative resource benchmarks are not established."),
+    ),
+    _descriptor(
         module_id="manufacturing.execution-v2", name="Inspected production and original cost claims",
         revision="0138_pg_manufacturing_v2", namespace="manufacturing_execution_v2",
         actions=("read", "manage", "approve", "post"), manifest="docs/modules/manufacturing-execution-v2.yaml",

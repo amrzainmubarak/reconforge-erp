@@ -28,6 +28,10 @@ platform_services:
   - {file: payables_payment_link.py, service: PayablesPaymentLinkService, status: compatibility_adapter}
   - {file: receivables.py, service: ReceivablesService, status: compatibility_adapter}
 application_services:
+  - file: accrual_deferral.py
+    service: AccrualDeferralApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_accrual_deferral.PostgresAccrualDeferralRepository
   - file: manufacturing_execution_v2.py
     service: ManufacturingExecutionV2Service
     status: backend_neutral
@@ -304,4 +308,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 21
-  backend_neutral_application: 66
+  backend_neutral_application: 67

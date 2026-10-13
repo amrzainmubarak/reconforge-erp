@@ -23328,3 +23328,16 @@ source-bound evidence, not acceptance of2ca. Correction requires real async
 cryptographic completion and immutable value-bound exact scanner fingerprints,
 then a new fixed-head full hosted run; no skipped/retried financial gate or broad
 scanner exclusion grants acceptance.
+
+### Enterprise M2 ordered source and authorization gate — 2026-10-13
+
+`output/m2-ordered141-migration-v1.xml` records two actual mandatory native
+PostgreSQL tests: linear installation, empty rollback/re-upgrade, selected
+FORCE RLS, ordinary non-superuser isolation, no automatic operating permissions
+and refusal to remove retained personnel grants. The four authorization/boundary
+inventory groups record thirty passes in `m2-shared141-contracts-v4.xml`.
+Earlier route-inventory and critical-GET contract failures remain retained in
+v1-v3 receipts. Checking critical GET permission drift before mutation filtering
+closes the discovered read-contract verification gap without altering runtime
+permission dependencies or the492 accepted-route digest. Studio, populated
+restore, peer integration, full CI and comparative performance are not inferred.

@@ -364,6 +364,20 @@ for _method, _path, _phase in (
     _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/intercompany-fx" + _path)] = ("all", tuple(sorted(_icfx_permissions)))
 
 
+for _method, _path, _phase in (
+    ("GET", "/catalog", "read"), ("GET", "/sources", "read"), ("GET", "/sources/{source_id}", "read"),
+    ("GET", "/sources/{source_id}/evidence", "read"), ("GET", "/plans/{plan_id}", "read"),
+    ("GET", "/sources/{source_id}/evidence/export", "read"), ("GET", "/plans/{plan_id}/evidence/export", "read"),
+    ("POST", "/sources", "prepare"), ("POST", "/sources/{source_id}/tranches", "prepare"),
+    ("POST", "/sources/{source_id}/cancellations", "prepare"), ("POST", "/sources/{source_id}/reversals", "reverse"),
+    ("POST", "/plans/{plan_id}/review", "review"), ("POST", "/plans/{plan_id}/post", "post"),
+):
+    _schedule_permissions = {"accrual_deferral." + ("prepare" if _phase == "reverse" else _phase),
+                            "finance_core." + {"read": "read", "prepare": "manage", "review": "validate", "post": "post", "reverse": "manage"}[_phase]}
+    if _phase == "reverse":
+        _schedule_permissions.add("finance_core.reverse")
+    _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/accrual-deferral" + _path)] = ("all", tuple(sorted(_schedule_permissions)))
+
 _PEOPLE_PHASE_CONTRACTS = {
     "personnel": frozenset({"people_project_payroll.personnel", "people_project_payroll.read_sensitive"}),
     "manage": frozenset({"people_project_payroll.manage"}),
@@ -474,6 +488,13 @@ def validate_authorization_surface(
 
     for contract in normalized_contracts:
         key = (contract.method, contract.path)
+        expected = _CRITICAL_ROUTE_CONTRACTS.get(key)
+        if expected is not None and (contract.mode, contract.permissions) != expected:
+            raise ValueError(
+                "Critical API route authorization contract drifted: "
+                f"{contract.method} {contract.path} expected {expected}, "
+                f"got {(contract.mode, contract.permissions)}."
+            )
         if contract.method not in _MUTATING_METHODS:
             continue
         if contract.mode == "public" and key not in _PUBLIC_MUTATION_ALLOWLIST:
@@ -484,10 +505,3 @@ def validate_authorization_surface(
             raise ValueError(f"Mutating API route lacks a permission contract: {contract.method} {contract.path}.")
         if contract.mode not in {"all", "any", "dynamic", "identity", "public", "scim"}:
             raise ValueError(f"Mutating API route has unsupported authorization mode: {contract.method} {contract.path}.")
-        expected = _CRITICAL_ROUTE_CONTRACTS.get(key)
-        if expected is not None and (contract.mode, contract.permissions) != expected:
-            raise ValueError(
-                "Critical API route authorization contract drifted: "
-                f"{contract.method} {contract.path} expected {expected}, "
-                f"got {(contract.mode, contract.permissions)}."
-            )

@@ -63,6 +63,12 @@ def test_live_ci_general_gate_collects_every_advertised_contract() -> None:
         "tests/test_postgres_manufacturing_execution.py": "manufacturing-execution",
         "tests/test_postgres_intercompany_operations.py": "intercompany-operations",
         "tests/test_postgres_intercompany_operations_api.py": "intercompany-operations",
+        "tests/test_postgres_manufacturing_execution_v2.py": "manufacturing-execution",
+        "tests/test_postgres_intercompany_fx.py": "intercompany-operations",
+        "tests/test_postgres_intercompany_fx_api.py": "intercompany-operations",
+        "tests/test_postgres_people_project_payroll.py": "people-project-payroll",
+        "tests/test_postgres_people_project_payroll_api.py": "people-project-payroll",
+        "tests/test_postgres_people_project_payroll_restore.py": "people-project-payroll",
     }
     # Delegation must name a required native branch and retain complete modules.
     for path, owner in delegated.items():

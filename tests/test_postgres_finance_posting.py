@@ -50,12 +50,14 @@ def posting_database(finance_database: dict[str, Any]) -> dict[str, Any]:
         )
         # The current native inverse reads/writes only its scoped Core directory;
         # ordinary Finance does not receive any manufacturing/personnel SELECT.
-        admin.execute(psycopg.sql.SQL(
-            "GRANT SELECT,INSERT,UPDATE ON reconforge.financial_effect_claim_gates TO {}"
-        ).format(psycopg.sql.Identifier(role)))
-        admin.execute(psycopg.sql.SQL(
-            "GRANT SELECT ON reconforge.financial_effect_ownership_guards,reconforge.financial_effect_ownership_releases TO {}"
-        ).format(psycopg.sql.Identifier(role)))
+        if admin.execute("SELECT to_regclass('reconforge.financial_effect_claim_gates')").fetchone()[0] is not None:
+            admin.execute(psycopg.sql.SQL(
+                "GRANT SELECT,INSERT,UPDATE ON reconforge.financial_effect_claim_gates TO {}"
+            ).format(psycopg.sql.Identifier(role)))
+        for table in ("financial_effect_ownership_guards", "financial_effect_ownership_releases"):
+            if admin.execute("SELECT to_regclass(%s)", ("reconforge." + table,)).fetchone()[0] is not None:
+                admin.execute(psycopg.sql.SQL("GRANT SELECT ON {} TO {}").format(
+                    psycopg.sql.Identifier("reconforge", table), psycopg.sql.Identifier(role)))
     return finance_database
 
 

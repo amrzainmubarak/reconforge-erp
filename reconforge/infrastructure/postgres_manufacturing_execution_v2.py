@@ -233,6 +233,8 @@ class PostgresManufacturingExecutionV2Repository:
         original_header = posting_entry(self.connection, self.tenant_id, effect["entry_id"])
         if (effect["source_kind"] != "Manual" or effect["reverses_effect_id"] is not None
                 or original_header["source_type"] != "Manual" or original_header["posting_date"] > source["posting_date"]
+                or any(str(original_header[key]).upper().startswith(("HC1-", "HC1P-", "AD1-", "AD1R-", "PB1-", "PB1C-"))
+                       for key in ("id", "entry_number"))
                 or any(effect[key] != source[key] for key in ("workspace_id", "organization_id", "legal_entity_id", "currency_code"))
                 or any(effect["currency_" + key] != source["monetary_policy"][key] for key in ("precision", "rounding_policy", "registry_version", "registry_digest"))):
             fail("Cost allocation requires an original posted native Manual expense in the exact original currency policy and hierarchy.")

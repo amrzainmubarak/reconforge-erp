@@ -24,6 +24,7 @@ from reconforge.infrastructure.postgres_domain import PostgresAuditEventReposito
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
 from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
+from reconforge.infrastructure.postgres_inventory_quantity_coordination import lock_inventory_quantity_pools
 from reconforge.infrastructure.postgres_operational_finance import PostgresOperationalFinanceRepository
 from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
 from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope
@@ -170,6 +171,8 @@ class PostgresStockSalesRepository:
             return self._remember(self._order(identifier), command_id, command, "Create product sales order", actor)
 
     def _stock_lock(self, row: Mapping[str, Any]) -> None:
+        lock_inventory_quantity_pools(self.connection, self.tenant_id, str(row["workspace_id"]),
+                                      str(row["legal_entity_id"]), (str(row["item_id"]),))
         self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
             (f"{row['workspace_id']}|{row['legal_entity_id']}|{row['location_id']}|{row['item_id']}|",))
 

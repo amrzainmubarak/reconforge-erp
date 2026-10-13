@@ -431,7 +431,7 @@ class PostgresFinancePostingRepository:
         reason = text(reason, "reason", maximum=500)
         with self._transaction(write=True):
             entry = posting_entry(self.connection, self.tenant_id, text(entry_id, "entry_id"))
-            if entry["entry_number"].upper().startswith(("ME2W-", "ME2R-", "ME2P-", "ME2K-", "ME2X-")) or entry["id"].upper().startswith(("ME2W-", "ME2R-", "ME2P-", "ME2K-", "ME2X-")):
+            if entry["entry_number"].upper().startswith(("ME2W-", "ME2R-", "ME2P-", "ME2K-", "ME2X-", "MSP1-", "MSP1D-", "MSP1K-", "MSP1Q-")) or entry["id"].upper().startswith(("ME2W-", "ME2R-", "ME2P-", "ME2K-", "ME2X-", "MSP1-", "MSP1D-", "MSP1K-", "MSP1Q-")):
                 raise FinancePostingError("posting_source_unsupported", "Engineering definitions and held production cannot be posted as financial sources.")
             enterprise_sources: tuple[tuple[tuple[str, ...], ParticipantKind], ...] = (
                 (("ME2-", "ME2C-"), "manufacturing-v2-post"),

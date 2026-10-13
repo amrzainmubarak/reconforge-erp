@@ -18,6 +18,7 @@ from reconforge.domain.inventory_costing import allocate_fifo_value
 from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_inventory_quantity_coordination import lock_inventory_quantity_pools
 from reconforge.infrastructure.postgres_repository_scope import (
     PostgresRepositoryScopeError,
     ensure_repository_tenant_scope,
@@ -871,6 +872,10 @@ class PostgresInventoryValuationRepository:
                 )
             # Serialize chronology and inbound creation with the same legacy FIFO
             # keys used by outbound allocation and reviewed source posting.
+            lock_inventory_quantity_pools(self.connection, self.tenant_id, str(document["workspace_id"]),
+                                          str(document["legal_entity_id"]),
+                                          (str(line["item_id"]) for line in self._movement_lines(str(movement["id"]))
+                                           if line["inventory_lot_id"] is None))
             fifo_keys = {
                 f"{document['legal_entity_id']}|{line['item_id']}|{line['inventory_lot_id'] or ''}"
                 for line in self._movement_lines(str(movement["id"]))

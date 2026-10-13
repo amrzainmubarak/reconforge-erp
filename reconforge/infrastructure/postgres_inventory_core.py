@@ -10,6 +10,7 @@ from reconforge.application.inventory_core import InventoryCoreSummary
 from reconforge.auth.rbac import same_actor
 from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_inventory_quantity_coordination import lock_inventory_quantity_pools
 from reconforge.infrastructure.postgres_repository_scope import (
     PostgresRepositoryScopeError,
     ensure_repository_tenant_scope,
@@ -1370,6 +1371,9 @@ class PostgresInventoryCoreRepository:
                     - (quantity if line["from_location_id"] is not None else 0),
                     precision,
                 )
+        lock_inventory_quantity_pools(self.connection, self.tenant_id, str(movement["workspace_id"]),
+                                      str(movement["legal_entity_id"]),
+                                      (str(line["item_id"]) for line in lines if line["inventory_lot_id"] is None))
         lock_keys = [
             f"{movement['workspace_id']}|{movement['legal_entity_id']}|{location}|{item}|{lot or ''}"
             for location, item, lot in effects

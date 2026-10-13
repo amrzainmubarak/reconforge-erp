@@ -60,3 +60,5 @@ runtime_acceptance:
   - Material2700 plus Labor600 plus Overhead300 equals FG3240 plus abnormal loss360 plus residual WIP0;9 actual accepted units and1 rejected unit.
   - Original native full-cycle handoff fixture verifies its exact source and requirement/coverage seals in the Studio parser.
   - Thirty focused pure/API cases, eleven Studio data/React cases and TypeScript typecheck passed developmentally; root integration gates remain separate.
+  - Final adjacent native gate passed4 cases with0 skips, xfails or xpasses; exact owned native requisition read received a separate passing source-qualified gate.
+  - Standalone original synthetic native snapshot browser QA passed Arabic/English at320/768/1024/1440 with no page overflow, console errors or selected WCAG axe violations; this is explicitly offline fixture QA, not authenticated native HTTP/TLS acceptance.

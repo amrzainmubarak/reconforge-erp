@@ -81,7 +81,29 @@ the ordinary authenticated report/export target also passes with exact original
 length/SHA, complete source equality and unchanged financial populations. Its first
 failure was a tuple/list representation mismatch in exported selection containers;
 the current containers are explicit JSON lists, with unchanged serialized digests.
-These original failures are retained separately. UI and HTTPS execution are not
-claimed for this diagnostic.
+These original failures are retained separately.
+
+The owned bilingual Studio page requires an explicit known-zero selection for
+each original source before capture. It verifies the source, every original phase
+seal, its retained report and a current-authorized source Cashflow view before
+publishing the selected pin. The selected diagnostic binds each complete source
+evidence digest and Cash equation to that retained view. The browser checks exact
+minor-unit strings, all reporting/native/combined columns with BigInt, original
+effect membership and the exact observed-period population. Canonical FX and CTA
+conversion remain the server and independent Fraction CLI boundary.
+
+The page offers read and original export controls. It presents the three reporting
+columns separately, source/effect drilldown and observed fiscal-period status.
+It does not post, approve, close a period or change permissions. Original download
+is bounded and verifies the expected subject, SHA256 and length before creating a
+Blob from unchanged bytes; it does not parse or reserialize the raw artifact.
+Thirty targeted data/component tests pass, including same-original byte download,
+both session/scope late report and pending download refusal, removal invalidation,
+and successful report followed by denied export clearing all previous money and
+selection. Type checking passes. The first data mutation run exposed numerical
+money comparing equal to string money under canonical projection; its red receipt
+is retained and every displayed minor field now requires a canonical integer
+string. Root registration, socket HTTPS and populated restore remain separate
+gates for this diagnostic.
 PostgreSQL is required and SQLite is explicitly unavailable. Country statutory
 packs remain zero, and comparative performance measurement remains deferred.

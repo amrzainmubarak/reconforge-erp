@@ -31,7 +31,7 @@ api_routes:
   - /api/v1/intercompany-group-diagnostic/report
   - /api/v1/intercompany-group-diagnostic/evidence
 cli_commands: [.github/scripts/verify_intercompany_group_diagnostic.py]
-ui_routes: []
+ui_routes: [/intercompany-group-diagnostic]
 import_schemas: [explicit_intercompany_diagnostic_selection_v1]
 export_schemas: [intercompany-group-diagnostic-v1, intercompany-group-diagnostic-evidence-v1, intercompany-group-diagnostic-oracle-v1]
 synthetic_fixtures: [tests/fixtures/intercompany-group-diagnostic-native-v1.json]
@@ -45,7 +45,7 @@ threat_model:
   - Oversized envelope or one JSON encoder token per synchronous transport operation
 benchmarks: deferred_human_measurement
 rollback_plan: remove_additive_module_and_read_routes_no_native_history_or_DDL_changed
-test_matrix: [pure_original_pins, exact_period_population, known_zero_source_openings, actual_two_sources_fourteen_effects, native_period_nowait_writer_admission, aggregate_current_read_ceiling_both_permissions, strict_bounded_query_selection, original_source_financial_population_unchanged, ordinary_authenticated_report_and_original_export, independent_Fraction_all_accounts_and_CTA, balanced_rehashed_bridge_refusal, boolean_zero_refusal, raw_anchor, fresh_output, stdlib_helper_source_pin, isolated_normal_and_optimized_execution]
+test_matrix: [pure_original_pins, exact_period_population, known_zero_source_openings, actual_two_sources_fourteen_effects, native_period_nowait_writer_admission, aggregate_current_read_ceiling_both_permissions, strict_bounded_query_selection, original_source_financial_population_unchanged, ordinary_authenticated_report_and_original_export, independent_Fraction_all_accounts_and_CTA, balanced_rehashed_bridge_refusal, boolean_zero_refusal, raw_anchor, fresh_output, stdlib_helper_source_pin, isolated_normal_and_optimized_execution, bilingual_read_Studio, explicit_each_source_opening, current_authorized_source_cashflow_binding, exact_minor_strings_and_BigInt_bridge, scope_and_session_late_response_refusal, pending_original_download_scope_and_session_refusal, denied_export_clears_previous_money_and_selection]
 claims:
   allowed: Experimental diagnostic for explicitly selected complete original paired-trade reporting and native adjustment membership
   excluded: [whole_group_membership, whole_period_membership, formal_close_ready, statutory_consolidation, IFRS_or_US_GAAP_compliance, IAS7_compliance, ownership_NCI, investment_elimination, profit_in_stock, hyperinflation, country_tax, Community_parity, measured_performance]

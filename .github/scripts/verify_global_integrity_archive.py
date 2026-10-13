@@ -494,6 +494,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/test_postgres_manufacturing_supply_browser_seed.py",
         "apps/web/live/manufacturing-supply-cycles.spec.ts",
         "apps/web/live/manufacturing-supply.playwright.config.ts",
+        "apps/web/src/fixtures/manufacturing-supply-original-command-acks.json",
         ".github/scripts/verify_accrual_deferral_cycle_oracle.py",
         ".github/scripts/verify_project_time_billing_cycle_oracle.py",
         "tests/fixtures/accrual-deferral-native-v1.json", "tests/fixtures/project-time-billing-native-v1.json",

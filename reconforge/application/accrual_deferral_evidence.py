@@ -11,6 +11,7 @@ from reconforge.domain.finance_posting import FinancePostingError
 
 MAX_EVIDENCE_BYTES = 67_108_864
 MAX_EVIDENCE_NODES = 1_000_000
+MAX_EVIDENCE_TRANSPORT_CHUNK_BYTES = 65_536
 
 
 def evidence_chunks(value: object, *, maximum_bytes: int = MAX_EVIDENCE_BYTES) -> Iterator[bytes]:
@@ -40,6 +41,32 @@ def evidence_chunks(value: object, *, maximum_bytes: int = MAX_EVIDENCE_BYTES) -
         if total > maximum_bytes:
             raise FinancePostingError("accrual_deferral_evidence_too_large", "Source evidence exceeds its explicit artifact byte budget.")
         yield encoded
+
+
+def evidence_transport_chunks(
+    value: object, *, maximum_bytes: int = MAX_EVIDENCE_BYTES,
+    chunk_bytes: int = MAX_EVIDENCE_TRANSPORT_CHUNK_BYTES,
+) -> Iterator[bytes]:
+    """Coalesce canonical tokens for bounded wire delivery without changing bytes.
+
+    A synchronous HTTP response schedules each iterator item separately. Keep
+    that boundary at a bounded payload size rather than at each JSON token;
+    the existing primitive, node and artifact-budget checks remain the encoder.
+    """
+    if type(chunk_bytes) is not int or not 1 <= chunk_bytes <= MAX_EVIDENCE_TRANSPORT_CHUNK_BYTES:
+        raise FinancePostingError("accrual_deferral_evidence_invalid", "Evidence transport chunks require a positive bounded exact integer.")
+    pending = bytearray()
+    for encoded in evidence_chunks(value, maximum_bytes=maximum_bytes):
+        offset = 0
+        while offset < len(encoded):
+            take = min(chunk_bytes - len(pending), len(encoded) - offset)
+            pending.extend(memoryview(encoded)[offset:offset + take])
+            offset += take
+            if len(pending) == chunk_bytes:
+                yield bytes(pending)
+                pending.clear()
+    if pending:
+        yield bytes(pending)
 
 
 def evidence_digest(value: object) -> str:

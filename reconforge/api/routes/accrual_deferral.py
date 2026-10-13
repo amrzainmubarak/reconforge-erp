@@ -17,7 +17,7 @@ from reconforge.api.server_finance_core import (
     server_finance_core_enabled,
 )
 from reconforge.api.server_identity import request_execution_scope
-from reconforge.application.accrual_deferral_evidence import evidence_chunks, evidence_size
+from reconforge.application.accrual_deferral_evidence import evidence_size, evidence_transport_chunks
 from reconforge.auth.models import LocalUser
 from reconforge.domain.accrual_deferral import AccrualDeferralPreparation, ScheduleAccounts, ScheduleTranche
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor
@@ -224,7 +224,7 @@ def evidence_response(retained: dict[str, Any]) -> StreamingResponse:
         raise APIError(status_code=413 if "too_large" in exc.code else 400, code=exc.code, message=str(exc)) from exc
     # Authorized immutable capture completes while the scoped connection and
     # source SHARE lock are live; no lazy database work escapes that context.
-    return StreamingResponse(evidence_chunks(retained), media_type="application/json",
+    return StreamingResponse(evidence_transport_chunks(retained), media_type="application/json",
         headers={"Content-Length": str(length), "Content-Disposition": 'attachment; filename="accrual-deferral-evidence.json"'})
 
 

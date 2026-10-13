@@ -80,6 +80,8 @@ def test_live_ci_general_gate_collects_every_advertised_contract() -> None:
         "tests/test_postgres_manufacturing_execution_v2.py": "manufacturing-execution",
         "tests/test_postgres_intercompany_fx.py": "intercompany-operations",
         "tests/test_postgres_intercompany_fx_api.py": "intercompany-operations",
+        "tests/test_postgres_intercompany_fx_reporting_authority.py": "intercompany-operations",
+        "tests/test_postgres_intercompany_reporting_currency_precision.py": "intercompany-operations",
         "tests/test_postgres_people_project_payroll.py": "people-project-payroll",
         "tests/test_postgres_people_project_payroll_api.py": "people-project-payroll",
         "tests/test_postgres_people_project_payroll_restore.py": "people-project-payroll",

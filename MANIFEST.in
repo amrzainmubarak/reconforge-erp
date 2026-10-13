@@ -1502,3 +1502,7 @@ include apps/web/src/fixtures/manufacturing-supply-original-command-acks.json
 include tests/browser_diagnostic_redaction.py
 include tests/test_browser_diagnostic_redaction.py
 include tests/test_browser_diagnostic_writer.py
+
+include tests/test_postgres_intercompany_fx_reporting_authority.py
+
+include tests/test_postgres_intercompany_reporting_currency_precision.py

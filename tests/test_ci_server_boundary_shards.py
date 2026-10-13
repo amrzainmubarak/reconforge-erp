@@ -55,7 +55,8 @@ INTEGRITY_FILES = {
         "tests/test_postgres_manufacturing_execution_v2.py", "tests/test_postgres_enterprise_migrations.py",
     ),
     "intercompany-operations": ("tests/test_postgres_intercompany_operations.py", "tests/test_postgres_intercompany_operations_api.py",
-                               "tests/test_postgres_intercompany_fx.py", "tests/test_postgres_intercompany_fx_api.py"),
+                               "tests/test_postgres_intercompany_fx.py", "tests/test_postgres_intercompany_fx_api.py",
+                               "tests/test_postgres_intercompany_fx_reporting_authority.py", "tests/test_postgres_intercompany_reporting_currency_precision.py"),
     "people-project-payroll": ("tests/test_postgres_people_project_payroll.py", "tests/test_postgres_people_project_payroll_api.py", "tests/test_postgres_people_project_payroll_restore.py", "tests/test_postgres_people_project_dimension_pins.py", "tests/test_postgres_people_project_read_authority.py"),
     "procurement-sourcing": ("tests/test_postgres_procurement_sourcing.py", "tests/test_postgres_procurement_sourcing_api.py", "tests/test_postgres_manufacturing_sourcing.py"),
 }

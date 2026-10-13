@@ -6,7 +6,7 @@ snapshot:
   evidence_base_commit: "bcc440896e1f499f10095a5cb32a04d98e7e57c1"
   policy_change_commit: "the commit containing this file"
   published: true
-  publication: "Draft PR133 bcc44089 code/source gates accepted above PR131; final body publication unconfirmed after TLS failure; M2/M3 final acceptance pending; performance deferred and false"
+  publication: "Draft PR133 bcc44089 code/source gates accepted above PR131; final body publication confirmed by independent original v9 GET; M2/M3 final acceptance pending; performance deferred and false"
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 

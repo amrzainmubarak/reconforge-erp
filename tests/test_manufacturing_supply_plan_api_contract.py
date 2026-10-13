@@ -51,7 +51,7 @@ def test_source_requisition_refuses_conflicting_body_scope_before_native_creatio
         "reason": "Preserve actual selected scope", "requirement_ids": ["actual-requirement"],
         "lines": [{"item_code": "ITEM", "quantity": "1", "unit_price_minor": "1200", "location_code": "MAIN/STOCK", "policy_code": "FIFO"}], field: value}
     scope = SimpleNamespace(workspace_id="work", organization_code="ORG", entity_code="ENTITY")
-    monkeypatch.setattr(api, "execute", lambda request, user, action: action(object(), object(), scope))
+    monkeypatch.setattr(api, "execute", lambda request, user, action, **kwargs: action(object(), object(), scope))
     with pytest.raises(APIError) as raised:
         api.create_requisition(None, "actual-plan", api.PlannedRequisitionRequest(**payload), None)  # type: ignore[arg-type]
     assert raised.value.status_code == 403 and raised.value.code == "manufacturing_supply_scope_alias_denied"

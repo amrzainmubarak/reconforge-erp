@@ -68,3 +68,98 @@ Studio fixture pins original source digest
 Final integrated acceptance, ordered migration/restore and socket/TLS browser
 verification remain separate root-owned gates. Unit/native gate durations are
 verification evidence, not throughput benchmarks.
+
+The original SQL export is enabled with `RECONFORGE_MSP_NATIVE_PROOF_DIR` on the
+bounded complete native test. `native-supply-original-populations.json` preserves
+all original supply requirements and coverage, starting stock receipts and FIFO,
+SRC quotations and award, BPC commitments and budget events, partial receipts and
+AP, quantity guards/releases, ME1/ME2, quality inspection and the complete native
+GL. The exporter uses the ordinary authenticated tenant role and records its
+non-superuser/non-bypass status. Native `NUMERIC` columns retain exact PostgreSQL
+decimal text; native `BIGINT` columns retain JSON integer tokens. Identities and
+private fixture credentials are excluded.
+
+Run `.github/scripts/verify_manufacturing_supply_cycle_oracle.py` with Python
+`-I` and separately with `-I -O`, supplying `--proof`, its independently retained
+`--proof-sha256`, and a new `--output` file. The file-only stdlib verifier derives
+gross BOM scaling, original partial on-hand and net shortage, exact received
+custody and handoff releases from originals. It admits the independent SRC and
+ME2 stdlib scripts only by source digests captured with those original bytes.
+SRC proves actual quotation/award/AP/budget equations. ME2 proves material FIFO,
+original labor/overhead capacity, issue/WIP, quality hold, accepted FG and loss.
+The ME2 projection excludes precisely the separately verified AP accrual effects;
+its digest and excluded original effect IDs are reported, and the full original
+AP/production native journal lines are checked again before the final GL totals.
+An internal seal is reproducibility evidence; the externally supplied raw SHA
+remains required and this tool does not claim external attestation.
+
+For the real native browser gate, use
+`seed_manufacturing_supply_browser`,
+`manufacturing_supply_browser_configuration`, and
+`verify_manufacturing_supply_browser` from `tests/manufacturing_supply_browser.py`.
+The seed supplies only approved original engineering/budget/masters, two partial
+stock inputs and the original posted labor/overhead expense inputs. It explicitly
+requires zero planner, sourcing, purchase and production documents before the
+browser starts. Pass configuration as `RECONFORGE_MANUFACTURING_SUPPLY_SOURCE`.
+The required single spec/config are `apps/web/live/manufacturing-supply-cycles.spec.ts`
+and `apps/web/live/manufacturing-supply.playwright.config.ts`. They perform actual
+Studio/API demand and coverage, quotation and three-human award, two original
+receipts and two AP/budget publications, atomic native handoff and existing ME2
+issue/quality/FG. Lost-ACK probes reuse the exact original command bytes and human.
+The helper supplies the protected-table union, sibling-workspace probes and three
+restore tamper statements for original net quantity, Core guard release and the
+retained terminal handoff command. The common TLS runner and CI registration are
+root-owned; spec collection alone is not native browser or restore acceptance.
+
+Every supply mutation also returns `manufacturing-supply-command-ack-v1` from
+its exact immutable PostgreSQL command receipt inside the caller's business
+transaction. The original command/operation/actor, source digest, historical
+version and native owner/command links remain unchanged on replay. The API seals
+the public projection of that stored response and provides the submitted typed
+model separately. Studio validates both the original native request digest and
+the normalized submitted body, exact subject/scope/current human, requested
+operation/phase and native response membership before clearing a retained
+command. An unqualified ACK retains the command and triggers no success refresh.
+An authoritative later read may legitimately show progress beyond a historical
+replayed ACK. Current denied reads remove displayed source and purchase evidence;
+an unknown command remains retained for the same human's qualified retry.
+
+Current amount authority covers the largest exposed original financial value,
+including every retained plan unit-price ceiling and native supplier quotation
+unit price, as well as transaction totals. These values use the plan's captured
+monetary precision. Fractional demand does not reduce authority over an exposed
+unit price: the supported original `0.001 KG × 3000 minor = 3 minor` requirement
+still exposes a `30.00` unit price. A retained `5000` unit-price quote has a `5`
+minor-unit total and exposes `50.00`. A lower current read cap refuses whole-source
+reads, lists, child reads, command responses and immutable replay. A refused new
+quote response rolls back its native offer, owner version and command together.
+Current persisted permissions and hierarchy grants are checked again after a
+blocked source lock; historical receipts never restore revoked authority.
+
+The focused native regressions are in
+`tests/test_postgres_manufacturing_supply_read_authority.py`. Original setup-error,
+authorization-red and corrected packets are retained separately under
+`output/msp-fractional-authority-native-*`; they are development verification.
+The unsupported `0.001 × 3001` example is explicitly retained as an exact-minor
+input rejection, and no rounding or procurement domain contract is changed.
+
+Studio binds the original budget's full monetary policy after normalizing its
+public projection: the budget envelope carries `currency_code` at envelope
+level, while MSP captures it inside `monetary_policy`. All five captured values
+(currency, precision, rounding policy, registry version and registry digest)
+must match, along with the original budget ID and selected hierarchy. Valid
+native budget evidence enables the shortage form; any altered binding or
+current denied read keeps native sourcing disabled. The original approved
+source/budget projection regression is in
+`apps/web/src/components/ManufacturingSupplyPurchasing.test.tsx` and retains the
+same raw original proof SHA as the supply oracle. The root-owned actual TLS
+failure and the focused Studio red/green remain separate evidence packets.
+
+The required native browser receipt cycle waits until the original purchase
+line control and exactly one intended item option are available. It selects
+the retained native line ID, then checks the selected ID, submitted exact
+quantity text and prepared receipt's original line ID. It never derives a
+selection from an option snapshot taken while the purchase read is pending.
+The delayed-read Studio regression uses original awarded sourcing, budget
+reservation and approved purchase receipts from the same native proof and
+verifies that `MATERIAL` retains KG precision3 and quantity text `2.500`.

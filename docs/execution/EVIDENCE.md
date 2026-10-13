@@ -23378,3 +23378,22 @@ The originalv1 failed only at mobile axe keyboard focus after running the
 business cycle; its receipt/artifacts are retained and are not counted as
 accepted. Focusable labelled allocation region,17 targeted React cases,
 typecheck/build and the realv2 repeat closed that failure without weakening axe.
+
+
+### Original M1 closure and ordered143 supply custody — 2026-10-13
+
+M1 original closure: output/m1-final-ci-bcc/enterprise-m1-original-final-closure-v1.json
+in its independent integration checkout;12,029,592bytes, SHA256
+6de3768e1ec93f857a6ed754161b1d57255f5e2a49077684a85bf0aa633432fe.
+Actual48 CI jobs,20 native partitions (55 pytest sessions/1620 selected),18
+HTTPS reports,3 package receipts and6 original isolated arithmetic executions.
+M2 original ordered143 full-cycle XML/log are
+output/m2-ordered143-native-full-supply-cycle-v1.xml/log at clean aa8f2145:
+2 actual mandatory passes/0 skips/xfails/xpasses. Quantity and migration
+receipts are separately qualified development packets, not final-source CI.
+Native original supply population fixture
+tests/fixtures/manufacturing_supply_original_golden.json SHA256
+9f49c6c5c523a0f0d7e65a457c727fc741bcec367cd3d6b98ce6098f90476590;
+stdlib -I/-I -O independently conserve13 actual effects and the complete
+shortage/receipt/AP/budget/FIFO/WIP/FG/scrap original populations. No new
+performance, statutory, complete-ERP or external-audit claim is inferred.

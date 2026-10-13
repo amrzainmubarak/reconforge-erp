@@ -21,6 +21,7 @@ HELPERS = (
     "manufacturing_execution_browser", "intercompany_operations_browser_seed", "procurement_sourcing_browser",
     "manufacturing_execution_v2_browser", "intercompany_fx_browser_seed", "people_project_payroll_browser",
     "accrual_deferral_browser", "project_time_billing_browser",
+    "manufacturing_supply_browser",
 )
 DIAGNOSTIC_HELPERS = (
     ".github/scripts/benchmark_wave5_profile_diagnostics.py",
@@ -487,6 +488,14 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "reconforge/api/routes/manufacturing_supply_plan.py",
         "docs/modules/manufacturing-supply-plan.yaml",
         "apps/web/src/components/ManufacturingSupplyPlanPage.tsx",
+        ".github/scripts/verify_manufacturing_supply_cycle_oracle.py",
+        "tests/fixtures/manufacturing_supply_original_golden.json",
+        "tests/test_manufacturing_supply_cycle_oracle.py",
+        "tests/test_postgres_manufacturing_supply_browser_seed.py",
+        "tests/test_postgres_manufacturing_supply_read_authority.py",
+        "apps/web/live/manufacturing-supply-cycles.spec.ts",
+        "apps/web/live/manufacturing-supply.playwright.config.ts",
+        "apps/web/src/fixtures/manufacturing-supply-original-command-acks.json",
         ".github/scripts/verify_accrual_deferral_cycle_oracle.py",
         ".github/scripts/verify_project_time_billing_cycle_oracle.py",
         "tests/fixtures/accrual-deferral-native-v1.json", "tests/fixtures/project-time-billing-native-v1.json",

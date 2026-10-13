@@ -33,7 +33,8 @@ Identifier = Annotated[str, Query(min_length=1, max_length=160)]
 
 
 def capture(
-    request: Request, user: LocalUser, project_id: str, period_id: str, payrun_id: str, invoice_id: str
+    request: Request, user: LocalUser, project_id: str, period_id: str, payrun_id: str, invoice_id: str,
+    *, close_diagnostics: bool = False,
 ) -> dict[str, Any]:
     if not server_finance_core_enabled(request):
         raise APIError(
@@ -46,9 +47,11 @@ def capture(
     def invoke(finance: Any, scope: FinanceCoreExecutionScope) -> dict[str, Any]:
         try:
             selection = ProjectSourceSelection(people_scope(scope), project_id, period_id, payrun_id, invoice_id)
-            return ProjectSourceReconciliationService(
+            service = ProjectSourceReconciliationService(
                 PostgresProjectSourceReconciliationRepository(finance.connection, scope.tenant_id)
-            ).report(selection, actor=actor)
+            )
+            return (service.close_diagnostics(selection, actor=actor) if close_diagnostics
+                    else service.report(selection, actor=actor))
         except FinancePostingError as exc:
             status = (
                 403
@@ -103,3 +106,32 @@ def evidence(
             "X-ReconForge-Raw-SHA256": raw_digest.hexdigest(),
         },
     )
+
+
+@router.get("/close-diagnostics")
+def close_diagnostics(
+    request: Request, user: Read, project_id: Identifier, period_id: Identifier,
+    payrun_id: Identifier, invoice_id: Identifier,
+) -> dict[str, Any]:
+    return {"diagnostic": capture(request, user, project_id, period_id, payrun_id, invoice_id,
+                                  close_diagnostics=True)["diagnostic"]}
+
+
+@router.get("/close-diagnostics/evidence")
+def close_diagnostic_evidence(
+    request: Request, user: Read, project_id: Identifier, period_id: Identifier,
+    payrun_id: Identifier, invoice_id: Identifier,
+) -> StreamingResponse:
+    retained = capture(request, user, project_id, period_id, payrun_id, invoice_id, close_diagnostics=True)
+    length = evidence_size(retained)
+    raw_digest = hashlib.sha256()
+    for chunk in evidence_chunks(retained):
+        raw_digest.update(chunk)
+    return StreamingResponse(evidence_transport_chunks(retained), media_type="application/json", headers={
+        "Content-Length": str(length),
+        "Content-Disposition": 'attachment; filename="project-source-close-evidence.json"',
+        "X-ReconForge-Evidence-Digest": retained["evidence_digest"],
+        "X-ReconForge-Diagnostic-Digest": retained["diagnostic"]["diagnostic_digest"],
+        "X-ReconForge-Report-Digest": retained["diagnostic"]["source_report_digest"],
+        "X-ReconForge-Raw-SHA256": raw_digest.hexdigest(),
+    })

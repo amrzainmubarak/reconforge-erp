@@ -13,3 +13,6 @@ class ProjectSourceReconciliationService:
 
     def report(self, selection: ProjectSourceSelection, *, actor: PostingActor) -> dict[str, Any]:
         return self.repository.report(selection, actor=actor)
+
+    def close_diagnostics(self, selection: ProjectSourceSelection, *, actor: PostingActor) -> dict[str, Any]:
+        return self.repository.close_diagnostics(selection, actor=actor)

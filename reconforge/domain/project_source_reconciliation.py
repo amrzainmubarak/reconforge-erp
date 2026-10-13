@@ -2,6 +2,7 @@
 
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
+from datetime import date
 from typing import Any, cast
 
 from reconforge.domain.finance_posting import (
@@ -643,3 +644,96 @@ def reconcile_project_sources(selection: ProjectSourceSelection, original: Mappi
         },
     }
     return {**summary, "report_digest": digest_payload(summary)}
+
+
+def diagnose_project_source_close(
+    selection: ProjectSourceSelection,
+    source_evidence: Mapping[str, Any],
+    observed_periods: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Describe selected original obligations without performing a Close.
+
+    The source evidence and its v1 report remain unchanged. This separate
+    derivative checks the same complete public source population, then adds
+    exact referenced period observations from one read-only statement snapshot.
+    """
+    require(
+        source_evidence["schema_version"] == "project-source-reconciliation-evidence-v1"
+        and source_evidence["native_execution_proven"] is True
+        and source_evidence["financial_writes"] is False
+        and source_evidence["private_personnel_reads"] is False
+        and source_evidence["private_payroll_command_receipts_exported"] is False,
+        "An original ordinary governed source capture is required.",
+    )
+    original = source_evidence["original_rows"]
+    report = reconcile_project_sources(selection, original)
+    require(report == source_evidence["report"], "Original source report differs from its public native population.")
+    scope = report["qualified_scope"]
+    period_fields = {"tenant_id", "id", "application_workspace_id", "name", "start_date", "end_date", "status", "updated_at"}
+    for row in observed_periods:
+        require(set(row) == period_fields and all(type(row[key]) is str and row[key] for key in period_fields),
+                "Only exact observed native period metadata is admitted.")
+        try:
+            require(date.fromisoformat(row["start_date"]).isoformat() == row["start_date"]
+                    and date.fromisoformat(row["end_date"]).isoformat() == row["end_date"],
+                    "Observed period dates must be canonical native dates.")
+        except ValueError:
+            refuse("Observed period dates are invalid.")
+    periods = {row["id"]: row for row in observed_periods}
+    required = {row["period_id"] for row in original["entries"]}
+    require(
+        len(observed_periods) == len(periods) and set(periods) == required == {selection.period_id},
+        "Observed period membership is duplicate, missing or unrelated to the selected source entries.",
+    )
+    for header in original["entries"]:
+        observed = periods[header["period_id"]]
+        require(
+            observed["tenant_id"] == scope["tenant_id"]
+            and observed["application_workspace_id"] == scope["workspace_id"]
+            and observed["status"] in {"Open", "Soft Closed", "Closed"}
+            and observed["start_date"] <= header["posting_date"] <= observed["end_date"],
+            "An original posting is outside its exact observed native period.",
+        )
+    claims = []
+    for time in report["approved_time"]:
+        rows = {}
+        for family in ("hc", "pb"):
+            head = next(row for row in original[family + "_claim_heads"] if row["time_id"] == time["id"])
+            rows[family] = {"owner_id": head["payrun_id" if family == "hc" else "invoice_id"],
+                            "sequence": head["sequence"], "state": head["state"]}
+        claims.append({"time_id": time["id"], "time_digest": time["source_digest"],
+                       "wage_claim": rows["hc"], "billing_claim": rows["pb"]})
+    obligations = report["whole_source_settlement"]
+    issues = []
+    if int(obligations["wage_liability_minor"]) != 0:
+        issues.append("selected_payrun_wages_outstanding")
+    if int(obligations["ar_outstanding_minor"]) != 0:
+        issues.append("selected_invoice_receivable_outstanding")
+    result = {
+        "schema_version": "project-source-close-diagnostic-v1",
+        "qualified_scope": scope,
+        "selection": report["selection"],
+        "source_report_digest": report["report_digest"],
+        "currency_policy": report["currency_policy"],
+        "project_totals": report["project_totals"],
+        "whole_source_obligations": obligations,
+        "whole_time_claims": claims,
+        "source_membership": report["source_membership"],
+        "observed_native_periods": [periods[key] for key in sorted(periods)],
+        "source_obligations_settled": not issues,
+        "findings": issues,
+        "coverage": "one-selected-original-payrun-and-invoice-with-identical-whole-approved-time",
+        "period_capture_scope": "one-readonly-statement-snapshot-without-period-row-locks",
+        "limitations": {
+            "formal_close_workflow_assessed": False,
+            "whole_period_membership_proven": False,
+            "comprehensive_project_profit_and_loss": False,
+            "private_earnings_formula_recomputed": False,
+            "per_project_cash_allocated": False,
+            "bank_transfer_proven": False,
+            "country_statutory_packs": 0,
+            "financial_writes": False,
+            "performance_comparison_accepted": False,
+        },
+    }
+    return {**result, "diagnostic_digest": digest_payload(result)}

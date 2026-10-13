@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import re
+from datetime import date
 from fractions import Fraction
 from pathlib import Path
 from typing import Any
@@ -673,11 +674,97 @@ def verify(proof: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def verify_close(proof):
+    """Verify a separate source-obligation derivative with the existing oracle."""
+    need(set(proof) == {"schema_version", "diagnostic", "source_evidence", "source_original_sha256",
+                       "source_original_bytes", "native_periods", "native_execution_proven", "financial_writes",
+                       "private_personnel_reads", "audit_chain_recomputed", "performance_comparison_accepted",
+                       "evidence_digest"}, "Exact close diagnostic evidence envelope required")
+    need(proof["schema_version"] == "project-source-close-evidence-v1" and proof["native_execution_proven"] is True,
+         "Original native close diagnostic required")
+    for key in ("financial_writes", "private_personnel_reads", "audit_chain_recomputed", "performance_comparison_accepted"):
+        need(proof[key] is False, "Unsupported close diagnostic claim")
+    need(proof["evidence_digest"] == sha({k: v for k, v in proof.items() if k != "evidence_digest"}),
+         "Close evidence seal differs")
+    retained = proof["source_evidence"]
+    original_result = verify(retained)
+    original = retained["original_rows"]
+    report = retained["report"]
+    need(type(proof["source_original_bytes"]) is int and proof["source_original_bytes"] == len(canonical(retained))
+         and proof["source_original_sha256"] == sha(retained), "Original source canonical byte anchor differs")
+    diagnostic = proof["diagnostic"]
+    need(set(diagnostic) == {"schema_version", "qualified_scope", "selection", "source_report_digest",
+                            "currency_policy", "project_totals", "whole_source_obligations", "whole_time_claims", "source_membership",
+                            "observed_native_periods", "source_obligations_settled", "findings", "coverage", "period_capture_scope",
+                            "limitations", "diagnostic_digest"}, "Exact derived close diagnostic fields required")
+    need(diagnostic["schema_version"] == "project-source-close-diagnostic-v1"
+         and diagnostic["diagnostic_digest"] == sha({k: v for k, v in diagnostic.items() if k != "diagnostic_digest"}),
+         "Close diagnostic seal differs")
+    for source_key, derived_key in (("qualified_scope", "qualified_scope"), ("selection", "selection"),
+                                    ("report_digest", "source_report_digest"), ("currency_policy", "currency_policy"),
+                                    ("project_totals", "project_totals"), ("whole_source_settlement", "whole_source_obligations"),
+                                    ("source_membership", "source_membership")):
+        need(diagnostic[derived_key] == report[source_key], "Original source/derived diagnostic subject differs")
+    observed = proof["native_periods"]
+    need(type(observed) is list and diagnostic["observed_native_periods"] == observed, "Original observed periods differ")
+    period_fields = {"tenant_id", "id", "application_workspace_id", "name", "start_date", "end_date", "status", "updated_at"}
+    for row in observed:
+        need(set(row) == period_fields and all(type(row[key]) is str and row[key] for key in period_fields),
+             "Exact observed native period fields required")
+        need(date.fromisoformat(row["start_date"]).isoformat() == row["start_date"]
+             and date.fromisoformat(row["end_date"]).isoformat() == row["end_date"], "Canonical observed native dates required")
+    required = {row["period_id"] for row in original["entries"]}
+    periods = {row["id"]: row for row in observed}
+    need(len(periods) == len(observed) and set(periods) == required == {report["selection"]["period_id"]},
+         "Exact original native period population required")
+    for header in original["entries"]:
+        period = periods[header["period_id"]]
+        need(period["tenant_id"] == report["qualified_scope"]["tenant_id"]
+             and period["application_workspace_id"] == report["qualified_scope"]["workspace_id"]
+             and period["status"] in {"Open", "Soft Closed", "Closed"}
+             and period["start_date"] <= header["posting_date"] <= period["end_date"], "Observed native period custody differs")
+    wanted = []
+    for time in report["approved_time"]:
+        row = {"time_id": time["id"], "time_digest": time["source_digest"]}
+        for family, target, owner_key in (("hc", "wage_claim", "payrun_id"), ("pb", "billing_claim", "invoice_id")):
+            head = next(value for value in original[family + "_claim_heads"] if value["time_id"] == time["id"])
+            row[target] = {"owner_id": head[owner_key], "sequence": head["sequence"], "state": head["state"]}
+        wanted.append(row)
+    need(diagnostic["whole_time_claims"] == wanted, "Whole approved-time claim derivative differs")
+    cash = original_result["whole_source_settlement"]
+    findings = (["selected_payrun_wages_outstanding"] if int(cash["wage_liability_minor"]) else [])
+    if int(cash["ar_outstanding_minor"]):
+        findings.append("selected_invoice_receivable_outstanding")
+    need(diagnostic["findings"] == findings and diagnostic["source_obligations_settled"] is (not findings),
+         "Selected original obligation status differs")
+    need(diagnostic["coverage"] == "one-selected-original-payrun-and-invoice-with-identical-whole-approved-time"
+         and diagnostic["period_capture_scope"] == "one-readonly-statement-snapshot-without-period-row-locks",
+         "Unsupported period/project coverage")
+    limits = diagnostic["limitations"]
+    false_keys = {"formal_close_workflow_assessed", "whole_period_membership_proven", "comprehensive_project_profit_and_loss",
+                  "private_earnings_formula_recomputed", "per_project_cash_allocated", "bank_transfer_proven",
+                  "financial_writes", "performance_comparison_accepted"}
+    need(set(limits) == false_keys | {"country_statutory_packs"}
+         and all(limits[key] is False for key in false_keys)
+         and type(limits["country_statutory_packs"]) is int and limits["country_statutory_packs"] == 0,
+         "Unsupported close acceptance claim")
+    return {"schema_version": "project-source-close-independent-oracle-v1", "qualified_scope": report["qualified_scope"],
+            "source_original_sha256": proof["source_original_sha256"], "source_report_digest": report["report_digest"],
+            "diagnostic_digest": diagnostic["diagnostic_digest"], "evidence_digest": proof["evidence_digest"],
+            "project_totals": original_result["project_totals"], "whole_source_obligations": cash,
+            "source_obligations_settled": not findings, "whole_approved_time_count": len(wanted),
+            "source_effect_count": original_result["source_effect_count"], "observed_period_count": len(periods),
+            "formal_close_workflow_assessed": False, "private_earnings_formula_recomputed": False,
+            "current_sql_authority_proven": False, "audit_chain_recomputed": False,
+            "per_project_cash_allocated": False, "performance_comparison_accepted": False}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--expected-sha256", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--kind", choices=("source", "close"), default="source")
     args = parser.parse_args()
     need(re.fullmatch(r"[0-9a-f]{64}", args.expected_sha256) is not None, "Separately trusted raw SHA256 required")
     need(
@@ -689,7 +776,7 @@ def main() -> None:
         len(original) <= MAX_BYTES and hashlib.sha256(original).hexdigest() == args.expected_sha256,
         "Original raw byte anchor differs",
     )
-    result = verify(
+    result = (verify_close if args.kind == "close" else verify)(
         json.loads(
             original,
             object_pairs_hook=pairs,

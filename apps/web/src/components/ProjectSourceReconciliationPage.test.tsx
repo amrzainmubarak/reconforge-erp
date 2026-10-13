@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { loadBudgetIdentity } from "../budget-control-data";
 import original from "../project-source-reconciliation-original-report.json";
+import { projectCloseFixture } from "../project-source-close-test-fixture";
 import { ProjectSourceReconciliationPage } from "./ProjectSourceReconciliationPage";
 
 const session = { tenantId: original.qualified_scope.tenant_id, csrfToken: "csrf", expiresAt: "2099-01-01T00:00:00Z" }, isCurrent = vi.fn(() => true);
@@ -23,4 +24,29 @@ it("clears the verified financial view immediately after an original export perm
   vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 403 })));
   fireEvent.click(screen.getByRole("button", { name: "Download original evidence" })); await screen.findByRole("alert");
   expect(screen.queryByText("Verified original report")).not.toBeInTheDocument(); expect(screen.queryByText("12.67 USD")).not.toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Download original evidence" })).not.toBeInTheDocument();
+});
+it("shows selected source obligations separately from observed native period and formal close", async () => {
+  await fill(); fireEvent.click(screen.getByRole("button", { name: "Verify original sources" })); await screen.findByText("Verified original report");
+  const diagnostic = await projectCloseFixture(); vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ diagnostic }))));
+  fireEvent.click(screen.getByRole("button", { name: "Verify selected source obligations" }));
+  await screen.findByText("The selected original wage and invoice obligations are settled.");
+  expect(screen.getByText(/Synthetic observed period/)).toBeInTheDocument();
+  expect(screen.getByText(/does not assess formal close tasks/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Download source obligation evidence" })).toBeEnabled();
+});
+it("holds source obligation publication until actual native WebCrypto finishes and invalidates on selection change", async () => {
+  await fill(); fireEvent.click(screen.getByRole("button", { name: "Verify original sources" })); await screen.findByText("Verified original report");
+  const diagnostic = await projectCloseFixture(); vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ diagnostic }))));
+  const native = crypto.subtle.digest.bind(crypto.subtle); let release!: () => void; vi.spyOn(crypto.subtle, "digest").mockImplementationOnce(async (...args) => { const bytes = await native(...args); return new Promise(resolve => { release = () => resolve(bytes); }); });
+  fireEvent.click(screen.getByRole("button", { name: "Verify selected source obligations" })); await waitFor(() => expect(release).toBeTypeOf("function"));
+  expect(screen.queryByRole("button", { name: "Download source obligation evidence" })).not.toBeInTheDocument(); release(); await screen.findByText("The selected original wage and invoice obligations are settled.");
+  fireEvent.change(screen.getByLabelText("Original period ID"), { target: { value: "other" } });
+  expect(screen.queryByText("The selected original wage and invoice obligations are settled.")).not.toBeInTheDocument();
+});
+it("clears source report and obligation evidence after current diagnostic export authority withdrawal", async () => {
+  await fill(); fireEvent.click(screen.getByRole("button", { name: "Verify original sources" })); await screen.findByText("Verified original report");
+  const diagnostic = await projectCloseFixture(); vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ diagnostic }))));
+  fireEvent.click(screen.getByRole("button", { name: "Verify selected source obligations" })); await screen.findByText("The selected original wage and invoice obligations are settled.");
+  vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 403 }))); fireEvent.click(screen.getByRole("button", { name: "Download source obligation evidence" }));
+  await screen.findByRole("alert"); expect(screen.queryByText("Verified original report")).not.toBeInTheDocument(); expect(screen.queryByText("The selected original wage and invoice obligations are settled.")).not.toBeInTheDocument();
 });

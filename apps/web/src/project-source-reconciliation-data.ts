@@ -78,3 +78,64 @@ export async function loadProjectEvidence(session: BrowserAdminSession, scope: F
   const report = await parseProjectReport(original.report, scope, session.tenantId, selected); if (report.report_digest !== expectedReport) invalid();
   return { bytes, sha256: expected };
 }
+
+export interface ProjectCloseDiagnostic {
+  schema_version: "project-source-close-diagnostic-v1"; qualified_scope: ProjectReport["qualified_scope"]; selection: ProjectSelection;
+  source_report_digest: string; currency_policy: ProjectReport["currency_policy"]; project_totals: ProjectReport["project_totals"];
+  whole_source_obligations: ProjectReport["whole_source_settlement"]; source_membership: ProjectReport["source_membership"];
+  whole_time_claims: { time_id: string; time_digest: string; wage_claim: { owner_id: string; sequence: number; state: "Consumed" }; billing_claim: { owner_id: string; sequence: number; state: "Consumed" } }[];
+  observed_native_periods: { tenant_id: string; id: string; application_workspace_id: string; name: string; start_date: string; end_date: string; status: "Open" | "Soft Closed" | "Closed"; updated_at: string }[];
+  source_obligations_settled: boolean; findings: string[]; coverage: string; period_capture_scope: string;
+  limitations: Record<string, unknown>; diagnostic_digest: string;
+}
+export async function parseProjectCloseDiagnostic(value: unknown, report: ProjectReport): Promise<ProjectCloseDiagnostic> {
+  if (!record(value)) invalid();
+  exactKeys(value, ["schema_version", "qualified_scope", "selection", "source_report_digest", "currency_policy", "project_totals", "whole_source_obligations", "whole_time_claims", "source_membership", "observed_native_periods", "source_obligations_settled", "findings", "coverage", "period_capture_scope", "limitations", "diagnostic_digest"]);
+  if (value.schema_version !== "project-source-close-diagnostic-v1" || value.source_report_digest !== report.report_digest || !hash(value.diagnostic_digest)
+      || canonicalProject(value.qualified_scope) !== canonicalProject(report.qualified_scope) || canonicalProject(value.selection) !== canonicalProject(report.selection)
+      || canonicalProject(value.currency_policy) !== canonicalProject(report.currency_policy) || canonicalProject(value.project_totals) !== canonicalProject(report.project_totals)
+      || canonicalProject(value.whole_source_obligations) !== canonicalProject(report.whole_source_settlement) || canonicalProject(value.source_membership) !== canonicalProject(report.source_membership)) invalid();
+  if (!Array.isArray(value.whole_time_claims) || value.whole_time_claims.length !== report.approved_time.length) invalid();
+  const claims = value.whole_time_claims;
+  for (const [index, time] of report.approved_time.entries()) { const row = claims[index]; if (!record(row)) invalid(); exactKeys(row, ["time_id", "time_digest", "wage_claim", "billing_claim"]);
+    if (row.time_id !== time.id || row.time_digest !== time.source_digest) invalid();
+    for (const [family, owner] of [["wage_claim", report.selection.payrun_id], ["billing_claim", report.selection.invoice_id]] as const) { const claim = row[family]; if (!record(claim)) invalid(); exactKeys(claim, ["owner_id", "sequence", "state"]); if (claim.owner_id !== owner || claim.state !== "Consumed" || typeof claim.sequence !== "number" || !Number.isSafeInteger(claim.sequence) || claim.sequence < 2) invalid(); }
+  }
+  if (!Array.isArray(value.observed_native_periods) || value.observed_native_periods.length !== 1) invalid();
+  const period = value.observed_native_periods[0]; if (!record(period)) invalid(); exactKeys(period, ["tenant_id", "id", "application_workspace_id", "name", "start_date", "end_date", "status", "updated_at"]);
+  if (period.tenant_id !== report.qualified_scope.tenant_id || period.id !== report.selection.period_id || period.application_workspace_id !== report.qualified_scope.workspace_id
+      || typeof period.name !== "string" || !period.name || typeof period.start_date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(period.start_date)
+      || typeof period.end_date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(period.end_date) || period.start_date > period.end_date
+      || !["Open", "Soft Closed", "Closed"].includes(String(period.status)) || typeof period.updated_at !== "string" || !period.updated_at) invalid();
+  const findings = [...(BigInt(report.whole_source_settlement.wage_liability_minor) !== 0n ? ["selected_payrun_wages_outstanding"] : []), ...(BigInt(report.whole_source_settlement.ar_outstanding_minor) !== 0n ? ["selected_invoice_receivable_outstanding"] : [])];
+  if (canonicalProject(value.findings) !== canonicalProject(findings) || value.source_obligations_settled !== (findings.length === 0)
+      || value.coverage !== "one-selected-original-payrun-and-invoice-with-identical-whole-approved-time" || value.period_capture_scope !== "one-readonly-statement-snapshot-without-period-row-locks") invalid();
+  const limits = { formal_close_workflow_assessed: false, whole_period_membership_proven: false, comprehensive_project_profit_and_loss: false, private_earnings_formula_recomputed: false, per_project_cash_allocated: false, bank_transfer_proven: false, country_statutory_packs: 0, financial_writes: false, performance_comparison_accepted: false };
+  if (canonicalProject(value.limitations) !== canonicalProject(limits)) invalid();
+  const { diagnostic_digest, ...body } = value;
+  if (await projectHash(new TextEncoder().encode(canonicalProject(body))) !== diagnostic_digest) invalid();
+  return value as unknown as ProjectCloseDiagnostic;
+}
+function closePath(selected: ProjectSelection, evidence = false) { return `/api/v1/project-source-reconciliation/close-diagnostics${evidence ? "/evidence" : ""}?${new URLSearchParams({ ...selected })}`; }
+export async function loadProjectCloseDiagnostic(session: BrowserAdminSession, scope: FinanceScope, selected: ProjectSelection, report: ProjectReport): Promise<ProjectCloseDiagnostic> {
+  await parseProjectReport(report, scope, session.tenantId, selected);
+  const response = await financeRequest(session, scope, closePath(selected)); if (!record(response)) invalid();
+  return parseProjectCloseDiagnostic(response.diagnostic, report);
+}
+export async function loadProjectCloseEvidence(session: BrowserAdminSession, scope: FinanceScope, selected: ProjectSelection, report: ProjectReport, diagnostic: ProjectCloseDiagnostic): Promise<{ bytes: Uint8Array; sha256: string }> {
+  await parseProjectReport(report, scope, session.tenantId, selected); await parseProjectCloseDiagnostic(diagnostic, report);
+  const response = await fetch(closePath(selected, true), { credentials: "same-origin", cache: "no-store", headers: { Accept: "application/json", "X-ReconForge-Tenant": session.tenantId, "X-ReconForge-Workspace": scope.workspace_id, "X-ReconForge-Organization": scope.organization_id, "X-ReconForge-Legal-Entity": scope.legal_entity_id } });
+  if (!response.ok) throw new AdminApiError(response.status, `http_${response.status}`);
+  const size = response.headers.get("Content-Length"), expected = response.headers.get("X-ReconForge-Raw-SHA256");
+  if (!size || !/^[1-9]\d*$/.test(size) || Number(size) > 67108864 || !hash(expected) || response.headers.get("X-ReconForge-Report-Digest") !== report.report_digest || response.headers.get("X-ReconForge-Diagnostic-Digest") !== diagnostic.diagnostic_digest) invalid();
+  const reader = response.body?.getReader(); if (!reader) invalid(); const parts: Uint8Array[] = []; let length = 0;
+  try { for (;;) { const { done, value } = await reader.read(); if (done) break; length += value.byteLength; if (length > Number(size)) invalid(); parts.push(value); } } catch (error) { await reader.cancel(); throw error; } finally { reader.releaseLock(); }
+  if (length !== Number(size)) invalid(); const bytes = new Uint8Array(length); let offset = 0; for (const part of parts) { bytes.set(part, offset); offset += part.length; }
+  if (await projectHash(bytes) !== expected) invalid();
+  const original: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+  if (!record(original) || original.schema_version !== "project-source-close-evidence-v1" || original.native_execution_proven !== true || original.financial_writes !== false || original.private_personnel_reads !== false || !hash(original.evidence_digest) || response.headers.get("X-ReconForge-Evidence-Digest") !== original.evidence_digest) invalid();
+  const retained = await parseProjectCloseDiagnostic(original.diagnostic, report); if (retained.diagnostic_digest !== diagnostic.diagnostic_digest) invalid();
+  // Preserve the complete original byte export. Native integer/source custody is
+  // independently verified by the stdlib oracle, rather than JSON re-encoding.
+  return { bytes, sha256: expected };
+}

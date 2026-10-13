@@ -6,7 +6,12 @@ from typing import Any
 
 from reconforge.application.accrual_deferral_evidence import evidence_digest, evidence_size
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor
-from reconforge.domain.project_source_reconciliation import ProjectSourceSelection, reconcile_project_sources, require
+from reconforge.domain.project_source_reconciliation import (
+    ProjectSourceSelection,
+    diagnose_project_source_close,
+    reconcile_project_sources,
+    require,
+)
 from reconforge.infrastructure.postgres_people_project_payroll import PostgresPeopleProjectPayrollRepository
 from reconforge.infrastructure.postgres_project_time_billing import PostgresProjectTimeBillingRepository
 
@@ -176,3 +181,23 @@ class PostgresProjectSourceReconciliationRepository:
             }
             evidence_size(evidence)
             return {**evidence, "evidence_digest": evidence_digest(evidence)}
+
+    def close_diagnostics(self, selection: ProjectSourceSelection, *, actor: PostingActor) -> dict[str, Any]:
+        with self.billing.owner._transaction():
+            source = self.report(selection, actor=actor)
+            period_ids = sorted({row["period_id"] for row in source["original_rows"]["entries"]})
+            # These are observed metadata, not stable/locked close readiness.
+            # Existing current source admission completes before this SELECT.
+            observations = self.connection.execute("""SELECT COALESCE(jsonb_agg(to_jsonb(p) ORDER BY id),'[]'::JSONB) AS periods
+                FROM (SELECT tenant_id,id,application_workspace_id,name,start_date,end_date,status,updated_at
+                FROM reconforge.fiscal_periods WHERE tenant_id=%s AND application_workspace_id=%s AND id=ANY(%s))p""",
+                (self.tenant_id, selection.scope.workspace_id, period_ids)).fetchone()["periods"]
+            diagnostic = diagnose_project_source_close(selection, source, observations)
+            envelope = {"schema_version": "project-source-close-evidence-v1", "diagnostic": diagnostic,
+                        "source_evidence": source, "source_original_sha256": evidence_digest(source),
+                        "source_original_bytes": evidence_size(source), "native_periods": observations,
+                        "native_execution_proven": True, "financial_writes": False,
+                        "private_personnel_reads": False, "audit_chain_recomputed": False,
+                        "performance_comparison_accepted": False}
+            evidence_size(envelope)
+            return {**envelope, "evidence_digest": evidence_digest(envelope)}

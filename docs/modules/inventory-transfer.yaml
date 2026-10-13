@@ -1,0 +1,51 @@
+id: inventory-transfer
+name: Governed same-entity warehouse transfer with original cost custody
+version: 1.0.0
+maturity: experimental
+owner: ReconForge inventory operations
+dependencies: [inventory-core, inventory-valuation, inventory-receipt-posting, finance-posting, identity, scope-authority]
+incompatible_versions: []
+data_classification: authorized-financial-operational-source
+retention_policy: Immutable original source, native movement, complete cost snapshots, claims/releases, actor commands, audit and outbox; no source deletion.
+permissions: [inventory_transfer.read, inventory_transfer.manage, inventory_transfer.approve, inventory_transfer.post, inventory.read, inventory.manage, inventory.post, inventory.valuation.read, finance_core.read]
+default_roles: []
+migrations: [root-owned-0146-pending-qualified-cohort]
+domain_invariants:
+  - One untracked native stock or consumable item in its exact base UOM moves between two distinct internal warehouses explicitly belonging to one current entity.
+  - Draft has no reservation. Independent second-human review freezes the complete approved entity FIFO/GL pool and creates one exclusive shared Core quantity claim.
+  - Distinct third-human post releases that exact claim and posts the original native Generated Transfer atomically; complete native originals and terminal receipts close at commit.
+  - Posted transfer adds no valuation, layer consumption or GL effect and preserves the complete pooled approved FIFO quantities/value and original GL bytes.
+  - An inverse is a separately created/reviewed/posted compensating native Transfer child with swapped original locations/quantity; the forward source and native Posted movement remain immutable.
+  - Every read and command response requires all current persisted permissions and original parent grants with the complete exposed original amount under captured currency precision.
+  - Exact same-command replay returns the original historical source/native ACK under fresh authority; changed actor/request/source/key conflicts.
+  - Retained pending or committed full receipt inverses and unsupported non-IRP cost owner classes refuse new transfer cost adoption.
+domain_events: [inventory_transfer.create, inventory_transfer.inverse-create, inventory_transfer.review, inventory_transfer.post, inventory_transfer.cancel]
+api_routes:
+  - GET /api/v1/inventory-transfer/transfers
+  - GET /api/v1/inventory-transfer/transfers/{identifier}
+  - GET /api/v1/inventory-transfer/transfers/{identifier}/evidence
+  - POST /api/v1/inventory-transfer/transfers
+  - POST /api/v1/inventory-transfer/transfers/{identifier}/review
+  - POST /api/v1/inventory-transfer/transfers/{identifier}/post
+  - POST /api/v1/inventory-transfer/transfers/{identifier}/cancel
+  - POST /api/v1/inventory-transfer/transfers/{identifier}/inverse
+cli_commands: []
+ui_routes: []
+import_schemas: [inventory-transfer-v1]
+export_schemas: [inventory-transfer-cost-v1, inventory-transfer-command-ack-v1, inventory-transfer-evidence-v1]
+synthetic_fixtures: [actual-approved-IRP-three-EA-USD3600-two-warehouse]
+threat_model: [changed-native-UOM-or-location, amount-cap-on-only-selected-portion, stale-human-or-parent-grant, source-reservation-double-spend, direct-native-post-or-void, detached-claim-release, fabricated-historical-ACK, missing-or-extra-native-evidence, consumed-destination-inverse, receipt-inverse-race]
+benchmarks: []
+rollback_plan: Root removes finite dispatch before the owned empty inverse; any retained transfer source refuses destructive rollback and requires an authorized restore. Posted correction is an independently governed compensating transfer.
+test_matrix:
+  pure: tests/test_inventory_transfer.py
+  api_contract: tests/test_inventory_transfer_api_contract.py
+  postgresql_initial: tests/test_postgres_inventory_transfer.py
+backend_support:
+  postgres: development-owned-schema-qualified-initial-original-draft-only
+  sqlite: unavailable-without-equivalent-native-FIFO-and-source-custody
+qualification:
+  pure: 29 focused domain/API cases passed; Ruff and typed owner/API checks passed.
+  native_initial: Actual mandatory restricted-role 2 PASS, 0 failures/errors/skips at output/it1-native-original-draft-v3; exact approved IRP3EA/value3600 cost originals, untouched FIFO/GL, native Draft, source read/list and original same-command replay. Empty owned schema inverse/reinstall was exercised inside the fixture; populated originals refuse destructive inverse.
+  retained_reds: Original v1 PostgreSQL JSON operator-precedence and v2 deferred-trigger record-field failures remain preserved in their source-qualified packets.
+  pending: Root146 finite source-directory/native dispatch integration; full review/post/cancel/child inverse, amount/grant withdrawal, contention/direct SQL/recovery/restore, independent original oracle and real Studio/API browser acceptance.

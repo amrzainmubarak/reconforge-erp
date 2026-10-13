@@ -40,6 +40,11 @@ def test_live_ci_general_gate_collects_every_advertised_contract() -> None:
         for path in [row.get("test"), *row.get("additional_tests", [])] if path
     }
     assert delegated == {
+        "tests/test_postgres_manufacturing_supply_plan.py": "manufacturing-supply-plan",
+        "tests/test_postgres_project_time_billing.py": "project-time-billing",
+        "tests/test_postgres_project_time_billing_api.py": "project-time-billing",
+        "tests/test_postgres_project_time_billing_restore.py": "project-time-billing",
+        "tests/test_postgres_project_time_billing_read_authority.py": "project-time-billing",
         "tests/test_postgres_accrual_deferral.py": "accrual-deferral",
         "tests/test_postgres_accrual_deferral_api.py": "accrual-deferral",
         "tests/test_postgres_accrual_deferral_guards.py": "accrual-deferral",

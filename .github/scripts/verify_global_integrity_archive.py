@@ -475,6 +475,18 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
 
         "docs/execution/GLOBAL_ENTERPRISE_PROGRAM_CONTRACTS_2026-10-12.md",
         "alembic/versions/0141_postgres_accrual_deferral.py",
+        "alembic/versions/0142_postgres_manufacturing_supply.py",
+        "alembic/versions/0143_postgres_project_billing.py",
+        "reconforge/infrastructure/postgres_inventory_quantity_source_ownership.py",
+        "reconforge/infrastructure/postgres_inventory_quantity_coordination.py",
+        "reconforge/domain/manufacturing_supply_plan.py",
+        "reconforge/application/manufacturing_supply_plan.py",
+        "reconforge/ports/manufacturing_supply_plan.py",
+        "reconforge/infrastructure/postgres_manufacturing_supply_plan.py",
+        "reconforge/infrastructure/postgres_manufacturing_supply_plan_schema.py",
+        "reconforge/api/routes/manufacturing_supply_plan.py",
+        "docs/modules/manufacturing-supply-plan.yaml",
+        "apps/web/src/components/ManufacturingSupplyPlanPage.tsx",
         ".github/scripts/verify_accrual_deferral_cycle_oracle.py",
         ".github/scripts/verify_project_time_billing_cycle_oracle.py",
         "tests/fixtures/accrual-deferral-native-v1.json", "tests/fixtures/project-time-billing-native-v1.json",
@@ -652,8 +664,8 @@ def main() -> int:
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--index-count", type=int, default=22)
-    parser.add_argument("--migration-count", type=int, default=140)
-    parser.add_argument("--migration-head", default="0141_pg_accrual_deferral")
+    parser.add_argument("--migration-count", type=int, default=142)
+    parser.add_argument("--migration-head", default="0143_pg_project_billing")
     parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
     parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
     parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")

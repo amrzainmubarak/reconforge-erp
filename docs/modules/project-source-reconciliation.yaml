@@ -34,9 +34,11 @@ rollback_plan: Remove this optional read-only surface. No schema or original fin
 test_matrix:
   native: tests/test_postgres_project_source_reconciliation.py
   native_http: tests/test_postgres_project_source_reconciliation_api.py
+  native_read_browser_fixture: tests/test_postgres_project_source_reconciliation_browser_fixture.py
   independent_oracle: tests/test_project_source_reconciliation_oracle.py
   studio: apps/web/src/components/ProjectSourceReconciliationPage.test.tsx
 runtime_acceptance: Development ordered141 plus owned PB tables executed three native current-read/privacy cases and a later four-case native/HTTP group with zero skips. The subsequently strengthened original-price and complete-metadata capture executed two native/HTTP cases with zero skips. The controlled HTTP test mounts the owned router explicitly; central registrations socket TLS browser and final CI are separate pending gates.
+fixed_checkpoint_acceptance: Fixed backend59c747d3 and Studio8a6fa868 executed4 focused native and controlled-HTTP cases with zero skips in166.527s. Its actual original export passed isolated normal and optimized stdlib verification with identical outputs. Independent adversarial cases49 pass. The subsequent stable read-browser fixture executed1 native source-and-tamper case with zero skips in48.343s;21 Studio tests and typecheck pass. Playwright collected1 test only, with no wire execution or central143 acceptance inferred.
 limitations:
   - PostgreSQL only. Community SQLite is explicitly unavailable for this source pair.
   - One functional currency Project period payrun and original invoice only.

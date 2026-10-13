@@ -35,11 +35,11 @@ function ProjectSourceSession({ locale }: { locale: Locale }) {
   }
   const fields = [["project_id", "project"], ["period_id", "period"], ["payrun_id", "payrun"], ["invoice_id", "invoice"]] as const;
   const money = (amount: string) => `${projectMoney(amount, report!.currency_policy.currency_precision, locale)} ${report!.currency_policy.currency_code}`;
-  return <section className="project-source-page" dir={locale === "ar" ? "rtl" : "ltr"}><h1>{word("title")}</h1><p>{word("subtitle")}</p>
-    {!auth.session && <form onSubmit={authenticate}><p>{word("signin")}</p><div className="project-source-fields">
+  return <main id="main-content" aria-busy={busy} className="project-source-page" dir={locale === "ar" ? "rtl" : "ltr"}><h1>{word("title")}</h1><p>{word("subtitle")}</p>
+    {!auth.session && <form aria-label={word("login")} onSubmit={authenticate}><p>{word("signin")}</p><div className="project-source-fields">
       {([["tenant", "tenant"], ["username", "username"], ["password", "password"]] as const).map(([key, label]) => <label key={key}>{word(label)}<input required type={key === "password" ? "password" : "text"} autoComplete={key === "password" ? "current-password" : key === "username" ? "username" : "off"} value={login[key]} onChange={e => setLogin(old => ({ ...old, [key]: e.target.value }))} /></label>)}
       </div><button disabled={busy} type="submit">{word("login")}</button></form>}
-    <form onSubmit={verify}><fieldset disabled={busy || !identity}><legend>{word("scope")}</legend><div className="project-source-fields">
+    <form aria-label={word("read")} onSubmit={verify}><fieldset disabled={busy || !identity}><legend>{word("scope")}</legend><div className="project-source-fields">
       {([["workspace_id", "workspace"], ["organization_id", "organization"], ["legal_entity_id", "entity"]] as const).map(([key, label]) => <label key={key}>{word(label)}<input maxLength={160} value={scope[key]} onChange={e => { invalidate(); setScope(old => ({ ...old, [key]: e.target.value })); }} /></label>)}
       {fields.map(([key, label]) => <label key={key}>{word(label)}<input required maxLength={160} value={selection[key]} onChange={e => { invalidate(); setSelection(old => ({ ...old, [key]: e.target.value })); }} /></label>)}
       </div><button disabled={!allowed || busy} type="submit">{word("read")}</button></fieldset></form>
@@ -49,5 +49,5 @@ function ProjectSourceSession({ locale }: { locale: Locale }) {
       <h2>{word("whole")}</h2><dl className="project-source-totals">{([["wage_accrued_minor", "accrued"], ["wage_paid_minor", "paid"], ["wage_liability_minor", "liability"], ["invoice_minor", "invoiced"], ["collected_minor", "collected"], ["ar_outstanding_minor", "outstanding"]] as const).map(([key, label]) => <div key={key}><dt>{word(label)}</dt><dd>{money(report.whole_source_settlement[key])}</dd></div>)}</dl>
       <details><summary>{word("evidence")}</summary><code>{report.report_digest}</code><ul>{report.source_membership.map(source => <li key={source.id}><code>{source.id}</code> · <code>{source.effect_id}</code></li>)}</ul></details>
       <button type="button" disabled={busy || !allowed} onClick={() => void download()}>{word("download")}</button>{evidenceSha && <p><code>{evidenceSha}</code></p>}
-      </div>}<p className="project-source-limit">{word("limits")}</p></section>;
+      </div>}<p className="project-source-limit">{word("limits")}</p></main>;
 }

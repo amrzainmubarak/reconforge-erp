@@ -38,7 +38,7 @@ api_routes:
 cli_commands: []
 ui_routes: [/manufacturing-supply-plan]
 import_schemas: [manufacturing-supply-plan-v1, manufacturing-planned-requirement-v1, manufacturing-supply-coverage-v1, manufacturing-planned-origin-v2]
-export_schemas: [manufacturing-supply-plan-v1, manufacturing-supply-proof-v1, manufacturing-supply-oracle-result-v1]
+export_schemas: [manufacturing-supply-plan-v1, manufacturing-supply-proof-v1, manufacturing-supply-oracle-result-v1, manufacturing-supply-command-ack-v1]
 synthetic_fixtures:
   - Original BOM10 needs ITEM2EA and MATERIAL3KG; actual starting ITEM1EA/value1200 and MATERIAL0.500KG/value50 produce shortage ITEM1EA and MATERIAL2.500KG/value1450.
   - Planned golden material2700 plus labor600 plus overhead300 equals accepted FG3240 plus abnormal loss360 plus WIP0; final native gate is explicitly source-qualified.

@@ -1,6 +1,22 @@
-import { supplyCanonical } from "./manufacturing-supply-data";
+import { supplyCanonical, supplyPlainCanonical } from "./manufacturing-supply-data";
+import type { PreparedScopedCommand } from "./scoped-command";
 export const supplyScope = { workspace_id: "work", organization_id: "org", legal_entity_id: "entity" };
 const hash = async (value: unknown) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(supplyCanonical(value))))].map(part => part.toString(16).padStart(2, "0")).join("");
+const plainHash = async (value: unknown) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(supplyPlainCanonical(value))))].map(part => part.toString(16).padStart(2, "0")).join("");
+export async function supplyApprovalAck(command: PreparedScopedCommand, source: Awaited<ReturnType<typeof supplyFixture>>, actorId = "checker") {
+  const request = { operation: "approve", actor_id: actorId, request: { id: source.id, expected_digest: command.body.expected_digest, reason: command.body.reason } };
+  return { source, command_ack: { schema_version: "manufacturing-supply-command-ack-v1", command_id: command.body.command_id, plan_id: source.id,
+    source_digest: source.source_digest, operation: "approve", actor_id: actorId, version: 2, scope: supplyScope, request_json: request,
+    request_digest: await hash(request), response_digest: await plainHash({ source }), native_kind: null, native_owner_id: null, native_command_id: null },
+    submitted_request: command.body, submitted_request_digest: await plainHash(command.body) };
+}
+export async function supplyCreateAck(command: PreparedScopedCommand, source: Awaited<ReturnType<typeof supplyFixture>>) {
+  const request = { operation: "create", actor_id: source.creator_id, request: source.command_request };
+  return { source, command_ack: { schema_version: "manufacturing-supply-command-ack-v1", command_id: command.body.command_id, plan_id: source.id,
+    source_digest: source.source_digest, operation: "create", actor_id: source.creator_id, version: 1, scope: supplyScope, request_json: request,
+    request_digest: await hash(request), response_digest: await plainHash({ source }), native_kind: null, native_owner_id: null, native_command_id: null },
+    submitted_request: command.body, submitted_request_digest: await plainHash(command.body) };
+}
 export async function supplyFixture(approved = false) {
   const identifier = `MSP1-${"A".repeat(32)}`, requirementId = `MSP1D-${"B".repeat(32)}`;
   const material = { schema_version: "manufacturing-order-v1", number: "SYN-DEMAND", bom_version_id: "SYN-BOM", output_quantity: "10", component_location_code: "MAIN/STOCK", finished_location_code: "MAIN/STOCK", component_policy_code: "FIFO", finished_policy_code: "MFG", journal_code: "STOCK", wip_account_code: "WIP", scrap_account_code: "SCRAP", period_id: "period", posting_date: "2026-10-04", reason: "Original synthetic demand", ...supplyScope, organization_code: "ORG", entity_code: "ENTITY" };

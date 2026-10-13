@@ -3,12 +3,12 @@ import { webcrypto } from "node:crypto";
 import { afterEach, expect, it, vi } from "vitest";
 import { loadBudgetIdentity } from "../budget-control-data";
 import { supplyOperationPermissions } from "../manufacturing-supply-data";
-import { supplyFixture } from "../manufacturing-supply-test-fixtures";
+import { supplyApprovalAck, supplyFixture } from "../manufacturing-supply-test-fixtures";
 import { ManufacturingSupplyPlanPage } from "./ManufacturingSupplyPlanPage";
 const session = { tenantId: "synthetic", csrfToken: "csrf", expiresAt: "2099-01-01T00:00:00Z" };
 vi.mock("../browserSession", () => ({ useBrowserSession: () => ({ session, revision: 1, username: "checker", isCurrent: () => true, recover: () => false }) }));
 const identity = { id: "checker", human: true, stepUp: true, workspaces: ["work"], organizations: ["org"], entities: ["entity"], permissions: [...new Set(Object.values(supplyOperationPermissions).flat())] };
-vi.mock("../budget-control-data", () => ({ loadBudgetIdentity: vi.fn(async () => identity), loadBudgetDetail: vi.fn(async () => ({ row_version: 3 })) }));
+vi.mock("../budget-control-data", () => ({ loadBudgetIdentity: vi.fn(async () => identity), loadBudgetDetail: vi.fn(async () => ({ id: "SYN-BUDGET", currency_code: "USD", monetary_policy: { precision: 2 }, row_version: 3 })) }));
 afterEach(() => vi.unstubAllGlobals());
 async function enter(locale: "en" | "ar" = "en") {
   vi.stubGlobal("crypto", webcrypto); render(<ManufacturingSupplyPlanPage locale={locale} />);
@@ -30,9 +30,23 @@ it("prevents scope bootstrap until persisted identity is known", async () => {
 });
 it("retries the exact source approval ACK and retains evidence after refresh failure", async () => {
   vi.stubGlobal("crypto", webcrypto); const draft = await supplyFixture(), approved = await supplyFixture(true), calls: string[] = []; let committed = false;
-  vi.stubGlobal("fetch", vi.fn(async (_url: unknown, init?: RequestInit) => { if (init?.method === "POST") { calls.push(String(init.body)); if (calls.length === 1) throw new TypeError("lost reply"); committed = true; return new Response(JSON.stringify({ source: approved })); } return committed ? new Response("Unavailable", { status: 503 }) : new Response(JSON.stringify({ records: [draft] })); }));
+  vi.stubGlobal("fetch", vi.fn(async (_url: unknown, init?: RequestInit) => { if (init?.method === "POST") { calls.push(String(init.body)); if (calls.length === 1) throw new TypeError("lost reply"); committed = true; return new Response(JSON.stringify(await supplyApprovalAck({ path: String(_url), body: JSON.parse(String(init.body)) }, approved))); } return committed ? new Response("Unavailable", { status: 503 }) : new Response(JSON.stringify({ records: [draft] })); }));
   const select = await enter(); await waitFor(() => expect(select.querySelectorAll("option")).toHaveLength(2)); fireEvent.change(select, { target: { value: draft.id } });
   const form = screen.getByRole("form", { name: "Approve and reserve original coverage" }); fireEvent.change(within(form).getByLabelText("Reason"), { target: { value: "Independent original demand" } }); fireEvent.click(within(form).getByRole("button", { name: "Approve and reserve original coverage" }));
   fireEvent.click(await screen.findByRole("button", { name: "Retry the same retained command" })); await waitFor(() => expect(calls).toHaveLength(2)); expect(calls[0]).toBe(calls[1]);
   await screen.findByText("Command acknowledged. Refresh original evidence before continuing."); expect(screen.queryByRole("button", { name: "Approve and reserve original coverage" })).not.toBeInTheDocument(); expect(within(screen.getByRole("table")).getByText("2.500")).toBeInTheDocument();
+});
+it("retains an unqualified same-source wrong-phase ACK without fetching or showing success", async () => {
+  vi.stubGlobal("crypto", webcrypto); const draft = await supplyFixture(), changed = await supplyFixture(true); changed.phase = 3; changed.stock_claims[0].state = "Released"; let reads = 0;
+  vi.stubGlobal("fetch", vi.fn(async (url: unknown, init?: RequestInit) => { if (init?.method === "POST") return new Response(JSON.stringify(await supplyApprovalAck({ path: String(url), body: JSON.parse(String(init.body)) }, changed))); reads++; return new Response(JSON.stringify({ records: [draft] })); }));
+  const select = await enter(); await waitFor(() => expect(select.querySelectorAll("option")).toHaveLength(2)); fireEvent.change(select, { target: { value: draft.id } });
+  const form = screen.getByRole("form", { name: "Approve and reserve original coverage" }); fireEvent.change(within(form).getByLabelText("Reason"), { target: { value: "Independent original demand" } }); fireEvent.click(within(form).getByRole("button", { name: "Approve and reserve original coverage" }));
+  await screen.findByRole("button", { name: "Retry the same retained command" }); expect(reads).toBe(1); expect(screen.queryByText("Command acknowledged. Refresh original evidence before continuing.")).not.toBeInTheDocument(); expect(within(screen.getByRole("table")).queryByText("2.500")).not.toBeInTheDocument();
+});
+it.each([401, 403, 404])("clears displayed current financial source and child evidence after read refusal %s", async status => {
+  vi.stubGlobal("crypto", webcrypto); const source = await supplyFixture(true); let refused = false;
+  vi.stubGlobal("fetch", vi.fn(async () => refused ? new Response(JSON.stringify({ error: { code: "scope_denied" } }), { status }) : new Response(JSON.stringify({ records: [source] }))));
+  const select = await enter(); await waitFor(() => expect(select.querySelectorAll("option")).toHaveLength(2)); fireEvent.change(select, { target: { value: source.id } });
+  await screen.findByRole("table"); refused = true; fireEvent.click(screen.getByRole("button", { name: "Refresh original supply evidence" }));
+  await waitFor(() => expect(screen.queryByRole("table")).not.toBeInTheDocument()); expect(screen.queryByRole("region", { name: "Actual sourcing and partial receiving" })).not.toBeInTheDocument(); expect(screen.queryByText(source.source_digest)).not.toBeInTheDocument();
 });

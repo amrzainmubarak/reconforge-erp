@@ -30,7 +30,7 @@ from reconforge.api.server_finance_core import (
 from reconforge.application.manufacturing_supply_plan import ManufacturingSupplyPlanService
 from reconforge.auth.models import LocalUser
 from reconforge.domain.budget_control import BudgetControlError
-from reconforge.domain.finance_posting import FinancePostingError, PostingActor
+from reconforge.domain.finance_posting import FinancePostingError, PostingActor, digest_payload
 from reconforge.domain.inventory_receipt_posting import InventoryReceiptPostingError
 from reconforge.domain.manufacturing_execution import OrderPreparation
 from reconforge.domain.manufacturing_execution_v2 import ManufacturingOrderPreparation
@@ -121,7 +121,8 @@ def project_supply(value: Any, key: str = "") -> Any:
 
 
 def execute(request: Request, user: LocalUser,
-            action: Callable[[ManufacturingSupplyPlanService, PostingActor, FinanceCoreExecutionScope], Any]) -> Any:
+            action: Callable[[ManufacturingSupplyPlanService, PostingActor, FinanceCoreExecutionScope], Any],
+            *, payload: BaseModel | None = None) -> Any:
     if not server_finance_core_enabled(request):
         raise APIError(status_code=503, code="manufacturing_supply_backend_unavailable", message="Native supply custody requires PostgreSQL.")
     actor = _actor(request, user)
@@ -130,7 +131,18 @@ def execute(request: Request, user: LocalUser,
         if scope.organization_id is None or scope.legal_entity_id is None:
             raise APIError(status_code=403, code="manufacturing_supply_scope_required", message="Select an authorized organization and legal entity.")
         try:
-            return project_supply(action(ManufacturingSupplyPlanService(PostgresManufacturingSupplyPlanRepository(finance.connection, scope.tenant_id)), actor, scope))
+            repository = PostgresManufacturingSupplyPlanRepository(finance.connection, scope.tenant_id)
+            result = action(ManufacturingSupplyPlanService(repository), actor, scope)
+            projected = project_supply(result)
+            if payload is not None:
+                submitted = payload.model_dump(mode="json", exclude_unset=True)
+                receipt = repository.command_receipt(result["source"]["id"], str(submitted["command_id"]), result, actor=actor)
+                # Seal the exact public projection of the original stored ACK;
+                # original native request digest remains separately verifiable.
+                projected["command_ack"] = {**project_supply(receipt), "response_digest": digest_payload(projected)}
+                projected["submitted_request"] = submitted
+                projected["submitted_request_digest"] = digest_payload(submitted)
+            return projected
         except (FinancePostingError, InventoryReceiptPostingError) as exc:
             raise APIError(status_code=403 if "denied" in exc.code else 404 if "not_found" in exc.code else 409, code=exc.code, message=str(exc)) from exc
         except BudgetControlError as exc:
@@ -164,17 +176,17 @@ def create_plan(request: Request, payload: PlanRequest, user: Create) -> dict[st
         prepared = SupplyPlanPreparation(material, payload.routing_id, payload.budget_id,
             {line.item_code: int(line.unit_price_minor) for line in payload.unit_price_ceilings_minor})
         return service.create(prepared, command_id=payload.command_id, actor=actor)
-    return execute(request, user, invoke)
+    return execute(request, user, invoke, payload=payload)
 
 
 @router.post("/plans/{identifier}/approve")
 def approve_plan(request: Request, identifier: str, payload: PhaseRequest, user: Approve) -> dict[str, Any]:
-    return execute(request, user, lambda service, actor, scope: service.approve(identifier, **payload.model_dump(), actor=actor))
+    return execute(request, user, lambda service, actor, scope: service.approve(identifier, **payload.model_dump(), actor=actor), payload=payload)
 
 
 @router.post("/plans/{identifier}/cancel")
 def cancel_plan(request: Request, identifier: str, payload: PhaseRequest, user: Cancel) -> dict[str, Any]:
-    return execute(request, user, lambda service, actor, scope: service.cancel(identifier, **payload.model_dump(), actor=actor))
+    return execute(request, user, lambda service, actor, scope: service.cancel(identifier, **payload.model_dump(), actor=actor), payload=payload)
 
 
 @router.post("/plans/{identifier}/handoff")
@@ -185,7 +197,7 @@ def handoff_plan(request: Request, identifier: str, payload: HandoffRequest, use
         prepared = ManufacturingOrderPreparation(replace(material, posting_date=payload.posting_date), source["routing_id"],
             [claim.claim_payload() for claim in payload.claims])
         return service.handoff(identifier, prepared, **payload.model_dump(exclude={"posting_date", "claims"}), actor=actor)
-    return execute(request, user, invoke)
+    return execute(request, user, invoke, payload=payload)
 
 
 @router.get("/plans/{identifier}/requisitions/{requisition_id}")
@@ -211,7 +223,7 @@ def create_requisition(request: Request, identifier: str, payload: PlannedRequis
             lines=tuple(ProcurementOrderLine(**{**line.model_dump(), "unit_price_minor": int(line.unit_price_minor)}) for line in payload.lines))
         return service.create_requisition(identifier, RequisitionPreparation(budget_id=payload.budget_id, order=order, reason=payload.reason),
             requirement_ids=tuple(payload.requirement_ids), expected_digest=payload.expected_digest, command_id=payload.command_id, actor=actor)
-    return execute(request, user, invoke)
+    return execute(request, user, invoke, payload=payload)
 
 
 @router.post("/plans/{identifier}/requisitions/{requisition_id}/quote")
@@ -220,19 +232,19 @@ def quote(request: Request, identifier: str, requisition_id: str, payload: Quota
     quotation = SupplierQuotationPreparation(supplier_code=payload.supplier_code, unit_prices_minor=tuple(int(value) for value in payload.unit_prices_minor),
         valid_until=payload.valid_until, reason=payload.reason)
     return execute(request, user, lambda service, actor, scope: service.act_requisition(identifier, requisition_id, "quote",
-        expected_version=payload.expected_version, command_id=payload.command_id, reason=payload.reason, actor=actor, quotation=quotation))
+        expected_version=payload.expected_version, command_id=payload.command_id, reason=payload.reason, actor=actor, quotation=quotation), payload=payload)
 
 
 @router.post("/plans/{identifier}/requisitions/{requisition_id}/award")
 def award(request: Request, identifier: str, requisition_id: str, payload: AwardRequest,
           user: LocalUser = Depends(required(PERMISSIONS["source-award"]))) -> dict[str, Any]:
-    return execute(request, user, lambda service, actor, scope: service.act_requisition(identifier, requisition_id, "award", **payload.model_dump(), actor=actor))
+    return execute(request, user, lambda service, actor, scope: service.act_requisition(identifier, requisition_id, "award", **payload.model_dump(), actor=actor), payload=payload)
 
 
 def source_endpoint(operation: str) -> Callable[..., dict[str, Any]]:
     def endpoint(request: Request, identifier: str, requisition_id: str, payload: SourcingCommandRequest,
                  user: LocalUser = Depends(required(PERMISSIONS["source-" + operation]))) -> dict[str, Any]:
-        return execute(request, user, lambda service, actor, scope: service.act_requisition(identifier, requisition_id, operation, **payload.model_dump(), actor=actor))
+        return execute(request, user, lambda service, actor, scope: service.act_requisition(identifier, requisition_id, operation, **payload.model_dump(), actor=actor), payload=payload)
     endpoint.__name__ = "supply_source_" + operation.replace("-", "_")
     return endpoint
 
@@ -246,7 +258,7 @@ def prepare_receipt(request: Request, identifier: str, order_id: str, payload: S
                     user: LocalUser = Depends(required(PERMISSIONS["receive-prepare"]))) -> dict[str, Any]:
     return execute(request, user, lambda service, actor, scope: service.procurement_operation(identifier, order_id, "receive-prepare",
         expected_version=payload.expected_version, command_id=payload.command_id, reason=payload.reason, line_id=payload.line_id, actor=actor,
-        quantity_request=PartialQuantityPreparation(**payload.model_dump(exclude={"command_id", "expected_version", "line_id"}))))
+        quantity_request=PartialQuantityPreparation(**payload.model_dump(exclude={"command_id", "expected_version", "line_id"}))), payload=payload)
 
 
 @router.post("/plans/{identifier}/purchases/{order_id}/invoice-match")
@@ -255,19 +267,19 @@ def match_invoice(request: Request, identifier: str, order_id: str, payload: Sup
     return execute(request, user, lambda service, actor, scope: service.procurement_operation(identifier, order_id, "invoice-match",
         expected_version=payload.expected_version, command_id=payload.command_id, reason=payload.reason, actor=actor,
         invoice_request=MultilineInvoicePreparation(**payload.model_dump(exclude={"command_id", "expected_version", "lines"}),
-            lines=tuple(ProcurementLineQuantity(**line.model_dump()) for line in payload.lines))))
+            lines=tuple(ProcurementLineQuantity(**line.model_dump()) for line in payload.lines))), payload=payload)
 
 
 @router.post("/plans/{identifier}/purchases/{order_id}/invoice-post")
 def post_invoice(request: Request, identifier: str, order_id: str, payload: PostInvoiceRequest,
                  user: LocalUser = Depends(required(PERMISSIONS["invoice-post"]))) -> dict[str, Any]:
-    return execute(request, user, lambda service, actor, scope: service.procurement_operation(identifier, order_id, "invoice-post", **payload.model_dump(), actor=actor))
+    return execute(request, user, lambda service, actor, scope: service.procurement_operation(identifier, order_id, "invoice-post", **payload.model_dump(), actor=actor), payload=payload)
 
 
 def purchase_endpoint(operation: str) -> Callable[..., dict[str, Any]]:
     def endpoint(request: Request, identifier: str, order_id: str, payload: SupplyActionRequest,
                  user: LocalUser = Depends(required(PERMISSIONS[operation]))) -> dict[str, Any]:
-        return execute(request, user, lambda service, actor, scope: service.procurement_operation(identifier, order_id, operation, **payload.model_dump(), actor=actor))
+        return execute(request, user, lambda service, actor, scope: service.procurement_operation(identifier, order_id, operation, **payload.model_dump(), actor=actor), payload=payload)
     endpoint.__name__ = "supply_purchase_" + operation.replace("-", "_")
     return endpoint
 

@@ -110,3 +110,16 @@ The helper supplies the protected-table union, sibling-workspace probes and thre
 restore tamper statements for original net quantity, Core guard release and the
 retained terminal handoff command. The common TLS runner and CI registration are
 root-owned; spec collection alone is not native browser or restore acceptance.
+
+Every supply mutation also returns `manufacturing-supply-command-ack-v1` from
+its exact immutable PostgreSQL command receipt inside the caller's business
+transaction. The original command/operation/actor, source digest, historical
+version and native owner/command links remain unchanged on replay. The API seals
+the public projection of that stored response and provides the submitted typed
+model separately. Studio validates both the original native request digest and
+the normalized submitted body, exact subject/scope/current human, requested
+operation/phase and native response membership before clearing a retained
+command. An unqualified ACK retains the command and triggers no success refresh.
+An authoritative later read may legitimately show progress beyond a historical
+replayed ACK. Current denied reads remove displayed source and purchase evidence;
+an unknown command remains retained for the same human's qualified retry.

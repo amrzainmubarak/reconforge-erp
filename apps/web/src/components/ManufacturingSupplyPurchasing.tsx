@@ -9,7 +9,7 @@ import { parseSourcingDetail, type SourcingDetail } from "../procurement-sourcin
 import type { ScopedJsonValue } from "../scoped-command";
 import type { Locale } from "../types";
 
-export function ManufacturingSupplyPurchasing({ locale, source, scope, identity, ready, submit }: { locale: Locale; source: SupplyPlan; scope: FinanceScope; identity: BudgetIdentity; ready: boolean; submit: (path: string, body: Record<string, ScopedJsonValue>) => void }) {
+export function ManufacturingSupplyPurchasing({ locale, source, scope, identity, ready, submit, onReadFailure }: { locale: Locale; source: SupplyPlan; scope: FinanceScope; identity: BudgetIdentity; ready: boolean; submit: (path: string, body: Record<string, ScopedJsonValue>) => void; onReadFailure: (error: unknown) => void }) {
   const auth = useBrowserSession(), t = (en: string, ar: string) => locale === "ar" ? ar : en;
   const money = (value: string) => financeMoney(value, source.monetary_policy.precision);
   const procurementScope: ProcurementScope = { ...scope, organization_code: String(source.organization_code), entity_code: String(source.entity_code), currency_code: String(source.currency_code), organization_name: "", entity_name: "" };
@@ -23,14 +23,19 @@ export function ManufacturingSupplyPurchasing({ locale, source, scope, identity,
   const base = `${supplyRoot}/plans/${source.id}`;
   useEffect(() => {
     if (!auth.session) return; const abort = new AbortController(); const session = auth.session, generation = auth.revision;
-    setReading(true); setFailure(false);
+    setReading(true); setFailure(false); setDetail(null); setPurchase(null); setBudgetVersion(null);
     (async () => {
       const budget = await loadBudgetDetail(session, scope, source.budget_id, abort.signal);
+      if (budget.id !== source.budget_id || budget.currency_code !== source.currency_code
+          || Object.entries(source.monetary_policy).some(([key, value]) => (budget.monetary_policy as unknown as Record<string, unknown>)[key] !== value)) throw new Error("wrong_original_budget");
       let nextDetail: SourcingDetail | null = null, nextPurchase: PartialDetail | null = null;
       if (requisitionId) { nextDetail = await parseSourcingDetail(await supplyRequest(session, scope, `${base}/requisitions/${requisitionId}`, undefined, abort.signal), procurementScope, requisitionId);
-        if (nextDetail.head.order_id) nextPurchase = parsePartialDetail(await supplyRequest(session, scope, `${base}/purchases/${nextDetail.head.order_id}`, undefined, abort.signal), procurementScope); }
+        if (nextDetail.head.order_id) {
+          nextPurchase = parsePartialDetail(await supplyRequest(session, scope, `${base}/purchases/${nextDetail.head.order_id}`, undefined, abort.signal), procurementScope);
+          if (nextPurchase.order.id !== nextDetail.head.order_id || nextPurchase.order.request.currency_code !== source.currency_code) throw new Error("wrong_original_purchase");
+        } }
       if (!abort.signal.aborted && auth.isCurrent(generation)) { setBudgetVersion(budget.row_version); setDetail(nextDetail); setPurchase(nextPurchase); setPrices(nextDetail?.source.request.order.lines.map(row => row.unit_price_minor) ?? []); setLineId(nextPurchase?.lines?.[0]?.id ?? ""); setReading(false); }
-    })().catch(() => { if (!abort.signal.aborted && auth.isCurrent(generation)) { setFailure(true); setReading(false); } });
+    })().catch(caught => { if (!abort.signal.aborted && auth.isCurrent(generation)) { setDetail(null); setPurchase(null); setBudgetVersion(null); setFailure(true); setReading(false); onReadFailure(caught); } });
     return () => abort.abort();
   }, [source.id, source.row_version]);
   const input = (label: string, value: string, change: (next: string) => void, type = "text", required = true) => <label>{label}<input disabled={!usable} required={required} value={value} type={type} maxLength={label === t("Reason", "السبب") ? 500 : 160} onChange={event => change(event.target.value)} /></label>;

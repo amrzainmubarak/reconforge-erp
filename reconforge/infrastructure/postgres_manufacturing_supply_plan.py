@@ -73,6 +73,29 @@ class PostgresManufacturingSupplyPlanRepository:
         self._locked_plan_id: str | None = None
         self._locked_scope: tuple[str, ...] | None = None
 
+    def command_receipt(self, identifier: str, command_id: str, response: Mapping[str, Any], *, actor: PostingActor) -> dict[str, Any]:
+        """Read the exact immutable owner receipt under current caller authority.
+
+        The API calls this inside the same outer business transaction. Historical
+        response/operation/actor/native membership come from the original command,
+        including replay; no current phase or request receipt is fabricated.
+        """
+        source = self._row(identifier, lock=True)
+        retained = self.material._one("""SELECT * FROM reconforge.manufacturing_supply_commands
+            WHERE tenant_id=%s AND workspace_id=%s AND plan_id=%s AND command_id=%s""",
+            (self.tenant_id, source["workspace_id"], identifier, command_id))
+        self._actor(actor, retained["operation"], source, lock=True)
+        if retained["actor_id"] != actor.user_id or dict(response) != retained["response_json"]:
+            fail("The response must be this human's exact immutable owner command.", "manufacturing_supply_command_conflict")
+        self.connection.execute("SELECT reconforge.msp_evidence(%s,%s,%s)", (self.tenant_id, identifier, retained["version"]))
+        return {"schema_version": "manufacturing-supply-command-ack-v1", "command_id": retained["command_id"],
+            "plan_id": identifier, "source_digest": source["source_digest"], "version": retained["version"],
+            "operation": retained["operation"], "actor_id": retained["actor_id"],
+            "scope": {key: source[key] for key in ("workspace_id", "organization_id", "legal_entity_id")},
+            "request_json": retained["request_json"], "request_digest": retained["request_digest"],
+            "native_kind": retained["native_kind"], "native_owner_id": retained["native_owner_id"],
+            "native_command_id": retained["native_command_id"]}
+
     @contextmanager
     def _transaction(self) -> Iterator[None]:
         if self._active:

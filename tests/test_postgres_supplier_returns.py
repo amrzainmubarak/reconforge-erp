@@ -510,6 +510,11 @@ def test_actual_ordered_empty_rollback_and_populated_refusal_keep_original_nativ
             # ownership metadata; restore only the native inverse prerequisites.
             admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE ON reconforge.financial_effect_claim_gates TO {}").format(sql.Identifier(role)))
             admin.execute(sql.SQL("GRANT SELECT ON reconforge.financial_effect_ownership_guards,reconforge.financial_effect_ownership_releases TO {}").format(sql.Identifier(role)))
+            # Empty later migrations recreate the native pool version table.
+            # Its INVOKER lock function needs the original operator's exact
+            # SELECT/INSERT/UPDATE rights; it does not need owner or DELETE.
+            admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE ON reconforge.inventory_quantity_claim_gates TO {}").format(sql.Identifier(role)))
+            assert admin.execute("SELECT has_table_privilege(%s,'reconforge.inventory_quantity_claim_gates','DELETE')", (role,)).fetchone()[0] is False
         assert snapshot(selected) == before
         plan = prepare(selected, purchase)
         retained = snapshot(selected)

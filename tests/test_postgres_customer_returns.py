@@ -99,7 +99,7 @@ def balances(runtime: ReceiptRuntime) -> dict[str, int]:
         return {row["account_code"]: int(row["value"]) for row in rows}
 
 
-def retained_state(runtime: ReceiptRuntime) -> str:
+def retained_rows(runtime: ReceiptRuntime) -> dict[str, list[dict[str, Any]]]:
     from psycopg import sql
 
     with runtime.actor("maker") as (connection, _, _actor):
@@ -111,7 +111,11 @@ def retained_state(runtime: ReceiptRuntime) -> str:
             rows = connection.execute(sql.SQL("SELECT to_jsonb(r) v FROM reconforge.{} r WHERE tenant_id=%s ORDER BY to_jsonb(r)::text")
                 .format(sql.Identifier(table["table_name"])), (runtime.tenant,)).fetchall()
             state[table["table_name"]] = [row["v"] for row in rows]
-        return digest_payload(state)
+        return state
+
+
+def retained_state(runtime: ReceiptRuntime) -> str:
+    return digest_payload(retained_rows(runtime))
 
 
 @pytest.mark.parametrize("paid", [0, 10000, 45000])
@@ -272,7 +276,15 @@ def test_forward_upgrade_retains_native_source_empty_rollback_and_populated_cred
     database = next(delegated)
     try:
         runtime, source, _invoice = create_runtime(database, 0)
-        before = retained_state(runtime)
+        before_rows = retained_rows(runtime)
+        coordination_table = "inventory_quantity_claim_gates"
+        original_coordination = before_rows[coordination_table]
+        assert {row["pool_kind"] for row in original_coordination} == {"FIFO", "Location"}
+        assert len(original_coordination) == 2
+        assert all(type(row["version"]) is int and row["version"] > 0 for row in original_coordination)
+        for directory in ("inventory_quantity_source_guards", "inventory_quantity_source_releases"):
+            assert before_rows[directory] == []
+        original_history = {name: rows for name, rows in before_rows.items() if name != coordination_table}
         root = Path(__file__).resolve().parents[1]
         environment = {**os.environ, "RECONFORGE_POSTGRES_DSN": runtime.admin_dsn}
         body_query = "SELECT oid::regprocedure::text,pg_get_functiondef(oid) FROM pg_proc WHERE pronamespace='reconforge'::regnamespace AND proname IN ('stock_sales_close','stock_sales_native_close','stock_commerce_public','collection_close','collection_invoice_close','ops_close_plan','inventory_valuation_reversal_guard') ORDER BY proname"
@@ -301,8 +313,27 @@ def test_forward_upgrade_retains_native_source_empty_rollback_and_populated_cred
             # Restoring inverse prerequisites gives no personnel/module reads.
             admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE ON reconforge.financial_effect_claim_gates TO {}").format(sql.Identifier(app_user)))
             admin.execute(sql.SQL("GRANT SELECT ON reconforge.financial_effect_ownership_guards,reconforge.financial_effect_ownership_releases TO {}").format(sql.Identifier(app_user)))
-        assert retained_state(runtime) == before
+            # The empty MSP migration recreates native coordination tables.
+            # Restore their operator ACLs explicitly, without source-owner DML.
+            admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE ON reconforge.inventory_quantity_claim_gates TO {}").format(sql.Identifier(app_user)))
+            admin.execute(sql.SQL("GRANT SELECT ON reconforge.inventory_quantity_source_guards,reconforge.inventory_quantity_source_releases TO {}").format(sql.Identifier(app_user)))
+            assert admin.execute("SELECT has_table_privilege(%s,'reconforge.inventory_quantity_claim_gates','DELETE')", (app_user,)).fetchone()[0] is False
+            for directory in ("inventory_quantity_source_guards", "inventory_quantity_source_releases"):
+                assert admin.execute("SELECT has_table_privilege(%s,%s,'INSERT,UPDATE,DELETE')", (app_user, "reconforge." + directory)).fetchone()[0] is False
+        after_rows = retained_rows(runtime)
+        assert after_rows[coordination_table] == []
+        # All original financial/FIFO/AR/GL/audit/outbox rows and the two empty
+        # source directories stay exact. Only discarded runtime gate versions
+        # are reset by the explicitly empty downgrade and upgrade.
+        assert {name: rows for name, rows in after_rows.items() if name != coordination_table} == original_history
         plan = prepare_return(runtime, source)
+        reinitialized = retained_rows(runtime)[coordination_table]
+        assert len(reinitialized) == len(original_coordination)
+        # The original SQL JSON ordering includes the version, whose deliberate
+        # reset can change row order. Compare every identity field canonically.
+        assert sorted([{key: value for key, value in row.items() if key != "version"} for row in reinitialized], key=digest_payload) == sorted([
+            {key: value for key, value in row.items() if key != "version"} for row in original_coordination], key=digest_payload)
+        assert all(type(row["version"]) is int and row["version"] > 0 for row in reinitialized)
         populated = retained_state(runtime)
         refused = subprocess.run([sys.executable, "-m", "alembic", "downgrade", "0125_pg_landed_cost_cancellation"],
             cwd=root, env=environment, capture_output=True, text=True, timeout=180, check=False)

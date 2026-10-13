@@ -40,8 +40,18 @@ class PostgresProjectTimeBillingRepository:
         self.policy = FinancePolicyStore(connection, tenant_id=tenant_id)
         self._participant: _ProjectBillingPostingParticipant | None = None
 
+    def _authorization_view(self, source: Mapping[str, Any]) -> dict[str, Any]:
+        """Project money for policy evaluation without changing sealed source JSON."""
+        value = dict(source.get("payload", source.get("source_json", source)))
+        if "hourly_price_minor" in value:
+            policy = value.get("monetary_policy")
+            if not isinstance(policy, Mapping) or type(policy.get("currency_precision")) is not int:
+                fail("A price authorization requires its explicit captured currency policy.")
+            value.update(amount_minor=value["hourly_price_minor"], currency_precision=policy["currency_precision"])
+        return value
+
     def _authorize(self, actor: PostingActor, action: str, scope: Mapping[str, Any], *, mutation: bool = True) -> None:
-        scope = scope.get("payload", scope)
+        scope = self._authorization_view(scope)
         self.owner._actor(actor, "project_time_billing." + action, scope, mutation=mutation)
         if action == "manage":
             self.owner._actor(actor, "receivables.read", scope, mutation=False)
@@ -53,6 +63,24 @@ class PostgresProjectTimeBillingRepository:
             if getattr(exc, "sqlstate", None) == "23514":
                 fail("Current persisted source permission and hierarchy grants are required.", "project_billing_actor_denied")
             raise
+
+    def _financial_read(self, actor: PostingActor, source: Mapping[str, Any]) -> None:
+        scope = self._authorization_view(source)
+        self._authorize(actor, "read", scope, mutation=False)
+        for permission in ("finance_core.read", "people_project_payroll.read", "receivables.read"):
+            self.owner._actor(actor, permission, scope, mutation=False)
+        if scope.get("schema_version") == "project-invoice-v1":
+            # A short invoice can expose an original hourly price above its own
+            # amount. Authorize that retained price with its captured policy,
+            # including when it appears inside sealed calculation.sources.
+            price_ids = scope["calculation"]["price_ids"]
+            prices = records(self.connection.execute(
+                "SELECT * FROM reconforge.pb_prices WHERE tenant_id=%s AND id=ANY(%s) ORDER BY id FOR SHARE",
+                (self.tenant_id, price_ids)))
+            if len(prices) != len(price_ids) or {price["id"] for price in prices} != set(price_ids):
+                fail("Every retained invoice price requires its original scoped source.")
+            for price in prices:
+                self._financial_read(actor, price)
 
     def _financial(self, actor: PostingActor, action: str, source: Mapping[str, Any]) -> None:
         self._authorize(actor, action, source)
@@ -122,10 +150,13 @@ class PostgresProjectTimeBillingRepository:
     def register_price(self, request: ProjectPriceAgreement, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
         args = request.payload()
         with self.owner._transaction():
-            self._authorize(actor, "manage", args)
+            # Initial permission/hierarchy admission precedes native customer
+            # lookup; exact hourly admission follows captured currency policy.
+            self._authorize(actor, "manage", {key: args[key] for key in ("workspace_id", "organization_id", "legal_entity_id")})
             self.policy.lock_binding(request.scope.workspace_id)
             digest, replay = self._command(args, "manage", command_id, actor, args)
             if replay is not None:
+                self._authorize(actor, "manage", replay)
                 return replay
             project = records(self.connection.execute("SELECT * FROM reconforge.hc_projects WHERE tenant_id=%s AND id=%s FOR SHARE",
                 (self.tenant_id, request.project_id)))
@@ -138,6 +169,7 @@ class PostgresProjectTimeBillingRepository:
                     request.scope.organization_id, request.scope.legal_entity_id, request.currency_code) or not currency or currency[0]["currency_code"] != request.currency_code:
                 fail("First project billing contract requires the customer's original functional currency and entity.")
             policy = self.ar._capture_policy(request.scope.workspace_id, request.currency_code, actor.username, customer)
+            self._authorize(actor, "manage", {**args, "monetary_policy": {"currency_code": request.currency_code, **policy.metadata()}})
             identifier = "PBP-" + uuid4().hex
             payload = {"id": identifier, "tenant_id": self.tenant_id, **args, "preparer_id": actor.user_id,
                 "dimension_id": project[0]["dimension_id"], "value_id": project[0]["value_id"],
@@ -156,6 +188,10 @@ class PostgresProjectTimeBillingRepository:
     def approve_price(self, price_id: str, *, expected_digest: str, command_id: str, actor: PostingActor) -> dict[str, Any]:
         request = {"price_id": price_id, "expected_digest": expected_digest}
         with self.owner._transaction():
+            # Match the existing financial commands: hold persisted authority
+            # before source locks, then recheck the locked original money view.
+            preview = self._row(price_id, price=True)
+            self._authorize(actor, "approve_price", preview)
             source = self._row(price_id, price=True, lock=True)
             self._authorize(actor, "approve_price", source)
             digest, replay = self._command(source, "approve_price", command_id, actor, request)
@@ -383,8 +419,10 @@ class PostgresProjectTimeBillingRepository:
 
     def get(self, plan_id: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():
+            preview = self._row(plan_id)
+            self._authorize(actor, "read", preview, mutation=False)
             source = self._row(plan_id, share=True)
-            self._authorize(actor, "read", source, mutation=False)
+            self._financial_read(actor, source)
             return self._view(source)
 
     def _original_rows(self, source: Mapping[str, Any], plans: list[dict[str, Any]]) -> dict[str, Any]:
@@ -447,13 +485,14 @@ class PostgresProjectTimeBillingRepository:
 
     def evidence(self, invoice_id: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():
+            preview = self._row(invoice_id)
+            self._authorize(actor, "read", preview, mutation=False)
             source = self._row(invoice_id, share=True)
-            self._authorize(actor, "read", source, mutation=False)
-            self.owner._actor(actor, "finance_core.read", source["payload"], mutation=False)
-            self.owner._actor(actor, "people_project_payroll.read", source["payload"], mutation=False)
-            self.owner._actor(actor, "receivables.read", source["payload"], mutation=False)
+            self._financial_read(actor, source)
             self.connection.execute("SELECT reconforge.pb_close(%s,%s)", (self.tenant_id, invoice_id))
-            plans = [source, *records(self.connection.execute("SELECT * FROM reconforge.pb_plans WHERE tenant_id=%s AND parent_id=%s ORDER BY id", (self.tenant_id, invoice_id)))]
+            plans = [source, *records(self.connection.execute("SELECT * FROM reconforge.pb_plans WHERE tenant_id=%s AND parent_id=%s ORDER BY id FOR SHARE", (self.tenant_id, invoice_id)))]
+            for collection in plans[1:]:
+                self._financial_read(actor, collection)
             return {"schema_version": "project-billing-evidence-v1", "invoice": self._view(source),
                 "qualified_scope": {"tenant_id": self.tenant_id, **{key: source[key] for key in ("workspace_id", "organization_id", "legal_entity_id")}},
                 "registry_snapshot": records(self.connection.execute("SELECT snapshot_json FROM reconforge.currency_registry_snapshots WHERE tenant_id=%s AND registry_digest=%s",
@@ -474,11 +513,13 @@ class PostgresProjectTimeBillingRepository:
         integer(limit, "Page size", minimum=1, maximum=100)
         with self.owner._transaction():
             self._authorize(actor, "read", asdict(scope), mutation=False)
-            plans = records(self.connection.execute("SELECT * FROM reconforge.pb_plans WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s AND id>%s ORDER BY id LIMIT %s",
+            plans = records(self.connection.execute("SELECT * FROM reconforge.pb_plans WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s AND id>%s ORDER BY id LIMIT %s FOR SHARE",
                 (self.tenant_id, scope.workspace_id, scope.organization_id, scope.legal_entity_id, after, limit + 1)))
-            prices = records(self.connection.execute("SELECT * FROM reconforge.pb_prices WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s AND id>%s ORDER BY id LIMIT %s",
+            prices = records(self.connection.execute("SELECT * FROM reconforge.pb_prices WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s AND id>%s ORDER BY id LIMIT %s FOR SHARE",
                 (self.tenant_id, scope.workspace_id, scope.organization_id, scope.legal_entity_id, after, limit + 1)))
             for source in plans[:limit]:
-                self._authorize(actor, "read", source["payload"], mutation=False)
+                self._financial_read(actor, source)
+            for source in prices[:limit]:
+                self._financial_read(actor, source)
             return {"items": [self._view(row) for row in plans[:limit]], "prices": [self._view(row, price=True) for row in prices[:limit]],
                 "has_more": len(plans) > limit, "after": plans[limit-1]["id"] if len(plans) > limit else ""}

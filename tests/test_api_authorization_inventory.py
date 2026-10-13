@@ -21,8 +21,8 @@ ENTERPRISE_M1_PREFIXES = (
     "/api/v1/manufacturing-execution-v2/", "/api/v1/intercompany-fx/", "/api/v1/people-project-payroll/",
 )
 EXPECTED_ENTERPRISE_M1_ROUTE_COUNT = 45
-ENTERPRISE_M2_PREFIXES = ("/api/v1/accrual-deferral/",)
-EXPECTED_ENTERPRISE_M2_ROUTE_COUNT = 13
+ENTERPRISE_M2_PREFIXES = ("/api/v1/accrual-deferral/", "/api/v1/project-time-billing/")
+EXPECTED_ENTERPRISE_M2_ROUTE_COUNT = 23
 WAVE5_PREFIXES = ("/api/v1/manufacturing-execution/", "/api/v1/intercompany-operations/", "/api/v1/procurement-sourcing/")
 WAVE4_PREFIXES = (
     "/api/v1/customer-returns/", "/api/v1/procurement-commitments/",
@@ -61,6 +61,7 @@ HANDLER_BOUNDARY_HELPERS = {
     "intercompany_operations.py": frozenset({"authority", "execute"}),
     "intercompany_fx.py": frozenset({"authority", "execute"}),
     "accrual_deferral.py": frozenset({"authority", "execute"}),
+    "project_time_billing.py": frozenset({"execute", "phase"}),
     # Reviewed HC execution chooses only the ordinary scoped GL transaction or
     # the separate role-authenticated personnel transaction; HTTP cannot select it.
     "people_project_payroll.py": frozenset({"execute"}),
@@ -298,6 +299,9 @@ def test_mutating_route_modules_declare_a_server_boundary_or_explicit_protocol_c
     ("POST", "/api/v1/accrual-deferral/sources/{source_id}/reversals", "finance_core.reverse"),
     ("POST", "/api/v1/accrual-deferral/plans/{plan_id}/post", "accrual_deferral.post"),
     ("GET", "/api/v1/accrual-deferral/plans/{plan_id}/evidence/export", "finance_core.read"),
+    ("POST", "/api/v1/project-time-billing/plans/{plan_id}/post", "receivables.approve"),
+    ("GET", "/api/v1/project-time-billing/plans/{plan_id}", "people_project_payroll.read"),
+    ("GET", "/api/v1/project-time-billing/catalog", "receivables.read"),
 ])
 def test_enterprise_sensitive_contract_refuses_adjacent_authority(
     tmp_path: Path, method: str, path: str, required: str,

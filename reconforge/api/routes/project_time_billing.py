@@ -152,7 +152,7 @@ def cancel(plan_id: str, request: Request, payload: PhaseRequest, user: Prepare)
 
 
 @router.get("/plans/{plan_id}")
-def get(plan_id: str, request: Request, user: Read) -> Any:
+def get(plan_id: str, request: Request, user: Evidence) -> Any:
     return execute(request, user, "read", lambda repo, actor, _: {"plan": repo.get(plan_id, actor=actor)})
 
 
@@ -162,5 +162,5 @@ def evidence(invoice_id: str, request: Request, user: Evidence) -> Any:
 
 
 @router.get("/catalog")
-def catalog(request: Request, user: Read, after: str = Query(default="", max_length=160), limit: int = Query(default=25, ge=1, le=100)) -> Any:
+def catalog(request: Request, user: Evidence, after: str = Query(default="", max_length=160), limit: int = Query(default=25, ge=1, le=100)) -> Any:
     return execute(request, user, "read", lambda repo, actor, scope: repo.catalog(people_scope(scope), after=after, limit=limit, actor=actor))

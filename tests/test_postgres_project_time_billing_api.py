@@ -15,7 +15,7 @@ def test_registered_http_price_time_native_ar_partial_final_cash_and_original_ev
     times = approved_time(billing)
     # Billing uses the ordinary finance factory; private wages are not queried.
     app = application(billing, tmp_path, private=False)
-    assert any(getattr(route, "path", "") == ROOT + "/invoices" for route in app.routes)
+    assert ROOT + "/invoices" in app.openapi()["paths"]
     with TestClient(app, base_url="https://testserver") as client:
         headers = sessions(client, billing)
         projects = client.get("/api/v1/people-project-payroll/catalog/projects?limit=100", headers=headers["maker"])

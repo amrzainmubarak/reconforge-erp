@@ -76,7 +76,7 @@ def require_browser_acceptance(stats: object) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-native-restore", action="store_true")
-    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax", "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing"), default="expansion")
+    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax", "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing"), default="expansion")
     parser.add_argument("--runtime-root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "output/erp-expansion-20261009/browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
@@ -199,6 +199,39 @@ def main() -> int:
         workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + PEOPLE_PROJECT_PAYROLL_WORKSPACE_PROBE_TABLES))
         tamper_statements = PEOPLE_PROJECT_PAYROLL_TAMPER
         tamper_actor = people_project_payroll_restore_tamper_actor
+        personnel_dsn = personnel_browser_dsn
+    elif args.scenario == "accrual-deferral":
+        from tests.accrual_deferral_browser import (
+            ACCRUAL_DEFERRAL_BROWSER_TABLES,
+            ACCRUAL_DEFERRAL_RESTORE_TAMPER,
+            ACCRUAL_DEFERRAL_WORKSPACE_PROBE_TABLES,
+            accrual_deferral_restore_tamper_actor,
+            seed_accrual_deferral_browser,
+            verify_accrual_deferral_browser,
+        )
+        seed, verify_cycles = seed_accrual_deferral_browser, verify_accrual_deferral_browser
+        configuration = "apps/web/live/accrual-deferral.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + ACCRUAL_DEFERRAL_BROWSER_TABLES))
+        workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + ACCRUAL_DEFERRAL_WORKSPACE_PROBE_TABLES))
+        tamper_statements = ACCRUAL_DEFERRAL_RESTORE_TAMPER
+        tamper_actor = accrual_deferral_restore_tamper_actor
+    elif args.scenario == "project-time-billing":
+        from tests.project_time_billing_browser import (
+            PROJECT_TIME_BILLING_TABLES,
+            PROJECT_TIME_BILLING_TAMPER,
+            personnel_browser_dsn,
+            project_time_billing_restore_tamper_actor,
+            seed_project_time_billing_browser,
+            verify_project_time_billing_browser,
+        )
+        seed, verify_cycles = seed_project_time_billing_browser, verify_project_time_billing_browser
+        configuration = "apps/web/live/project-time-billing.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + PROJECT_TIME_BILLING_TABLES))
+        # The financial/time input relations require the same workspace probe
+        # as the owned billing relations; only the tenant audit chain is global.
+        workspace_probe_tables = tuple(name for name in extension_tables if name != "domain_audit_events")
+        tamper_statements = PROJECT_TIME_BILLING_TAMPER
+        tamper_actor = project_time_billing_restore_tamper_actor
         personnel_dsn = personnel_browser_dsn
     elif args.scenario == "procurement-sourcing":
         from tests.procurement_sourcing_browser import (
@@ -349,7 +382,7 @@ def main() -> int:
         if not origin.is_relative_to(runtime_root):
             raise ValueError("Expansion module origin is outside the integrated runtime checkout.")
         module_origins[module_name] = {"path": str(origin), "sha256": hashlib.sha256(origin.read_bytes()).hexdigest()}
-    if args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing"}:
+    if args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing"}:
         owner_module = "reconforge.infrastructure.postgres_" + args.scenario.replace("-", "_")
         for module_name in dict.fromkeys((owner_module, seed.__module__, verify_cycles.__module__)):
             origin = Path(importlib.import_module(module_name).__file__).resolve()

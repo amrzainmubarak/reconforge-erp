@@ -34,6 +34,8 @@ const pageLabels: Record<StudioPage, MessageKey> = {
   manufacturingExecutionV2: "manufacturingExecutionV2",
   intercompanyFx: "intercompanyFx",
   peopleProjectPayroll: "peopleProjectPayroll",
+  projectTimeBilling: "projectTimeBilling",
+  accrualDeferral: "accrualDeferral",
   procurementSourcing: "procurementSourcing",
   exceptions: "exceptions",
   evidence: "evidence",

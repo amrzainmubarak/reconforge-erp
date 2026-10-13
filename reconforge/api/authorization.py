@@ -389,6 +389,26 @@ _PEOPLE_PHASE_CONTRACTS = {
     "read": frozenset({"people_project_payroll.read"}),
     "read_sensitive": frozenset({"people_project_payroll.read", "people_project_payroll.read_sensitive", "finance_core.read"}),
 }
+_PROJECT_BILLING_PHASE_CONTRACTS = {
+    "read": frozenset({"project_time_billing.read"}),
+    "evidence": frozenset({"project_time_billing.read", "finance_core.read", "people_project_payroll.read", "receivables.read"}),
+    "manage": frozenset({"project_time_billing.manage", "receivables.read"}),
+    "approve_price": frozenset({"project_time_billing.approve_price"}),
+    "prepare": frozenset({"project_time_billing.prepare", "finance_core.manage", "receivables.manage", "people_project_payroll.read"}),
+    "collect": frozenset({"project_time_billing.collect", "finance_core.manage", "receivables.receive"}),
+    "review": frozenset({"project_time_billing.review", "finance_core.validate", "receivables.manage"}),
+    "post": frozenset({"project_time_billing.post", "finance_core.post", "receivables.approve", "receivables.receive"}),
+}
+for _method, _path, _phase in (
+    ("POST", "/prices", "manage"), ("POST", "/prices/{price_id}/approve", "approve_price"),
+    ("POST", "/invoices", "prepare"), ("POST", "/invoices/{invoice_id}/collections", "collect"),
+    ("POST", "/plans/{plan_id}/review", "review"), ("POST", "/plans/{plan_id}/post", "post"),
+    ("POST", "/plans/{plan_id}/cancel", "prepare"), ("GET", "/plans/{plan_id}", "evidence"),
+    ("GET", "/invoices/{invoice_id}/evidence", "evidence"), ("GET", "/catalog", "evidence"),
+):
+    _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/project-time-billing" + _path)] = (
+        "all", tuple(sorted(_PROJECT_BILLING_PHASE_CONTRACTS[_phase])))
+
 for _method, _path, _phase in (
     ("POST", "/employees", "personnel"), ("POST", "/employees/{employee_id}/employment", "personnel"),
     ("POST", "/projects", "manage"), ("POST", "/times", "manage"), ("POST", "/times/{time_id}/approve", "approve_time"),

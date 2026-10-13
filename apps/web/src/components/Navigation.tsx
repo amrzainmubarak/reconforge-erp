@@ -56,6 +56,8 @@ export const navigationGroups: NavigationGroup[] = [
       { key: "manufacturing-execution-v2", label: "manufacturingExecutionV2", icon: Factory, page: "manufacturingExecutionV2" },
       { key: "intercompany-fx", label: "intercompanyFx", icon: Landmark, page: "intercompanyFx" },
       { key: "people-project-payroll", label: "peopleProjectPayroll", icon: FileChartColumn, page: "peopleProjectPayroll" },
+      { key: "project-time-billing", label: "projectTimeBilling", icon: FileChartColumn, page: "projectTimeBilling" },
+      { key: "accrual-deferral", label: "accrualDeferral", icon: FileChartColumn, page: "accrualDeferral" },
       { key: "procurement-sourcing", label: "procurementSourcing", icon: Boxes, page: "procurementSourcing" },
       { key: "customer-returns", label: "customerReturns", icon: Landmark, page: "customerReturns" },
       { key: "operational-fx-tax", label: "operationalFxTax", icon: Landmark, page: "operationalFxTax" },

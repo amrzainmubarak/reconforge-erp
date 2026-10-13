@@ -91,6 +91,7 @@ from reconforge.api.routes import (
     procurement_partial,
     procurement_sourcing,
     professional_invoice_payment,
+    project_time_billing,
     receivables,
     reconciliation,
     retail_settlement,
@@ -469,6 +470,7 @@ def create_api_app(
     app.include_router(manufacturing_execution_v2.router, prefix="/api/v1")
     app.include_router(procurement_sourcing.router, prefix="/api/v1")
     app.include_router(people_project_payroll.router, prefix="/api/v1")
+    app.include_router(project_time_billing.router, prefix="/api/v1")
     app.include_router(procurement_commitments.router, prefix="/api/v1")
     app.include_router(supplier_returns.router, prefix="/api/v1")
     app.include_router(operational_fx_tax.router, prefix="/api/v1")
@@ -542,6 +544,7 @@ def create_api_app(
         manufacturing_execution_v2.router,
         procurement_sourcing.router,
         people_project_payroll.router,
+        project_time_billing.router,
         procurement_commitments.router,
         supplier_returns.router,
         operational_fx_tax.router,

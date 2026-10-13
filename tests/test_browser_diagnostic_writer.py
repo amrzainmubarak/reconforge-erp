@@ -22,6 +22,31 @@ CSRF = "synthetic-csrf-b29-private"
 PASSWORD = "synthetic-pass-c31-private"
 
 
+def test_original_oracle_publication_preserves_exact_financial_bytes(tmp_path: Path) -> None:
+    private, output = tmp_path / "private", tmp_path / "public"
+    source = private / "original-browser-download-verification"
+    source.mkdir(parents=True)
+    output.mkdir()
+    raw = b'{"minor":9000000000000000000,"currency":"KWD"}\n'
+    (source / "1-I.json").write_bytes(raw)
+    (source / "custody.json").write_bytes(b'{"originals_unchanged":true}\n')
+    result = writer.publish_original_oracle_custody(private, output)
+    assert result["financial_bytes_transformed"] is False
+    assert (output / "original-browser-download-verification/1-I.json").read_bytes() == raw
+    assert (source / "1-I.json").read_bytes() == raw
+
+
+def test_original_oracle_publication_rejects_unclassified_private_member_before_copy(tmp_path: Path) -> None:
+    private, output = tmp_path / "private", tmp_path / "public"
+    source = private / "original-browser-download-verification"
+    source.mkdir(parents=True)
+    output.mkdir()
+    (source / "trace.zip").write_bytes(b"private network container")
+    with pytest.raises(ValueError, match="unexpected member"):
+        writer.publish_original_oracle_custody(private, output)
+    assert not (output / "original-browser-download-verification").exists()
+
+
 def inputs(tmp_path: Path, *, unexpected: int = 0) -> tuple[Path, Path, dict[str, bytes], dict[str, Any]]:
     output = tmp_path / "enterprise-browser-finance"
     output.mkdir()

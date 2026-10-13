@@ -21,7 +21,7 @@ HELPERS = (
     "manufacturing_execution_browser", "intercompany_operations_browser_seed", "procurement_sourcing_browser",
     "manufacturing_execution_v2_browser", "intercompany_fx_browser_seed", "people_project_payroll_browser",
     "accrual_deferral_browser", "project_time_billing_browser",
-    "manufacturing_supply_browser",
+    "manufacturing_supply_browser", "browser_diagnostic_redaction", "original_browser_download_verification",
 )
 DIAGNOSTIC_HELPERS = (
     ".github/scripts/benchmark_wave5_profile_diagnostics.py",
@@ -511,6 +511,9 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/test_project_source_close_oracle.py",
         "tests/browser_diagnostic_redaction.py",
         "tests/test_browser_diagnostic_redaction.py",
+        "tests/test_browser_diagnostic_writer.py",
+        "tests/original_browser_download_verification.py",
+        "tests/test_original_browser_download_verification.py",
         "tests/fixtures/intercompany-group-diagnostic-native-v1.json",
         "docs/modules/intercompany-group-diagnostic.yaml",
         "apps/web/src/components/GroupDiagnosticPage.tsx",

@@ -39,6 +39,7 @@ from tests.erp_expansion_browser_restore import (  # noqa: E402
     verify_expansion_native_restore,
 )
 from tests.erp_expansion_browser_seed import seed_expansion_browser  # noqa: E402
+from tests.original_browser_download_verification import verify_original_browser_downloads  # noqa: E402
 
 IMAGE = "postgres:17.11-alpine@sha256:aa90e97ee862e558111d34cfb8b2c4bec768c2b039fb791341686928560263b3"
 PUBLIC_ORIGINAL_JSON = re.compile(
@@ -272,6 +273,29 @@ def require_browser_acceptance(stats: object) -> None:
     for name, required in (("expected", 1), ("skipped", 0), ("unexpected", 0), ("flaky", 0)):
         if type(stats.get(name)) is not int or stats[name] != required:
             raise RuntimeError(f"Required browser outcome count refused: {name}")
+
+
+def publish_original_oracle_custody(private: Path, output: Path) -> dict[str, Any]:
+    """Keep isolated financial verifier bytes distinct from browser diagnostics."""
+    source = private / "original-browser-download-verification"
+    admitted = re.compile(r"(?:custody\.json|[1-2]-(?:I|IO)(?:(?:\.command|\.execution)?\.json|\.(?:stdout|stderr)\.log))")
+    if source.is_symlink() or not source.is_dir() or not source.resolve().is_relative_to(private.resolve()):
+        raise ValueError("Original oracle custody is outside its owned private directory")
+    originals = sorted(source.iterdir())
+    if not originals or len(originals) > 25 or any(not p.is_file() or p.is_symlink() or not admitted.fullmatch(p.name) for p in originals):
+        raise ValueError("Original oracle custody has an unexpected member")
+    target = output / "original-browser-download-verification"
+    target.mkdir(exist_ok=False)
+    members = []
+    for original in originals:
+        identity = _file_identity(original)
+        destination = target / original.name
+        with original.open("rb") as reader, destination.open("xb") as writer:
+            shutil.copyfileobj(reader, writer, length=65_536)
+        if _file_identity(original) != identity or _file_identity(destination) != identity:
+            raise ValueError("Original oracle custody changed during byte-preserving publication")
+        members.append({"name": original.name, **identity})
+    return {"financial_bytes_transformed": False, "members": members}
 
 
 def main() -> int:
@@ -779,7 +803,12 @@ def main() -> int:
             report["browser_counts"] = json.loads((private_diagnostics / "playwright.json").read_text(encoding="utf-8"))["stats"]
         if browser.returncode == 0:
             require_browser_acceptance(report.get("browser_counts"))
-            report["persisted_effects"] = verify_cycles(runtime)
+            persisted_effects = verify_cycles(runtime)
+            report["persisted_effects"] = persisted_effects
+            if args.scenario in {"intercompany-source-cashflow", "intercompany-group-diagnostic", "project-source-reconciliation"}:
+                report["downloaded_original_verification"] = verify_original_browser_downloads(
+                    private_diagnostics, args.scenario, persisted_effects)
+                report["original_oracle_publication"] = publish_original_oracle_custody(private_diagnostics, output)
             if args.verify_native_restore:
                 report["native_restore"] = verify_expansion_native_restore(runtime, container,
                     verify_cycles=verify_cycles, extension_tables=extension_tables, tamper_statements=tamper_statements,

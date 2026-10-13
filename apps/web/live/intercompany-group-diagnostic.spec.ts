@@ -9,6 +9,7 @@ test("actual selected original group diagnostic unchanged bytes Arabic mobile an
   const base = process.env.RECONFORGE_ERP_LIVE_URL, tenant = process.env.RECONFORGE_ERP_TENANT, password = process.env.RECONFORGE_ERP_PASSWORD, artifacts = process.env.RECONFORGE_ERP_BROWSER_ARTIFACTS;
   expect(base && tenant && password && artifacts, "Owned synthetic HTTPS fixture must be supplied").toBeTruthy();
   const mutations: string[] = [];
+  const captureReads: { endpoint: string; source_id: string; status: number }[] = [];
   page.on("request", request => { if (request.url().includes("/api/v1/intercompany-") && request.method() !== "GET") mutations.push(request.method() + " " + new URL(request.url()).pathname); });
   await page.goto(`${base}/intercompany-group-diagnostic`);
   await expect(page.getByRole("heading", { name: "Selected-source group reporting diagnostic", exact: true })).toBeVisible();
@@ -24,7 +25,19 @@ test("actual selected original group diagnostic unchanged bytes Arabic mobile an
     await selected.selectOption(id!);
     const opening = page.getByLabel("I explicitly select the known zero opening for this complete source membership.", { exact: true });
     await expect(opening).not.toBeChecked(); await expect(page.getByRole("button", { name: "Capture and add original source", exact: true })).toBeDisabled();
-    await opening.check(); await page.getByRole("button", { name: "Capture and add original source", exact: true }).click();
+    await opening.check();
+    // Capture includes all original native phase proofs and completes only
+    // after this exact source's final current-authorized Cashflow body. Keep
+    // the existing 15s action budget and 5s verified-heading assertion.
+    const captured = page.waitForResponse(response => new URL(response.url()).pathname === `/api/v1/intercompany-source-cashflow/sources/${id}` && response.request().method() === "GET", { timeout: 15_000 });
+    await page.getByRole("button", { name: "Capture and add original source", exact: true }).click();
+    const response = await captured;
+    captureReads.push({ endpoint: new URL(response.url()).pathname, source_id: id!, status: response.status() });
+    await writeFile(join(artifacts!, "group-diagnostic-source-capture-reads.json"), JSON.stringify(captureReads));
+    expect(response.status()).toBe(200);
+    const currentCash = await response.json();
+    expect(currentCash.qualified_scope.tenant_id).toBe(tenant); expect(currentCash.cashflow.source_id).toBe(id);
+    expect(currentCash.cashflow.opening_minor).toBe("0"); expect(currentCash.cashflow.elimination_plan_id).toMatch(/^IC2E-[0-9a-f]{32}$/);
     await expect(page.getByRole("heading", { name: `Selected original sources · ${index + 1}/16`, exact: true })).toBeVisible();
   }
   const viewed = page.waitForResponse(response => new URL(response.url()).pathname === "/api/v1/intercompany-group-diagnostic/report");

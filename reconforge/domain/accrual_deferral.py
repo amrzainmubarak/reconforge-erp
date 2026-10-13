@@ -23,6 +23,8 @@ ALLOCATION_POLICY = "native-hamilton-stable-id-v1"
 MAX_MINOR = 9_000_000_000_000_000_000
 MAX_TRANCHES = 36
 MAX_DIMENSIONS = 8
+RESERVED_ORIGINALS = ("IC1-", "IC2-", "IC2S-", "IC2R-", "IC2E-", "FX1-", "ME1-", "ME1C-", "ME2-", "ME2C-", "HC1-", "HC1P-",
+                      "OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-", "AD1-", "AD1R-", "PB1-", "PB1C-")
 SourceMode = Literal["new_prepaid_voucher", "attach_paid_expense", "attach_prepaid_voucher", "expense_accrual"]
 Operation = Literal["source", "release", "accrue", "reverse"]
 MODES = frozenset(("new_prepaid_voucher", "attach_paid_expense", "attach_prepaid_voucher", "expense_accrual"))
@@ -189,6 +191,8 @@ def attach_original(request: Mapping[str, Any], effect: Mapping[str, Any],
     snapshot = effect["snapshot"]
     digest = validation_digest(snapshot)
     entry = snapshot["entry"]
+    if any(str(entry[field]).upper().startswith(RESERVED_ORIGINALS) for field in ("id", "entry_number")):
+        fail("An operating source voucher must stay with its original source owner.")
     if (effect["id"] != request["original_effect_id"] or effect["source_kind"] != "Manual"
             or effect.get("reverses_effect_id") is not None or digest != effect["validation_digest"]
             or entry["source_type"] != "Manual" or entry["reverses_posting_id"] is not None

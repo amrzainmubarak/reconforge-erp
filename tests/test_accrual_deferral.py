@@ -131,6 +131,22 @@ def test_attachment_refuses_changed_or_ineligible_original_paid_voucher(mutation
         attach_original(request, effect, review, roles, context)
 
 
+@pytest.mark.parametrize("prefix", ["PB1-", "pb1-", "PB1C-", "pb1c-"])
+@pytest.mark.parametrize("field", ["id", "entry_number"])
+def test_rehashed_operating_billing_original_stays_with_its_source_owner(prefix: str, field: str) -> None:
+    _, context = planned_source()
+    request = preparation("attach_prepaid_voucher").payload()
+    effect, review, roles = paid_original(request)
+    effect["snapshot"]["entry"][field] = prefix + "a" * 32
+    review[field] = effect["snapshot"]["entry"][field]
+    if field == "id":
+        effect["entry_id"] = review["id"]
+    effect["validation_digest"] = validation_digest(effect["snapshot"])
+    review["validation_digest"] = effect["validation_digest"]
+    with pytest.raises(FinancePostingError, match="original source owner"):
+        attach_original(request, effect, review, roles, context)
+
+
 def test_functional_expense_accrual_has_no_new_cash_voucher_and_retains_next_period_exact_inverse() -> None:
     source, context = planned_source()
     request = preparation("expense_accrual").payload()

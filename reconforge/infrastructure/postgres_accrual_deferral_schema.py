@@ -86,6 +86,11 @@ CREATE TABLE reconforge.accrual_deferral_commands(
 );
 CREATE FUNCTION reconforge.ad1_assert(ok BOOLEAN,message TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $ad1$
 BEGIN IF ok IS DISTINCT FROM TRUE THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='accrual_deferral_owner',MESSAGE=message;END IF;END $ad1$;
+CREATE FUNCTION reconforge.ad1_original_namespace_allowed(entry_number TEXT,entry_id TEXT) RETURNS BOOLEAN
+ LANGUAGE SQL IMMUTABLE STRICT SET search_path=pg_catalog AS $ad1$
+ SELECT upper(entry_number)!~'^(IC1-|IC2[SRE]?-|FX1-|ME[12]C?-|HC1P?-|OPS1-|OB1-|FI1-|CA1-|LC1-|FA1-|CRF?1-|SR1-|AD1R?-|PB1C?-)'
+ AND upper(entry_id)!~'^(IC1-|IC2[SRE]?-|FX1-|ME[12]C?-|HC1P?-|OPS1-|OB1-|FI1-|CA1-|LC1-|FA1-|CRF?1-|SR1-|AD1R?-|PB1C?-)';
+$ad1$;
 CREATE FUNCTION reconforge.ad1_protect() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $ad1$
 BEGIN
  IF TG_OP='UPDATE' THEN
@@ -228,8 +233,7 @@ BEGIN
    AND(claim.workspace_id,claim.organization_id,claim.legal_entity_id)=(s.workspace_id,s.organization_id,s.legal_entity_id)
    AND original.source_kind='Manual' AND original.reverses_effect_id IS NULL AND entry.source_type='Manual' AND entry.reverses_posting_id IS NULL
    AND entry.status='Validated' AND entry.posting_date<=cfg->>'posting_date'
-   AND upper(entry.entry_number)!~'^(IC1-|IC2[SRE]?-|FX1-|ME[12]C?-|HC1P?-|OPS1-|OB1-|FI1-|CA1-|LC1-|FA1-|CRF?1-|SR1-|AD1R?-)'
-   AND upper(entry.id)!~'^(IC1-|IC2[SRE]?-|FX1-|ME[12]C?-|HC1P?-|OPS1-|OB1-|FI1-|CA1-|LC1-|FA1-|CRF?1-|SR1-|AD1R?-)'
+   AND reconforge.ad1_original_namespace_allowed(entry.entry_number,entry.id)
    AND(original.workspace_id,original.organization_id,original.legal_entity_id)=(s.workspace_id,s.organization_id,s.legal_entity_id)
    AND entry.validation_digest=original.validation_digest AND original.validation_digest=reconforge.irp_digest(original.snapshot_json)
    AND entry.validation_contract_version='finance-entry-review-v1'
@@ -579,5 +583,5 @@ ALTER TABLE reconforge.fiscal_periods DROP CONSTRAINT ad1_fiscal_identity;
 ALTER TABLE reconforge.finance_accounts DROP CONSTRAINT ad1_native_account_identity;
 DROP FUNCTION reconforge.ad1_native_close(),reconforge.ad1_deferred(),reconforge.ad1_command_actor(),
  reconforge.ad1_close(TEXT,TEXT),reconforge.ad1_claim_close(TEXT,TEXT,TEXT),reconforge.ad1_source_close(TEXT,TEXT),
- reconforge.ad1_allocate(JSONB),reconforge.ad1_line(TEXT,NUMERIC,NUMERIC,JSONB),reconforge.ad1_protect(),reconforge.ad1_assert(BOOLEAN,TEXT);
+ reconforge.ad1_allocate(JSONB),reconforge.ad1_line(TEXT,NUMERIC,NUMERIC,JSONB),reconforge.ad1_original_namespace_allowed(TEXT,TEXT),reconforge.ad1_protect(),reconforge.ad1_assert(BOOLEAN,TEXT);
 """

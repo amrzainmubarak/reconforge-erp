@@ -83,11 +83,13 @@ threat_model:
 benchmarks: Human comparative measurements deferred; no throughput or resource acceptance
 rollback_plan: Refuse destructive populated downgrade; restore and verify original data and separate Core directory prerequisites
 test_matrix:
-  pure: 34 actual passing source, attachment, allocation, inverse and malformed-input cases
+  pure: 34 original cases plus 18 artifact cases, 8 PB1/PB1C original namespace cases and 7 finite restore catalog equivalence cases; all actual passing
   oracle_adversarial: 27 actual passing raw-anchor, isolated normal/optimized CLI, tenant, account, calendar, native-effect, inverse and claim mutations over byte-exact synthetic native fixture
   typing_lint: actual passing Ruff and mypy on owned production files
   native_sql: 8 actual passing development cases on current140 plus manually installed owned schema/Core fragment; an additional current qualified-scope six-effect export target passed after additive tenant projection
-  native_migration_restore: Actual complete logical empty down/reup catalog equality; ordered141 and populated restore acceptance pending
+  native_migration_restore: Actual complete logical empty down/reup equality and populated PG17.11 archive restore on current140 plus owned schema; all table histories and selected logical catalog matched except six frozen legacy nested-AND parse forms; ACL/owners excluded; ordered141 integration separately qualified
+  native_guard_ownership_followup: Actual frozen35 cases pass without skips; seven whole-population SQL attacks, four exact native line bounds, sixteen current read/scope checks, current inverse permission, period close/reopen, two cancellation/exclusivity orders and four RC/RR coordination races
+  native_restore_followup: Actual2 cases pass without skips; case-insensitive finite original namespace SQL boundary and restored original paid expense cycle preserves Cash10001 credit while completing five native effects
   api: 2 actual authenticated PostgreSQL TestClient contracts passed; central registration and real wire browser acceptance pending
   artifact_followup: 18 additional pure artifact/canonical-dimension cases passed; full and partial export paths passed inside two actual native TestClient contracts
   native_dimension_followup: 2 actual paid-expense/prepaid attachment cases preserve native Project and separate Cash BRANCH references; both full cycles passed without another Cash effect

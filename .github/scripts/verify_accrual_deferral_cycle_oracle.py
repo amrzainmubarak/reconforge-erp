@@ -10,6 +10,9 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
+RESERVED_ORIGINALS = ("IC1-", "IC2-", "IC2S-", "IC2R-", "IC2E-", "FX1-", "ME1-", "ME1C-", "ME2-", "ME2C-", "HC1-", "HC1P-",
+    "OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-", "AD1-", "AD1R-", "PB1-", "PB1C-")
+
 
 def require(value: bool, message: str) -> None:
     if not value:
@@ -143,6 +146,8 @@ def verify(raw: dict[str, Any]) -> dict[str, Any]:
 
     if request["mode"].startswith("attach_"):
         original = effects[request["original_effect_id"]]
+        require(all(not str(original["snapshot"]["entry"][field]).upper().startswith(RESERVED_ORIGINALS) for field in ("id", "entry_number")),
+                "Operating original must retain its original source owner")
         observe(original)
         review = external["original_review"]
         require(original["source_kind"] == "Manual" and original["reverses_effect_id"] is None

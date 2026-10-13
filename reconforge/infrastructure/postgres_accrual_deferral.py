@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from reconforge.application.accrual_deferral_evidence import evidence_digest
 from reconforge.domain.accrual_deferral import (
+    RESERVED_ORIGINALS,
     AccrualDeferralPreparation,
     attach_original,
     captured_policy,
@@ -28,8 +29,6 @@ from reconforge.platform.common import platform_id
 PERMISSIONS = {"prepare": "finance_core.manage", "review": "finance_core.validate",
                "post": "finance_core.post", "read": "finance_core.read"}
 MAX_PLANS = 160
-RESERVED_ORIGINALS = ("IC1-", "IC2-", "IC2S-", "IC2R-", "IC2E-", "FX1-", "ME1-", "ME1C-", "ME2-", "ME2C-", "HC1-", "HC1P-",
-                      "OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-", "AD1-", "AD1R-")
 
 
 class _AccrualDeferralPostingParticipant:

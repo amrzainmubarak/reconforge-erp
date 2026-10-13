@@ -154,3 +154,12 @@ source/budget projection regression is in
 `apps/web/src/components/ManufacturingSupplyPurchasing.test.tsx` and retains the
 same raw original proof SHA as the supply oracle. The root-owned actual TLS
 failure and the focused Studio red/green remain separate evidence packets.
+
+The required native browser receipt cycle waits until the original purchase
+line control and exactly one intended item option are available. It selects
+the retained native line ID, then checks the selected ID, submitted exact
+quantity text and prepared receipt's original line ID. It never derives a
+selection from an option snapshot taken while the purchase read is pending.
+The delayed-read Studio regression uses original awarded sourcing, budget
+reservation and approved purchase receipts from the same native proof and
+verifies that `MATERIAL` retains KG precision3 and quantity text `2.500`.

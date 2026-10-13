@@ -103,9 +103,17 @@ test("actual original partial-stock supply RFQ three-human award two receipts AP
   for (const [item, quantity, day] of [["ITEM", "1", "2026-10-05"], ["MATERIAL", "2.500", "2026-10-06"]]) {
     await login(page, "browser-maker"); await enter(page, plan.id);
     const receipt = page.getByRole("form", { name: "Prepare actual partial receipt", exact: true });
-    await receipt.getByRole("combobox", { name: "Original purchase line", exact: true }).selectOption({ label: (await receipt.getByRole("option").allTextContents()).find(value => value.startsWith(item + " /"))! });
+    const lineSelect = receipt.getByRole("combobox", { name: "Original purchase line", exact: true });
+    await expect(lineSelect).toBeEnabled();
+    const originalLine = lineSelect.getByRole("option", { name: new RegExp(`^${item} /`) });
+    await expect(originalLine).toHaveCount(1);
+    const originalLineId = await originalLine.getAttribute("value"); expect(originalLineId, "Exact original native purchase line required").toBeTruthy();
+    await lineSelect.selectOption(originalLineId!); await expect(lineSelect).toHaveValue(originalLineId!);
     await fill(receipt, { "Exact received quantity": quantity, "Receipt date": day, Reason: "Actual original shortage receipt" });
-    await command(page, receipt, "Prepare actual partial receipt", `${root}/plans/${plan.id}/purchases/${purchase}/receive-prepare`, "native_response");
+    const request = page.waitForRequest(value => value.url().endsWith(`${root}/plans/${plan.id}/purchases/${purchase}/receive-prepare`) && value.method() === "POST");
+    const prepared = await command(page, receipt, "Prepare actual partial receipt", `${root}/plans/${plan.id}/purchases/${purchase}/receive-prepare`, "native_response");
+    expect((await request).postDataJSON()).toMatchObject({ line_id: originalLineId, quantity });
+    expect(prepared.receipts.at(-1).order_line_id).toBe(originalLineId);
     await purchaseAction(page, plan.id, purchase, "browser-checker", "receive-review", "Review original receipt");
     await purchaseAction(page, plan.id, purchase, "browser-poster", "receive-commit", "Post actual stock and custody", true);
     await login(page, "browser-maker"); await enter(page, plan.id);

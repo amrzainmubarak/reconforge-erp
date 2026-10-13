@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { webcrypto } from "node:crypto";
 import { afterEach, expect, it, vi } from "vitest";
 import original from "../fixtures/manufacturing-supply-original-budget-read.json";
+import originalPurchase from "../fixtures/manufacturing-supply-original-purchase-read.json";
 import { parseSupplyPlan, supplyOperationPermissions } from "../manufacturing-supply-data";
 import { ManufacturingSupplyPurchasing } from "./ManufacturingSupplyPurchasing";
 
@@ -49,4 +50,29 @@ it.each([401, 403, 404])("keeps native sourcing disabled and propagates current 
   await screen.findByText("Original purchase evidence is unavailable. Refresh before any command.");
   expect(screen.getByRole("textbox", { name: "Supplier code" })).toBeDisabled(); expect(failure.mock.calls[0][0]).toMatchObject({ status });
   expect(submit).not.toHaveBeenCalled();
+});
+
+it("waits for delayed actual original purchase evidence then sends the selected nonfirst KG line and exact quantity", async () => {
+  vi.stubGlobal("crypto", webcrypto); const failure = vi.fn(), submit = vi.fn();
+  let release!: (value: Response) => void;
+  const requested: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL) => {
+    const path = String(url); requested.push(path);
+    if (path.includes("/budget-control/")) return new Response(JSON.stringify(originalPurchase.budget_detail));
+    if (path.includes("/requisitions/")) return new Response(JSON.stringify(originalPurchase.sourcing));
+    return new Promise<Response>(resolve => { release = resolve; });
+  }));
+  const source = await parseSupplyPlan(originalPurchase.source, scope);
+  render(<ManufacturingSupplyPurchasing locale="en" source={source} scope={scope} identity={identity} ready={true} submit={submit} onReadFailure={failure} />);
+  await waitFor(() => expect(requested.some(path => path.includes("/purchases/"))).toBe(true));
+  expect(screen.queryByRole("combobox", { name: "Original purchase line" })).not.toBeInTheDocument(); expect(submit).not.toHaveBeenCalled();
+  await act(async () => release(new Response(JSON.stringify(originalPurchase.purchase))));
+  const select = await screen.findByRole("combobox", { name: "Original purchase line" }); await waitFor(() => expect(select).toBeEnabled());
+  const material = originalPurchase.purchase.lines.find(row => row.item_code === "MATERIAL")!;
+  expect(material.quantity_precision).toBe(3); expect(material.quantity_text).toBe("2.500");
+  fireEvent.change(select, { target: { value: material.id } }); expect(select).toHaveValue(material.id);
+  const form = screen.getByRole("form", { name: "Prepare actual partial receipt" });
+  for (const [name, value] of Object.entries({ "Exact received quantity": "2.500", "Receipt date": "2026-10-06", Reason: "Actual original selected mass receipt" })) fireEvent.change(within(form).getByLabelText(name), { target: { value } });
+  fireEvent.click(within(form).getByRole("button", { name: "Prepare actual partial receipt" }));
+  expect(failure).not.toHaveBeenCalled(); expect(submit).toHaveBeenCalledWith(expect.stringContaining(`/purchases/${originalPurchase.purchase.order.id}/receive-prepare`), expect.objectContaining({ line_id: material.id, quantity: "2.500", expected_version: originalPurchase.purchase.order.row_version }));
 });

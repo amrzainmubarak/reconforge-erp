@@ -8,6 +8,7 @@ claimed; its task is reading and downloading this exact original source pair.
 import hashlib
 import importlib.util
 import json
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -48,12 +49,21 @@ PROJECT_SOURCE_RECONCILIATION_TAMPER = (
 )
 _ORIGINALS: dict[str, tuple[tuple[str, str, str], str]] = {}
 _ORIGINAL_CAPTURE: dict[str, bytes] = {}
+_ORIGINAL_CLOSE_CAPTURE: dict[str, bytes] = {}
 
 
 def source_evidence(base: ReceiptRuntime) -> dict[str, Any]:
     pair, _ = _ORIGINALS[base.tenant]
     with private_runtime(base).actor("maker", private=False) as (connection, _, actor):
         return PostgresProjectSourceReconciliationRepository(connection, base.tenant).report(
+            ProjectSourceSelection(SCOPE, pair[2], "period", pair[0], pair[1]), actor=actor
+        )
+
+
+def source_close_evidence(base: ReceiptRuntime) -> dict[str, Any]:
+    pair, _ = _ORIGINALS[base.tenant]
+    with private_runtime(base).actor("maker", private=False) as (connection, _, actor):
+        return PostgresProjectSourceReconciliationRepository(connection, base.tenant).close_diagnostics(
             ProjectSourceSelection(SCOPE, pair[2], "period", pair[0], pair[1]), actor=actor
         )
 
@@ -90,11 +100,12 @@ def seed_project_source_reconciliation_browser(admin_dsn: str, app_dsn: str) -> 
     original = source_evidence(base)
     _ORIGINALS[base.tenant] = (pair, immutable_source_digest(original))
     _ORIGINAL_CAPTURE[base.tenant] = b"".join(evidence_chunks(original))
+    _ORIGINAL_CLOSE_CAPTURE[base.tenant] = b"".join(evidence_chunks(source_close_evidence(base)))
     return base
 
 
 @contextmanager
-def project_source_reconciliation_restore_tamper_actor(base: ReceiptRuntime):
+def project_source_reconciliation_restore_tamper_actor(base: ReceiptRuntime) -> Iterator[tuple[Any, Any, Any]]:
     with private_runtime(base).actor("poster", private=False) as values:
         yield values
 
@@ -128,6 +139,23 @@ def verify_project_source_reconciliation_browser(base: ReceiptRuntime) -> dict[s
     independent = oracle.verify(seeded)
     if seeded["report"] != proof["report"]:
         raise ValueError("Current verified source summary differs from the original seed capture")
+    close = source_close_evidence(base)
+    if immutable_source_digest(close["source_evidence"]) != _ORIGINALS[base.tenant][1]:
+        raise ValueError("Source obligation capture changed the original immutable source population")
+    current_close_independent = oracle.verify_close(close)
+    if (current_close_independent["source_effect_count"] != 6
+            or current_close_independent["source_obligations_settled"] is not True
+            or close["diagnostic"]["whole_source_obligations"]["wage_liability_minor"] != "0"
+            or close["diagnostic"]["whole_source_obligations"]["ar_outstanding_minor"] != "0"):
+        raise ValueError("The final selected whole-document source obligations differ")
+    with (directory / ("fresh-source-close-" + uuid4().hex + ".json")).open("xb") as handle:
+        for chunk in evidence_chunks(close):
+            handle.write(chunk)
+    close_raw = _ORIGINAL_CLOSE_CAPTURE[base.tenant]
+    seeded_close = json.loads(close_raw)
+    close_independent = oracle.verify_close(seeded_close)
+    if seeded_close["diagnostic"] != close["diagnostic"]:
+        raise ValueError("Current source obligation diagnostic differs from the original seed observation")
     return {
         "schema_version": "project-source-browser-read-verification-v1",
         "original_evidence": seeded,
@@ -136,6 +164,11 @@ def verify_project_source_reconciliation_browser(base: ReceiptRuntime) -> dict[s
         "immutable_source_sha256": immutable_source_digest(proof),
         "oracle_source_sha256": hashlib.sha256(script.read_bytes()).hexdigest(),
         "independent_oracle": independent,
+        "source_close_original_evidence": seeded_close,
+        "source_close_original_sha256": hashlib.sha256(close_raw).hexdigest(),
+        "source_close_original_bytes": len(close_raw),
+        "source_close_independent_oracle": close_independent,
+        "formal_close_workflow_assessed": False,
         "native_effect_count": 6,
         "browser_financial_writes": False,
         "financial_sources_provisioned_by": "existing-owner-commands-three-distinct-synthetic-humans",

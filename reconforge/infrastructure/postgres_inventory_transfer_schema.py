@@ -87,6 +87,7 @@ CREATE FUNCTION reconforge.it1_cost_snapshot(t TEXT,w TEXT,o TEXT,e TEXT,i TEXT)
  LANGUAGE plpgsql STABLE SET search_path=pg_catalog AS $it1$
 DECLARE layer RECORD;p RECORD;document RECORD;entry RECORD;line RECORD;policy JSONB;sources JSONB:='[]'::jsonb;
  quantities NUMERIC:=0;values_minor NUMERIC:=0;amounts JSONB;original JSONB;lines JSONB;consumptions JSONB;
+ consumed_quantity NUMERIC;consumed_value NUMERIC;history_count INTEGER:=0;
 BEGIN
  PERFORM reconforge.it1_assert(reconforge.irp_scope(t,w,o,e),'Transfer cost requires the original scoped hierarchy');
  FOR layer IN SELECT * FROM reconforge.inventory_cost_layers WHERE tenant_id=t AND workspace_id=w AND legal_entity_id=e AND item_id=i
@@ -100,6 +101,9 @@ BEGIN
    WHERE inverse.tenant_id=t AND inverse.original_plan_id=p.id AND inverse.operation='FullReceiptReversal')
    AND NOT EXISTS(SELECT 1 FROM reconforge.finance_posting_effects inverse WHERE inverse.tenant_id=t AND inverse.reverses_effect_id=p.posting_effect_id),
    'A transfer cannot adopt a cost source with a retained pending or committed complete receipt inverse');
+  PERFORM reconforge.it1_assert(NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_reversal_effects correction
+   WHERE correction.tenant_id=t AND correction.cost_layer_id=layer.id),
+   'First IT1 cost scope refuses retained valuation correction owners until their complete original contract is supported');
   SELECT * INTO document FROM reconforge.inventory_valuation_documents WHERE tenant_id=t AND id=p.valuation_document_id;
   SELECT * INTO entry FROM reconforge.finance_entries WHERE tenant_id=t AND id=p.finance_entry_id;
   SELECT * INTO line FROM reconforge.inventory_valuation_lines WHERE tenant_id=t AND id=p.valuation_line_id;
@@ -118,6 +122,18 @@ BEGIN
    FROM reconforge.finance_entry_lines l WHERE l.tenant_id=t AND l.entry_id=entry.id;
   SELECT COALESCE(jsonb_agg(to_jsonb(c) ORDER BY c.id),'[]'::jsonb) INTO consumptions
    FROM reconforge.inventory_layer_consumptions c WHERE c.tenant_id=t AND c.cost_layer_id=layer.id;
+  history_count:=history_count+jsonb_array_length(consumptions);
+  SELECT COALESCE(sum(c.quantity_scaled),0),COALESCE(sum(c.value_minor),0) INTO consumed_quantity,consumed_value
+   FROM reconforge.inventory_layer_consumptions c WHERE c.tenant_id=t AND c.cost_layer_id=layer.id;
+  PERFORM reconforge.it1_assert(history_count<=200 AND layer.remaining_quantity_scaled=layer.original_quantity_scaled-consumed_quantity
+   AND layer.remaining_value_minor=layer.original_value_minor-consumed_value
+   AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_layer_consumptions c LEFT JOIN reconforge.inventory_valuation_lines detail
+    ON detail.tenant_id=c.tenant_id AND detail.id=c.valuation_line_id LEFT JOIN reconforge.inventory_valuation_documents consumed_document
+    ON consumed_document.tenant_id=detail.tenant_id AND consumed_document.id=detail.valuation_document_id WHERE c.tenant_id=t AND c.cost_layer_id=layer.id
+    AND(consumed_document.status IS DISTINCT FROM 'Approved' OR detail.flow_direction IS DISTINCT FROM 'Outbound'
+     OR(detail.item_id,detail.uom_id,detail.quantity_precision,detail.inventory_lot_id)
+      IS DISTINCT FROM(layer.item_id,layer.uom_id,layer.quantity_precision,layer.inventory_lot_id))),
+   'Transfer captures all bounded immutable approved consumption facts and exact residual quantity/value conservation');
   amounts:=jsonb_build_array(layer.original_value_minor,layer.remaining_value_minor,document.total_value_minor,
    line.value_minor,p.total_value_minor,entry.total_debit_minor,entry.total_credit_minor);
   SELECT amounts||COALESCE(jsonb_agg(l.debit_minor ORDER BY l.line_number),'[]'::jsonb)
@@ -126,10 +142,12 @@ BEGIN
   SELECT jsonb_build_object('layer',to_jsonb(layer),'valuation_document',to_jsonb(document),'valuation_line',to_jsonb(line),
    'receipt_plan',p.plan_json,'receipt_link',to_jsonb(link),'receipt_review',review.review_json,
    'finance_entry',to_jsonb(entry),'finance_lines',lines,'posting_effect',to_jsonb(effect),
+   'receipt_native',reconforge.it1_native_snapshot(t,p.movement_id),'valuation_input',to_jsonb(input),
    'consumptions',consumptions,'exposed_amounts_minor',amounts) INTO original
    FROM reconforge.inventory_receipt_links link JOIN reconforge.inventory_receipt_reviews review
    ON review.tenant_id=link.tenant_id AND review.id=link.review_id JOIN reconforge.finance_posting_effects effect
-   ON effect.tenant_id=link.tenant_id AND effect.id=link.posting_effect_id WHERE link.tenant_id=t AND link.plan_id=p.id;
+   ON effect.tenant_id=link.tenant_id AND effect.id=link.posting_effect_id JOIN reconforge.inventory_valuation_input_costs input
+   ON input.tenant_id=p.tenant_id AND input.id=p.input_cost_id WHERE link.tenant_id=t AND link.plan_id=p.id;
   PERFORM reconforge.it1_assert(original IS NOT NULL,'Transfer cost needs actual posted receipt, review and GL effect originals');
   sources:=sources||jsonb_build_array(original);quantities:=quantities+layer.remaining_quantity_scaled;values_minor:=values_minor+layer.remaining_value_minor;
  END LOOP;
@@ -198,10 +216,13 @@ BEGIN
   'Transfer command must retain exact source audit and scoped outbox membership');RETURN e.actor_id;
 END $it1$;
 CREATE FUNCTION reconforge.it1_cost_originals(t TEXT,cost JSONB) RETURNS VOID LANGUAGE plpgsql STABLE SET search_path=pg_catalog AS $it1$
-DECLARE original JSONB;p RECORD;layer RECORD;actual JSONB;
+DECLARE original JSONB;p RECORD;layer RECORD;actual JSONB;consumption JSONB;consumed_quantity NUMERIC;consumed_value NUMERIC;history_count INTEGER:=0;
+ quantity_total NUMERIC:=0;value_total NUMERIC:=0;
 BEGIN
  PERFORM reconforge.it1_assert(cost->>'schema_version'='inventory-transfer-cost-v1'
-  AND jsonb_array_length(cost->'sources') BETWEEN 1 AND 32,'Transfer retains a bounded complete approved cost snapshot');
+  AND jsonb_array_length(cost->'sources') BETWEEN 1 AND 32
+  AND(SELECT count(DISTINCT value#>>'{layer,id}') FROM jsonb_array_elements(cost->'sources'))=jsonb_array_length(cost->'sources'),
+  'Transfer retains a bounded complete unique approved cost-source population');
  FOR original IN SELECT value FROM jsonb_array_elements(cost->'sources') LOOP
   SELECT * INTO p FROM reconforge.inventory_receipt_plans WHERE tenant_id=t AND id=original#>>'{receipt_plan,plan_id}';
   PERFORM reconforge.it1_assert(p.id IS NOT NULL AND p.operation='Receipt' AND p.plan_json=original->'receipt_plan'
@@ -211,18 +232,39 @@ BEGIN
   PERFORM reconforge.it1_assert((to_jsonb(layer)-ARRAY['remaining_quantity_scaled','remaining_value_minor','row_version'])
    =((original->'layer')-ARRAY['remaining_quantity_scaled','remaining_value_minor','row_version']),
    'Transfer original FIFO identity and approved cost must remain unchanged');
+  PERFORM reconforge.it1_assert(jsonb_typeof(original->'consumptions')='array','Transfer retains an exact immutable consumption history population');
+  PERFORM reconforge.it1_assert((SELECT count(DISTINCT value->>'id') FROM jsonb_array_elements(original->'consumptions'))
+   =jsonb_array_length(original->'consumptions'),'Transfer historical consumption membership cannot duplicate an original native fact');
+  history_count:=history_count+jsonb_array_length(original->'consumptions');consumed_quantity:=0;consumed_value:=0;
+  FOR consumption IN SELECT value FROM jsonb_array_elements(original->'consumptions') LOOP
+   PERFORM reconforge.it1_assert(consumption->>'cost_layer_id'=layer.id AND EXISTS(SELECT 1 FROM reconforge.inventory_layer_consumptions c
+    WHERE c.tenant_id=t AND c.id=consumption->>'id' AND to_jsonb(c)=consumption),
+    'Every captured historical consumption must retain its exact original native byte and layer membership');
+   consumed_quantity:=consumed_quantity+(consumption->>'quantity_scaled')::numeric;
+   consumed_value:=consumed_value+(consumption->>'value_minor')::numeric;
+  END LOOP;
+  PERFORM reconforge.it1_assert(history_count<=200 AND(original#>>'{layer,remaining_quantity_scaled}')::numeric
+   =(original#>>'{layer,original_quantity_scaled}')::numeric-consumed_quantity
+   AND(original#>>'{layer,remaining_value_minor}')::numeric=(original#>>'{layer,original_value_minor}')::numeric-consumed_value,
+   'Captured transfer residuals must derive independently from all retained original consumption facts');
+  quantity_total:=quantity_total+(original#>>'{layer,remaining_quantity_scaled}')::numeric;
+  value_total:=value_total+(original#>>'{layer,remaining_value_minor}')::numeric;
   SELECT jsonb_build_object('valuation_document',to_jsonb(d),'valuation_line',to_jsonb(l),'receipt_link',to_jsonb(link),
    'receipt_review',review.review_json,'finance_entry',to_jsonb(entry),'posting_effect',to_jsonb(effect),
+   'receipt_native',reconforge.it1_native_snapshot(t,p.movement_id),'valuation_input',to_jsonb(input),
    'finance_lines',(SELECT jsonb_agg(to_jsonb(fl) ORDER BY fl.line_number,fl.id) FROM reconforge.finance_entry_lines fl
    WHERE fl.tenant_id=t AND fl.entry_id=p.finance_entry_id)) INTO actual
    FROM reconforge.inventory_valuation_documents d JOIN reconforge.inventory_valuation_lines l ON l.tenant_id=d.tenant_id AND l.id=p.valuation_line_id
    JOIN reconforge.inventory_receipt_links link ON link.tenant_id=d.tenant_id AND link.plan_id=p.id
    JOIN reconforge.inventory_receipt_reviews review ON review.tenant_id=link.tenant_id AND review.id=link.review_id
    JOIN reconforge.finance_entries entry ON entry.tenant_id=d.tenant_id AND entry.id=p.finance_entry_id
-   JOIN reconforge.finance_posting_effects effect ON effect.tenant_id=entry.tenant_id AND effect.id=p.posting_effect_id WHERE d.tenant_id=t AND d.id=p.valuation_document_id;
+   JOIN reconforge.finance_posting_effects effect ON effect.tenant_id=entry.tenant_id AND effect.id=p.posting_effect_id
+   JOIN reconforge.inventory_valuation_input_costs input ON input.tenant_id=p.tenant_id AND input.id=p.input_cost_id WHERE d.tenant_id=t AND d.id=p.valuation_document_id;
   PERFORM reconforge.it1_assert(actual=original-ARRAY['layer','receipt_plan','consumptions','exposed_amounts_minor'],
    'Transfer approved valuation, posted GL and immutable native effects must retain original bytes');
  END LOOP;
+ PERFORM reconforge.it1_assert(quantity_total=(cost->>'remaining_quantity_scaled')::numeric AND value_total=(cost->>'remaining_value_minor')::numeric,
+  'Transfer captured pool totals must equal its complete unique original layer residual population');
 END $it1$;
 CREATE FUNCTION reconforge.it1_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $it1$
 DECLARE s RECORD;original RECORD;c RECORD;r RECORD;native JSONB;created JSONB;line JSONB;v INTEGER;event RECORD;phase INTEGER:=0;
@@ -240,6 +282,11 @@ BEGIN
   =(s.item_id,s.uom_id,s.quantity_precision,s.quantity_scaled,s.from_location_id,s.to_location_id,s.period_id,s.posting_date,s.number,s.native_movement_id),
   'Transfer source must bind its exact immutable hierarchy, master quantities, date and native identity');
  PERFORM reconforge.it1_cost_originals(t,s.payload->'cost_snapshot');
+ PERFORM reconforge.it1_assert(NOT EXISTS(SELECT 1 FROM jsonb_array_elements(s.payload#>'{cost_snapshot,sources}') original_source
+  WHERE(original_source#>>'{layer,workspace_id}',original_source#>>'{layer,legal_entity_id}',original_source#>>'{layer,item_id}',
+   original_source#>>'{layer,uom_id}',(original_source#>>'{layer,quantity_precision}')::integer,
+   original_source#>>'{receipt_plan,scope,organization_id}') IS DISTINCT FROM(s.workspace_id,s.legal_entity_id,s.item_id,s.uom_id,s.quantity_precision,s.organization_id)),
+  'Every transfer original cost layer must belong to the exact source item, base unit and parent hierarchy');
  IF s.review_cost_json IS NOT NULL THEN
   PERFORM reconforge.it1_assert(s.review_cost_digest=reconforge.irp_digest(s.review_cost_json)
    AND s.review_cost_json->'monetary_policy'=s.payload#>'{cost_snapshot,monetary_policy}',
@@ -330,10 +377,10 @@ BEGIN
    AND native#>>'{audit,1,actor_label}'=s.poster_actor_id AND native#>>'{audit,1,action}'='inventory_movement_posted'
    AND native#>'{audit,1,metadata_json}'=jsonb_build_object('movement_number','IT1-'||right(s.id,32),'reason',r.reason),
    'Posted transfer must retain exact native original lines and independent posting evidence');
-  PERFORM reconforge.it1_assert(EXISTS(SELECT 1 FROM jsonb_array_elements(native->'outbox') event WHERE event=created#>'{outbox,0}')
-   AND EXISTS(SELECT 1 FROM jsonb_array_elements(native->'outbox') event WHERE event->>'event_type'='inventory_movement_posted'
-    AND event->>'aggregate_type'='inventory_movement' AND event->>'aggregate_id'=s.native_movement_id
-    AND event->'payload'=native#>'{audit,1,metadata_json}'),'Native posting outbox must exactly bind the retained posting audit and creation original');
+  PERFORM reconforge.it1_assert(EXISTS(SELECT 1 FROM jsonb_array_elements(native->'outbox') native_event(value) WHERE native_event.value=created#>'{outbox,0}')
+   AND EXISTS(SELECT 1 FROM jsonb_array_elements(native->'outbox') native_event(value) WHERE native_event.value->>'event_type'='inventory_movement_posted'
+    AND native_event.value->>'aggregate_type'='inventory_movement' AND native_event.value->>'aggregate_id'=s.native_movement_id
+    AND native_event.value->'payload'=native#>'{audit,1,metadata_json}'),'Native posting outbox must exactly bind the retained posting audit and creation original');
  ELSE PERFORM reconforge.it1_assert(native=created AND s.posted_native_json IS NULL,'Unposted or cancelled source retains its original untouched native Draft');END IF;
  PERFORM reconforge.it1_assert(NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_documents d WHERE d.tenant_id=t AND d.movement_id=s.native_movement_id)
   AND NOT EXISTS(SELECT 1 FROM reconforge.finance_posting_effects effect WHERE effect.tenant_id=t AND effect.source_id=i),

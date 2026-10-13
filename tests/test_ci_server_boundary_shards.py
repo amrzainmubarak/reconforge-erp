@@ -20,7 +20,7 @@ SHARDS = {
     "people-project-payroll", "accrual-deferral", "manufacturing-supply-plan", "project-time-billing",
 }
 INTEGRITY_FILES = {
-    "manufacturing-supply-plan": ("tests/test_postgres_manufacturing_supply_plan.py", "tests/test_postgres_manufacturing_supply_browser_seed.py", "tests/test_postgres_manufacturing_supply_read_authority.py"),
+    "manufacturing-supply-plan": ("tests/test_postgres_manufacturing_supply_closure.py", "tests/test_postgres_manufacturing_supply_closure_authority.py", "tests/test_postgres_manufacturing_supply_plan.py", "tests/test_postgres_manufacturing_supply_browser_seed.py", "tests/test_postgres_manufacturing_supply_read_authority.py"),
     "project-time-billing": (
         "tests/test_postgres_project_time_billing.py", "tests/test_postgres_project_time_billing_api.py",
         "tests/test_postgres_project_time_billing_restore.py", "tests/test_postgres_project_time_billing_read_authority.py",

@@ -23515,3 +23515,19 @@ limit, native skip rejection and services stay unchanged. Eight focused CI
 partition contracts pass. No financial runtime, migration, reader or API change.
 Fresh final CI on the new exact source remains required. Earlier browser,
 package and same-source security components are qualified to their own heads.
+
+### 2026-10-14 — Selector and included-router negative evidence
+
+CI38501987164 at464 and38502226273 at4b002 each failed the general Python
+collection contract at test_ci_postgres_selection.py:42 on both Python versions.
+Actual M3 each1failed/6486passed/663 prerequisite skips; M4 each1failed/6622passed/
+663 prerequisite skips. The full eleven-owner expectation was stale; native file
+sets were not removed. Source package parity did not run after these failures.
+M4 group native job115652026809 failed with AttributeError at the route-uniqueness
+assertion before its report/export request. Original303130B log SHA
+8f6189dd2256b8f2f30c31e6de482b520ec2b49fa15ef4ff847d92ba4b617349.
+No missing or duplicate production route was observed by that failed assertion.
+The test-only effective-context counter retains duplicates, prefixes and HTTP
+methods, unlike an OpenAPI dictionary. Public FastAPI release notes describe
+the retained-router change since0.137: https://fastapi.tiangolo.com/release-notes/.
+All old originals remain source-qualified; current final CI is still pending.

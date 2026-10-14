@@ -12513,3 +12513,19 @@ being bounded before admission. No transfer or full-ERP completion is claimed.
 Comparative performance remains deferred; cost per operation null; statutory
 country packs0. Main and the two original primary-worktree file hashes were
 reverified unchanged on2026-10-14.
+
+### 2026-10-14 — Bounded independent intercompany native acceptance
+
+Exact6baff intercompany native job115628650617 was cancelled at its existing
+30-minute job bound. Original515957B log SHAede780e2e151883e55a1a6e4c712a73111cd4eb9d488e69f4de373ed2011e154
+retains complete45/core and11/cashflow finished receipts with zero critical
+skips/xfails/xpasses. The third full invocation has no completion receipt;
+no final native or whole-CI pass is inferred. Its last test ID is not exposed
+by the quiet log and is not invented.
+Split complete original file sets into intercompany-operations,
+intercompany-cashflow and intercompany-group-reporting. Every prior invocation
+and test file remains required once; thirty-minute bound, four-job parallel
+limit, native skip rejection and services stay unchanged. Eight focused CI
+partition contracts pass. No financial runtime, migration, reader or API change.
+Fresh final CI on the new exact source remains required. Earlier browser,
+package and same-source security components are qualified to their own heads.

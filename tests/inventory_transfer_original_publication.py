@@ -119,7 +119,10 @@ def _expected(verified: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], byte
     _require(set(expected) == set(NAMES) and sum(row["bytes"] for row in expected.values()) <= MAX_TOTAL,
         "The complete original bundle exceeds its finite membership or byte bound")
     stdout = _json_bytes(result, compact=True)
-    _require(all(expected[name] == {"bytes": len(stdout), "sha256": _hash(stdout)} for name in ("stdout-I.json", "stdout-I-O.json"))
+    # Text-mode CLI stdout preserves its platform newline; never normalize retained bytes.
+    canonical_outputs = (stdout, stdout[:-1] + b"\r\n")
+    _require(expected["stdout-I.json"] == expected["stdout-I-O.json"]
+        and expected["stdout-I.json"] in ({"bytes": len(raw), "sha256": _hash(raw)} for raw in canonical_outputs)
         and all(expected[name] == {"bytes": 0, "sha256": _hash(b"")} for name in ("stderr-I.log", "stderr-I-O.log")),
         "Original normal and optimized output identities differ from the successful result")
     return expected, manifest_raw, manifest

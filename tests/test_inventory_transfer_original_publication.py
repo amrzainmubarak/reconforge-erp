@@ -1,4 +1,6 @@
 """Filesystem custody only; these synthetic bytes claim no executed financial cycle."""
+import subprocess
+import sys
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -8,7 +10,8 @@ import pytest
 from tests import inventory_transfer_original_publication as publisher
 
 
-def packet(tmp_path: Path) -> tuple[Path, Path, dict[str, Any], dict[str, bytes]]:
+def packet(tmp_path: Path, *, stdout_suffix: bytes = b"\n", optimized_suffix: bytes | None = None,
+        stdout_prefix: bytes = b"", native_stdout: bool = False) -> tuple[Path, Path, dict[str, Any], dict[str, bytes]]:
     private, output = tmp_path / "private", tmp_path / "public"
     source = private / "capture-original"
     source.mkdir(parents=True)
@@ -16,11 +19,20 @@ def packet(tmp_path: Path) -> tuple[Path, Path, dict[str, Any], dict[str, bytes]
     raw = b'{"filesystem_custody_fixture":true,"minor":9000000000000000000,"label":"original"}\n'
     result = {"schema_version": "inventory-transfer-oracle-v1", "filesystem_fixture_only": True,
         "original_file_sha256": publisher._hash(raw), "verifier_sha256": "a" * 64}
-    stdout = publisher._json_bytes(result, compact=True)
+    canonical_stdout = publisher._json_bytes(result, compact=True)
+    stdout = stdout_prefix + canonical_stdout[:-1] + stdout_suffix
+    optimized_stdout = stdout_prefix + canonical_stdout[:-1] + (optimized_suffix if optimized_suffix is not None else stdout_suffix)
+    if native_stdout:
+        # Real text stdout keeps the platform's line ending; originals are never normalized.
+        argv = [sys.executable, "-I", "-c", "import sys; print(sys.argv[1], end='')", canonical_stdout.decode()]
+        normal = subprocess.run(argv, capture_output=True, check=True, timeout=5)
+        optimized = subprocess.run([argv[0], "-O", *argv[1:]], capture_output=True, check=True, timeout=5)
+        assert normal.stderr == optimized.stderr == b""
+        stdout, optimized_stdout = normal.stdout, optimized.stdout
     files = {publisher.RAW: raw,
         "argv-I.json": b'["python","-I","reviewed-helper.py","inventory-transfer-original.json"]\n',
         "argv-I-O.json": b'["python","-I","-O","reviewed-helper.py","inventory-transfer-original.json"]\n',
-        "stdout-I.json": stdout, "stdout-I-O.json": stdout, "stderr-I.log": b"", "stderr-I-O.log": b""}
+        "stdout-I.json": stdout, "stdout-I-O.json": optimized_stdout, "stderr-I.log": b"", "stderr-I-O.log": b""}
     manifest = {"schema_version": "inventory-transfer-original-oracle-custody-v1", "original_file": publisher.RAW,
         "original_file_sha256": publisher._hash(raw), "original_bytes": len(raw), "verifier_sha256": "a" * 64,
         "source_files_sha256": {"synthetic-reviewed-helper.py": "a" * 64}, "normal_optimized_receipts_equal": True,
@@ -34,6 +46,40 @@ def packet(tmp_path: Path) -> tuple[Path, Path, dict[str, Any], dict[str, bytes]
         "original_oracle_manifest": manifest, "original_oracle_manifest_sha256": publisher._hash(files[publisher.MANIFEST]),
         "independent_oracle": result, "originals_preserved": True, "restore_rebaseline_allowed": False}
     return private, output, verified, files
+
+
+@pytest.mark.parametrize("suffix", [b"\n", b"\r\n"])
+def test_exact_canonical_platform_line_endings_preserve_original_bytes(tmp_path: Path, suffix: bytes) -> None:
+    private, output, verified, files = packet(tmp_path, stdout_suffix=suffix)
+    publisher.publish_inventory_transfer_originals(private, output, verified)
+    assert files["stdout-I.json"] == files["stdout-I-O.json"]
+    assert all((output / publisher.TARGET / name).read_bytes() == raw for name, raw in files.items())
+
+
+def test_actual_isolated_platform_stdout_is_published_without_line_ending_rewrite(tmp_path: Path) -> None:
+    private, output, verified, files = packet(tmp_path, native_stdout=True)
+    canonical = publisher._json_bytes(verified["independent_oracle"], compact=True)
+    assert files["stdout-I.json"] in (canonical, canonical[:-1] + b"\r\n")
+    assert files["stdout-I.json"] == files["stdout-I-O.json"]
+    publisher.publish_inventory_transfer_originals(private, output, verified)
+    assert all((output / publisher.TARGET / name).read_bytes() == raw for name, raw in files.items())
+
+
+@pytest.mark.parametrize("suffix,prefix,optimized", [
+    (b"\n", b"", b"\r\n"), (b"\r\n", b"", b"\n"),
+    (b"\r", b"", None), (b"", b"", None), (b"\n\n", b"", None),
+    (b"\r\n\r\n", b"", None), (b" \n", b"", None), (b"\x00\n", b"", None),
+    (b"\n", b" ", None), (b"\n", b"\xef\xbb\xbf", None),
+])
+def test_other_or_mismatched_stdout_forms_refuse_even_with_exact_trusted_member_hashes(
+        tmp_path: Path, suffix: bytes, prefix: bytes, optimized: bytes | None) -> None:
+    private, output, verified, files = packet(tmp_path, stdout_suffix=suffix,
+        stdout_prefix=prefix, optimized_suffix=optimized)
+    with pytest.raises(ValueError, match="normal and optimized output identities"):
+        publisher.publish_inventory_transfer_originals(private, output, verified)
+    assert not (output / publisher.TARGET).exists()
+    source = Path(verified["original_oracle_packet"])
+    assert all((source / name).read_bytes() == raw for name, raw in files.items())
 
 
 def test_exact_eight_original_bytes_publish_without_parsing_or_financial_rewriting(tmp_path: Path) -> None:

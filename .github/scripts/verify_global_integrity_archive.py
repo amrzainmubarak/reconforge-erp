@@ -506,6 +506,8 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/test_browser_diagnostic_redaction.py",
         "tests/test_browser_diagnostic_writer.py",
         "tests/test_workspace_recovery_acceptance.py",
+        "tests/customer_returns_financial_oracle.py",
+        "tests/test_customer_returns_financial_oracle.py",
         "reconforge/infrastructure/postgres_inventory_quantity_contracts.py",
         "tests/test_postgres_inventory_quantity_contracts.py",
         "reconforge/infrastructure/postgres_inventory_quantity_source_ownership.py",

@@ -574,6 +574,47 @@ def require_workspace_recovery_acceptance(private: Path, *, known_private_values
         "raw_financial_originals_published": False, "previous_blank_screen_cause_proven": False}
 
 
+def verify_customer_return_original_rows(private: Path, *, required_captures: int) -> dict[str, Any]:
+    """Execute the independent reader twice; retain all row/proof bytes privately."""
+    source = ROOT / "tests/customer_returns_financial_oracle.py"
+    source_identity = _file_identity(source)
+    originals = private / "playwright-artifacts/native-customer-return-originals"
+    executions = private / "independent-customer-return-row-verification"
+    if executions.exists() or executions.is_symlink():
+        raise ValueError("Independent row reader requires fresh private execution storage.")
+    executions.mkdir(mode=0o700)
+    results = []
+    for label, options in (("I", ["-I"]), ("IO", ["-I", "-O"])):
+        destination = executions / (label + ".json")
+        argv = [sys.executable, *options, str(source), str(originals), "--output", str(destination)]
+        completed = subprocess.run(argv, cwd=ROOT, capture_output=True, timeout=60)  # nosec B603
+        for suffix, raw in (("stdout.log", completed.stdout), ("stderr.log", completed.stderr)):
+            with (executions / (label + "." + suffix)).open("xb") as stream:
+                stream.write(raw)
+        with (executions / (label + ".execution.json")).open("x", encoding="utf8") as stream:
+            json.dump({"isolated": True, "optimized": "-O" in options, "exit_code": completed.returncode,
+                "source": source_identity, "original_rows_remain_private": True}, stream, sort_keys=True)
+        results.append((completed.returncode, destination))
+    if any(code != 0 for code, _ in results) or _file_identity(source) != source_identity:
+        raise ValueError("Independent original row verification failed or its source changed.")
+    raw_proofs = [_read_private_original(private, path, limit=diagnostic_redaction.MAX_WORKSPACE_RECOVERY_BYTES)
+        for _, path in results]
+    if raw_proofs[0] != raw_proofs[1]:
+        raise ValueError("Independent original row verification differs under optimized execution.")
+    proof = json.loads(raw_proofs[0])
+    if (type(proof) is not dict or proof.get("schema_version") != "independent-native-customer-return-row-oracle-v1"
+            or type(proof.get("captures")) is not int or proof["captures"] != required_captures
+            or type(proof.get("tables_per_capture")) is not int or proof["tables_per_capture"] != 13
+            or proof.get("complete_actual_rows_unchanged_across_captures") is not True
+            or proof.get("application_imports") is not False or proof.get("private_financial_originals_published") is not False):
+        raise ValueError("Independent row proof does not cover the complete required native cohort.")
+    return {"schema_version": "independent-customer-return-row-executions-v1", "status": "passed",
+        "isolated_actual_executions": 2, "optimized_result_bytes_equal": True,
+        "source": source_identity, "captures": required_captures, "tables_per_capture": 13,
+        "proof": {"bytes": len(raw_proofs[0]), "sha256": hashlib.sha256(raw_proofs[0]).hexdigest()},
+        "raw_financial_originals_published": False, "application_imports": False}
+
+
 def publish_original_oracle_custody(private: Path, output: Path, verified: dict[str, Any]) -> dict[str, Any]:
     """Keep isolated financial verifier bytes distinct from browser diagnostics."""
     source = private / "original-browser-download-verification"
@@ -975,6 +1016,9 @@ def main() -> int:
         from tests.inventory_transfer_browser import verify_inventory_transfer_browser
         verify_cycles = partial(verify_inventory_transfer_browser,
             custody_root=private_diagnostics / "inventory-transfer-oracle-custody")
+    elif args.scenario == "customer-returns":
+        verify_cycles = partial(verify_cycles,
+            custody_root=private_diagnostics / "playwright-artifacts/native-customer-return-originals")
     if not (args.web_root / "index.html").is_file():
         raise ValueError("Build the integrated Studio before running browser acceptance.")
     name = "reconforge-erp-expansion-browser-" + uuid4().hex[:12]
@@ -1165,6 +1209,9 @@ def main() -> int:
                 report["native_restore"] = verify_expansion_native_restore(runtime, container,
                     verify_cycles=verify_cycles, extension_tables=extension_tables, tamper_statements=tamper_statements,
                     tamper_actor=tamper_actor, workspace_probe_tables=workspace_probe_tables)
+            if args.scenario == "customer-returns":
+                report["independent_financial_original_verification"] = verify_customer_return_original_rows(
+                    private_diagnostics, required_captures=3 if args.verify_native_restore else 1)
             if args.scenario == "inventory-transfer":
                 # Fresh restore captures must still equal the first trusted
                 # packet before any of its original bytes become public.

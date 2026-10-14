@@ -1,5 +1,25 @@
 # Execution State
 
+## M3/M4 accepted; cohesive M5 source gate proceeds (2026-10-14)
+
+Current accepted dependency heads are M3 `18d81cc5` (CI62/62) and M4
+`d9f2e031` (CI64/64), with original downloaded archives, actual manual image
+security5/5, current-source package closure and independent original readers.
+PR135/136 final bodies were PATCH/GET verified; Draft status and main remain.
+Earlier sourcing timeout and missing local evidence remain separately disclosed.
+M5 corrects original-price/current-read authority across CR1/StockSales/Commerce
+without altering WRITE amounts or accepted financial history. Fresh Stock
+native9 and multi-warehouse commerce compatibility passed with integer/Fraction
+oracles; retained ACK regression is corrected by comparing actual row contents.
+An actual rejected Studio lazy asset also exposed missing workspace containment.
+The new bilingual manual recovery boundary has726 passing React cases. Strict
+private reporter/attachment custody and final three-case HTTPS/333-table restore
+and cohesive hosted acceptance remain pending. Source is frozen only after peer
+review; unpublished development receipts do not replace final source gates.
+No147 migration, new money/identity/GL engine, benchmark or statutory country
+acceptance follows. Performance is still deferred by the human; country packs0.
+See ENTERPRISE_COMPLETION_M5_2026-10-14.md and WORKTREE_RECOVERY_2026-10-14.md.
+
 ## Enterprise M1 integrated cycles; final hosted gate pending (2026-10-13)
 
 Draft [PR133](https://github.com/amrzainmubarak/reconforge-erp/pull/133) is above

@@ -1,5 +1,22 @@
 # ReconForge Execution Decisions Log
 
+## Current money authority and private browser custody (2026-10-14)
+
+Original retained unit prices are READ exposure, independent of phase WRITE
+amount. Keep captured currency policies and named finite owner surfaces; recheck
+current human/role/catalog and scope on every retained read/ACK/replay. Reuse
+existing GL/FIFO/source financial ownership. Do not infer new SQL monetary
+ceilings from test-configured ABAC policies or relax immutable history.
+Contain workspace rendering failures inside the navigation shell, with explicit
+human dashboard/reload actions; do not automatically retry financial mutations.
+Keep full before/after financial browser originals private and unchanged. Bind
+their exact bytes to actual passed unretried locale cases and Playwright's owned
+attachment copies. Publish only a finite scalar projection, never raw bodies or
+absolute private attachment paths. Require all three cases, actual financial
+verification and populated restore; verify source/build/HEAD/clean after final
+publication. An injected asset failure cannot establish the cause of a previous
+unexplained blank screen. Old absent outputs are not reconstructed as originals.
+
 ## Enterprise M1 shared contracts (2026-10-13)
 
 Start from actual accepted542, preserve main/primary dirty files and old custody.

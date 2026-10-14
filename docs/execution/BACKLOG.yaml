@@ -1,12 +1,12 @@
 schema_version: 2
 updated_at: "2026-10-14"
 phase: "Phase 4 — Global Capability Expansion"
-active_sprint: "Accepted M1/M2 original source gates; M3 restore runner correction; M4 complete original warehouse transfer and restore acceptance; performance deferred"
+active_sprint: "Accepted M3/M4 source gates; M5 original-money current authority and private bilingual manual-recovery integration; performance deferred"
 snapshot:
-  evidence_base_commit: "bcc440896e1f499f10095a5cb32a04d98e7e57c1"
+  evidence_base_commit: "d9f2e031b553dbf4ff94da40815605738c5644c7"
   policy_change_commit: "the commit containing this file"
   published: true
-  publication: "Draft PR134 6da88aae code/source gates accepted above PR133; final body PATCH/GET independently retained; M3 native restore and M4 final gates pending; performance deferred and false"
+  publication: "Draft PR135 18d81cc5 CI62/62 and PR136 d9f2e031 CI64/64 accepted; final bodies PATCH/GET independently retained. M5 cohesive exact-head gates pending; performance deferred and false"
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
@@ -23,13 +23,22 @@ tasks:
     priority: P0
     area: original-reporting-custody
     title: Accept actual downloaded group cashflow and Project source-close originals with whole write-time custody and private diagnostic boundaries
-    status: in_progress
+    status: completed
+    exit_evidence: "Current18d81 CI62/62,28 native shards/63 mandatory sessions/1858 selected0critical skips,24 actual328-table HTTPS restores, exact-head manual image security5/5 and original independent readers. Earlier sourcing timeout retained."
   - id: AMR-ENTERPRISE-M4-TRANSFER-014
     depends_on: [AMR-ENTERPRISE-M2-002, AMR-ENTERPRISE-M3-CUSTODY-014]
     priority: P0
     area: governed-physical-stock-transfer
     title: Complete same-entity two-warehouse transfer and separately governed inverse with original FIFO GL preservation and finite structural custody
+    status: completed
+    exit_evidence: "Currentd9f2e CI64/64,29 shards/64 mandatory sessions/1903 selected0critical skips,25 actual333-table HTTPS restores, actual manual image security5/5, original transfer verifier twice."
+  - id: AMR-ENTERPRISE-M5-AUTHORITY-014
+    depends_on: [AMR-ENTERPRISE-M4-TRANSFER-014]
+    priority: P0
+    area: original-money-authority-and-workspace-resilience
+    title: Complete current original-price read authority and governed manual workspace recovery with private source-bound financial originals
     status: in_progress
+    exit_evidence: "Fresh native9 and four-tranche commerce/oracles passed;726 React/typecheck/build passed. Strict case-bound three-case TLS/333-table restore and final cohesive CI remain required."
   - id: AMR-ENTERPRISE-CR2-CONTRACT-014
     depends_on: [AMR-ENTERPRISE-M4-TRANSFER-014, AMR-WAVE4-001]
     priority: P1

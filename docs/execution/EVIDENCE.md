@@ -1,5 +1,29 @@
 # ReconForge Execution Evidence Log
 
+## Fresh M3/M4 original acceptance and M5 integration (2026-10-14)
+
+M3 `18d81cc5`: CI38521912621 is62/62 successful; original final closure
+SHA06e49eb704c51d47cf2105898b6ad5c7953c2ee69faa3208176e47131ef37bb2.
+M4 `d9f2e031`: CI38522800958 is64/64 successful; original final closure
+SHAf384d4c5c68b87ea65677ba38d681abe6a4881520092b689154034d52ea1fcce.
+Actual image security5/5 each:0Critical/0High/9Medium/1Negligible; licenses65/68
+with three missing and no legal compatibility conclusion. Old failures retained.
+M5 fresh reconstructed Stock/Commerce native9 passed0critical skips; closure
+SHA7ec43ec7b11c585ae43a2f416d043f04c4860f96836e58fc88426e93740f21d8.
+Independent original integer/Fraction oracle checks23 raw67-table snapshots,
+preserving66 financial/source/audit rows and separately monotonic gate versions.
+Existing actual two-item/two-warehouse/four-paid-tranche commerce passed with
+oracle:receipts28000/COGS28000/revenueCash69000/14GL effects/Dr=Cr194000.
+Retained ACK/current-withdrawal regression passed1 case63.145s after replacing
+incorrect row-wrapper object comparison with exact contents/code checks. These
+test durations are not business throughput measurements.
+Actual Studio injected negative and first positive3-case originals remain
+component evidence only; earlier driver count/private publication refusals did
+not execute native restore. New whole React726/typecheck/build passed. Final
+strict case-bound HTTPS,333-table restore and frozen-source hosted gates pending.
+Fresh original files are byte-identically mirrored outside worktrees in
+F:/ReconForge_Evidence/recovery-20261014; absent historical outputs stay absent.
+
 ## Actual Wave5 closure and M1 executed integration checkpoints (2026-10-13)
 
 Wave5 original final closure SHA07bc3fd44b6de8b52d77ed35a8624c97cdfecaa754fbafea666dee7aa82c7f98

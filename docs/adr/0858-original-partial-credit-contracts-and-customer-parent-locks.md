@@ -18,6 +18,9 @@ by the operational owner. Keep its existing operational_source_state_invalid
 code/message, while Paid still reaches the existing positive-residual rejection.
 The two new native cases hold the mutable source's customer and require refusal
 to complete while that lock is still held, with unchanged invoice and zero effects.
+Sourcec211cf50 passes those two cases plus the real approved posting, then all29
+affected native collection/return cases with zero skips/errors/failures. Ordinary
+role and before/after source receipts are retained; no timeout is increased.
 
 The affected native collection/return cohort passes 27 cases on source00929829.
 Its new case posts the real approved collection after the held parent releases:

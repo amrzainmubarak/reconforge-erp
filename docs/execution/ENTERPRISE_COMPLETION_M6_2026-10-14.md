@@ -2,12 +2,13 @@
 
 Base: frozen M5 PR137 source23fe490e, retaining the historical draft chain and
 M4d9f2e/M318d81. Primary worktree and main remain untouched. M5 exact-head hosted
-CI64/64 is successful; byte custody of all hosted archives and final PR evidence
-publication are being closed separately. No M5 result is relabeled as M6 acceptance.
+CI64/64 scoped acceptance is closed: final closure08fb3a32 and402-file/36,612,658B
+external original mirror975029bf were independently rehashed. Reviewed final PR
+evidence publication closes separately. No M5 result is relabeled as M6 acceptance.
 
 | Capability | Implemented / independently verified | Remaining acceptance / owner |
 | --- | --- | --- |
-| Real collection parent order | Customer acquired before the existing operational invoice owner. Baseline8d951057 reproduces LockNotAvailable; source00929829 new case and whole27 native collection/return cases pass without skips or timeout changes. Hand-calculated eight lines/Dr=Cr70000, AR44000, cash/allocation1000 | Root: frozen M6 native/API/restore and hosted gates; no performance claim |
+| Real collection parent order | Customer acquired before the existing operational invoice owner, after immutable approved-state admission. Baseline8d951057 reproduces LockNotAvailable; source00929829 new case/full27 pass. Sourcec211cf50 target3/full29 pass0 skips, including Draft/Submitted refusal while the customer is still held. Hand-calculated eight lines/Dr=Cr70000, AR44000, cash/allocation1000 | Root: frozen final M6 API/restore and hosted gates; no performance claim |
 | Partial original quantity / cost | Immutable typed source, exact original FIFO prefix, explicit scope/tax/tracking/captured currency, source/history seals and cumulative versions. Commercial source22509ff6:97 design+Domain cases | Root/native: PostgreSQL ownership, physical receipt and both cost-layer guards; no native partial-stock return yet |
 | Credit / collection / refund | Per-invoice AR-first credit, independent COGS restitution, collection/refund residual caps, append-only history and stale/tamper refusal | Root: shared native AR/aging/exposure/allocation projection, direct SQL OLD/NEW delta guards and CR1/CR2 exclusion |
 | Original-account correction templates | Unapproved, nonpostable Revenue/AR/RefundLiability and Inventory/COGS templates reuse existing Finance Posting snapshots. Native source51616df0:184 combined design/Domain/builder cases; reciprocal static peer closed | Root: source directory admission, exact native chart/period/current-authority checks, three-person approvals, same-transaction ledger/inventory effects |
@@ -21,7 +22,11 @@ Foreign/taxed/lot/serial returns, fractional monetary remainder policy and
 multi-tranche allocation ownership remain outside this first scope.
 
 Pure integration on7d43be1e passes184 cases in29.21s, with zero failures/errors/
-skips. Targeted Ruff/mypy/Bandit pass. Seven independently authored Fraction
+skips. Whole-source Ruff/mypy794files/Bandit pass on sourcec211cf50. Exact package
+source/archive inspection also passes (closure665328e2). Target3/full29 native
+receipts on that source retain normal role4false, unchanged source and server
+timeouts; final full29 receipt16a02094 and original XML9b1dba6e are external.
+Seven independently authored Fraction
 vectors remain separate from implementation-derived expected outputs. Isolated
 and optimized isolated interpreters enforce refusal guards. These timings are
 test durations, not manufacturing/posting benchmarks or cost-per-transaction.

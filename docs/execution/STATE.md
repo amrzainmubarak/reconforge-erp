@@ -12622,3 +12622,15 @@ USD parent/partial-refund compatibility passes separately. Root composed81
 passes. Whole frozen M5 TLS/restore/package/security/CI remains pending.
 Partial-stock CR2 remains design only. StockSales adjacent scope is under actual
 native audit, not yet a proven correction. Comparative benchmarks are deferred.
+
+### 2026-10-14 — Own the real WebCrypto publication test sequence
+
+Currentc65 hosted web component gate rejected only the Arabic original-evidence
+publication case. Its original DOM retained source/native books with no alert,
+no status and no download; no financial or cryptographic defect is inferred.
+The focused unchanged six-case diagnostic passed locally, but that is not flaky
+acceptance. The test now controls the source-response commit and real WebCrypto
+completion separately from publication. Before publication, status/download are
+absent and verify remains disabled; only the genuine checked result releases it.
+Both locales retain actual cryptographic verification and original effect checks.
+No timeout increase, retry, mock digest, skip or production component change.

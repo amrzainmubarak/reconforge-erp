@@ -23551,3 +23551,15 @@ Root composed81 PASS XML SHA
 4d8c72752862ff4d96d47002cbe32cf19b273cfa46f8d9bec83e3da542a84ac0.
 Affected production mypy/Ruff pass. Noncanonical test-only mypy found52 errors
 (11 own annotations/41 imported fixture); no suppression or test-mypy pass.
+
+### 2026-10-14 — Preserve rejected original Arabic publication receipt
+
+CI38507877851/c65 web job115669639719 rejected one component case at original
+test line39:25, TestingLibraryElementError: Unable to find role=status.
+Actual703 PASS/1 FAIL across87 PASS/1 FAIL files. Original132260B log SHA
+bd1d43df82ec2f567379c5f5c8c998c6cc47f2a6234bbbaffd5335f940f7ef54.
+Finite DOM retains SYNTHETIC-IC, posted recognition and native seller/buyer books;
+verify is enabled, download absent, no alert/error text. Epoch transitions were
+not observable in that log and are not invented. Controlled source-response and
+real checked-result publication gates remove the test's implicit async ordering;
+new frozen whole CI remains required, with the rejected source preserved.

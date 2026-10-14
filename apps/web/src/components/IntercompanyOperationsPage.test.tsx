@@ -30,12 +30,25 @@ describe("real intercompany Studio controls", () => {
   });
   it.each(["en", "ar"] as const)("commits actual WebCrypto verification before exposing download in %s", async locale => {
     const { proof, detail } = await icFixture(), complete = deferred<data.IcEvidence>(); const original = data.verifyIcEvidence;
-    vi.spyOn(data, "verifyIcEvidence").mockImplementation((...args) => { const running = original(...args); void running.then(complete.resolve); return running; });
-    vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL) => response(String(url).endsWith("/auth/me") ? identity : String(url).endsWith("/catalog") ? { catalog } : String(url).endsWith("/evidence") ? { evidence: proof } : String(url).endsWith("/sources") ? { sources: [detail] } : { source: detail })));
+    const sourceResponse = deferred<Response>(), publish = deferred<data.IcEvidence>();
+    vi.spyOn(data, "verifyIcEvidence").mockImplementation(async (...args) => {
+      const checked = await original(...args); complete.resolve(checked); return publish.promise;
+    });
+    vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL) => {
+      const path = String(url);
+      if (path.endsWith(`/sources/${proof.source.id}`)) return sourceResponse.promise;
+      return response(path.endsWith("/auth/me") ? identity : path.endsWith("/catalog") ? { catalog } : path.endsWith("/evidence") ? { evidence: proof } : { sources: [detail] });
+    }));
     renderSession(locale); await waitFor(() => expect(screen.getByRole("button", { name: icTranslate(locale, "apply") })).toBeEnabled()); fireEvent.click(screen.getByRole("button", { name: icTranslate(locale, "apply") }));
     await screen.findByRole("form", { name: icTranslate(locale, "prepare") }); fireEvent.change(screen.getByLabelText(icTranslate(locale, "sources")), { target: { value: proof.source.id } });
-    await screen.findByRole("region", { name: icTranslate(locale, "plan") });
+    // Commit the retained source and its invalidation effects before verification.
+    await act(async () => sourceResponse.resolve(response({ source: detail })));
+    expect(screen.getByRole("region", { name: icTranslate(locale, "plan") })).toBeInTheDocument();
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: icTranslate(locale, "verify") })); await complete.promise; });
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: icTranslate(locale, "download") })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: icTranslate(locale, "verify") })).toBeDisabled();
+    await act(async () => publish.resolve(await complete.promise));
     expect(await screen.findByRole("status")).toHaveTextContent(icTranslate(locale, "verified")); expect(screen.getByRole("button", { name: icTranslate(locale, "download") })).toBeEnabled();
     expect(screen.getByText("effect-buyer")).toBeInTheDocument(); expect(screen.getByText("effect-seller")).toBeInTheDocument();
   });

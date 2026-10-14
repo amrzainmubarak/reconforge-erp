@@ -625,7 +625,7 @@ def test_writer_refuses_late_customer_return_private_original_drift_without_publ
 def test_reused_public_customer_return_raw_rows_are_quarantined_before_generic_basename_exemption(tmp_path: Path) -> None:
     output, private, _, _ = inputs(tmp_path)
     stale = output / "playwright-artifacts/native-customer-return-originals/native-financial-snapshot-oracle-1.json"
-    stale.parent.mkdir()
+    stale.parent.mkdir(parents=True)
     raw = PRIVATE_MONEY.encode() + b" " + PRIVATE_SOURCE.encode()
     stale.write_bytes(raw)
     assert writer._unchanged_original_artifact_name(stale) is True

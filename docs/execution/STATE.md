@@ -12529,3 +12529,17 @@ limit, native skip rejection and services stay unchanged. Eight focused CI
 partition contracts pass. No financial runtime, migration, reader or API change.
 Fresh final CI on the new exact source remains required. Earlier browser,
 package and same-source security components are qualified to their own heads.
+
+### 2026-10-14 — Preserve full CI ownership and actual router uniqueness
+
+Current464 Python gates each rejected one stale expected-owner map: all eleven
+retained cashflow/group files were still assigned to the prior combined native
+shard by a separate literal collection contract. Change those eleven labels
+only; preserve whole-map equality, every file, every invocation and native bounds.
+Current4b002 group API native gate stopped before the report/export request:
+FastAPI's retained included-router objects have no direct path attribute.
+Resolve effective route contexts for actual registration counts, preserve each
+operation's count of exactly one and add duplicate/nested/legacy-flat controls.
+The FX client now tests real application assembly without injecting an extra
+router. Production API/authorization/accounting bytes remain unchanged. Preserve
+both rejected sources and raw receipts; fresh source acceptance is required.

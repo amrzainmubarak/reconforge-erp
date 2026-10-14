@@ -541,6 +541,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "LICENSE", "README.md", "MANIFEST.in", "pyproject.toml", "alembic.ini", "reconforge_migration_sql.py",
         "alembic/env.py", "alembic/script.py.mako", "tests/__init__.py", INDEX_PATH,
         "tests/mandatory_native_gate.py", "tests/test_mandatory_native_gate.py",
+        "tests/api_route_registration.py",
         "tests/test_benchmark_evidence_index.py", "tests/test_alembic_postgres.py",
         ".github/scripts/verify_benchmark_index.py", ".github/scripts/verify_commercial_collections.py",
         ".github/scripts/benchmark_enterprise_finance.py", "tests/fixtures/landed_cost_owner_0123_69951414.sql",

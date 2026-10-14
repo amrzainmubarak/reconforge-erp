@@ -8,6 +8,7 @@ from reconforge.domain.finance_posting import canonical_json, digest_payload
 from reconforge.infrastructure.postgres_intercompany_group_diagnostic import (
     PostgresIntercompanyGroupDiagnosticRepository,
 )
+from tests.api_route_registration import registered_http_operations
 from tests.test_postgres_intercompany_cashflow_api import financial_population
 from tests.test_postgres_intercompany_fx_api import client
 from tests.test_postgres_intercompany_group_diagnostic import closed_source, selection, write_original
@@ -74,8 +75,9 @@ def test_ordinary_authenticated_diagnostic_report_and_original_export_retain_eve
                                                                                                intercompany_fx_database, tmp_path):
     chosen = selection(closed_source(runtime, "authenticated"))
     with client(runtime, intercompany_fx_database, tmp_path, "poster", step_up=False) as (session, headers):
-        assert sum(route.path == "/api/v1/intercompany-group-diagnostic/report" for route in session.app.routes) == 1
-        assert sum(route.path == "/api/v1/intercompany-group-diagnostic/evidence" for route in session.app.routes) == 1
+        registrations = registered_http_operations(session.app)
+        assert registrations[("GET", "/api/v1/intercompany-group-diagnostic/report")] == 1
+        assert registrations[("GET", "/api/v1/intercompany-group-diagnostic/evidence")] == 1
         with runtime.actor("poster") as (connection, _, actor):
             before = financial_population(connection, runtime.base.tenant)
             original = PostgresIntercompanyGroupDiagnosticRepository(connection, runtime.base.tenant).evidence(chosen, actor=actor)

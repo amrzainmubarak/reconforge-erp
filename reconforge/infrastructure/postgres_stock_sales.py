@@ -3,12 +3,12 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import asdict
-from typing import Any
+from typing import Any, NoReturn
 
 from reconforge.application.receivables import ReceiptAllocationInput, ReceivableInvoiceLineInput
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor, canonical_json, digest_payload, text
 from reconforge.domain.operational_finance import OperationalFinancePreparation
-from reconforge.domain.sales_revenue import SalesInvoicePreparation, require_sales_monetary_affinity
+from reconforge.domain.sales_revenue import MAX_MINOR, SalesInvoicePreparation, require_sales_monetary_affinity
 from reconforge.domain.stock_sales import (
     STOCK_OPERATIONS,
     STOCK_STAGES,
@@ -22,14 +22,14 @@ from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
-from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository
+from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository, records
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
 from reconforge.infrastructure.postgres_inventory_quantity_coordination import lock_inventory_quantity_pools
 from reconforge.infrastructure.postgres_operational_finance import PostgresOperationalFinanceRepository
 from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
 from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope
 from reconforge.infrastructure.postgres_sales_revenue import PostgresSalesRevenueRepository
-from reconforge.platform.common import platform_id
+from reconforge.platform.common import current_server_principal, platform_id
 from reconforge.platform.inventory_values import minor_to_text, quantity_to_scaled
 
 READ = frozenset({"sales.read", "inventory.read", "receivables.read", "finance_core.read"})
@@ -47,6 +47,48 @@ OPERATION_PERMISSIONS = {
     "collect": READ | {"sales.manage", "receivables.manage", "finance_core.post"},
     "cancel": READ | {"sales.manage", "finance_core.manage"},
 }
+
+
+def stock_sales_money_context(row: Mapping[str, Any]) -> tuple[int, int]:
+    """Separate exposed price sensitivity from the original business amount."""
+    def invalid() -> NoReturn:
+        raise FinancePostingError("stock_sales_evidence_invalid", "Retained prices and captured monetary policies must be exact.")
+
+    def minor(value: object) -> int:
+        if type(value) is not int or not 1 <= value <= MAX_MINOR:
+            invalid()
+        return value
+
+    source = row.get("source", row)
+    if not isinstance(source, Mapping):
+        invalid()
+    currency = source.get("currency_code")
+    if type(currency) is not str or not currency or row.get("currency_code") != currency:
+        invalid()
+    retained = source.get("monetary_policy")
+    fields = ("currency_code", "precision", "rounding_policy", "registry_version", "registry_digest")
+    policy: tuple[Any, ...] | None = None
+    if retained is not None:
+        if not isinstance(retained, Mapping):
+            invalid()
+        policy = tuple(retained.get(field) for field in fields)
+        if (policy[0] != currency or type(policy[1]) is not int or not 0 <= policy[1] <= 18
+                or any(type(value) is not str or not value for index, value in enumerate(policy) if index != 1)):
+            invalid()
+    elif "source" in row:
+        invalid()  # Only an original pre-birth request may lack its captured policy.
+    cost = 0
+    issue = row.get("issue_plan")
+    if issue is not None:
+        if not isinstance(issue, Mapping) or not isinstance(issue.get("currency_policy"), Mapping) or policy is None:
+            invalid()
+        captured = tuple(issue["currency_policy"].get(field) for field in fields)
+        if any(type(actual) is not type(expected) or actual != expected for actual, expected in zip(captured, policy, strict=True)):
+            invalid()
+        cost = minor(issue.get("total_cost_minor"))
+    effect = max(minor(row.get("total_minor")), minor(source.get("total_minor")), cost)
+    exposed = max(effect, minor(source.get("unit_price_minor")), minor(source.get("net_unit_price_minor")))
+    return exposed, effect
 
 
 class PostgresStockSalesRepository:
@@ -68,26 +110,71 @@ class PostgresStockSalesRepository:
             raise FinancePostingError("stock_sales_source_missing", "Source is absent from the selected scope.")
         return dict(row)
 
+    def _authority_locks(self, actor: PostingActor, operation: str) -> None:
+        """Pin current authority before source, command and quantity waits."""
+        permissions = OPERATION_PERMISSIONS.get(operation, READ)
+        for permission in sorted(permissions):
+            actor.require(permission, mutation=operation != "read")
+        principal = current_server_principal()
+        if (principal is None or principal.user.id != actor.user_id or principal.user.username != actor.username
+                or principal.user.disabled or principal.principal_type != "user"
+                or (operation != "read" and not principal.step_up_active)):
+            raise FinancePostingError("sales_actor_denied", "A current authenticated human is required.")
+        for permission in sorted(permissions):
+            # Keep the existing captured-scope preflight before waits, without
+            # interpreting a historical quote through live currency metadata.
+            self.authority._actor(actor, permission, mutation=operation != "read")
+        if self.connection.execute("""SELECT id FROM reconforge.identity_users WHERE tenant_id=%s AND id=%s
+            AND username=%s AND NOT disabled FOR SHARE""", (self.tenant_id, actor.user_id, actor.username)).fetchone() is None:
+            raise FinancePostingError("sales_actor_denied", "Current persisted human authority is absent.")
+        rows = records(self.connection.execute("""SELECT p.permission_name FROM reconforge.identity_user_roles a
+            JOIN reconforge.identity_roles r ON r.tenant_id=a.tenant_id AND r.id=a.role_id
+            JOIN reconforge.identity_role_permissions p ON p.tenant_id=r.tenant_id AND p.role_id=r.id
+            JOIN reconforge.identity_permissions c ON c.tenant_id=p.tenant_id AND c.name=p.permission_name
+            WHERE a.tenant_id=%s AND a.user_id=%s AND a.active AND r.active AND p.active AND p.permission_name=ANY(%s)
+            ORDER BY r.id,p.permission_name FOR SHARE OF a,r,p,c""", (self.tenant_id, actor.user_id, sorted(permissions))))
+        if {row["permission_name"] for row in rows} != set(permissions):
+            raise FinancePostingError("sales_actor_denied", "Current persisted permissions deny this command.")
+        history = records(self.connection.execute("""SELECT DISTINCT scope_type FROM reconforge.principal_scope_grants
+            WHERE tenant_id=%s AND principal_type='user' AND principal_id=%s ORDER BY scope_type""",
+            (self.tenant_id, actor.user_id)))
+        if history:
+            fields = {"workspace": "workspace_id", "organization": "organization_id", "legal_entity": "legal_entity_id"}
+            required = {(row["scope_type"], self.scope[fields[row["scope_type"]]]) for row in history}
+            grants = records(self.connection.execute("""SELECT scope_type,scope_id FROM reconforge.principal_scope_grants
+                WHERE tenant_id=%s AND principal_type='user' AND principal_id=%s AND revoked_at IS NULL
+                AND scope_type=ANY(%s) AND((scope_type='workspace' AND scope_id=%s)
+                    OR(scope_type='organization' AND scope_id=%s) OR(scope_type='legal_entity' AND scope_id=%s))
+                ORDER BY scope_type,scope_id FOR SHARE""", (self.tenant_id, actor.user_id, sorted(kind for kind, _ in required),
+                    self.scope["workspace_id"], self.scope["organization_id"], self.scope["legal_entity_id"])))
+            if {(row["scope_type"], row["scope_id"]) for row in grants} != required:
+                raise FinancePostingError("sales_scope_denied", "Current historical parent scope authority is absent or revoked.")
+
     def _actor(self, actor: PostingActor, operation: str, row: Mapping[str, Any] | None = None) -> None:
+        self._authority_locks(actor, operation)
         source = (row.get("source") or row) if row else {}
         retained = source.get("monetary_policy")
+        exposed, effect = stock_sales_money_context(row) if row is not None else (None, None)
         for permission in sorted(OPERATION_PERMISSIONS.get(operation, READ)):
+            amount = exposed if permission in READ else effect
             self.authority._actor(actor, permission, mutation=operation != "read",
-                amount=row["total_minor"] if row and not retained else None,
+                amount=amount if row and not retained else None,
                 currency=row["currency_code"] if row and not retained else None)
             if row and retained:
-                amount = max(row["total_minor"], source["total_minor"], (row.get("issue_plan") or {}).get("total_cost_minor", 0))
                 self.ops._actor(actor, permission, {**self.scope, "amount_minor": amount,
                     "currency_precision": retained["precision"]}, mutation=operation != "read")
         if operation != "read":
             self.connection.execute("SELECT set_config('app.stock_sales_actor_id',%s,true)", (actor.user_id,))
 
-    def _order(self, identifier: str, *, lock: bool = False) -> dict[str, Any]:
+    def _order(self, identifier: str, *, lock: bool = False, read_lock: bool = False) -> dict[str, Any]:
         args = (self.tenant_id, text(identifier, "stock order"), self.scope["workspace_id"],
                 self.scope["organization_id"], self.scope["legal_entity_id"])
         if lock:
             return self._one("""SELECT * FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s
                 AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s FOR UPDATE""", args)
+        if read_lock:
+            return self._one("""SELECT * FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s
+                AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s FOR SHARE""", args)
         return self._one("""SELECT * FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s
             AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s""", args)
 
@@ -130,6 +217,7 @@ class PostgresStockSalesRepository:
             command, row["id"], row["row_version"], actor.user_id, request["operation"], digest_payload(request),
             canonical_json(request), canonical_json(result)))
         self._close(row["id"])
+        self._actor(actor, str(request["operation"]), self._order(str(row["id"])))
         return result
 
     def create(self, request: StockOrder, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
@@ -137,12 +225,15 @@ class PostgresStockSalesRepository:
         identifier = platform_id("STSALE", self.scope["workspace_id"], payload["number"])
         with self.connection.transaction():
             ensure_repository_tenant_scope(self.connection, self.tenant_id)
-            self._actor(actor, "create", payload)
+            self._authority_locks(actor, "create")
             command = self._request(identifier, "create", payload, actor)
             replay = self._replay(command_id, command)
             if replay is not None:
-                self._actor(actor, "create", payload)
+                self._actor(actor, "create", self._order(identifier, read_lock=True))
                 return replay
+            # Live currency interpretation applies only to a genuinely new
+            # source. A historical acknowledgement retains its captured policy.
+            self._actor(actor, "create", payload)
             masters = self._one("""SELECT i.id item_id,i.uom_id,u.decimal_places quantity_precision,l.id location_id,
                 w.warehouse_code,c.id customer_id,e.currency_code
                 FROM reconforge.inventory_items i JOIN reconforge.inventory_units_of_measure u ON u.tenant_id=i.tenant_id AND u.id=i.uom_id
@@ -161,6 +252,7 @@ class PostgresStockSalesRepository:
             quantity = quantity_to_scaled(payload["quantity"], masters["quantity_precision"], "Stock order quantity")
             payload["monetary_policy"] = self.ar.get_customer(masters["customer_id"])["monetary_policy"]
             payload["quantity_scaled"] = quantity
+            self._actor(actor, "create", payload)
             self.connection.execute("""INSERT INTO reconforge.stock_sales_orders
                 (tenant_id,id,workspace_id,organization_id,legal_entity_id,customer_id,item_id,uom_id,location_id,number,
                 currency_code,quantity_scaled,quantity_precision,total_minor,source,source_digest,created_by)
@@ -306,7 +398,7 @@ class PostgresStockSalesRepository:
             request = self._request(identifier, operation, {"expected_version": expected_version, "reason": reason, **dict(parameters)}, actor)
             replay = self._replay(command_id, request)
             if replay is not None:
-                self._actor(actor, operation, self._order(identifier))
+                self._actor(actor, operation, self._order(identifier, read_lock=True))
                 return replay
             context: Mapping[str, Any] = {}
             if operation in {"prepare-issue", "prepare-invoice", "prepare-collection"}:
@@ -443,7 +535,10 @@ class PostgresStockSalesRepository:
         with self.connection.transaction():
             ensure_repository_tenant_scope(self.connection, self.tenant_id)
             self._actor(actor, "read", self._order(identifier))
+            row = self._order(identifier, read_lock=True)
+            self._actor(actor, "read", row)
             self._close(identifier)
+            self._actor(actor, "read", row)
             return self._view(identifier)
 
     def list(self, *, actor: PostingActor) -> dict[str, Any]:

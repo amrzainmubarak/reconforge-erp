@@ -13587,3 +13587,13 @@ Each restore callback captures and verifies fresh actual originals, then returns
 the first already verified receipt only after exact proof equality and all eight
 write-time identity checks. Publish only that trusted finite custody packet.
 Local comparative benchmarks remain deferred; native test durations are not TPS.
+
+### 2026-10-14 — Exposed money and original approval amounts
+
+Use finite named original-money fields under the immutable captured currency
+policy for READ. Keep original source business-effect amount for phase WRITE.
+Require captured nonempty scope kinds union immutable historical grant kinds on
+every operation. Never-granted child levels keep existing fallback; withdrawn
+levels cannot become global through fresh snapshots. Lock current authorities
+before source waits and recheck after source locks. Reuse current Identity,
+ScopeAuthority, Money and GL; no migration147 for this application correction.

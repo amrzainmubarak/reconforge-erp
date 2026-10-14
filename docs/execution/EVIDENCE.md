@@ -23531,3 +23531,23 @@ The test-only effective-context counter retains duplicates, prefixes and HTTP
 methods, unlike an OpenAPI dictionary. Public FastAPI release notes describe
 the retained-router change since0.137: https://fastapi.tiangolo.com/release-notes/.
 All old originals remain source-qualified; current final CI is still pending.
+
+### 2026-10-14 — Original CR1 read/write and withdrawn authority proof
+
+Final owned adapter working-byte SHA
+27cede1b6aae4f345efd39a5fb847ef59aa8528cc6f911e5a125b379696e0271.
+Actual native9 PASS431.652s/zero skips, original XML SHA
+15a6bea8b7a4502aa0a57b69a0be05daf0e07023d007c80f59a80620306aeb3c.
+Independent private closure SHA
+527f6807eded5bb80e3dcf923c1282361623fed1599d615280ef85bceaadff7e.
+Existing USD parent/refund1 PASS91.515s/zero skips, XML SHA
+95346f3dd3ee61b1dd641f27e0c2c8f577915dd07e05509371fbf059453ea56c.
+Four READ caps20 refuse retained3000.000 KWD unit price; phase WRITE20 admits
+original3.000/6.001 effect and WRITE6 refuses. Cached/fresh partial/all-empty
+withdrawal and both actual wait orders are covered.67 selected financial table
+strings remain exact within each fixture; cross-database equality not claimed.
+Prior true price/scope/write-context RED originals remain retained separately.
+Root composed81 PASS XML SHA
+4d8c72752862ff4d96d47002cbe32cf19b273cfa46f8d9bec83e3da542a84ac0.
+Affected production mypy/Ruff pass. Noncanonical test-only mypy found52 errors
+(11 own annotations/41 imported fixture); no suppression or test-mypy pass.

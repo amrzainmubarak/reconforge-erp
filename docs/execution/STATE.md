@@ -12608,3 +12608,17 @@ operation's count of exactly one and add duplicate/nested/legacy-flat controls.
 The FX client now tests real application assembly without injecting an extra
 router. Production API/authorization/accounting bytes remain unchanged. Preserve
 both rejected sources and raw receipts; fresh source acceptance is required.
+
+### 2026-10-14 — Current original-credit money and authority correction
+
+M5 integrates the independently qualified CR1 correction: exposed quoted prices,
+FIFO values and original source totals use a finite captured-policy READ context;
+phase permissions retain original business-effect amounts. Current human/role/
+catalog and applicable historical scope kinds are locked before source waits.
+Fresh empty or partial snapshots cannot reinstate withdrawn bounded access.
+Original source/ACK/GL/AR and migration126 bytes are preserved; no147 is needed.
+Actual independent9 native cases pass431.652s with zero critical skips; existing
+USD parent/partial-refund compatibility passes separately. Root composed81
+passes. Whole frozen M5 TLS/restore/package/security/CI remains pending.
+Partial-stock CR2 remains design only. StockSales adjacent scope is under actual
+native audit, not yet a proven correction. Comparative benchmarks are deferred.

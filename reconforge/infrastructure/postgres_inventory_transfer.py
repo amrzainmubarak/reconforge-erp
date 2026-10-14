@@ -82,7 +82,8 @@ class PostgresInventoryTransferRepository:
             precision = snapshots[0]["monetary_policy"]["currency_precision"]
             if any(snapshot["monetary_policy"] != snapshots[0]["monetary_policy"] for snapshot in snapshots):
                 fail("Transfer originals require the same exact captured monetary policy.")
-            scope.update(amount_minor=max(exposed_minor(snapshot) for snapshot in snapshots), currency_precision=precision)
+            scope.update(amount_minor=max(max(exposed_minor(snapshot), self._consumed_document_amount(snapshot, scope))
+                for snapshot in snapshots), currency_precision=precision)
         for permission in sorted(PERMISSIONS.get(operation, READ)):
             self.owner._actor(actor, permission, scope, mutation=operation != "read")
         query = """SELECT scope_type,scope_id FROM reconforge.principal_scope_grants WHERE tenant_id=%s
@@ -95,6 +96,28 @@ class PostgresInventoryTransferRepository:
             scope["organization_id"], scope["legal_entity_id"])))
         if len({(row["scope_type"], row["scope_id"]) for row in grants}) != 3:
             fail("Transfer requires every current persisted original parent grant.", "inventory_transfer_scope_denied")
+
+    def _consumed_document_amount(self, snapshot: Mapping[str, Any], scope: Mapping[str, Any]) -> int:
+        """Authorize whole immutable documents without rewriting historical snapshots."""
+        identifiers = sorted({original["id"] for source in snapshot["sources"] for original in source["consumptions"]})
+        if not identifiers:
+            return 0
+        row = self._one("""SELECT count(DISTINCT c.id) originals,COALESCE(max(d.total_value_minor),0) amount
+            FROM reconforge.inventory_layer_consumptions c
+            JOIN reconforge.inventory_valuation_lines v ON v.tenant_id=c.tenant_id AND v.id=c.valuation_line_id
+            JOIN reconforge.inventory_valuation_documents d ON d.tenant_id=v.tenant_id AND d.id=v.valuation_document_id
+            JOIN reconforge.finance_entries f ON f.tenant_id=d.tenant_id AND f.id=d.finance_entry_id
+            WHERE c.tenant_id=%s AND c.id=ANY(%s) AND c.workspace_id=%s AND d.status='Approved'
+            AND(d.workspace_id,d.organization_id,d.legal_entity_id)=(%s,%s,%s)
+            AND f.currency_code=d.currency_code
+            AND jsonb_build_object('currency_code',d.currency_code,'currency_precision',f.currency_precision,
+                'currency_rounding_policy',f.currency_rounding_policy,'currency_registry_version',f.currency_registry_version,
+                'currency_registry_digest',f.currency_registry_digest)=%s::jsonb""",
+            (self.tenant_id, identifiers, scope["workspace_id"], scope["workspace_id"], scope["organization_id"],
+                scope["legal_entity_id"], canonical_json(snapshot["monetary_policy"])))
+        if row["originals"] != len(identifiers):
+            fail("Transfer requires every original consumed document in its captured scope and monetary policy.")
+        return int(row["amount"])
 
     def _context(self, identifier: str, operation: str, actor: PostingActor) -> None:
         self.connection.execute("""SELECT set_config('app.inventory_transfer_id',%s,true),

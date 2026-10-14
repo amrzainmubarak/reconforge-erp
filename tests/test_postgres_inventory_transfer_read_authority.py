@@ -13,7 +13,9 @@ from reconforge.infrastructure.postgres_inventory_transfer import PostgresInvent
 from reconforge.infrastructure.postgres_outbox import PostgresOutboxRepository
 from reconforge.platform.common import current_server_principal, server_principal_context
 from tests.test_postgres_inventory_transfer import (
+    add_approved_receipt,
     baseline_receipt_database,
+    consume_original,
     native_business,
     request,
     transfer_database,
@@ -21,6 +23,67 @@ from tests.test_postgres_inventory_transfer import (
 )
 
 _ = (baseline_receipt_database, transfer_database)
+
+
+@pytest.mark.parametrize("permission", ["inventory_transfer.read", "inventory.read", "inventory.valuation.read", "finance_core.read"])
+def test_actual_complete_single_item_multilayer_consumption_document_requires_whole_original_amount(transfer_database: tuple[str, str], monkeypatch: pytest.MonkeyPatch, permission: str) -> None:
+    import json
+    import os
+    from pathlib import Path
+
+    import reconforge.infrastructure.postgres_operational_finance as core
+    from tests.inventory_transfer_browser import inventory_transfer_proof
+
+    runtime = transfer_runtime(transfer_database)
+    add_approved_receipt(runtime, "SECOND-COMPLETE-COST-ORIGINAL")
+    consumed = consume_original(runtime, "WHOLE-ORIGINAL-CONSUMPTION", quantity="5")
+    with runtime.actor("maker") as (connection, _, actor):
+        document = connection.execute("SELECT total_value_minor FROM reconforge.inventory_valuation_documents WHERE tenant_id=%s AND id=%s", (runtime.tenant, consumed["id"])).fetchone()
+        assert document["total_value_minor"] == 6000
+        created = PostgresInventoryTransferRepository(connection, runtime.tenant).create(request(), command_id="multilayer-whole-create", actor=actor)
+        cost = created["source"]["cost_snapshot"]
+        assert cost["remaining_value_minor"] == 1200 and len(cost["sources"]) == 2
+        assert all(source["layer"]["original_value_minor"] == 3600 for source in cost["sources"])
+        assert sum(history["value_minor"] for source in cost["sources"] for history in source["consumptions"]) == 6000
+        original = canonical_json(native_business(connection, runtime.tenant))
+    maximum = "60"
+    observed: list[Decimal] = []
+
+    def bounded(principal, **context):
+        if context["required_permission"] == permission and context.get("amount") is not None:
+            observed.append(context["amount"])
+            return evaluate_principal_access(principal, maximum_amount=Decimal(maximum), **context)
+        return evaluate_principal_access(principal, **context)
+
+    monkeypatch.setattr(core, "evaluate_principal_access", bounded)
+    with runtime.actor("maker") as (connection, _, actor):
+        owner = PostgresInventoryTransferRepository(connection, runtime.tenant)
+        assert owner.get(created["source"]["id"], actor=actor) == created["source"]
+        assert owner.create(request(), command_id="multilayer-whole-create", actor=actor) == created
+    if directory := os.environ.get("RECONFORGE_IT1_NATIVE_PROOF_DIR"):
+        with (Path(directory) / ("multilayer-original-" + permission + ".json")).open("x", encoding="utf-8") as target:
+            json.dump(inventory_transfer_proof(runtime, actor_name="poster"), target, indent=2, sort_keys=True, allow_nan=False)
+            target.write("\n")
+    maximum = "36"
+    for operation in ("get", "list", "evidence", "replay", "receipt", "new-response"):
+        with runtime.actor("maker") as (connection, _, actor), pytest.raises(FinancePostingError) as refused:
+            owner = PostgresInventoryTransferRepository(connection, runtime.tenant)
+            if operation == "list":
+                owner.list_transfers(request().scope, actor=actor)
+            elif operation == "replay":
+                owner.create(request(), command_id="multilayer-whole-create", actor=actor)
+            elif operation == "receipt":
+                owner.command_receipt(created["source"]["id"], "multilayer-whole-create", created, actor=actor)
+            elif operation == "new-response":
+                owner.create(request("REFUSED-MULTILAYER-WHOLE"), command_id="refuse-multilayer-whole", actor=actor)
+            else:
+                getattr(owner, operation)(created["source"]["id"], actor=actor)
+        assert "denied" in refused.value.code
+    assert observed and set(observed) == {Decimal("60.00")}
+    with runtime.actor("maker") as (connection, _, _):
+        assert canonical_json(native_business(connection, runtime.tenant)) == original
+        assert connection.execute("SELECT count(*) n FROM reconforge.inventory_transfer_sources WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
+        assert connection.execute("SELECT count(*) n FROM reconforge.inventory_transfer_commands WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
 
 
 def test_actual_first_read_permission_withdrawn_during_identity_wait_refuses_original(transfer_database: tuple[str, str]) -> None:

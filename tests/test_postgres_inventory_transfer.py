@@ -194,12 +194,24 @@ def test_actual_reviewed_and_unreviewed_cancel_retain_native_draft_and_release_o
         assert canonical_json(native_business(connection, runtime.tenant)) == original_financial
 
 
-def consume_original(runtime: ReceiptRuntime, number: str) -> dict[str, Any]:
+def add_approved_receipt(runtime: ReceiptRuntime, number: str, *, item_code: str = "ITEM") -> None:
+    original = ReceiptPreparation(receipt_number=number, posting_date="2026-10-04", period_id="period", item_code=item_code,
+        location_code="MAIN/STOCK", quantity="3", total_value_minor=3600, policy_code="FIFO", organization_code="ORG", entity_code="ENTITY",
+        workspace="work", reason="Additional original approved receipt with independent human custody")
+    with runtime.actor("maker") as (_, owner, actor):
+        plan = owner.prepare_receipt(original, command_id=number + "-prepare", actor=actor)
+    with runtime.actor("checker") as (_, owner, actor):
+        review = owner.review(plan["plan_id"], command_id=number + "-review", expected_plan_digest=plan["plan_digest"], reason="Independent complete added source review", actor=actor)
+    with runtime.actor("poster") as (_, owner, actor):
+        owner.commit(plan["plan_id"], command_id=number + "-post", expected_review_digest=review["review_digest"], reason="Actual additional posted original", actor=actor)
+
+
+def consume_original(runtime: ReceiptRuntime, number: str, *, quantity: str = "1") -> dict[str, Any]:
     with runtime.actor("maker") as (connection, _, actor):
         movement = PostgresInventoryCoreRepository(connection, runtime.tenant).create_movement(movement_number=number,
             movement_type="Delivery", organization_code="ORG", entity_code="ENTITY", period_id="period", movement_date="2026-10-10",
             description="Actual original FIFO withdrawal", workspace="work", actor_label=actor.user_id,
-            lines=[{"item_code": "ITEM", "quantity": "1", "from_location": "MAIN/STOCK"}])
+            lines=[{"item_code": "ITEM", "quantity": quantity, "from_location": "MAIN/STOCK"}])
     with runtime.actor("poster") as (connection, _, actor):
         PostgresInventoryCoreRepository(connection, runtime.tenant).post_movement(movement["id"], reason="Independent ordinary source withdrawal", actor_label=actor.user_id)
     with runtime.actor("maker") as (connection, _, actor):
@@ -274,3 +286,111 @@ def test_actual_restored_fifo_correction_class_refuses_new_transfer_cost_adoptio
         assert isinstance(refused.value.__cause__, psycopg.errors.CheckViolation) and "correction owners" in str(refused.value.__cause__)
         assert connection.execute("SELECT count(*) n FROM reconforge.inventory_transfer_sources WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
         assert before == canonical_json(native_business(connection, runtime.tenant))
+
+
+@pytest.mark.parametrize("balanced_offset", [False, True])
+def test_actual_unvalued_manual_destination_receipt_cannot_reserve_as_approved_original_stock(transfer_database: tuple[str, str], balanced_offset: bool) -> None:
+    """Approved commodity FIFO at A does not prove an unsupported new receipt at B."""
+    runtime = transfer_runtime(transfer_database)
+    with runtime.actor("maker") as (connection, _, actor):
+        receipt = PostgresInventoryCoreRepository(connection, runtime.tenant).create_movement(movement_number="UNVALUED-DESTINATION",
+            movement_type="Receipt", source_type="Manual", organization_code="ORG", entity_code="ENTITY", period_id="period", movement_date="2026-10-14",
+            workspace="work", description="Actual unsupported physical input without approved cost", actor_label=actor.user_id,
+            lines=[{"item_code": "ITEM", "quantity": "1", "to_location": "SECOND/STOCK"}])
+    with runtime.actor("poster") as (connection, _, actor):
+        PostgresInventoryCoreRepository(connection, runtime.tenant).post_movement(receipt["id"], reason="Actual independent legacy manual stock input", actor_label=actor.user_id)
+        assert physical(connection, runtime) == {"MAIN/STOCK": 3, "SECOND/STOCK": 1}
+        originals = canonical_json(native_business(connection, runtime.tenant))
+    if balanced_offset:
+        with runtime.actor("maker") as (connection, _, actor):
+            delivery = PostgresInventoryCoreRepository(connection, runtime.tenant).create_movement(movement_number="UNVALUED-OFFSET",
+                movement_type="Delivery", source_type="Manual", organization_code="ORG", entity_code="ENTITY", period_id="period", movement_date="2026-10-14",
+                workspace="work", description="Actual unvalued offset leaves equal aggregate quantities", actor_label=actor.user_id,
+                lines=[{"item_code": "ITEM", "quantity": "1", "from_location": "MAIN/STOCK"}])
+        with runtime.actor("poster") as (connection, _, actor):
+            PostgresInventoryCoreRepository(connection, runtime.tenant).post_movement(delivery["id"], reason="Actual independent unvalued offset", actor_label=actor.user_id)
+            assert physical(connection, runtime) == {"MAIN/STOCK": 2, "SECOND/STOCK": 1}
+            assert sum(physical(connection, runtime).values()) == connection.execute("SELECT remaining_quantity_scaled FROM reconforge.inventory_cost_layers WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["remaining_quantity_scaled"] == 3
+    unsupported = TransferPreparation("UNSUPPORTED-B-ORIGIN", "ITEM", "1", "SECOND/STOCK", "MAIN/STOCK", "period", "2026-10-14",
+        "Cannot claim unsupported original stock as approved IRP input", request().scope)
+    created = None
+    try:
+        with runtime.actor("maker") as (connection, _, actor):
+            created = PostgresInventoryTransferRepository(connection, runtime.tenant).create(unsupported, command_id="unsupported-physical-create", actor=actor)
+    except FinancePostingError as refused:
+        assert "conflict" in refused.code
+    if created is not None:
+        try:
+            phase(runtime, created, "review", "checker")
+        except FinancePostingError as refused:
+            assert "conflict" in refused.code
+        else:
+            import json
+            import os
+            from pathlib import Path
+
+            from tests.inventory_transfer_browser import inventory_transfer_proof
+
+            if directory := os.environ.get("RECONFORGE_IT1_NATIVE_PROOF_DIR"):
+                with (Path(directory) / "unsupported-physical-original-populations.json").open("x", encoding="utf-8") as original:
+                    json.dump(inventory_transfer_proof(runtime, actor_name="poster"), original, indent=2, sort_keys=True, allow_nan=False)
+                    original.write("\n")
+            pytest.fail("An unsupported unvalued native receipt was incorrectly reserved as approved original stock.")
+    with runtime.actor("poster") as (connection, _, _):
+        assert physical(connection, runtime) == {"MAIN/STOCK": 2 if balanced_offset else 3, "SECOND/STOCK": 1}
+        assert canonical_json(native_business(connection, runtime.tenant)) == originals
+        assert connection.execute("SELECT count(*) n FROM reconforge.inventory_transfer_claims WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
+
+
+def test_actual_prior_it1_relocation_supports_independent_new_forward_source_without_warehouse_cost_allocation(transfer_database: tuple[str, str]) -> None:
+    runtime = transfer_runtime(transfer_database)
+    with runtime.actor("maker") as (connection, _, actor):
+        original = canonical_json(native_business(connection, runtime.tenant))
+        first = PostgresInventoryTransferRepository(connection, runtime.tenant).create(request("PRIOR-APPROVED-RELOCATION"), command_id="prior-governed-create", actor=actor)
+    first = phase(runtime, phase(runtime, first, "review", "checker"), "post", "poster")
+    second_request = TransferPreparation("NEW-FORWARD-FROM-B", "ITEM", "1", "SECOND/STOCK", "MAIN/STOCK", "period", "2026-10-14",
+        "New independent forward source over original governed relocation", request().scope)
+    with runtime.actor("maker") as (connection, _, actor):
+        second = PostgresInventoryTransferRepository(connection, runtime.tenant).create(second_request, command_id="new-forward-b-create", actor=actor)
+        assert second["source"]["original"] is None
+    second = phase(runtime, phase(runtime, second, "review", "checker"), "post", "poster")
+    with runtime.actor("poster") as (connection, _, actor):
+        assert physical(connection, runtime) == {"MAIN/STOCK": 3, "SECOND/STOCK": 0}
+        assert canonical_json(native_business(connection, runtime.tenant)) == original
+        assert second["source"]["cost_snapshot"]["sources"][0]["layer"]["id"] == first["source"]["cost_snapshot"]["sources"][0]["layer"]["id"]
+
+
+def test_actual_multi_item_native_consumption_refuses_new_adoption_preserving_historical_original(transfer_database: tuple[str, str]) -> None:
+    import psycopg
+
+    runtime = transfer_runtime(transfer_database)
+    with runtime.actor("maker") as (connection, _, actor):
+        owner = PostgresInventoryTransferRepository(connection, runtime.tenant)
+        historical = owner.create(request("BEFORE-MULTI-ITEM-ISSUE"), command_id="before-multi-item", actor=actor)
+        PostgresInventoryCoreRepository(connection, runtime.tenant).upsert_item(item_code="ITEM2", name="Independent second source commodity",
+            organization_code="ORG", uom_code="EA", inventory_account_code="INVENTORY", workspace="work")
+    add_approved_receipt(runtime, "OTHER-ITEM-COMPLETE-COST", item_code="ITEM2")
+    with runtime.actor("maker") as (connection, _, actor):
+        movement = PostgresInventoryCoreRepository(connection, runtime.tenant).create_movement(movement_number="MULTI-ITEM-OUTBOUND",
+            movement_type="Delivery", organization_code="ORG", entity_code="ENTITY", period_id="period", movement_date="2026-10-10",
+            description="Actual supported Core two-item issue outside first IT1 source class", workspace="work", actor_label=actor.user_id,
+            lines=[{"item_code": code, "quantity": "1", "from_location": "MAIN/STOCK"} for code in ("ITEM", "ITEM2")])
+    with runtime.actor("poster") as (connection, _, actor):
+        PostgresInventoryCoreRepository(connection, runtime.tenant).post_movement(movement["id"], reason="Independent original two-item physical issue", actor_label=actor.user_id)
+    with runtime.actor("maker") as (connection, _, actor):
+        document = PostgresInventoryValuationRepository(connection, runtime.tenant).create_document(valuation_number="MULTI-ITEM-FIFO",
+            movement_id=movement["id"], policy_code="FIFO", actor_label=actor.user_id)
+    with runtime.actor("checker") as (connection, _, actor):
+        PostgresInventoryValuationRepository(connection, runtime.tenant).approve_document(document["id"], reason="Independent complete two-item FIFO issue", actor_label=actor.user_id)
+    with runtime.actor("maker") as (connection, _, actor):
+        owner = PostgresInventoryTransferRepository(connection, runtime.tenant)
+        assert owner.get(historical["source"]["id"], actor=actor) == historical["source"]
+        assert owner.create(request("BEFORE-MULTI-ITEM-ISSUE"), command_id="before-multi-item", actor=actor) == historical
+        assert connection.execute("SELECT count(*) n FROM reconforge.inventory_valuation_lines WHERE tenant_id=%s AND valuation_document_id=%s", (runtime.tenant, document["id"])).fetchone()["n"] == 2
+        before = canonical_json(native_business(connection, runtime.tenant))
+        with pytest.raises(FinancePostingError) as refused, connection.transaction():
+            owner.create(request("UNSUPPORTED-MULTI-ITEM-ORIGIN"), command_id="refuse-multi-item-origin", actor=actor)
+        assert refused.value.code == "operational_state_conflict"
+        assert isinstance(refused.value.__cause__, psycopg.errors.CheckViolation) and "one complete" in str(refused.value.__cause__)
+        assert connection.execute("SELECT count(*) n FROM reconforge.inventory_transfer_sources WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
+        assert canonical_json(native_business(connection, runtime.tenant)) == before

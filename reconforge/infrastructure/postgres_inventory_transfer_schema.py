@@ -83,6 +83,69 @@ BEGIN IF valid IS DISTINCT FROM TRUE THEN RAISE EXCEPTION USING ERRCODE='23514',
 CREATE FUNCTION reconforge.it1_visible(t TEXT,i TEXT) RETURNS BOOLEAN LANGUAGE sql STABLE SET search_path=pg_catalog AS $it1$
  SELECT EXISTS(SELECT 1 FROM reconforge.inventory_transfer_sources s WHERE s.tenant_id=t AND s.id=i
  AND reconforge.irp_scope(s.tenant_id,s.workspace_id,s.organization_id,s.legal_entity_id)) $it1$;
+CREATE FUNCTION reconforge.it1_stock_origins(t TEXT,w TEXT,o TEXT,e TEXT,i TEXT) RETURNS VOID
+ LANGUAGE plpgsql SET search_path=pg_catalog AS $it1$
+DECLARE physical RECORD;source RECORD;receipt RECORD;consumed RECORD;seen INTEGER:=0;
+BEGIN
+ -- This is a NEW-adoption boundary over original native rows. Historical
+ -- public/evidence/replay closure continues to retain its captured originals.
+ FOR physical IN SELECT m.id movement_id,m.movement_type,to_jsonb(m) head,l.* FROM reconforge.inventory_movements m
+  JOIN reconforge.inventory_movement_lines l ON l.tenant_id=m.tenant_id AND l.movement_id=m.id
+  WHERE m.tenant_id=t AND(m.workspace_id,m.organization_id,m.legal_entity_id)=(w,o,e)
+   AND m.status='Posted' AND l.item_id=i ORDER BY m.id,l.line_number,l.id LOOP
+  seen:=seen+1;
+  PERFORM reconforge.it1_assert(seen<=200 AND physical.inventory_lot_id IS NULL,
+   'First IT1 adoption requires at most 200 complete untracked original physical lines');
+  IF physical.movement_type='Receipt' THEN
+   SELECT p.* INTO receipt FROM reconforge.inventory_receipt_plans p JOIN reconforge.inventory_receipt_links link
+    ON link.tenant_id=p.tenant_id AND link.plan_id=p.id WHERE p.tenant_id=t AND p.operation='Receipt'
+    AND p.movement_id=physical.movement_id AND p.movement_line_id=physical.id
+    AND(p.workspace_id,p.organization_id,p.legal_entity_id,p.item_id,p.uom_id,p.quantity_precision,p.quantity_scaled)
+     =(w,o,e,i,physical.uom_id,physical.quantity_precision,physical.quantity_scaled);
+   PERFORM reconforge.it1_assert(receipt.id IS NOT NULL AND physical.from_location_id IS NULL
+    AND physical.to_location_id=receipt.location_id,
+    'First IT1 adoption refuses unsupported or unvalued original physical receipt owners');
+   PERFORM reconforge.irp_assert_complete(t,receipt.id,TRUE);
+  ELSIF physical.movement_type='Delivery' THEN
+   SELECT detail.id,detail.quantity_scaled,detail.value_minor,detail.valuation_document_id,
+    document.total_value_minor,document.currency_code INTO consumed FROM reconforge.inventory_valuation_lines detail
+    JOIN reconforge.inventory_valuation_documents document ON document.tenant_id=detail.tenant_id AND document.id=detail.valuation_document_id
+    WHERE detail.tenant_id=t AND document.status='Approved' AND document.movement_id=physical.movement_id
+     AND(document.workspace_id,document.organization_id,document.legal_entity_id)=(w,o,e)
+     AND detail.movement_line_id=physical.id AND detail.flow_direction='Outbound' AND detail.inventory_lot_id IS NULL
+     AND(detail.item_id,detail.uom_id,detail.quantity_precision,detail.quantity_scaled)
+      =(i,physical.uom_id,physical.quantity_precision,physical.quantity_scaled);
+   PERFORM reconforge.it1_assert(consumed.id IS NOT NULL AND physical.from_location_id IS NOT NULL AND physical.to_location_id IS NULL
+    AND(SELECT count(*) FROM reconforge.inventory_movement_lines detail WHERE detail.tenant_id=t AND detail.movement_id=physical.movement_id)=1
+    AND(SELECT count(*) FROM reconforge.inventory_valuation_lines detail WHERE detail.tenant_id=t AND detail.valuation_document_id=consumed.valuation_document_id)=1
+    AND consumed.total_value_minor=consumed.value_minor
+    AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_layer_consumptions c LEFT JOIN reconforge.inventory_cost_layers layer
+      ON layer.tenant_id=c.tenant_id AND layer.id=c.cost_layer_id WHERE c.tenant_id=t AND c.valuation_line_id=consumed.id
+      AND(c.workspace_id,layer.workspace_id,layer.legal_entity_id,layer.item_id,layer.uom_id,layer.quantity_precision,
+       layer.inventory_lot_id,layer.currency_code) IS DISTINCT FROM(w,w,e,i,physical.uom_id,physical.quantity_precision,NULL::text,consumed.currency_code))
+    AND consumed.quantity_scaled=(SELECT COALESCE(sum(c.quantity_scaled),0) FROM reconforge.inventory_layer_consumptions c
+      WHERE c.tenant_id=t AND c.valuation_line_id=consumed.id)
+    AND consumed.value_minor=(SELECT COALESCE(sum(c.value_minor),0) FROM reconforge.inventory_layer_consumptions c
+      WHERE c.tenant_id=t AND c.valuation_line_id=consumed.id),
+    'First IT1 adoption requires one complete approved original native consumption line and its exact pool membership');
+  ELSIF physical.movement_type='Transfer' THEN
+   SELECT * INTO source FROM reconforge.inventory_transfer_sources s WHERE s.tenant_id=t AND s.native_movement_id=physical.movement_id
+    AND(s.workspace_id,s.organization_id,s.legal_entity_id,s.item_id,s.uom_id,s.quantity_precision,s.quantity_scaled,
+     s.from_location_id,s.to_location_id)=(w,o,e,i,physical.uom_id,physical.quantity_precision,physical.quantity_scaled,
+      physical.from_location_id,physical.to_location_id);
+   PERFORM reconforge.it1_assert(source.id IS NOT NULL,
+    'First IT1 adoption requires an original governed IT1 physical relocation owner');
+   IF source.phase=2 THEN PERFORM reconforge.it1_close(t,source.id);
+   ELSE
+    -- The original third-human native post has occurred in this transaction,
+    -- before its source phase/immutable receipt is completed. Delegate its
+    -- existing full native admission contract; a routing hint alone is never
+    -- sufficient and the existing deferred native/source guards still close.
+    PERFORM reconforge.it1_native_admit(t,physical.head,source.native_creation_json->'head','inventory_movements:UPDATE');
+   END IF;
+  ELSE PERFORM reconforge.it1_assert(FALSE,'First IT1 adoption refuses unsupported original physical movement classes');END IF;
+ END LOOP;
+END $it1$;
 CREATE FUNCTION reconforge.it1_cost_snapshot(t TEXT,w TEXT,o TEXT,e TEXT,i TEXT) RETURNS JSONB
  LANGUAGE plpgsql STABLE SET search_path=pg_catalog AS $it1$
 DECLARE layer RECORD;p RECORD;document RECORD;entry RECORD;line RECORD;policy JSONB;sources JSONB:='[]'::jsonb;
@@ -151,6 +214,7 @@ BEGIN
   PERFORM reconforge.it1_assert(original IS NOT NULL,'Transfer cost needs actual posted receipt, review and GL effect originals');
   sources:=sources||jsonb_build_array(original);quantities:=quantities+layer.remaining_quantity_scaled;values_minor:=values_minor+layer.remaining_value_minor;
  END LOOP;
+ PERFORM reconforge.it1_stock_origins(t,w,o,e,i);
  PERFORM reconforge.it1_assert(jsonb_array_length(sources) BETWEEN 1 AND 32 AND quantities BETWEEN 1 AND 9000000000000000000
   AND values_minor BETWEEN 1 AND 9000000000000000000,'Transfer needs a bounded complete positive approved entity FIFO pool');
  RETURN jsonb_build_object('schema_version','inventory-transfer-cost-v1','monetary_policy',policy,
@@ -543,5 +607,6 @@ DROP FUNCTION reconforge.it1_deferred_close(),reconforge.it1_protect(),reconforg
  reconforge.it1_actor(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT),reconforge.it1_native_close(TEXT,TEXT),
  reconforge.it1_core_release_close(TEXT,TEXT),reconforge.it1_core_claim_close(TEXT,TEXT),reconforge.it1_close(TEXT,TEXT),
  reconforge.it1_cost_originals(TEXT,JSONB),reconforge.it1_evidence(TEXT,TEXT,INTEGER),reconforge.it1_public(TEXT,TEXT,INTEGER),
- reconforge.it1_native_snapshot(TEXT,TEXT),reconforge.it1_cost_snapshot(TEXT,TEXT,TEXT,TEXT,TEXT),reconforge.it1_visible(TEXT,TEXT),reconforge.it1_assert(BOOLEAN,TEXT);
+ reconforge.it1_native_snapshot(TEXT,TEXT),reconforge.it1_cost_snapshot(TEXT,TEXT,TEXT,TEXT,TEXT),reconforge.it1_stock_origins(TEXT,TEXT,TEXT,TEXT,TEXT),
+ reconforge.it1_visible(TEXT,TEXT),reconforge.it1_assert(BOOLEAN,TEXT);
 """

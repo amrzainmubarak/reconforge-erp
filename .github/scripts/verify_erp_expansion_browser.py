@@ -354,7 +354,8 @@ def _stage_original_browser_artifacts(output: Path, private: Path, known_private
 
 
 def publish_browser_diagnostics(output: Path, private: Path, known_private_values: list[str], *,
-        workspace_verification: dict[str, Any] | None = None) -> dict[str, Any]:
+        workspace_verification: dict[str, Any] | None = None,
+        financial_verification: dict[str, Any] | None = None) -> dict[str, Any]:
     """Publish only complete derived diagnostics; financial bytes are excluded."""
     helper_source = Path(diagnostic_redaction.__file__).read_bytes()
     helper_sha = hashlib.sha256(helper_source).hexdigest()
@@ -367,6 +368,8 @@ def publish_browser_diagnostics(output: Path, private: Path, known_private_value
         "unchanged_browser_artifacts": [], "private_browser_artifacts": [], "workspace_recovery_projections": [], "status": "quarantined"}
     try:
         quarantined = _quarantine_public_diagnostics(output, private)
+        if financial_verification is not None:
+            require_financial_original_binding(private, financial_verification)
         inputs = {name: private / name for name in ("browser.log", "playwright.json") if (private / name).exists()}
         inputs.update({name: path for name, path in quarantined.items() if name.startswith("playwright-artifacts/")})
         if (private / "playwright-artifacts").is_symlink():
@@ -410,6 +413,8 @@ def publish_browser_diagnostics(output: Path, private: Path, known_private_value
             source.rename(destination)
         _require_workspace_originals_unchanged(private, workspace_receipts)
         _require_private_financial_originals_unchanged(private, private_receipts)
+        if financial_verification is not None:
+            require_financial_original_binding(private, financial_verification)
         if workspace_verification is not None and require_workspace_recovery_acceptance(
                 private, known_private_values=known_private_values) != workspace_verification:
             raise ValueError("Workspace originals changed during completed publication.")
@@ -578,6 +583,8 @@ def require_workspace_recovery_acceptance(private: Path, *, known_private_values
 def verify_customer_return_original_rows(private: Path, *, required_captures: int) -> dict[str, Any]:
     """Execute the independent reader twice; retain all row/proof bytes privately."""
     source = ROOT / "tests/customer_returns_financial_oracle.py"
+    if type(required_captures) is not int or required_captures not in {1, 3}:
+        raise ValueError("Independent reader requires an exact native capture count.")
     source_identity = _file_identity(source)
     originals = private / "playwright-artifacts/native-customer-return-originals"
     executions = private / "independent-customer-return-row-verification"
@@ -609,11 +616,52 @@ def verify_customer_return_original_rows(private: Path, *, required_captures: in
             or proof.get("complete_actual_rows_unchanged_across_captures") is not True
             or proof.get("application_imports") is not False or proof.get("private_financial_originals_published") is not False):
         raise ValueError("Independent row proof does not cover the complete required native cohort.")
-    return {"schema_version": "independent-customer-return-row-executions-v1", "status": "passed",
+    verified = {"schema_version": "independent-customer-return-row-executions-v1", "status": "passed",
         "isolated_actual_executions": 2, "optimized_result_bytes_equal": True,
         "source": source_identity, "captures": required_captures, "tables_per_capture": 13,
+        "input_identities": proof.get("input_identities"),
         "proof": {"bytes": len(raw_proofs[0]), "sha256": hashlib.sha256(raw_proofs[0]).hexdigest()},
         "raw_financial_originals_published": False, "application_imports": False}
+    require_financial_original_binding(private, verified)
+    return verified
+
+
+def require_financial_original_binding(private: Path, verified: dict[str, Any]) -> None:
+    """Join the isolated reader's exact originals to post-publication private bytes."""
+    proof_identity = verified.get("proof")
+    if (type(proof_identity) is not dict or set(proof_identity) != {"bytes", "sha256"}
+            or type(proof_identity["bytes"]) is not int
+            or not 0 < proof_identity["bytes"] <= diagnostic_redaction.MAX_WORKSPACE_RECOVERY_BYTES
+            or type(proof_identity["sha256"]) is not str
+            or re.fullmatch(r"[0-9a-f]{64}", proof_identity["sha256"]) is None):
+        raise ValueError("Independent financial original proof identity is malformed.")
+    for label in ("I", "IO"):
+        raw_proof = _read_private_original(private,
+            private / "independent-customer-return-row-verification" / (label + ".json"),
+            limit=diagnostic_redaction.MAX_WORKSPACE_RECOVERY_BYTES)
+        if {"bytes": len(raw_proof), "sha256": hashlib.sha256(raw_proof).hexdigest()} != proof_identity:
+            raise ValueError("Independent financial original proof differs from its isolated verified bytes.")
+    inputs = verified.get("input_identities")
+    captures = verified.get("captures")
+    if (type(captures) is not int or captures not in {1, 3} or type(inputs) is not list
+            or len(inputs) != captures * 13):
+        raise ValueError("Independent financial original identities are incomplete.")
+    originals = private / "playwright-artifacts/native-customer-return-originals"
+    if originals.is_symlink() or not originals.is_dir():
+        raise ValueError("Independent financial original storage is not a regular private folder.")
+    expected_names = {f"native-financial-snapshot-oracle-{number}.json" for number in range(1, len(inputs) + 1)}
+    if {path.name for path in originals.iterdir()} != expected_names:
+        raise ValueError("Independent financial original membership changed after isolated verification.")
+    for number, identity in enumerate(inputs, start=1):
+        if (type(identity) is not dict or set(identity) != {"number", "bytes", "sha256"}
+                or type(identity["number"]) is not int or identity["number"] != number
+                or type(identity["bytes"]) is not int or not 0 < identity["bytes"] <= diagnostic_redaction.MAX_WORKSPACE_RECOVERY_BYTES
+                or type(identity["sha256"]) is not str or re.fullmatch(r"[0-9a-f]{64}", identity["sha256"]) is None):
+            raise ValueError("Independent financial original identity is malformed.")
+        raw = _read_private_original(private, originals / f"native-financial-snapshot-oracle-{number}.json",
+            limit=diagnostic_redaction.MAX_WORKSPACE_RECOVERY_BYTES)
+        if {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()} != {key: identity[key] for key in ("bytes", "sha256")}:
+            raise ValueError("Independent financial original differs from its isolated verified bytes.")
 
 
 def publish_original_oracle_custody(private: Path, output: Path, verified: dict[str, Any]) -> dict[str, Any]:
@@ -1251,8 +1299,10 @@ def main() -> int:
                 time.sleep(.1)
         report["wall_seconds"] = round(time.monotonic() - started, 3)
         verification = report.get("workspace_recovery_verification")
+        financial_verification = report.get("independent_financial_original_verification")
         publication = publish_browser_diagnostics(output, private_diagnostics, secret_values,
-            workspace_verification=verification if isinstance(verification, dict) else None)
+            workspace_verification=verification if isinstance(verification, dict) else None,
+            financial_verification=financial_verification if isinstance(financial_verification, dict) else None)
         report["browser_diagnostics"] = publication
         if publication["status"] != "published":
             report["status"] = "failed"

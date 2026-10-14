@@ -46,6 +46,35 @@ def test_required_financial_row_reader_refuses_incomplete_restore_cohort(tmp_pat
     assert (private / "independent-customer-return-row-verification/IO.json").is_file()
 
 
+@pytest.mark.parametrize("drift", ["changed", "missing", "additional", "bool_number", "duplicate_number", "wrong_hash"])
+def test_isolated_financial_original_input_seal_refuses_drift_before_diagnostic_publication(tmp_path: Path, drift: str) -> None:
+    private = tmp_path / "private"
+    originals = private / "playwright-artifacts/native-customer-return-originals"
+    originals.mkdir(parents=True)
+    write_capture(originals, rows())
+    proof = RUNNER.verify_customer_return_original_rows(private, required_captures=1)
+    first = originals / "native-financial-snapshot-oracle-1.json"
+    if drift == "changed":
+        first.write_bytes(b'{"changed_after_isolated_reader":true}')
+    elif drift == "missing":
+        first.rename(originals / "missing-original.json")
+    elif drift == "additional":
+        (originals / "unexpected.json").write_bytes(first.read_bytes())
+    elif drift == "bool_number":
+        proof["input_identities"][0]["number"] = True
+    elif drift == "duplicate_number":
+        proof["input_identities"][1]["number"] = 1
+    else:
+        proof["input_identities"][0]["sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="Independent financial original"):
+        RUNNER.require_financial_original_binding(private, proof)
+    output = tmp_path / "public"
+    output.mkdir()
+    published = RUNNER.publish_browser_diagnostics(output, private, [], financial_verification=proof)
+    assert published["status"] == "quarantined" and RUNNER._public_diagnostic_paths(output) == []
+    assert not (output / "playwright-artifacts/native-customer-return-originals").exists()
+
+
 def test_required_wire_cycle_accepts_one_complete_nonflaky_execution() -> None:
     RUNNER.require_browser_acceptance({"expected": 1, "skipped": 0, "unexpected": 0, "flaky": 0, "duration": 100})
 

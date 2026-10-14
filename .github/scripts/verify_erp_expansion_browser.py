@@ -50,6 +50,7 @@ PUBLIC_ORIGINAL_JSON = re.compile(
     r"cashflow-(?:view|original|original-wire|browser-read-boundary)|"
     r"group-diagnostic-(?:view|original|original-wire|browser-read-boundary|source-capture-reads)|"
     r"project-source-(?:view|original|close-view|close-original|browser-boundary)|"
+    r"inventory-transfer-(?:browser-wire|IT1-S-[0-9a-f]{32}-evidence)|"
     r"(?:fx-proof|ic-proof|fixed-asset-proof)-[a-z0-9-]+|ic-group-report|"
     r"intercompany-fx-(?:stage-[0-9]+|management-report|report-download|proof-ar-mobile)|"
     r"accrual-deferral-native-proof-en|manufacturing-supply-original-replay-custody|"
@@ -856,9 +857,6 @@ def main() -> int:
             require_browser_acceptance(report.get("browser_counts"))
             persisted_effects = verify_cycles(runtime)
             report["persisted_effects"] = persisted_effects
-            if args.scenario == "inventory-transfer":
-                report["original_oracle_publication"] = publish_inventory_transfer_originals(
-                    private_diagnostics, output, persisted_effects)
             if args.scenario in {"intercompany-source-cashflow", "intercompany-group-diagnostic", "project-source-reconciliation"}:
                 downloaded_originals = verify_original_browser_downloads(
                     private_diagnostics, args.scenario, persisted_effects)
@@ -868,6 +866,11 @@ def main() -> int:
                 report["native_restore"] = verify_expansion_native_restore(runtime, container,
                     verify_cycles=verify_cycles, extension_tables=extension_tables, tamper_statements=tamper_statements,
                     tamper_actor=tamper_actor, workspace_probe_tables=workspace_probe_tables)
+            if args.scenario == "inventory-transfer":
+                # Fresh restore captures must still equal the first trusted
+                # packet before any of its original bytes become public.
+                report["original_oracle_publication"] = publish_inventory_transfer_originals(
+                    private_diagnostics, output, persisted_effects)
         report["built_web_unchanged"] = built_web_digest(args.web_root.resolve()) == report["built_web_sha256"]
         report["source_unchanged"] = source_digest(runtime_root) == report["source_sha256"]
         report["source_commit_after"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=runtime_root, text=True).strip()

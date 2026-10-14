@@ -17,6 +17,10 @@ const locales = {
   ar: { navigation: "التنقل الرئيسي", returns: "مرتجعات العملاء", dashboard: "لوحة المتابعة", unavailable: "مساحة العمل غير متاحة",
     open: "فتح لوحة المتابعة", reload: "إعادة تحميل الصفحة", heading: "إرجاع العميل الأصلي وردّ النقد على دفعات", direction: "rtl" },
 } as const;
+type ResponsiveCheck = {
+  width: number; height: number; direction: "ltr" | "rtl"; overflowPixels: number; seriousCriticalViolationCount: number;
+  primaryNavigationAvailable: boolean; usedMobileMenu: boolean; recoveryButtonsVisible: boolean;
+};
 
 async function authenticate(page: Page) {
   await page.goto(`${base}/admin-audit`);
@@ -67,6 +71,7 @@ for (const locale of ["en", "ar"] as const) {
     const failedRequests: { path: string; method: string; kind: string; failure: string | null }[] = [];
     const mutations: { path: string; method: string }[] = [];
     const abortedAssets: string[] = [];
+    const responsiveChecks: ResponsiveCheck[] = [];
     page.on("pageerror", error => pageErrors.push({ name: error.name, message: error.message, stack: error.stack ?? null }));
     page.on("requestfailed", request => failedRequests.push({ path: new URL(request.url()).pathname,
       method: request.method(), kind: request.resourceType(), failure: request.failure()?.errorText ?? null }));
@@ -95,8 +100,29 @@ for (const locale of ["en", "ar"] as const) {
       await expect(navigation).toBeVisible();
       await expect(page.getByRole("button", { name: locale === "en" ? "Switch language" : "تبديل اللغة", exact: true })).toBeVisible();
       expect(mutations).toEqual([]);
-      const access = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
-      expect(access.violations.filter(issue => issue.impact === "serious" || issue.impact === "critical")).toEqual([]);
+      for (const width of [320, 768, 1024, 1440]) {
+        await page.setViewportSize({ width, height: 900 });
+        await expect(fallback).toHaveAttribute("dir", text.direction);
+        const menu = page.getByRole("button", { name: locale === "en" ? "Menu" : "القائمة", exact: true });
+        const usedMobileMenu = await menu.isVisible();
+        if (usedMobileMenu) { await menu.focus(); await expect(menu).toBeFocused(); await menu.press("Enter"); }
+        await expect(navigation).toBeInViewport();
+        const primaryNavigationAvailable = await navigation.isVisible();
+        if (usedMobileMenu) {
+          const close = page.locator("aside.sidebar").getByRole("button", { name: locale === "en" ? "Close dialog" : "إغلاق النافذة", exact: true });
+          await close.focus(); await expect(close).toBeFocused(); await close.press("Enter");
+        }
+        const access = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+        const seriousCriticalViolationCount = access.violations.filter(issue => issue.impact === "serious" || issue.impact === "critical").length;
+        const overflowPixels = await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth));
+        const recoveryButtonsVisible = await fallback.getByRole("button", { name: text.open, exact: true }).isVisible()
+          && await fallback.getByRole("button", { name: text.reload, exact: true }).isVisible();
+        responsiveChecks.push({ width, height: 900, direction: text.direction, overflowPixels,
+          seriousCriticalViolationCount, primaryNavigationAvailable, usedMobileMenu, recoveryButtonsVisible });
+        expect(overflowPixels).toBe(0); expect(seriousCriticalViolationCount).toBe(0);
+        expect(primaryNavigationAvailable && recoveryButtonsVisible).toBe(true);
+        expect(mutations).toEqual([]); expect(abortedAssets).toHaveLength(1);
+      }
       const dashboard = fallback.getByRole("button", { name: text.open, exact: true });
       await dashboard.focus(); await expect(dashboard).toBeFocused(); await dashboard.press("Enter");
       await expect(navigation.getByRole("button", { name: text.dashboard, exact: true })).toHaveAttribute("aria-current", "page");
@@ -119,13 +145,13 @@ for (const locale of ["en", "ar"] as const) {
       recovered = true;
     } finally {
       const after = await originals(page);
-      await retain(info, `workspace-recovery-${locale}-original-native-boundary.json`, { schema_version: "workspace-recovery-native-v1",
+      await retain(info, `workspace-recovery-${locale}-original-native-boundary.json`, { schema_version: "workspace-recovery-native-v2",
         locale, injection: "One genuine CustomerReturnsPage JavaScript GET aborted; no API or financial response mocked",
         originalBefore: before, originalAfter: after, pageErrors, failedRequests, abortedAssets, financialMutations: mutations,
         recovered, rawFinancialOriginalsEqual: JSON.stringify(before) === JSON.stringify(after),
         fallbackHeadingCount: await page.getByRole("heading", { name: text.unavailable, exact: true }).count(),
         navigationCount: await navigation.count(), rootMainCount: await page.locator("main#main-content").count(),
-        previousBlankScreenCauseProven: false });
+        previousBlankScreenCauseProven: false, responsiveChecks });
       expect(after).toEqual(before);
       expect(mutations).toEqual([]);
     }

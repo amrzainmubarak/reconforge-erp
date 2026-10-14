@@ -622,9 +622,10 @@ def test_writer_refuses_late_customer_return_private_original_drift_without_publ
     assert not (output / original.relative_to(private)).exists()
 
 
-def test_reused_public_customer_return_raw_rows_are_quarantined_before_generic_basename_exemption(tmp_path: Path) -> None:
+@pytest.mark.parametrize("directory", ["native-customer-return-originals", "Native-Customer-Return-Originals"])
+def test_reused_public_customer_return_raw_rows_are_quarantined_before_generic_basename_exemption(tmp_path: Path, directory: str) -> None:
     output, private, _, _ = inputs(tmp_path)
-    stale = output / "playwright-artifacts/native-customer-return-originals/native-financial-snapshot-oracle-1.json"
+    stale = output / "playwright-artifacts" / directory / "native-financial-snapshot-oracle-1.json"
     stale.parent.mkdir(parents=True)
     raw = PRIVATE_MONEY.encode() + b" " + PRIVATE_SOURCE.encode()
     stale.write_bytes(raw)
@@ -635,3 +636,14 @@ def test_reused_public_customer_return_raw_rows_are_quarantined_before_generic_b
     retained = private / "public-originals" / stale.relative_to(output)
     assert retained.read_bytes() == raw
     assert (private / "playwright.json").is_file()
+
+
+def test_private_financial_family_casing_alias_is_refused_before_case_insensitive_generic_basename_publication(tmp_path: Path) -> None:
+    output, private, _, _ = inputs(tmp_path)
+    original = private / "playwright-artifacts/Native-Customer-Return-Originals/native-financial-snapshot-oracle-1.json"
+    original.parent.mkdir()
+    raw = PRIVATE_MONEY.encode()
+    original.write_bytes(raw)
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD])
+    assert result["status"] == "quarantined" and writer._public_diagnostic_paths(output) == []
+    assert original.read_bytes() == raw and not (output / original.relative_to(private)).exists()

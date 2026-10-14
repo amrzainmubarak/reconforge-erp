@@ -100,7 +100,7 @@ def _public_diagnostic_paths(output: Path) -> list[Path]:
         # upload directory merely because the current child writes privately.
         paths.extend(path for path in sorted(artifacts.rglob("*"))
             if path.is_symlink() or path.is_file() and (path.name == "error-context.md"
-                or path.relative_to(artifacts).parts[0] == "native-customer-return-originals"
+                or path.relative_to(artifacts).parts[0].casefold() == "native-customer-return-originals"
                 or not _unchanged_original_artifact_name(path)))
     projections = output / "workspace-recovery"
     if projections.is_symlink():
@@ -283,7 +283,7 @@ def _stage_original_browser_artifacts(output: Path, private: Path, known_private
         if not source.is_file() or source.name == "error-context.md":
             continue
         name = source.relative_to(private).as_posix()
-        if name.startswith("playwright-artifacts/native-customer-return-originals/"):
+        if name.casefold().startswith("playwright-artifacts/native-customer-return-originals/"):
             if CUSTOMER_RETURN_PRIVATE_ORIGINAL.fullmatch(name) is None:
                 raise ValueError("Customer return financial custody is outside its finite private family.")
             raw = _read_private_original(private, source, limit=diagnostic_redaction.MAX_WORKSPACE_RECOVERY_BYTES)

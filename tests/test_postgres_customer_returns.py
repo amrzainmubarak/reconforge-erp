@@ -14,6 +14,7 @@ from reconforge.infrastructure.postgres_customer_returns import PERMISSIONS, Pos
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
 from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
 from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
+from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 from tests.test_postgres_commercial_collections import complete, invoiced, prepare
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, receipt_database
 from tests.test_postgres_stock_sales import create_reserved_order, create_stock_runtime, execute
@@ -29,6 +30,13 @@ def configure_runtime(runtime: ReceiptRuntime) -> None:
             identity.grant_permission(tenant_id=runtime.tenant, role_name="receipt-operator", permission_name=permission)
         PostgresFinanceCoreRepository(connection, runtime.tenant).upsert_account(account_code="REFUND", name="Customer refund obligation",
             account_type="Liability", normal_balance="Credit", workspace="work")
+        # This runtime captures bounded parent sets, so its synthetic humans need
+        # the durable grants represented by that snapshot.
+        authority = PostgresScopeAuthorityRepository(connection)
+        for person in ("maker", "checker", "poster"):
+            for kind, identifier in (("workspace", "work"), ("organization", "org"), ("legal_entity", "entity")):
+                authority.grant(tenant_id=runtime.tenant, grant_id="cr1-" + person + "-" + kind,
+                    principal_type="user", principal_id=person, scope_type=kind, scope_id=identifier, actor_id=person)
 
 
 def create_runtime(database: tuple[str, str], paid: int = 10000, *, quantity: str | None = None) -> tuple[ReceiptRuntime, str, str]:

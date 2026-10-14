@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, NoReturn
 from uuid import uuid4
 
-from reconforge.domain.customer_returns import CustomerRefundPreparation, CustomerReturnPreparation, credit_entitlement
+from reconforge.domain.customer_returns import (
+    MAX_MINOR,
+    CustomerRefundPreparation,
+    CustomerReturnPreparation,
+    credit_entitlement,
+)
 from reconforge.domain.finance_posting import (
     FinancePostingError,
     PostingActor,
@@ -20,7 +25,7 @@ from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.postgres_finance_posting import posting_entry, posting_snapshot, records
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
 from reconforge.infrastructure.postgres_operational_finance import PostgresOperationalFinanceRepository
-from reconforge.platform.common import platform_id
+from reconforge.platform.common import current_server_principal, platform_id
 from reconforge.utils.time import utc_now_text
 
 
@@ -42,6 +47,95 @@ PERMISSIONS = {
 }
 
 
+def customer_return_money_context(plan: Mapping[str, Any], *, parent: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Authorize every retained monetary field under its original captured policy.
+
+    This projection is private authorization context only. It never changes a
+    source snapshot, saved plan, digest or historical command acknowledgement.
+    """
+    original = parent if parent is not None else plan
+    if "source_snapshot" not in original:
+        if original.get("operation") in {"Return", "Refund"}:
+            raise FinancePostingError("customer_return_source_invalid", "Original monetary source is missing.")
+        return dict(plan)  # Scope-only list admission retains the amount=None policy.
+
+    def invalid() -> NoReturn:
+        raise FinancePostingError("customer_return_source_invalid", "Retained monetary values or captured policies differ.")
+
+    def object_value(value: object) -> Mapping[str, Any]:
+        if not isinstance(value, Mapping):
+            invalid()
+        return value
+
+    def population(value: object, maximum: int = 1000) -> list[Any]:
+        if not isinstance(value, list) or not 1 <= len(value) <= maximum:
+            invalid()
+        return value
+
+    amounts: list[int] = []
+
+    def money(value: Mapping[str, Any], *fields: str) -> None:
+        for field in fields:
+            amount = value.get(field)
+            if type(amount) is not int or not 0 <= amount <= MAX_MINOR:
+                invalid()
+            amounts.append(amount)
+
+    source = object_value(original["source_snapshot"])
+    invoice = object_value(source.get("invoice"))
+    policy_fields = ("currency_code", "currency_precision", "currency_rounding_policy",
+                     "currency_registry_version", "currency_registry_digest")
+    policy = tuple(invoice.get(field) for field in policy_fields)
+    if (type(policy[1]) is not int or not 0 <= policy[1] <= 18
+            or any(type(value) is not str or not value for index, value in enumerate(policy) if index != 1)):
+        invalid()
+
+    def affinity(value: Mapping[str, Any], *, compact: bool = False) -> None:
+        fields = ("currency_code", "precision", "rounding_policy", "registry_version", "registry_digest") if compact else policy_fields
+        captured = tuple(value.get(field) for field in fields)
+        if any(type(actual) is not type(expected) or actual != expected for actual, expected in zip(captured, policy, strict=True)):
+            invalid()
+
+    def snapshot(value: object) -> None:
+        captured = object_value(value)
+        affinity(object_value(captured.get("entry")))
+        for item in population(captured.get("lines")):
+            line = object_value(item)
+            money(line, "debit_minor", "credit_minor")
+
+    for retained in (original, plan) if parent is not None else (plan,):
+        if retained.get("currency_code") != policy[0] or type(retained.get("currency_precision")) is not int or retained["currency_precision"] != policy[1]:
+            invalid()
+        for field in ("amount_minor", "credit_minor", "receivable_released_minor", "refund_entitlement_minor",
+                      "cogs_restored_minor", "turnover_minor", "refunded_before_minor"):
+            if field in retained:
+                money(retained, field)
+        if "entries" in retained:
+            for entry in population(retained["entries"], 3):
+                snapshot(object_value(entry).get("snapshot"))
+    money(invoice, "subtotal_minor", "tax_minor", "total_minor")
+    money(source, "allocated_minor")
+    stock = object_value(source.get("stock"))
+    quoted = object_value(stock.get("source"))
+    issue = object_value(stock.get("issue_plan"))
+    if stock.get("currency_code") != policy[0] or quoted.get("currency_code") != policy[0]:
+        invalid()
+    affinity(object_value(quoted.get("monetary_policy")), compact=True)
+    affinity(object_value(issue.get("currency_policy")), compact=True)
+    money(stock, "total_minor")
+    money(quoted, "unit_price_minor", "net_unit_price_minor", "tax_minor", "total_minor")
+    money(issue, "total_cost_minor")
+    for allocation in population(issue.get("allocations")):
+        money(object_value(allocation), "remaining_value_minor", "value_minor")
+    for consumption in population(source.get("consumptions")):
+        money(object_value(consumption), "value_minor")
+    for name in ("cogs", "revenue"):
+        effect = object_value(source.get(name))
+        affinity(effect)
+        snapshot(effect.get("snapshot_json"))
+    return {**plan, "amount_minor": max(amounts), "currency_precision": policy[1]}
+
+
 class PostgresCustomerReturnsRepository:
     def __init__(self, connection: Any, tenant_id: str) -> None:
         self.connection, self.tenant_id = connection, tenant_id
@@ -54,17 +148,59 @@ class PostgresCustomerReturnsRepository:
             raise FinancePostingError("customer_return_not_found", "Source is absent from the selected hierarchy.")
         return rows[0]
 
+    def _authority_locks(self, actor: PostingActor, operation: str, plan: Mapping[str, Any]) -> None:
+        """Pin current human and role authority before any source or pool wait."""
+        principal = current_server_principal()
+        if (principal is None or principal.user.id != actor.user_id or principal.user.username != actor.username
+                or principal.user.disabled or principal.principal_type != "user"):
+            raise FinancePostingError("operational_actor_denied", "A current bound human identity is required.")
+        if self.connection.execute("""SELECT id FROM reconforge.identity_users WHERE tenant_id=%s AND id=%s
+            AND username=%s AND NOT disabled FOR SHARE""", (self.tenant_id, actor.user_id, actor.username)).fetchone() is None:
+            raise FinancePostingError("operational_actor_denied", "Persisted human identity is disabled or absent.")
+        permissions = PERMISSIONS.get(operation, READ)
+        rows = records(self.connection.execute("""SELECT p.permission_name FROM reconforge.identity_user_roles a
+            JOIN reconforge.identity_roles r ON r.tenant_id=a.tenant_id AND r.id=a.role_id
+            JOIN reconforge.identity_role_permissions p ON p.tenant_id=r.tenant_id AND p.role_id=r.id
+            JOIN reconforge.identity_permissions c ON c.tenant_id=p.tenant_id AND c.name=p.permission_name
+            WHERE a.tenant_id=%s AND a.user_id=%s AND a.active AND r.active AND p.active AND p.permission_name=ANY(%s)
+            ORDER BY r.id,p.permission_name FOR SHARE OF a,r,p,c""", (self.tenant_id, actor.user_id, sorted(permissions))))
+        if {row["permission_name"] for row in rows} != set(permissions):
+            raise FinancePostingError("operational_actor_denied", "Current authorization requires every original read and phase permission.")
+        # Preserve the existing empty captured-level fallback. Bounded captured
+        # levels require their effective durable grants, including on retries.
+        required = {(kind, plan[field]) for kind, field, captured in (
+            ("workspace", "workspace_id", principal.authorized_workspace_ids),
+            ("organization", "organization_id", principal.authorized_organization_ids),
+            ("legal_entity", "legal_entity_id", principal.authorized_legal_entity_ids),
+        ) if captured}
+        if required:
+            grants = records(self.connection.execute("""SELECT scope_type,scope_id FROM reconforge.principal_scope_grants
+                WHERE tenant_id=%s AND principal_type='user' AND principal_id=%s AND revoked_at IS NULL
+                AND scope_type=ANY(%s) AND((scope_type='workspace' AND scope_id=%s)
+                    OR(scope_type='organization' AND scope_id=%s) OR(scope_type='legal_entity' AND scope_id=%s))
+                ORDER BY scope_type,scope_id FOR SHARE""", (self.tenant_id, actor.user_id, sorted(kind for kind, _ in required),
+                    plan["workspace_id"], plan["organization_id"], plan["legal_entity_id"])))
+            if {(row["scope_type"], row["scope_id"]) for row in grants} != required:
+                raise FinancePostingError("operational_scope_denied", "Current parent scope authority is absent or revoked.")
+
     def _actor(self, actor: PostingActor, operation: str, plan: Mapping[str, Any]) -> None:
+        self._authority_locks(actor, operation, plan)
+        parent = None
         if plan.get("operation") == "Refund":
-            self._actor(actor, operation, self._row(str(plan["return_id"])))
+            parent = self._row(str(plan["return_id"]))
+            self._actor(actor, operation, parent)
+        governed = customer_return_money_context(plan, parent=parent)
         for permission in sorted(PERMISSIONS.get(operation, READ)):
-            self.owner._actor(actor, permission, plan, mutation=operation != "read")
+            self.owner._actor(actor, permission, governed, mutation=operation != "read")
         if operation != "read":
             self.connection.execute("SELECT set_config('app.customer_return_actor_id',%s,true)", (actor.user_id,))
 
-    def _row(self, identifier: str, *, lock: bool = False) -> dict[str, Any]:
-        query = ("SELECT payload,phase FROM reconforge.customer_return_plans WHERE tenant_id=%s AND id=%s FOR UPDATE"
-                 if lock else "SELECT payload,phase FROM reconforge.customer_return_plans WHERE tenant_id=%s AND id=%s")
+    def _row(self, identifier: str, *, lock: bool = False, read_lock: bool = False) -> dict[str, Any]:
+        query = "SELECT payload,phase FROM reconforge.customer_return_plans WHERE tenant_id=%s AND id=%s"
+        if lock:
+            query += " FOR UPDATE"
+        elif read_lock:
+            query += " FOR SHARE"
         row = self._one(query, (self.tenant_id, text(identifier, "plan_id")))
         return {**row["payload"], "phase": row["phase"]}
 
@@ -120,8 +256,9 @@ class PostgresCustomerReturnsRepository:
         retained = rows[0]
         if (retained["operation"], retained["actor_id"], retained["request_digest"]) != (operation, actor.user_id, digest):
             raise FinancePostingError("customer_return_command_conflict", "Command identifies another exact request or actor.")
-        self._actor(actor, "prepare" if operation == "prepare_refund" else operation,
-                    self._row(retained["plan_id"]))
+        authority_operation = "prepare" if operation == "prepare_refund" else operation
+        self._actor(actor, authority_operation, self._row(retained["plan_id"]))
+        self._actor(actor, authority_operation, self._row(retained["plan_id"], read_lock=True))
         self.connection.execute("SELECT reconforge.customer_return_close(%s,%s)", (self.tenant_id, retained["plan_id"]))
         return digest, retained["response_json"]
 
@@ -142,6 +279,8 @@ class PostgresCustomerReturnsRepository:
         with self.owner._transaction():
             plan = self._row(plan_id)
             self._actor(actor, "read", plan)
+            plan = self._row(plan_id, read_lock=True)
+            self._actor(actor, "read", plan)
             self.connection.execute("SELECT reconforge.customer_return_close(%s,%s)", (self.tenant_id, plan_id))
             return self._view(plan_id)
 
@@ -156,6 +295,8 @@ class PostgresCustomerReturnsRepository:
     def balance(self, plan_id: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():
             plan = self._row(plan_id)
+            self._actor(actor, "read", plan)
+            plan = self._row(plan_id, read_lock=True)
             self._actor(actor, "read", plan)
             if plan["operation"] != "Return" or plan["phase"] != 2:
                 raise FinancePostingError("customer_return_refund_invalid", "Refund balance requires a posted original credit.")
@@ -222,7 +363,8 @@ class PostgresCustomerReturnsRepository:
         args = request.payload()
         with self.owner._transaction():
             source = self._source(request.source_order_id, lock=False)
-            governed = {**args, "amount_minor": source["stock"]["total_minor"], "currency_precision": source["invoice"]["currency_precision"]}
+            governed = {**args, "source_snapshot": source, "currency_code": source["invoice"]["currency_code"],
+                        "amount_minor": source["stock"]["total_minor"], "currency_precision": source["invoice"]["currency_precision"]}
             self._actor(actor, "prepare", governed)
             digest, replay = self._command(args, "prepare", command_id, actor, args)
             if replay is not None:

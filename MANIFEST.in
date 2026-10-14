@@ -1538,6 +1538,8 @@ include tests/test_inventory_transfer_api_contract.py
 include docs/modules/inventory-transfer.yaml
 include docs/inventory-transfer.md
 include tests/inventory_transfer_browser.py
+include tests/inventory_transfer_original_publication.py
+include tests/test_inventory_transfer_original_publication.py
 include tests/test_postgres_inventory_transfer_browser.py
 include tests/test_inventory_transfer_browser_custody.py
 include tests/test_inventory_transfer_cycle_oracle.py

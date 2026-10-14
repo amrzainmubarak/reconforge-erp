@@ -22,6 +22,7 @@ import urllib.error
 import urllib.request
 from collections.abc import Callable
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -39,6 +40,7 @@ from tests.erp_expansion_browser_restore import (  # noqa: E402
     verify_expansion_native_restore,
 )
 from tests.erp_expansion_browser_seed import seed_expansion_browser  # noqa: E402
+from tests.inventory_transfer_original_publication import publish_inventory_transfer_originals  # noqa: E402
 from tests.original_browser_download_verification import canonical as original_verification_json_bytes  # noqa: E402
 from tests.original_browser_download_verification import verify_original_browser_downloads  # noqa: E402
 
@@ -673,6 +675,10 @@ def main() -> int:
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     private_diagnostics = private_diagnostics_directory(output)
+    if args.scenario == "inventory-transfer":
+        from tests.inventory_transfer_browser import verify_inventory_transfer_browser
+        verify_cycles = partial(verify_inventory_transfer_browser,
+            custody_root=private_diagnostics / "inventory-transfer-oracle-custody")
     if not (args.web_root / "index.html").is_file():
         raise ValueError("Build the integrated Studio before running browser acceptance.")
     name = "reconforge-erp-expansion-browser-" + uuid4().hex[:12]
@@ -848,6 +854,9 @@ def main() -> int:
             require_browser_acceptance(report.get("browser_counts"))
             persisted_effects = verify_cycles(runtime)
             report["persisted_effects"] = persisted_effects
+            if args.scenario == "inventory-transfer":
+                report["original_oracle_publication"] = publish_inventory_transfer_originals(
+                    private_diagnostics, output, persisted_effects)
             if args.scenario in {"intercompany-source-cashflow", "intercompany-group-diagnostic", "project-source-reconciliation"}:
                 downloaded_originals = verify_original_browser_downloads(
                     private_diagnostics, args.scenario, persisted_effects)

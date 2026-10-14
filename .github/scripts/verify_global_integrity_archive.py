@@ -23,6 +23,7 @@ HELPERS = (
     "accrual_deferral_browser", "project_time_billing_browser",
     "manufacturing_supply_browser", "browser_diagnostic_redaction", "original_browser_download_verification",
     "inventory_transfer_browser",
+    "inventory_transfer_original_publication",
 )
 DIAGNOSTIC_HELPERS = (
     ".github/scripts/benchmark_wave5_profile_diagnostics.py",
@@ -492,6 +493,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/test_postgres_inventory_transfer_read_authority.py",
         "tests/test_postgres_inventory_transfer_concurrency.py",
         "tests/inventory_transfer_browser.py", "tests/test_postgres_inventory_transfer_browser.py",
+        "tests/inventory_transfer_original_publication.py", "tests/test_inventory_transfer_original_publication.py",
         "tests/test_inventory_transfer_browser_custody.py", "tests/test_inventory_transfer_cycle_oracle.py",
         "tests/fixtures/inventory-transfer-original-v1.json.gz", "tests/fixtures/inventory-transfer-original-v1.custody.json",
         ".github/scripts/verify_inventory_transfer_cycle_oracle.py",

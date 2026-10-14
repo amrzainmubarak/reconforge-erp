@@ -179,12 +179,16 @@ class _AuthorityCursor:
 
 
 class _AuthorityConnection:
-    def __init__(self, grants: set[tuple[str, str]], permissions: frozenset[str] = READ) -> None:
+    def __init__(self, grants: set[tuple[str, str]], permissions: frozenset[str] = READ,
+                 *, historical_kinds: set[str] | None = None) -> None:
         self.grants, self.permissions = grants, permissions
+        self.historical_kinds = historical_kinds if historical_kinds is not None else {kind for kind, _ in grants}
         self.kinds_requested: list[str] | None = None
 
     def execute(self, query: str, params: tuple[Any, ...]) -> _AuthorityCursor:
         if "principal_scope_grants" in query:
+            if "DISTINCT scope_type" in query:
+                return _AuthorityCursor([{"scope_type": kind} for kind in self.historical_kinds])
             self.kinds_requested = params[2]
             return _AuthorityCursor([{"scope_type": kind, "scope_id": identifier} for kind, identifier in self.grants
                                      if kind in params[2]])
@@ -218,3 +222,18 @@ def test_current_permission_retirement_refuses_even_when_bound_principal_still_c
     principal = ServerPrincipal(user=LocalUser(id="reader", username="reader", display_name="Reader"), permissions=READ)
     with server_principal_context(principal), pytest.raises(FinancePostingError, match="Current authorization"):
         PostgresCustomerReturnsRepository(connection, "tenant")._authority_locks(PostingActor("reader", "reader", READ), "read", original())
+
+
+def test_fresh_empty_principal_after_all_grants_revoked_cannot_become_global() -> None:
+    connection = _AuthorityConnection(set(), historical_kinds={"workspace", "organization", "legal_entity"})
+    principal = ServerPrincipal(user=LocalUser(id="reader", username="reader", display_name="Reader"), permissions=READ)
+    with server_principal_context(principal), pytest.raises(FinancePostingError, match="scope authority"):
+        PostgresCustomerReturnsRepository(connection, "tenant")._authority_locks(PostingActor("reader", "reader", READ), "read", original())
+
+
+def test_empty_cached_capture_uses_exact_existing_current_grants_when_history_is_bounded() -> None:
+    connection = _AuthorityConnection({("workspace", "work")})
+    principal = ServerPrincipal(user=LocalUser(id="reader", username="reader", display_name="Reader"), permissions=READ)
+    with server_principal_context(principal):
+        PostgresCustomerReturnsRepository(connection, "tenant")._authority_locks(PostingActor("reader", "reader", READ), "read", original())
+    assert connection.kinds_requested == ["workspace"]

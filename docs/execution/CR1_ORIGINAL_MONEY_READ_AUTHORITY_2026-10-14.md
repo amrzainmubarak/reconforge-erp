@@ -26,3 +26,9 @@ For captured bounded scopes, only nonempty captured levels require the correspon
 - Historic schema working bytes remain SHA256 `54d8645c9ea393bfdad3eb7b62e1be878796770c9fe248026aa0d1a47949d402`.
 
 Native green qualification is pending at this development checkpoint. Required acceptance includes the four real central cap cases/high-cap original controls, current permission and scope retirement, both authority/source wait orders, exact original source/command/native row preservation, legacy fallback and scoped inheritance controls. No migration147 is allocated by this correction and no SQL monetary ceiling is claimed.
+
+## Fresh principal follow-up
+
+The all-empty captured-scope fallback above is narrowed to a human who has never received durable scope grants. Existing append-only grant history supplies the historical explicit scope kinds when a captured snapshot is empty. A formerly scoped human must retain matching active grants for those selected parents; an empty fresh snapshot after all grants were revoked refuses. A workspace-only history continues to use the existing separate-set empty-child fallback. No schema flag or new scope engine is introduced.
+
+Focused qualification after this change is53PASS, zero failures/errors/skips, pytest1.02s; original XML `output/cr1-money-context-pure-v4.xml`. Production Ruff/mypy remain green. The synthetic fixture accepts `seed_scope_grants=False` when a specialized source fixture seeds its own explicit grants, so existing active-grant uniqueness remains enforced. Independent old-source cached/fresh withdrawal reds and final native green are still pending, kept separate from these pure receipts.

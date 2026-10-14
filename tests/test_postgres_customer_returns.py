@@ -22,7 +22,7 @@ from tests.test_postgres_stock_sales import create_reserved_order, create_stock_
 _ = receipt_database
 
 
-def configure_runtime(runtime: ReceiptRuntime) -> None:
+def configure_runtime(runtime: ReceiptRuntime, *, seed_scope_grants: bool = True) -> None:
     with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
         identity = PostgresIdentityRepository(connection)
         for permission in sorted(set().union(*PERMISSIONS.values())):
@@ -32,11 +32,12 @@ def configure_runtime(runtime: ReceiptRuntime) -> None:
             account_type="Liability", normal_balance="Credit", workspace="work")
         # This runtime captures bounded parent sets, so its synthetic humans need
         # the durable grants represented by that snapshot.
-        authority = PostgresScopeAuthorityRepository(connection)
-        for person in ("maker", "checker", "poster"):
-            for kind, identifier in (("workspace", "work"), ("organization", "org"), ("legal_entity", "entity")):
-                authority.grant(tenant_id=runtime.tenant, grant_id="cr1-" + person + "-" + kind,
-                    principal_type="user", principal_id=person, scope_type=kind, scope_id=identifier, actor_id=person)
+        if seed_scope_grants:
+            authority = PostgresScopeAuthorityRepository(connection)
+            for person in ("maker", "checker", "poster"):
+                for kind, identifier in (("workspace", "work"), ("organization", "org"), ("legal_entity", "entity")):
+                    authority.grant(tenant_id=runtime.tenant, grant_id="cr1-" + person + "-" + kind,
+                        principal_type="user", principal_id=person, scope_type=kind, scope_id=identifier, actor_id=person)
 
 
 def create_runtime(database: tuple[str, str], paid: int = 10000, *, quantity: str | None = None) -> tuple[ReceiptRuntime, str, str]:

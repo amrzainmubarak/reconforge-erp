@@ -173,6 +173,14 @@ class PostgresCustomerReturnsRepository:
             ("organization", "organization_id", principal.authorized_organization_ids),
             ("legal_entity", "legal_entity_id", principal.authorized_legal_entity_ids),
         ) if captured}
+        if not required:
+            # Grant history is append-only. A freshly empty snapshot after
+            # revocation must never promote a formerly scoped human to global.
+            history = records(self.connection.execute("""SELECT DISTINCT scope_type FROM reconforge.principal_scope_grants
+                WHERE tenant_id=%s AND principal_type='user' AND principal_id=%s ORDER BY scope_type""",
+                (self.tenant_id, actor.user_id)))
+            fields = {"workspace": "workspace_id", "organization": "organization_id", "legal_entity": "legal_entity_id"}
+            required = {(row["scope_type"], plan[fields[row["scope_type"]]]) for row in history}
         if required:
             grants = records(self.connection.execute("""SELECT scope_type,scope_id FROM reconforge.principal_scope_grants
                 WHERE tenant_id=%s AND principal_type='user' AND principal_id=%s AND revoked_at IS NULL

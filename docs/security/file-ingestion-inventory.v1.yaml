@@ -903,6 +903,23 @@ surfaces:
       - Driver-decoded JSONB and the two json.loads text fallbacks do not provide application pre-parse byte, graph-depth, node, or duplicate-key budgets; JSONB normalization is not duplicate-key rejection of arbitrary external JSON.
       - The database/schema owner and restore operator remain trusted dependencies that can bypass storage guards; this internal persisted reader is not an authorized upload parser or proof of independent source authenticity.
     next_action: Add a shared bounded decoder for textual fallbacks before widening this internal producer/database boundary; retain typed source and evidence verification after decoding.
+  - id: FI-046
+    name: Selected original group diagnostic API query
+    module_ids: [finance.core]
+    trust: untrusted-network
+    entrypoints: [reconforge/api/routes/intercompany_group_diagnostic.py::parse_selection]
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: partial
+    status: partial
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_intercompany_group_diagnostic_api.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The query is limited to32768 characters, not32768 UTF-8 bytes, rejects duplicate fields and maps malformed or decoder-recursive JSON to the same safe400 response.
+      - Strict closed typed models admit only1..16 explicit source and report pins; domain validation retains canonical ordering, uniqueness and original seals before current authorized source capture.
+      - No application pre-parse node or graph-depth profile is claimed; this read selection does not authenticate source documents or authorize financial posting.
+    next_action: Keep the exact finite selection and current source authority; use a shared bounded graph decoder before widening the query or accepting uploaded documents.
 direct_tabular_parser_allowlist:
   - path: reconforge/benchmark/amlsim_reconciliation.py
     parser: csv.DictReader
@@ -950,6 +967,11 @@ direct_tabular_parser_allowlist:
     surface_id: FI-023
     rationale: Parses only size- and hash-verified public responses after strict decoding, then requires an exact unique header set and complete rows before financial normalization.
 direct_json_parser_allowlist:
+  - path: reconforge/api/routes/intercompany_group_diagnostic.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-046
+    rationale: One32768-character bounded external read-selection query with duplicate-key refusal, safe decoder-recursion rejection, strict closed one-to-sixteen source pins and domain canonical validation; a pre-parse graph budget is not claimed.
   - path: reconforge/infrastructure/postgres_sales_revenue.py
     parser: json.loads
     call_count: 1

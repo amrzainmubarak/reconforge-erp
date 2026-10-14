@@ -9,7 +9,7 @@ import json
 import subprocess
 import sys
 from copy import deepcopy
-from dataclasses import FrozenInstanceError, replace
+from dataclasses import FrozenInstanceError, fields, replace
 from fractions import Fraction
 from pathlib import Path
 from typing import Any
@@ -85,7 +85,7 @@ def source_for(case: dict[str, Any]) -> OriginalPartialReturnSource:
         policy, context,
         evidence("COGS", "COGS", "INVENTORY", sum(row.value_minor for row in consumptions), source_id),
         evidence("REVENUE", "AR", "REVENUE", case["gross_minor"], revenue_reference),
-        consumptions, policy.currency_code, scope.uom_id,
+        consumptions, policy.currency_code, scope.uom_id, 0, None, False,
     )
 
 
@@ -272,14 +272,22 @@ def test_nested_money_source_history_and_fresh_accessors_remain_immutable() -> N
 
 
 @pytest.mark.parametrize("field,value", [
-    ("tax_minor", 1), ("tax_minor", False), ("functional_currency", "JPY"), ("base_uom_id", "OTHER-UOM"),
-    ("inventory_lot_id", "LOT"), ("serial_tracked", True), ("serial_tracked", 0),
+    ("tax_minor", 1), ("tax_minor", False), ("tax_minor", None), ("functional_currency", "JPY"), ("base_uom_id", "OTHER-UOM"),
+    ("inventory_lot_id", "LOT"), ("serial_tracked", True), ("serial_tracked", 0), ("serial_tracked", None),
     ("quantity_precision", True), ("quantity_precision", 7), ("collected_minor", 7501),
     ("net_unit_price_minor", 2501), ("source_order_id", " OTHER "),
 ])
 def test_first_scope_refuses_unsupported_or_inconsistent_source(field: str, value: Any) -> None:
     with pytest.raises(ValueError):
         replace(source_for(DESIGN["cases"][0]), **{field: value})
+
+
+@pytest.mark.parametrize("missing", ["tax_minor", "inventory_lot_id", "serial_tracked"])
+def test_absent_source_scope_facts_are_never_inferred_as_zero_or_untracked(missing: str) -> None:
+    source = source_for(DESIGN["cases"][0])
+    supplied = {field.name: getattr(source, field.name) for field in fields(source) if field.name != missing}
+    with pytest.raises(TypeError, match=missing):
+        OriginalPartialReturnSource(**supplied)
 
 
 @pytest.mark.parametrize("mutation", ["position", "duplicate-id", "duplicate-layer", "scope", "currency", "scale", "quantity", "cost-float"])

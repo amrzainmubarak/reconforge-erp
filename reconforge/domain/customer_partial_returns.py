@@ -154,9 +154,9 @@ class OriginalPartialReturnSource:
     consumptions: tuple[OriginalConsumption, ...]
     functional_currency: str
     base_uom_id: str
-    tax_minor: int = 0
-    inventory_lot_id: str | None = None
-    serial_tracked: bool = False
+    tax_minor: int
+    inventory_lot_id: str | None
+    serial_tracked: bool
 
     def __post_init__(self) -> None:
         if type(self.scope) is not PartialReturnScope:

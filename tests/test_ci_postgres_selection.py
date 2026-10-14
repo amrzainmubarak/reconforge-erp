@@ -14,6 +14,29 @@ ROOT = Path(__file__).resolve().parents[1]
 JOBS_MODULE = "tests/test_postgres_durable_jobs.py"
 
 
+def test_native_sourcing_partition_retains_exact_complete_files() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    inventory = yaml.safe_load((ROOT / "docs/execution/POSTGRES_PARITY_INVENTORY.yaml").read_text(encoding="utf-8"))
+    expected = {
+        "tests/test_postgres_procurement_sourcing.py": "procurement-sourcing",
+        "tests/test_postgres_procurement_sourcing_api.py": "procurement-sourcing-api",
+        "tests/test_postgres_manufacturing_sourcing.py": "manufacturing-sourcing",
+    }
+    assert inventory["native_sourcing_partition"]["complete_file_owners"] == expected
+    job = workflow["jobs"]["server-boundaries"]
+    assert job["timeout-minutes"] == 30
+    assert job["strategy"]["max-parallel"] == 4
+    live = next(step for step in job["steps"] if step["name"] == "Run live server-boundary tests")
+    assert live["env"]["PYTEST_ADDOPTS"] == "-p tests.mandatory_native_gate"
+    for path, owner in expected.items():
+        assert owner in job["strategy"]["matrix"]["shard"]
+        branch = live["run"].split(f"{owner})\n", 1)[1].split(";;", 1)[0]
+        commands = [shlex.split(line) for line in branch.splitlines() if "pytest " in line]
+        assert commands == [["uv", "run", "--no-sync", "pytest", path, "-q"]]
+        assert sum(path in shlex.split(line) for line in live["run"].splitlines()
+                   if "pytest " in line) == 1
+
+
 def test_live_ci_general_gate_collects_every_advertised_contract() -> None:
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
     steps = [step for job in workflow["jobs"].values() for step in job.get("steps", [])]
@@ -45,10 +68,25 @@ def test_live_ci_general_gate_collects_every_advertised_contract() -> None:
         "tests/test_postgres_manufacturing_supply_closure_authority.py": "manufacturing-supply-plan",
         "tests/test_postgres_manufacturing_supply_read_authority.py": "manufacturing-supply-plan",
         "tests/test_postgres_manufacturing_supply_browser_seed.py": "manufacturing-supply-plan",
+        "tests/test_postgres_intercompany_group_diagnostic.py": "intercompany-group-reporting",
+        "tests/test_postgres_intercompany_group_diagnostic_api.py": "intercompany-group-reporting",
+        "tests/test_intercompany_group_diagnostic_browser_fixture.py": "intercompany-group-reporting",
+        "tests/test_postgres_intercompany_fx_reporting_authority.py": "intercompany-group-reporting",
+        "tests/test_postgres_intercompany_fx_native_evidence_bundle.py": "intercompany-group-reporting",
+        "tests/test_postgres_intercompany_reporting_currency_precision.py": "intercompany-group-reporting",
         "tests/test_postgres_project_time_billing.py": "project-time-billing",
         "tests/test_postgres_project_time_billing_api.py": "project-time-billing",
         "tests/test_postgres_project_time_billing_restore.py": "project-time-billing",
         "tests/test_postgres_project_time_billing_read_authority.py": "project-time-billing",
+        "tests/test_postgres_project_source_reconciliation.py": "project-source-reconciliation",
+        "tests/test_postgres_project_source_close.py": "project-source-reconciliation",
+        "tests/test_postgres_project_source_reconciliation_api.py": "project-source-reconciliation",
+        "tests/test_postgres_project_source_reconciliation_browser_fixture.py": "project-source-reconciliation",
+        "tests/test_postgres_intercompany_cashflow.py": "intercompany-cashflow",
+        "tests/test_postgres_intercompany_cashflow_api.py": "intercompany-cashflow",
+        "tests/test_postgres_intercompany_cashflow_authority.py": "intercompany-cashflow",
+        "tests/test_postgres_intercompany_cashflow_restore.py": "intercompany-cashflow",
+        "tests/test_intercompany_cashflow_browser_fixture.py": "intercompany-cashflow",
         "tests/test_postgres_accrual_deferral.py": "accrual-deferral",
         "tests/test_postgres_accrual_deferral_api.py": "accrual-deferral",
         "tests/test_postgres_accrual_deferral_guards.py": "accrual-deferral",
@@ -80,8 +118,6 @@ def test_live_ci_general_gate_collects_every_advertised_contract() -> None:
         "tests/test_postgres_manufacturing_execution_v2.py": "manufacturing-execution",
         "tests/test_postgres_intercompany_fx.py": "intercompany-operations",
         "tests/test_postgres_intercompany_fx_api.py": "intercompany-operations",
-        "tests/test_postgres_intercompany_fx_reporting_authority.py": "intercompany-operations",
-        "tests/test_postgres_intercompany_reporting_currency_precision.py": "intercompany-operations",
         "tests/test_postgres_people_project_payroll.py": "people-project-payroll",
         "tests/test_postgres_people_project_payroll_api.py": "people-project-payroll",
         "tests/test_postgres_people_project_payroll_restore.py": "people-project-payroll",

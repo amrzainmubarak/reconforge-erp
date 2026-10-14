@@ -7,9 +7,9 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from reconforge.api.routes.intercompany_fx import router
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
+from tests.api_route_registration import registered_http_operations
 from tests.test_postgres_intercompany_fx import (
     FxRuntime,
     intercompany_fx_database,
@@ -27,8 +27,8 @@ ROOT = "/api/v1/intercompany-fx"
 @contextmanager
 def client(rt: FxRuntime, database: tuple[str, str], path: Path, actor: str, *, step_up: bool = True) -> Iterator[tuple[TestClient, dict[str, str]]]:
     with client_for(rt.base, database, path, actor, step_up=step_up) as (session, headers):
-        if not any(getattr(route, "path", None) == ROOT + "/sources" for route in session.app.routes):
-            session.app.include_router(router, prefix="/api/v1")
+        # Exercise the real application assembly, never inject an extra router.
+        assert registered_http_operations(session.app)[("GET", ROOT + "/sources")] == 1
         yield session, {key: value for key, value in headers.items() if key != "X-ReconForge-Legal-Entity"}
 
 

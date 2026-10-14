@@ -1,0 +1,47 @@
+id: intercompany_source_cashflow
+name: Source-qualified paired-trade management cashflow
+version: 1.0.0
+maturity: experimental
+owner: ReconForge finance maintainers
+dependencies: [intercompany_fx, finance_posting, finance_policy, identity, audit, outbox, accrual_deferral_evidence_codec]
+incompatible_versions: []
+data_classification: confidential_financial
+retention_policy: preserve_original_IC2_history_and_export_raw_bytes
+permissions: [intercompany_fx.read, finance_core.read]
+default_roles: {reader: [intercompany_fx.read, finance_core.read]}
+migrations: []
+backends: {postgresql: targeted_native_and_TestClient_proof, sqlite: unavailable}
+domain_invariants:
+  - Explicit known zero opening binds the complete native source origin and original source/plan digests
+  - Nonzero, unknown, malformed, stale or another-source opening is refused
+  - Every current original source plan is posted by three distinct authorized humans and remains covered by its native effects
+  - Current read amount context covers displayed reporting-currency values as well as original functional and transaction amounts
+  - Native account, currency policy, historical/closing rate and report/elimination membership retain their original seals
+  - Cash is covered only by the exact original seller receipt and buyer payment settlement lines
+  - Uncovered Cash or group adjustment Cash is refused rather than classified or silently omitted
+  - Historical and closing translation reuse canonical IC2 inverse conversion and captured ROUND_HALF_UP policy
+  - Closing Cash translates the aggregate native account using the original report closing method
+  - Operating flow derives from original Cash at reviewed historical rates; exchange effect reconciles operating to closing
+  - No financial journal, claim, period, review or source state is created or changed by this view
+domain_events: []
+api_routes:
+  - /api/v1/intercompany-source-cashflow/sources/{source_id}
+  - /api/v1/intercompany-source-cashflow/sources/{source_id}/evidence/export
+cli_commands: [.github/scripts/verify_intercompany_cashflow_oracle.py]
+ui_routes: []
+import_schemas: [explicit_source_cash_opening]
+export_schemas: [intercompany-source-cashflow-v1, intercompany-source-cashflow-evidence-v1, intercompany-source-cashflow-oracle-v1]
+synthetic_fixtures: [tests/intercompany_cashflow_fixture.py, tests/fixtures/intercompany-source-cashflow-native-v1.json]
+threat_model:
+  - Unknown opening silently converted to zero or whole-company balance claim
+  - Native Cash population drift, duplicate effect/line membership, hidden adjustment Cash or copied report totals
+  - Tampered original historical rates, current functional policy or native scope
+  - Cached authority or amount scopes permitting another source/plan disclosure
+  - Floating JSON, duplicate keys, unsupported precision or stale raw anchor
+  - Evidence overwrite, oversized export or lazy database access after response headers
+benchmarks: deferred_human_measurement
+rollback_plan: remove_additive_read_route_and_module_registration_no_native_history_or_DDL_changed
+test_matrix: [pure_opening_and_membership, native_original_cycle, unfinished_source_refusal, current_grant_revocation, current_reporting_currency_amount_context, authenticated_explicit_opening, original_export_length_and_SHA, unchanged_financial_population, real_populated_restore_with_catalog_ACL_owners, restored_owner_tamper_and_inverse_refusal, stdlib_Fraction_oracle, rehashed_balanced_business_mutation, raw_anchor, fresh_output, normal_and_optimized_isolation]
+claims:
+  allowed: Experimental management cashflow for complete original IC2 paired-trade source membership with evidence-specific verification
+  excluded: [whole_company_opening, whole_company_cash_balance, external_bank_transfer, statutory_cashflow, IFRS_or_IAS7_compliance, US_GAAP, investment_classification, financing_classification, ownership_NCI, country_tax, Community_backend_parity, measured_performance]

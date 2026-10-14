@@ -23434,3 +23434,47 @@ Root155 new custody/publication cases XML
 9f99136e813aad44899b11c135b81e525096e5d24049718fc12f9bb5709f53ff.
 Actual late-original, output, command and publication counterexamples remain
 retained privately; no raw header/network diagnostics are public evidence.
+
+### 2026-10-14 — Bounded independent intercompany native acceptance
+
+Exact6baff intercompany native job115628650617 was cancelled at its existing
+30-minute job bound. Original515957B log SHAede780e2e151883e55a1a6e4c712a73111cd4eb9d488e69f4de373ed2011e154
+retains complete45/core and11/cashflow finished receipts with zero critical
+skips/xfails/xpasses. The third full invocation has no completion receipt;
+no final native or whole-CI pass is inferred. Its last test ID is not exposed
+by the quiet log and is not invented.
+Split complete original file sets into intercompany-operations,
+intercompany-cashflow and intercompany-group-reporting. Every prior invocation
+and test file remains required once; thirty-minute bound, four-job parallel
+limit, native skip rejection and services stay unchanged. Eight focused CI
+partition contracts pass. No financial runtime, migration, reader or API change.
+Fresh final CI on the new exact source remains required. Earlier browser,
+package and same-source security components are qualified to their own heads.
+
+### 2026-10-14 — Selector and included-router negative evidence
+
+CI38501987164 at464 and38502226273 at4b002 each failed the general Python
+collection contract at test_ci_postgres_selection.py:42 on both Python versions.
+Actual M3 each1failed/6486passed/663 prerequisite skips; M4 each1failed/6622passed/
+663 prerequisite skips. The full eleven-owner expectation was stale; native file
+sets were not removed. Source package parity did not run after these failures.
+M4 group native job115652026809 failed with AttributeError at the route-uniqueness
+assertion before its report/export request. Original303130B log SHA
+8f6189dd2256b8f2f30c31e6de482b520ec2b49fa15ef4ff847d92ba4b617349.
+No missing or duplicate production route was observed by that failed assertion.
+The test-only effective-context counter retains duplicates, prefixes and HTTP
+methods, unlike an OpenAPI dictionary. Public FastAPI release notes describe
+the retained-router change since0.137: https://fastapi.tiangolo.com/release-notes/.
+All old originals remain source-qualified; current final CI is still pending.
+
+### 2026-10-14 — Preserve rejected original Arabic publication receipt
+
+CI38507877851/c65 web job115669639719 rejected one component case at original
+test line39:25, TestingLibraryElementError: Unable to find role=status.
+Actual703 PASS/1 FAIL across87 PASS/1 FAIL files. Original132260B log SHA
+bd1d43df82ec2f567379c5f5c8c998c6cc47f2a6234bbbaffd5335f940f7ef54.
+Finite DOM retains SYNTHETIC-IC, posted recognition and native seller/buyer books;
+verify is enabled, download absent, no alert/error text. Epoch transitions were
+not observable in that log and are not invented. Controlled source-response and
+real checked-result publication gates remove the test's implicit async ordering;
+new frozen whole CI remains required, with the rejected source preserved.

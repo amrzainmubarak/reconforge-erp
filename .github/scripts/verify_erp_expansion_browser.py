@@ -39,6 +39,8 @@ from tests.erp_expansion_browser_restore import (  # noqa: E402
     verify_expansion_native_restore,
 )
 from tests.erp_expansion_browser_seed import seed_expansion_browser  # noqa: E402
+from tests.original_browser_download_verification import canonical as original_verification_json_bytes  # noqa: E402
+from tests.original_browser_download_verification import verify_original_browser_downloads  # noqa: E402
 
 IMAGE = "postgres:17.11-alpine@sha256:aa90e97ee862e558111d34cfb8b2c4bec768c2b039fb791341686928560263b3"
 PUBLIC_ORIGINAL_JSON = re.compile(
@@ -274,10 +276,59 @@ def require_browser_acceptance(stats: object) -> None:
             raise RuntimeError(f"Required browser outcome count refused: {name}")
 
 
+def publish_original_oracle_custody(private: Path, output: Path, verified: dict[str, Any]) -> dict[str, Any]:
+    """Keep isolated financial verifier bytes distinct from browser diagnostics."""
+    source = private / "original-browser-download-verification"
+    admitted = re.compile(r"(?:custody\.json|[1-2]-(?:I|IO)(?:(?:\.command|\.execution)?\.json|\.(?:stdout|stderr)\.log))")
+    if source.is_symlink() or not source.is_dir() or not source.resolve().is_relative_to(private.resolve()):
+        raise ValueError("Original oracle custody is outside its owned private directory")
+    originals = sorted(source.iterdir())
+    if not originals or len(originals) > 25 or any(not p.is_file() or p.is_symlink() or not admitted.fullmatch(p.name) for p in originals):
+        raise ValueError("Original oracle custody has an unexpected member")
+    expected: dict[str, dict[str, Any]] = {}
+    records = list(verified["retained_execution_artifacts"])
+    for artifact in verified["artifacts"]:
+        records.extend((artifact["normal"], artifact["optimized"]))
+    for record in records:
+        name = record["path"]
+        if (not isinstance(name, str) or not admitted.fullmatch(name) or name == "custody.json"
+                or name in expected or type(record["bytes"]) is not int or record["bytes"] < 0
+                or not isinstance(record["sha256"], str) or re.fullmatch(r"[0-9a-f]{64}", record["sha256"]) is None):
+            raise ValueError("Original oracle custody has an invalid trusted member")
+        expected[name] = {"bytes": record["bytes"], "sha256": record["sha256"]}
+    custody_raw = original_verification_json_bytes(verified)
+    expected["custody.json"] = {"bytes": len(custody_raw), "sha256": hashlib.sha256(custody_raw).hexdigest()}
+    if set(expected) != {p.name for p in originals} or any(_file_identity(p) != expected[p.name] for p in originals):
+        raise ValueError("Original oracle custody differs from the successful verification before publication")
+    target = output / "original-browser-download-verification"
+    target.mkdir(exist_ok=False)
+    members = []
+    try:
+        for original in originals:
+            identity = expected[original.name]
+            destination = target / original.name
+            with original.open("rb") as reader, destination.open("xb") as writer:
+                shutil.copyfileobj(reader, writer, length=65_536)
+            if _file_identity(original) != identity or _file_identity(destination) != identity:
+                raise ValueError("Original oracle custody changed during byte-preserving publication")
+            members.append({"name": original.name, **identity})
+        if (set(expected) != {p.name for p in target.iterdir()}
+                or any(_file_identity(p) != expected[p.name] or _file_identity(target / p.name) != expected[p.name] for p in originals)):
+            raise ValueError("Original oracle custody changed before completed publication")
+    except Exception:
+        refused = private / ("refused-original-oracle-publication-" + uuid4().hex)
+        if (target.is_symlink() or not target.resolve().is_relative_to(output.resolve())
+                or not refused.resolve().is_relative_to(private.resolve()) or refused.exists()):
+            raise RuntimeError("Owned refused oracle publication quarantine is invalid") from None
+        target.rename(refused)
+        raise
+    return {"financial_bytes_transformed": False, "verified_against_original_custody": True, "members": members}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-native-restore", action="store_true")
-    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax", "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "manufacturing-supply-plan"), default="expansion")
+    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax", "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan"), default="expansion")
     parser.add_argument("--runtime-root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "output/erp-expansion-20261009/browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
@@ -384,6 +435,36 @@ def main() -> int:
         extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + INTERCOMPANY_BROWSER_TABLES))
         tamper_statements = INTERCOMPANY_RESTORE_TAMPER
         tamper_actor = intercompany_restore_tamper_actor
+    elif args.scenario == "intercompany-source-cashflow":
+        from tests.intercompany_cashflow_browser import (
+            INTERCOMPANY_CASHFLOW_BROWSER_TABLES,
+            INTERCOMPANY_CASHFLOW_RESTORE_TAMPER,
+            INTERCOMPANY_CASHFLOW_WORKSPACE_PROBE_TABLES,
+            intercompany_cashflow_restore_tamper_actor,
+            seed_intercompany_cashflow_browser,
+            verify_intercompany_cashflow_browser,
+        )
+        seed, verify_cycles = seed_intercompany_cashflow_browser, verify_intercompany_cashflow_browser
+        configuration = "apps/web/live/intercompany-cashflow.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + INTERCOMPANY_CASHFLOW_BROWSER_TABLES))
+        workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + INTERCOMPANY_CASHFLOW_WORKSPACE_PROBE_TABLES))
+        tamper_statements = INTERCOMPANY_CASHFLOW_RESTORE_TAMPER
+        tamper_actor = intercompany_cashflow_restore_tamper_actor
+    elif args.scenario == "intercompany-group-diagnostic":
+        from tests.intercompany_group_diagnostic_browser import (
+            INTERCOMPANY_GROUP_DIAGNOSTIC_BROWSER_TABLES,
+            INTERCOMPANY_GROUP_DIAGNOSTIC_RESTORE_TAMPER,
+            INTERCOMPANY_GROUP_DIAGNOSTIC_WORKSPACE_PROBE_TABLES,
+            intercompany_group_diagnostic_restore_tamper_actor,
+            seed_intercompany_group_diagnostic_browser,
+            verify_intercompany_group_diagnostic_browser,
+        )
+        seed, verify_cycles = seed_intercompany_group_diagnostic_browser, verify_intercompany_group_diagnostic_browser
+        configuration = "apps/web/live/intercompany-group-diagnostic.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + INTERCOMPANY_GROUP_DIAGNOSTIC_BROWSER_TABLES))
+        workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + INTERCOMPANY_GROUP_DIAGNOSTIC_WORKSPACE_PROBE_TABLES))
+        tamper_statements = INTERCOMPANY_GROUP_DIAGNOSTIC_RESTORE_TAMPER
+        tamper_actor = intercompany_group_diagnostic_restore_tamper_actor
     elif args.scenario == "intercompany-fx":
         from tests.intercompany_fx_browser_seed import (
             INTERCOMPANY_FX_BROWSER_TABLES,
@@ -429,6 +510,21 @@ def main() -> int:
         workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + ACCRUAL_DEFERRAL_WORKSPACE_PROBE_TABLES))
         tamper_statements = ACCRUAL_DEFERRAL_RESTORE_TAMPER
         tamper_actor = accrual_deferral_restore_tamper_actor
+    elif args.scenario == "project-source-reconciliation":
+        from tests.project_source_reconciliation_browser import (
+            PROJECT_SOURCE_RECONCILIATION_TABLES,
+            PROJECT_SOURCE_RECONCILIATION_TAMPER,
+            PROJECT_SOURCE_RECONCILIATION_WORKSPACE_PROBE_TABLES,
+            project_source_reconciliation_restore_tamper_actor,
+            seed_project_source_reconciliation_browser,
+            verify_project_source_reconciliation_browser,
+        )
+        seed, verify_cycles = seed_project_source_reconciliation_browser, verify_project_source_reconciliation_browser
+        configuration = "apps/web/live/project-source-reconciliation.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + PROJECT_SOURCE_RECONCILIATION_TABLES))
+        workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + PROJECT_SOURCE_RECONCILIATION_WORKSPACE_PROBE_TABLES))
+        tamper_statements = PROJECT_SOURCE_RECONCILIATION_TAMPER
+        tamper_actor = project_source_reconciliation_restore_tamper_actor
     elif args.scenario == "project-time-billing":
         from tests.project_time_billing_browser import (
             PROJECT_TIME_BILLING_TABLES,
@@ -601,8 +697,8 @@ def main() -> int:
         if not origin.is_relative_to(runtime_root):
             raise ValueError("Expansion module origin is outside the integrated runtime checkout.")
         module_origins[module_name] = {"path": str(origin), "sha256": hashlib.sha256(origin.read_bytes()).hexdigest()}
-    if args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "manufacturing-supply-plan"}:
-        owner_module = "reconforge.infrastructure.postgres_" + args.scenario.replace("-", "_")
+    if args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan"}:
+        owner_module = "reconforge.infrastructure.postgres_intercompany_cashflow" if args.scenario == "intercompany-source-cashflow" else "reconforge.infrastructure.postgres_" + args.scenario.replace("-", "_")
         for module_name in dict.fromkeys((owner_module, seed.__module__, verify_cycles.__module__)):
             origin_file = importlib.import_module(module_name).__file__
             if origin_file is None:
@@ -734,7 +830,13 @@ def main() -> int:
             report["browser_counts"] = json.loads((private_diagnostics / "playwright.json").read_text(encoding="utf-8"))["stats"]
         if browser.returncode == 0:
             require_browser_acceptance(report.get("browser_counts"))
-            report["persisted_effects"] = verify_cycles(runtime)
+            persisted_effects = verify_cycles(runtime)
+            report["persisted_effects"] = persisted_effects
+            if args.scenario in {"intercompany-source-cashflow", "intercompany-group-diagnostic", "project-source-reconciliation"}:
+                downloaded_originals = verify_original_browser_downloads(
+                    private_diagnostics, args.scenario, persisted_effects)
+                report["downloaded_original_verification"] = downloaded_originals
+                report["original_oracle_publication"] = publish_original_oracle_custody(private_diagnostics, output, downloaded_originals)
             if args.verify_native_restore:
                 report["native_restore"] = verify_expansion_native_restore(runtime, container,
                     verify_cycles=verify_cycles, extension_tables=extension_tables, tamper_statements=tamper_statements,

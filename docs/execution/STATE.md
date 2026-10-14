@@ -12513,3 +12513,45 @@ being bounded before admission. No transfer or full-ERP completion is claimed.
 Comparative performance remains deferred; cost per operation null; statutory
 country packs0. Main and the two original primary-worktree file hashes were
 reverified unchanged on2026-10-14.
+
+### 2026-10-14 — Bounded independent intercompany native acceptance
+
+Exact6baff intercompany native job115628650617 was cancelled at its existing
+30-minute job bound. Original515957B log SHAede780e2e151883e55a1a6e4c712a73111cd4eb9d488e69f4de373ed2011e154
+retains complete45/core and11/cashflow finished receipts with zero critical
+skips/xfails/xpasses. The third full invocation has no completion receipt;
+no final native or whole-CI pass is inferred. Its last test ID is not exposed
+by the quiet log and is not invented.
+Split complete original file sets into intercompany-operations,
+intercompany-cashflow and intercompany-group-reporting. Every prior invocation
+and test file remains required once; thirty-minute bound, four-job parallel
+limit, native skip rejection and services stay unchanged. Eight focused CI
+partition contracts pass. No financial runtime, migration, reader or API change.
+Fresh final CI on the new exact source remains required. Earlier browser,
+package and same-source security components are qualified to their own heads.
+
+### 2026-10-14 — Preserve full CI ownership and actual router uniqueness
+
+Current464 Python gates each rejected one stale expected-owner map: all eleven
+retained cashflow/group files were still assigned to the prior combined native
+shard by a separate literal collection contract. Change those eleven labels
+only; preserve whole-map equality, every file, every invocation and native bounds.
+Current4b002 group API native gate stopped before the report/export request:
+FastAPI's retained included-router objects have no direct path attribute.
+Resolve effective route contexts for actual registration counts, preserve each
+operation's count of exactly one and add duplicate/nested/legacy-flat controls.
+The FX client now tests real application assembly without injecting an extra
+router. Production API/authorization/accounting bytes remain unchanged. Preserve
+both rejected sources and raw receipts; fresh source acceptance is required.
+
+### 2026-10-14 — Own the real WebCrypto publication test sequence
+
+Currentc65 hosted web component gate rejected only the Arabic original-evidence
+publication case. Its original DOM retained source/native books with no alert,
+no status and no download; no financial or cryptographic defect is inferred.
+The focused unchanged six-case diagnostic passed locally, but that is not flaky
+acceptance. The test now controls the source-response commit and real WebCrypto
+completion separately from publication. Before publication, status/download are
+absent and verify remains disabled; only the genuine checked result releases it.
+Both locales retain actual cryptographic verification and original effect checks.
+No timeout increase, retry, mock digest, skip or production component change.

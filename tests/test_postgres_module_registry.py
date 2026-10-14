@@ -23,7 +23,7 @@ def test_backend_discovery_retains_legacy_contract_and_does_not_inspect_deployme
     assert payload["schema_version"] == 2 and payload["backend"] == "postgresql"
     assert payload["metadata_only"] is True and payload["installation_status"] == "not_inspected"
     records = list_postgres_modules()
-    assert len(records) == 6 and records == tuple(sorted(records, key=lambda item: item.module_id))
+    assert len(records) == 9 and records == tuple(sorted(records, key=lambda item: item.module_id))
     assert all(record.sqlite_operating_adapter is False and record.acceptance_status == "development" for record in records)
     assert all(record.migration_versions == () and record.maturity == "experimental" for record in records)
     assert validate_postgres_registry() == ()

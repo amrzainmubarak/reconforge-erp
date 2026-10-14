@@ -22,6 +22,69 @@ CSRF = "synthetic-csrf-b29-private"
 PASSWORD = "dummy-pass"
 
 
+def original_oracle_publication_input(tmp_path: Path) -> tuple[Path, Path, bytes, dict[str, Any]]:
+    private, output = tmp_path / "private", tmp_path / "public"
+    source = private / "original-browser-download-verification"
+    source.mkdir(parents=True)
+    output.mkdir()
+    raw = b'{"minor":9000000000000000000,"currency":"KWD"}\n'
+    (source / "1-I.json").write_bytes(raw)
+    (source / "1-IO.json").write_bytes(raw)
+    command = b'{"argv":["python","-I"]}'
+    (source / "1-I.command.json").write_bytes(command)
+    proof = {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+    verified = {"artifacts": [{"normal": {"path": "1-I.json", **proof}, "optimized": {"path": "1-IO.json", **proof}}],
+        "retained_execution_artifacts": [{"path": "1-I.command.json", "bytes": len(command), "sha256": hashlib.sha256(command).hexdigest()}]}
+    (source / "custody.json").write_bytes(writer.original_verification_json_bytes(verified))
+    return private, output, raw, verified
+
+
+def test_original_oracle_publication_preserves_exact_financial_bytes(tmp_path: Path) -> None:
+    private, output, raw, verified = original_oracle_publication_input(tmp_path)
+    source = private / "original-browser-download-verification"
+    result = writer.publish_original_oracle_custody(private, output, verified)
+    assert result["financial_bytes_transformed"] is False
+    assert result["verified_against_original_custody"] is True
+    assert (output / "original-browser-download-verification/1-I.json").read_bytes() == raw
+    assert (source / "1-I.json").read_bytes() == raw
+
+
+def test_original_oracle_publication_rejects_unclassified_private_member_before_copy(tmp_path: Path) -> None:
+    private, output = tmp_path / "private", tmp_path / "public"
+    source = private / "original-browser-download-verification"
+    source.mkdir(parents=True)
+    output.mkdir()
+    (source / "trace.zip").write_bytes(b"private network container")
+    with pytest.raises(ValueError, match="unexpected member"):
+        writer.publish_original_oracle_custody(private, output, {})
+    assert not (output / "original-browser-download-verification").exists()
+
+
+@pytest.mark.parametrize("name", ["1-I.command.json", "1-I.json", "custody.json"])
+def test_original_oracle_publication_refuses_late_drift_from_successful_verification(tmp_path: Path, name: str) -> None:
+    private, output, _, verified = original_oracle_publication_input(tmp_path)
+    (private / "original-browser-download-verification" / name).write_bytes(b'{"altered":true}')
+    with pytest.raises(ValueError, match="differs from the successful verification"):
+        writer.publish_original_oracle_custody(private, output, verified)
+    assert not (output / "original-browser-download-verification").exists()
+
+
+def test_original_oracle_publication_quarantines_earlier_original_drift_during_later_copy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    private, output, _, verified = original_oracle_publication_input(tmp_path)
+    copy = writer.shutil.copyfileobj
+    source = private / "original-browser-download-verification"
+    def late_drift(reader: Any, destination: Any, *, length: int) -> None:
+        copy(reader, destination, length=length)
+        if Path(reader.name).name == "custody.json":
+            (source / "1-I.command.json").write_bytes(b'{"altered":true}')
+    monkeypatch.setattr(writer.shutil, "copyfileobj", late_drift)
+    with pytest.raises(ValueError, match="changed before completed publication"):
+        writer.publish_original_oracle_custody(private, output, verified)
+    assert not (output / "original-browser-download-verification").exists()
+    refused = list(private.glob("refused-original-oracle-publication-*"))
+    assert len(refused) == 1 and (refused[0] / "1-I.command.json").is_file()
+
+
 def inputs(tmp_path: Path, *, unexpected: int = 0) -> tuple[Path, Path, dict[str, bytes], dict[str, Any]]:
     output = tmp_path / "enterprise-browser-finance"
     output.mkdir()

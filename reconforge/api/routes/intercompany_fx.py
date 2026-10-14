@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from reconforge.api.dependencies import enforce_server_scoped_permissions
@@ -17,6 +18,8 @@ from reconforge.api.server_finance_core import (
     server_finance_core_enabled,
 )
 from reconforge.api.server_identity import request_execution_scope
+from reconforge.application.accrual_deferral_evidence import evidence_digest, evidence_size, evidence_transport_chunks
+from reconforge.application.intercompany_fx import IntercompanyFxService
 from reconforge.auth.models import LocalUser
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor
 from reconforge.domain.intercompany_fx import (
@@ -174,7 +177,7 @@ def execute(request: Request, user: LocalUser,
         try:
             return project(operation(PostgresIntercompanyFxRepository(finance.connection, scope.tenant_id), actor, scope))
         except FinancePostingError as exc:
-            status = 403 if "denied" in exc.code else 404 if "not_found" in exc.code else 409 if "conflict" in exc.code else 400
+            status = 403 if "denied" in exc.code else 404 if "not_found" in exc.code else 409 if "conflict" in exc.code else 413 if "too_large" in exc.code else 400
             raise APIError(status_code=status, code=exc.code, message=str(exc)) from exc
         except PlatformError as exc:
             raise APIError(status_code=409, code="intercompany_fx_state_conflict", message=str(exc)) from exc
@@ -243,6 +246,21 @@ def sources(request: Request, user: Read, after: str = Query(default="", max_len
 def source(request: Request, source_id: str, user: Read) -> dict[str, Any]:
     authority(request, "read")
     return execute(request, user, lambda repository, actor, scope: {"source": repository.get_source(source_id, actor=actor)})
+
+
+@router.get("/sources/{source_id}/native-evidence-bundle")
+def native_evidence_bundle(request: Request, source_id: str, user: Read) -> StreamingResponse:
+    authority(request, "read")
+    retained = execute(request, user, lambda repository, actor, scope: {
+        "bundle": IntercompanyFxService(repository).native_evidence_bundle(source_id, actor=actor)})
+    try:
+        length, sha = evidence_size(retained), evidence_digest(retained)
+    except FinancePostingError as exc:
+        raise APIError(status_code=413 if "too_large" in exc.code else 400, code=exc.code, message=str(exc)) from exc
+    # Capture/current authorization and budgets finish before headers. Transport
+    # coalesces exact JSON bytes only; no generator owns a database connection.
+    return StreamingResponse(evidence_transport_chunks(retained), media_type="application/json",
+        headers={"Content-Length": str(length), "X-ReconForge-Evidence-SHA256": sha})
 
 
 def progress(payload: ProgressRequest) -> dict[str, Any]:

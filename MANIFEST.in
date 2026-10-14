@@ -1475,6 +1475,20 @@ include docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.md
 include docs/execution/GLOBAL_ENTERPRISE_PROGRAM_CONTRACTS_2026-10-12.md
 include docs/adr/0855-versioned-enterprise-cost-fx-and-time-ownership.md
 include .github/scripts/verify_intercompany_fx_cycle_oracle.py
+include .github/scripts/verify_intercompany_cashflow_oracle.py
+include .github/scripts/verify_project_source_reconciliation.py
+include docs/architecture/PROJECT_SOURCE_RECONCILIATION.md
+include docs/operator/intercompany-source-cashflow.md
+include tests/fixtures/project_source_reconciliation_original_golden.json
+include tests/fixtures/project_source_reconciliation_original_golden_v2.json
+include tests/intercompany_cashflow_fixture.py
+include tests/intercompany_cashflow_browser.py
+include .github/scripts/verify_intercompany_group_diagnostic.py
+include tests/intercompany_group_diagnostic_browser.py
+include tests/fixtures/intercompany-group-diagnostic-native-v1.json
+include docs/modules/intercompany-group-diagnostic.yaml
+include docs/operator/intercompany-group-diagnostic.md
+include tests/fixtures/intercompany-source-cashflow-native-v1.json
 include tests/verify_people_project_payroll_oracle.py
 include tests/intercompany_fx_fixture.py
 include tests/intercompany_fx_native_restore.py
@@ -1501,8 +1515,15 @@ include docs/execution/ENTERPRISE_COMPLETION_M2_2026-10-13.md
 include apps/web/src/fixtures/manufacturing-supply-original-command-acks.json
 
 include tests/browser_diagnostic_redaction.py
+include tests/fixtures/project_source_close_partial_native_v1.json
+include tests/fixtures/project_source_close_final_native_v1.json
+include tests/test_project_source_close_oracle.py
+
 include tests/test_browser_diagnostic_redaction.py
 include tests/test_browser_diagnostic_writer.py
+include tests/original_browser_download_verification.py
+include tests/api_route_registration.py
+include tests/test_original_browser_download_verification.py
 
 include tests/test_postgres_intercompany_fx_reporting_authority.py
 

@@ -16,14 +16,19 @@ SHARDS = {
     "industry-close", "receivables", "finance-posting", "inventory-payables", "erp-expansion", "finance-reporting",
     "commercial-integrity", "supply-integrity", "finance-integrity",
     "supplier-returns", "fx-revaluation",
-    "manufacturing-execution", "intercompany-operations", "procurement-sourcing",
-    "people-project-payroll", "accrual-deferral", "manufacturing-supply-plan", "project-time-billing",
+    "manufacturing-execution", "intercompany-operations", "intercompany-cashflow", "intercompany-group-reporting", "procurement-sourcing", "procurement-sourcing-api", "manufacturing-sourcing",
+    "people-project-payroll", "accrual-deferral", "manufacturing-supply-plan", "project-time-billing", "project-source-reconciliation",
 }
 INTEGRITY_FILES = {
     "manufacturing-supply-plan": ("tests/test_postgres_manufacturing_supply_closure.py", "tests/test_postgres_manufacturing_supply_closure_authority.py", "tests/test_postgres_manufacturing_supply_plan.py", "tests/test_postgres_manufacturing_supply_browser_seed.py", "tests/test_postgres_manufacturing_supply_read_authority.py"),
     "project-time-billing": (
         "tests/test_postgres_project_time_billing.py", "tests/test_postgres_project_time_billing_api.py",
         "tests/test_postgres_project_time_billing_restore.py", "tests/test_postgres_project_time_billing_read_authority.py",
+    ),
+    "project-source-reconciliation": (
+        "tests/test_postgres_project_source_close.py",
+        "tests/test_postgres_project_source_reconciliation.py", "tests/test_postgres_project_source_reconciliation_api.py",
+        "tests/test_postgres_project_source_reconciliation_browser_fixture.py",
     ),
     "accrual-deferral": (
         "tests/test_postgres_accrual_deferral.py", "tests/test_postgres_accrual_deferral_api.py",
@@ -55,10 +60,18 @@ INTEGRITY_FILES = {
         "tests/test_postgres_manufacturing_execution_v2.py", "tests/test_postgres_enterprise_migrations.py",
     ),
     "intercompany-operations": ("tests/test_postgres_intercompany_operations.py", "tests/test_postgres_intercompany_operations_api.py",
-                               "tests/test_postgres_intercompany_fx.py", "tests/test_postgres_intercompany_fx_api.py",
-                               "tests/test_postgres_intercompany_fx_reporting_authority.py", "tests/test_postgres_intercompany_reporting_currency_precision.py"),
+                               "tests/test_postgres_intercompany_fx.py", "tests/test_postgres_intercompany_fx_api.py"),
+    "intercompany-cashflow": ("tests/test_postgres_intercompany_cashflow.py", "tests/test_postgres_intercompany_cashflow_api.py",
+                             "tests/test_postgres_intercompany_cashflow_authority.py", "tests/test_postgres_intercompany_cashflow_restore.py",
+                             "tests/test_intercompany_cashflow_browser_fixture.py"),
+    "intercompany-group-reporting": ("tests/test_postgres_intercompany_fx_native_evidence_bundle.py",
+        "tests/test_postgres_intercompany_reporting_currency_precision.py", "tests/test_postgres_intercompany_fx_reporting_authority.py",
+        "tests/test_postgres_intercompany_group_diagnostic.py", "tests/test_postgres_intercompany_group_diagnostic_api.py",
+        "tests/test_intercompany_group_diagnostic_browser_fixture.py"),
     "people-project-payroll": ("tests/test_postgres_people_project_payroll.py", "tests/test_postgres_people_project_payroll_api.py", "tests/test_postgres_people_project_payroll_restore.py", "tests/test_postgres_people_project_dimension_pins.py", "tests/test_postgres_people_project_read_authority.py"),
-    "procurement-sourcing": ("tests/test_postgres_procurement_sourcing.py", "tests/test_postgres_procurement_sourcing_api.py", "tests/test_postgres_manufacturing_sourcing.py"),
+    "procurement-sourcing": ("tests/test_postgres_procurement_sourcing.py",),
+    "procurement-sourcing-api": ("tests/test_postgres_procurement_sourcing_api.py",),
+    "manufacturing-sourcing": ("tests/test_postgres_manufacturing_sourcing.py",),
 }
 PROOF_OWNERS = {
     "verify_postgres_writeback_identity_migration_matrix.py": "writeback",
@@ -142,7 +155,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 59  # Retain all56 original commands and three complete M2 owner commands.
+    assert len(commands) == 64  # Replace the complete three-file sourcing command with three complete-file commands.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -242,8 +255,8 @@ def test_enterprise_browser_matrix_requires_every_real_https_and_populated_resto
     assert job["strategy"]["matrix"]["scenario"] == [
         "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets",
         "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax",
-        "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing",
-        "accrual-deferral", "project-time-billing", "manufacturing-supply-plan",
+        "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing",
+        "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan",
     ]
     assert job["strategy"]["fail-fast"] is False
     assert "continue-on-error" not in job
@@ -292,6 +305,10 @@ def test_native_services_and_unconditional_report_retention_survive_partition() 
     assert live["env"]["RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE"] == "reconforge_ci_source"
     assert live["env"]["RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE"] == "reconforge_ci_admin"
     assert 'chmod 600 "$PGSERVICEFILE"' in live["run"]
+    assert live["env"]["RECONFORGE_CASHFLOW_PROOF_DIR"] == "${{ runner.temp }}/reconforge-cashflow-native-private"
+    assert 'mkdir -p "$RECONFORGE_CASHFLOW_PROOF_DIR"' in live["run"]
+    assert 'chmod 700 "$RECONFORGE_CASHFLOW_PROOF_DIR"' in live["run"]
+    assert live["run"].index('mkdir -p "$RECONFORGE_CASHFLOW_PROOF_DIR"') < live["run"].index('case "$RECONFORGE_SERVER_BOUNDARY_SHARD" in')
     assert 'pg_dump --format=custom --no-owner --no-privileges --file "$native_smoke_dump" --dbname service=reconforge_ci_source' in live["run"]
     assert 'test -s "$native_smoke_dump"' in live["run"]
     assert 'pg_restore --list "$native_smoke_dump"' in live["run"]

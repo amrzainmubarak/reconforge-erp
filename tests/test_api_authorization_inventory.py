@@ -23,6 +23,11 @@ ENTERPRISE_M1_PREFIXES = (
 EXPECTED_ENTERPRISE_M1_ROUTE_COUNT = 45
 ENTERPRISE_M2_PREFIXES = ("/api/v1/accrual-deferral/", "/api/v1/project-time-billing/", "/api/v1/manufacturing-supply-plan/")
 EXPECTED_ENTERPRISE_M2_ROUTE_COUNT = 48
+ENTERPRISE_M3_PREFIXES = ("/api/v1/intercompany-source-cashflow/", "/api/v1/project-source-reconciliation/", "/api/v1/intercompany-group-diagnostic/")
+ENTERPRISE_M3_EXACT_ROUTES = frozenset({
+    ("GET", "/api/v1/intercompany-fx/sources/{source_id}/native-evidence-bundle"),
+})
+EXPECTED_ENTERPRISE_M3_ROUTE_COUNT = 9
 WAVE5_PREFIXES = ("/api/v1/manufacturing-execution/", "/api/v1/intercompany-operations/", "/api/v1/procurement-sourcing/")
 WAVE4_PREFIXES = (
     "/api/v1/customer-returns/", "/api/v1/procurement-commitments/",
@@ -60,6 +65,9 @@ HANDLER_BOUNDARY_HELPERS = {
     "inventory_receipt_posting.py": frozenset({"_execute"}),
     "intercompany_operations.py": frozenset({"authority", "execute"}),
     "intercompany_fx.py": frozenset({"authority", "execute"}),
+    "intercompany_cashflow.py": frozenset({"capture"}),
+    "intercompany_group_diagnostic.py": frozenset({"capture"}),
+    "project_source_reconciliation.py": frozenset({"capture"}),
     "accrual_deferral.py": frozenset({"authority", "execute"}),
     "project_time_billing.py": frozenset({"execute", "phase"}),
     "manufacturing_supply_plan.py": frozenset({"execute"}),
@@ -111,10 +119,10 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
     app = create_api_app(tmp_path / "unused.db")
     contracts = app.state.authorization_contracts
 
-    retained = tuple(contract for contract in contracts if not contract.path.startswith(ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES))
+    retained = tuple(contract for contract in contracts if not contract.path.startswith(ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES))
     assert len(retained) == EXPECTED_ROUTE_COUNT
     assert authorization_inventory_digest(retained) == EXPECTED_DIGEST
-    assert len(contracts) == EXPECTED_ROUTE_COUNT + EXPECTED_ENTERPRISE_M1_ROUTE_COUNT + EXPECTED_ENTERPRISE_M2_ROUTE_COUNT
+    assert len(contracts) == EXPECTED_ROUTE_COUNT + EXPECTED_ENTERPRISE_M1_ROUTE_COUNT + EXPECTED_ENTERPRISE_M2_ROUTE_COUNT + EXPECTED_ENTERPRISE_M3_ROUTE_COUNT
     assert app.state.authorization_contract_digest == authorization_inventory_digest(contracts)
     assert {contract.mode for contract in contracts} == {"all", "any", "dynamic", "identity", "public", "scim"}
     assert [contract for contract in contracts if contract.mode == "dynamic"] == [
@@ -126,6 +134,18 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
         )
     ]
     assert all(contract.permissions for contract in contracts if contract.mode in {"all", "any"})
+
+
+def test_enterprise_route_cohorts_retain_historical_m1_and_classify_exact_m3_addition(tmp_path: Path) -> None:
+    contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
+    m1 = tuple(contract for contract in contracts if contract.path.startswith(ENTERPRISE_M1_PREFIXES)
+               and (contract.method, contract.path) not in ENTERPRISE_M3_EXACT_ROUTES)
+    m3 = tuple(contract for contract in contracts if contract.path.startswith(ENTERPRISE_M3_PREFIXES)
+               or (contract.method, contract.path) in ENTERPRISE_M3_EXACT_ROUTES)
+    assert len(m1) == EXPECTED_ENTERPRISE_M1_ROUTE_COUNT == 45
+    assert len(m3) == EXPECTED_ENTERPRISE_M3_ROUTE_COUNT == 9
+    assert {(contract.method, contract.path) for contract in m1}.isdisjoint(
+        {(contract.method, contract.path) for contract in m3})
     assert len([contract for contract in contracts if contract.mode == "scim"]) == 15
     emergency_request = next(
         contract
@@ -203,7 +223,7 @@ def test_wave3_routes_require_exact_authority_and_preserve_all_accepted_route_co
     actual_added = tuple(contract for contract in contracts if (contract.method, contract.path) in added_keys)
     assert actual_added == expected
     retained = tuple(contract for contract in contracts if (contract.method, contract.path) not in added_keys
-                     and not contract.path.startswith(ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES))
+                     and not contract.path.startswith(ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES))
     assert len(retained) == 429
     assert authorization_inventory_digest(retained) == "1c1581c2a7d8baf52e80253d5c5e8d026f09de431b250efdb4c89ea1bfd4232d"
     validate_authorization_surface(create_api_app(tmp_path / "complete.db").state.authorization_contracts,
@@ -212,7 +232,7 @@ def test_wave3_routes_require_exact_authority_and_preserve_all_accepted_route_co
 
 def test_wave4_source_routes_preserve_accepted_authority_and_require_exact_permissions(tmp_path: Path) -> None:
     contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
-    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE4_PREFIXES + WAVE5_PREFIXES + ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES))
+    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE4_PREFIXES + WAVE5_PREFIXES + ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES))
     assert len(retained) == 432
     assert authorization_inventory_digest(retained) == "1444692a691300fa3bd63fef6ab70f1c02d195a0b1b9b15b7673b58c847beb76"
     read = ("finance_core.read", "inventory.read", "receivables.read", "sales.read")
@@ -303,6 +323,16 @@ def test_mutating_route_modules_declare_a_server_boundary_or_explicit_protocol_c
     ("POST", "/api/v1/project-time-billing/plans/{plan_id}/post", "receivables.approve"),
     ("GET", "/api/v1/project-time-billing/plans/{plan_id}", "people_project_payroll.read"),
     ("GET", "/api/v1/project-time-billing/catalog", "receivables.read"),
+    ("GET", "/api/v1/intercompany-source-cashflow/sources/{source_id}", "finance_core.read"),
+    ("GET", "/api/v1/intercompany-source-cashflow/sources/{source_id}/evidence/export", "intercompany_fx.read"),
+    ("GET", "/api/v1/intercompany-group-diagnostic/report", "finance_core.read"),
+    ("GET", "/api/v1/intercompany-group-diagnostic/evidence", "intercompany_fx.read"),
+    ("GET", "/api/v1/project-source-reconciliation/report", "people_project_payroll.read"),
+    ("GET", "/api/v1/project-source-reconciliation/evidence", "receivables.read"),
+    ("GET", "/api/v1/project-source-reconciliation/close-diagnostics", "people_project_payroll.read"),
+    ("GET", "/api/v1/project-source-reconciliation/close-diagnostics/evidence", "receivables.read"),
+    ("GET", "/api/v1/intercompany-fx/sources/{source_id}/native-evidence-bundle", "intercompany_fx.read"),
+    ("GET", "/api/v1/intercompany-fx/sources/{source_id}/native-evidence-bundle", "finance_core.read"),
 ])
 def test_enterprise_sensitive_contract_refuses_adjacent_authority(
     tmp_path: Path, method: str, path: str, required: str,
@@ -319,7 +349,7 @@ def test_enterprise_sensitive_contract_refuses_adjacent_authority(
 
 def test_wave5_additions_preserve_every_accepted_wave4_route(tmp_path: Path) -> None:
     contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
-    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE5_PREFIXES + ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES))
+    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE5_PREFIXES + ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES))
     assert len(retained) == 459
     assert authorization_inventory_digest(retained) == "f41b3007bbcc9cc1285cc836be0cb2e81d2e2c4e03713f83f6d245db27fccc9a"
 

@@ -1,0 +1,94 @@
+{
+  "schema_version": "customer-partial-return-design-v1",
+  "qualification": "planned-arithmetic-only-no-native-CR2-implementation",
+  "proposed_policy": "exact-additive-original-consumption-prefix-v1",
+  "cases": [
+    {
+      "id": "usd-unpaid",
+      "currency_code": "USD", "currency_precision": 2, "quantity_precision": 0,
+      "quantity_scaled": 3, "gross_minor": 7500, "collected_minor": 0, "net_unit_price_minor": 2500,
+      "consumptions": [{"id": "C1", "layer_id": "L1", "quantity_scaled": 3, "value_minor": 3600}],
+      "steps": [
+        {"quantity_scaled": 1, "collect_before_minor": 0, "expected_credit_minor": 2500, "expected_cost_minor": 1200, "expected_ar_release_minor": 2500, "expected_refund_delta_minor": 0, "expected_outstanding_minor": 5000},
+        {"quantity_scaled": 2, "collect_before_minor": 0, "expected_credit_minor": 5000, "expected_cost_minor": 2400, "expected_ar_release_minor": 5000, "expected_refund_delta_minor": 0, "expected_outstanding_minor": 0}
+      ],
+      "refunds_minor": []
+    },
+    {
+      "id": "usd-partially-collected",
+      "currency_code": "USD", "currency_precision": 2, "quantity_precision": 0,
+      "quantity_scaled": 3, "gross_minor": 7500, "collected_minor": 5000, "net_unit_price_minor": 2500,
+      "consumptions": [{"id": "C1", "layer_id": "L1", "quantity_scaled": 3, "value_minor": 3600}],
+      "steps": [
+        {"quantity_scaled": 1, "collect_before_minor": 0, "expected_credit_minor": 2500, "expected_cost_minor": 1200, "expected_ar_release_minor": 2500, "expected_refund_delta_minor": 0, "expected_outstanding_minor": 0},
+        {"quantity_scaled": 1, "collect_before_minor": 0, "expected_credit_minor": 2500, "expected_cost_minor": 1200, "expected_ar_release_minor": 0, "expected_refund_delta_minor": 2500, "expected_outstanding_minor": 0},
+        {"quantity_scaled": 1, "collect_before_minor": 0, "expected_credit_minor": 2500, "expected_cost_minor": 1200, "expected_ar_release_minor": 0, "expected_refund_delta_minor": 2500, "expected_outstanding_minor": 0}
+      ],
+      "refunds_minor": [1250, 3750]
+    },
+    {
+      "id": "usd-fully-collected",
+      "currency_code": "USD", "currency_precision": 2, "quantity_precision": 0,
+      "quantity_scaled": 3, "gross_minor": 7500, "collected_minor": 7500, "net_unit_price_minor": 2500,
+      "consumptions": [{"id": "C1", "layer_id": "L1", "quantity_scaled": 3, "value_minor": 3600}],
+      "steps": [
+        {"quantity_scaled": 1, "collect_before_minor": 0, "expected_credit_minor": 2500, "expected_cost_minor": 1200, "expected_ar_release_minor": 0, "expected_refund_delta_minor": 2500, "expected_outstanding_minor": 0},
+        {"quantity_scaled": 2, "collect_before_minor": 0, "expected_credit_minor": 5000, "expected_cost_minor": 2400, "expected_ar_release_minor": 0, "expected_refund_delta_minor": 5000, "expected_outstanding_minor": 0}
+      ],
+      "refunds_minor": [7500]
+    },
+    {
+      "id": "usd-two-original-layers",
+      "currency_code": "USD", "currency_precision": 2, "quantity_precision": 0,
+      "quantity_scaled": 5, "gross_minor": 12500, "collected_minor": 5000, "net_unit_price_minor": 2500,
+      "consumptions": [
+        {"id": "C1", "layer_id": "L1", "quantity_scaled": 2, "value_minor": 2400},
+        {"id": "C2", "layer_id": "L2", "quantity_scaled": 3, "value_minor": 4500}
+      ],
+      "steps": [
+        {"quantity_scaled": 1, "collect_before_minor": 0, "expected_credit_minor": 2500, "expected_cost_minor": 1200, "expected_ar_release_minor": 2500, "expected_refund_delta_minor": 0, "expected_outstanding_minor": 5000},
+        {"quantity_scaled": 2, "collect_before_minor": 0, "expected_credit_minor": 5000, "expected_cost_minor": 2700, "expected_ar_release_minor": 5000, "expected_refund_delta_minor": 0, "expected_outstanding_minor": 0},
+        {"quantity_scaled": 2, "collect_before_minor": 0, "expected_credit_minor": 5000, "expected_cost_minor": 3000, "expected_ar_release_minor": 0, "expected_refund_delta_minor": 5000, "expected_outstanding_minor": 0}
+      ],
+      "refunds_minor": [2000, 3000]
+    },
+    {
+      "id": "usd-collection-between-returns",
+      "currency_code": "USD", "currency_precision": 2, "quantity_precision": 0,
+      "quantity_scaled": 4, "gross_minor": 10000, "collected_minor": 3000, "net_unit_price_minor": 2500,
+      "consumptions": [
+        {"id": "C1", "layer_id": "L1", "quantity_scaled": 2, "value_minor": 2400},
+        {"id": "C2", "layer_id": "L2", "quantity_scaled": 2, "value_minor": 3000}
+      ],
+      "steps": [
+        {"quantity_scaled": 1, "collect_before_minor": 0, "expected_credit_minor": 2500, "expected_cost_minor": 1200, "expected_ar_release_minor": 2500, "expected_refund_delta_minor": 0, "expected_outstanding_minor": 4500},
+        {"quantity_scaled": 1, "collect_before_minor": 4000, "expected_credit_minor": 2500, "expected_cost_minor": 1200, "expected_ar_release_minor": 500, "expected_refund_delta_minor": 2000, "expected_outstanding_minor": 0},
+        {"quantity_scaled": 2, "collect_before_minor": 0, "expected_credit_minor": 5000, "expected_cost_minor": 3000, "expected_ar_release_minor": 0, "expected_refund_delta_minor": 5000, "expected_outstanding_minor": 0}
+      ],
+      "refunds_minor": [3000, 4000]
+    },
+    {
+      "id": "kwd-fractional-base-uom",
+      "currency_code": "KWD", "currency_precision": 3, "quantity_precision": 3,
+      "quantity_scaled": 3, "gross_minor": 3000, "collected_minor": 2000, "net_unit_price_minor": 1000000,
+      "consumptions": [{"id": "C1", "layer_id": "L1", "quantity_scaled": 3, "value_minor": 1500}],
+      "steps": [
+        {"quantity_scaled": 1, "collect_before_minor": 0, "expected_credit_minor": 1000, "expected_cost_minor": 500, "expected_ar_release_minor": 1000, "expected_refund_delta_minor": 0, "expected_outstanding_minor": 0},
+        {"quantity_scaled": 1, "collect_before_minor": 0, "expected_credit_minor": 1000, "expected_cost_minor": 500, "expected_ar_release_minor": 0, "expected_refund_delta_minor": 1000, "expected_outstanding_minor": 0},
+        {"quantity_scaled": 1, "collect_before_minor": 0, "expected_credit_minor": 1000, "expected_cost_minor": 500, "expected_ar_release_minor": 0, "expected_refund_delta_minor": 1000, "expected_outstanding_minor": 0}
+      ],
+      "refunds_minor": [2000]
+    },
+    {
+      "id": "jpy-zero-currency-precision",
+      "currency_code": "JPY", "currency_precision": 0, "quantity_precision": 0,
+      "quantity_scaled": 3, "gross_minor": 303, "collected_minor": 202, "net_unit_price_minor": 101,
+      "consumptions": [{"id": "C1", "layer_id": "L1", "quantity_scaled": 3, "value_minor": 240}],
+      "steps": [
+        {"quantity_scaled": 1, "collect_before_minor": 0, "expected_credit_minor": 101, "expected_cost_minor": 80, "expected_ar_release_minor": 101, "expected_refund_delta_minor": 0, "expected_outstanding_minor": 0},
+        {"quantity_scaled": 2, "collect_before_minor": 0, "expected_credit_minor": 202, "expected_cost_minor": 160, "expected_ar_release_minor": 0, "expected_refund_delta_minor": 202, "expected_outstanding_minor": 0}
+      ],
+      "refunds_minor": [101, 101]
+    }
+  ]
+}

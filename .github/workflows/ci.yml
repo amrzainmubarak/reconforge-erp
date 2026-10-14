@@ -627,6 +627,7 @@ jobs:
           RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE: reconforge_ci_source
           RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE: reconforge_ci_admin
           RECONFORGE_AR_INVOICE_REPLAY_NATIVE_REPORT: ${{ runner.temp }}/reconforge-ar-invoice-recovery-native.json
+          RECONFORGE_CASHFLOW_PROOF_DIR: ${{ runner.temp }}/reconforge-cashflow-native-private
           RECONFORGE_TEST_REDIS_URL: redis://localhost:6379/0
           RECONFORGE_REDIS_IMAGE_DIGEST: sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
           RECONFORGE_REDIS_LIVE_REPORT: ${{ runner.temp }}/reconforge-redis-live-report.json
@@ -647,6 +648,11 @@ jobs:
             'user=postgres' \
             'password=postgres' > "$PGSERVICEFILE"
           chmod 600 "$PGSERVICEFILE"
+          # The native populated cashflow restore retains its exact dump and
+          # original proof in private runner custody; it never skips for an
+          # absent output directory or uploads a credential-bearing database.
+          mkdir -p "$RECONFORGE_CASHFLOW_PROOF_DIR"
+          chmod 700 "$RECONFORGE_CASHFLOW_PROOF_DIR"
           mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(path for item in document['boundaries'] if item.get('ci_shard', 'parity') == 'parity' for path in [item.get('test'), *item.get('additional_tests', [])] if path and path != 'tests/test_postgres_durable_jobs.py'), sep='\\n')")
           case "$RECONFORGE_SERVER_BOUNDARY_SHARD" in
             writeback) ;; # Dedicated evidence runners above own this shard.

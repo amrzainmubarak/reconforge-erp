@@ -12707,3 +12707,27 @@ portions only; no implicit rounding. New templates retain original account/
 dimension/journal/currency pins and create no approval, entry ID or full inverse.
 Native ownership, partial-stock posting, API, Studio and migration remain absent.
 ADR0858 and the M6 matrix define remaining shared AR/valuation/receipt guards.
+
+### 2026-10-15 — Integrate native original-source membership before CR2 effects
+
+M7 composes the qualified original partial-return domain with an internal native
+source mapper over existing invoice, issue, valuation, movement, posting and cash
+owners. Agentf3b target1/full6 actual PostgreSQL cases pass with zero skips; all12
+case-bound before/after captures retain unchanged exact row texts from72 tables.
+Native quantity uses NUMERIC::text and retained quantity text, never binary float.
+Reviewed FIFO issue order is preserved despite reversed layer ID ordering.
+Captured inbound currency policy does not replace original consumed/posted cost.
+
+The mapper and observer execute SELECTs; ordinary table ACLs still allow guarded
+DML. Actual current catalog retains15 function definitions/owners/ACLs/configs,
+including three selected inventory definers, and seven FORCE-RLS tables. Five
+ordinary elevated attributes and schemaCREATE remain false; alembic_version
+visibility is explicitly denied, with fixture migration logs retained separately.
+
+Root owns CI mandatory-shard selection, parser inventory, source archive pins,
+module metadata and the integrated freeze. Independent stdlib original-row
+arithmetic and final Root/hosted gates remain pending on this source. The initial
+62d native failure and missing-environment/catalog preflights remain negatives.
+No native CR2 command, partial-stock financial effect, migration147, API or Studio
+workflow is claimed. ADR0859 and the M7 matrix retain the next shared dependencies;
+performance is deferred and all-country statutory packs remain0.

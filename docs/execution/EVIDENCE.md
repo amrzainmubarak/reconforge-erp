@@ -23661,3 +23661,22 @@ records integer-only, duplicate/non-finite, UTF-8 and graph budgets with unchang
 canonical/core/template checks. The targeted206 inventory/design/Domain/template
 cases pass; their uncommitted component originals remain labeled separately.
 Fresh frozen source qualification and cohesive CI remain required.
+
+### 2026-10-15 — M7 actual native source component and original custody
+
+Agent sourcef3b6fac8247ed9a113f4e78274be0b7792be8388 qualifies the internal
+mapper only: target1 pass40.703s, full6 pass145.063s, zero failure/error/skip,
+unchanged source and ordinary five elevated role flags false. These are test
+durations, not resource/throughput benchmarks. Twelve same-case raw captures
+retain72 table populations and exact NUMERIC witnesses unchanged; five successful
+mapper observations are retained. No serialized actual proposal is present in
+that original packet, so its absence is not silently reconstructed as evidence.
+
+External27-file/3,488,976B custody manifest SHA
+e62a4c5bbd1af28f8321e3be9a064ae3165c0445c1d9f2e9bf9c7866a32fc756,
+closure1c9140e29ea55570b805431109d29a3007e568fff4eaacc92cbcfce2cefd2904,
+XML065c89c44273f083811525764a67b1daa352ff1dae1e3cf6cf200397e9847fd8.
+Production fileda47717b and test3fb74b49 are independently pinned. The original
+62d1-pass/5-failure cohort, missing old fixture files and least-privilege catalog
+setup error remain separately retained; no skips or grants bypass them.
+Root integrated source, independent row oracle and mandatory CI remain pending.

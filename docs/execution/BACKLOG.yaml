@@ -1,7 +1,7 @@
 schema_version: 2
-updated_at: "2026-10-14"
+updated_at: "2026-10-15"
 phase: "Phase 4 — Global Capability Expansion"
-active_sprint: "M5 exact64-job scoped acceptance closed; M6 native29 parent-order and typed original partial-credit integration gates; performance deferred"
+active_sprint: "M6 f0 exact-head cohesive acceptance; M7 native original source membership and independent oracle integration; performance deferred"
 snapshot:
   evidence_base_commit: "23fe490e3181eab020938c067c4f71a86521fee3"
   policy_change_commit: "the commit containing this file"
@@ -11,6 +11,13 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-ENTERPRISE-M7-NATIVE-SOURCE-015
+    depends_on: [AMR-ENTERPRISE-CR2-CONTRACT-014, AMR-ENTERPRISE-M6-COLLECTION-LOCK-014]
+    priority: P0
+    area: original-native-partial-return-source-membership
+    title: Rebind original FIFO invoice posting and collection owners before admitting partial correction effects
+    status: in_progress
+    exit_evidence: "Agentf3b target1/full6 actual native pass0 skips,72-table before/after original SQL row texts unchanged, exact NUMERIC quantity and real commercial/standaloneStock cash owners. Original62d red and environmental/catalog preflights remain retained. Root integrated frozen source, independent stdlib oracle, archive and mandatory native hosted acceptance remain required; no147/API/Studio/nativeCR2 claim."
   - id: AMR-ENTERPRISE-M2-ACCEPTANCE-014
     depends_on: [AMR-ENTERPRISE-M2-001, AMR-ENTERPRISE-M2-002, AMR-ENTERPRISE-M2-003]
     priority: P0

@@ -13645,3 +13645,20 @@ correction evidence over existing cost layers/receipts and GL, preserve all full
 inverse constraints, and use one per-invoice AR residual and actual OLD/NEW
 allocation delta. A digest or typed account pin is not native authorization.
 See ADR0858; no147, native command or partial-stock UI is claimed yet.
+
+### 2026-10-15 — Native source mapping is evidence, not posting authority
+
+Reuse existing CR1 scoped source, original FIFO consumption and reviewed GL/cash
+links. Preserve reviewed issue order and exact native NUMERIC text. Original
+inbound valuation supplies captured currency policy, not recalculated original
+cost. A canonical decoded observation must not claim PostgreSQL original bytes.
+Keep initial captured collections immutable when native partial history exists;
+later receipts require ordered native history and independently pinned owners.
+
+The adapter neither authenticates nor locks nor posts. Keep current human/grant
+admission, customer→invoice→stock order, same-layer additive restoration, shared
+AR residual and reciprocal CR1/full-inverse exclusion as native owner obligations.
+Observed SELECT-only statements do not revoke application DML ACLs. Pin actual
+definer/owner/ACL context before changing shared hooks; no invoker-label shortcut
+proves actor RLS. Retain environmental setup failures separately from financial
+test failures. See ADR0859; no147 or partial-stock API/Studio action is added.

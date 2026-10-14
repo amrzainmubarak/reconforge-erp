@@ -12513,3 +12513,28 @@ being bounded before admission. No transfer or full-ERP completion is claimed.
 Comparative performance remains deferred; cost per operation null; statutory
 country packs0. Main and the two original primary-worktree file hashes were
 reverified unchanged on2026-10-14.
+
+### 2026-10-14 — Accepted M2 and current M3/M4 integration subjects
+
+M2 exact6da88aae is accepted for its bounded code/source gates: actual CI54/54,
+22 mandatory pytest partitions/58 sessions/1827 selected with zero skips,
+xfails or xpasses; both Python versions6221 passes with663 separately recorded
+inherited prerequisites;21 actual HTTPS originals/328-table restores/3 tampers.
+Same-source manual security5/5 has0Critical/0High/9Medium/1Negligible and65/68
+licensed packages/3 missing; legal clearance remains false. Original closure
+SHA3b618127092df9eec9afed9b2c5f9f78f4a728d7e4d41938955a34d6fd03a4ab.
+PR134 final body PATCH and independent GET77553ced are published. Old failures
+and their original source subjects remain intact.
+M3 exact33b31d89 currently fails one native restore because CASHFLOW_PROOF_DIR
+was omitted by CI.6baff23e explicitly creates private runner custody; actual
+native qualification is pending. Its24 browser passes and package/security
+components are component-qualified only, not overall acceptance.
+M4 original-source adoption and whole consumed-document read caps close their
+actual counterexamples in16 owned native cases;142 integrated contracts and
+Studio typecheck/build pass. Four migration/catalog, sixteen structural native
+and seven actual contention/retry/SoD cases remain separately source-qualified.
+First actual integrated HTTPS/whole populated restore is pending. No new FIFO,
+valuation or GL engine exists; same-entity transfers preserve original pooled
+costs and financial effects. Multi-item Delivery adoption is explicitly refused.
+Comparative performance is deferred by the owner, cost per operation null,
+statutory country packs0;100K/1M/multi-region HA/DR remain unproven.

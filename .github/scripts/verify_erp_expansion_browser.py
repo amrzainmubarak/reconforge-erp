@@ -718,7 +718,9 @@ def main() -> int:
         module_origins[module_name] = {"path": str(origin), "sha256": hashlib.sha256(origin.read_bytes()).hexdigest()}
     if args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer"}:
         owner_module = "reconforge.infrastructure.postgres_intercompany_cashflow" if args.scenario == "intercompany-source-cashflow" else "reconforge.infrastructure.postgres_" + args.scenario.replace("-", "_")
-        for module_name in dict.fromkeys((owner_module, seed.__module__, verify_cycles.__module__)):
+        verification_module = (verify_cycles.func.__module__ if isinstance(verify_cycles, partial)
+                               else verify_cycles.__module__)
+        for module_name in dict.fromkeys((owner_module, seed.__module__, verification_module)):
             origin_file = importlib.import_module(module_name).__file__
             if origin_file is None:
                 raise ValueError("New enterprise module has no captured source file.")

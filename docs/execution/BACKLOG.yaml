@@ -1,12 +1,12 @@
 schema_version: 2
 updated_at: "2026-10-14"
 phase: "Phase 4 — Global Capability Expansion"
-active_sprint: "Accepted M1 code/source gates; M2 original supply schedules and Project AR; separate M3 source reporting; performance deferred"
+active_sprint: "Accepted M1/M2 original source gates; M3 restore runner correction; M4 complete original warehouse transfer and restore acceptance; performance deferred"
 snapshot:
   evidence_base_commit: "bcc440896e1f499f10095a5cb32a04d98e7e57c1"
   policy_change_commit: "the commit containing this file"
   published: true
-  publication: "Draft PR133 bcc44089 code/source gates accepted above PR131; final body publication confirmed by independent original v9 GET; M2/M3 final acceptance pending; performance deferred and false"
+  publication: "Draft PR134 6da88aae code/source gates accepted above PR133; final body PATCH/GET independently retained; M3 native restore and M4 final gates pending; performance deferred and false"
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
@@ -16,7 +16,8 @@ tasks:
     priority: P0
     area: frozen-enterprise-source-acceptance
     title: Close original CI Docker security migration and source-qualified financial receipts without counting prior failures as passes
-    status: in_progress
+    status: completed
+    exit_evidence: "Actual6da CI54/54,22 mandatory pytest partitions/58 sessions/1827 selected0critical skips,21 actual HTTPS originals/328-table restore/3 tampers; same-source manual security5/5 and independently matched publication archives. Original final closure3b618127; actual PR134 final body PATCH+GET77553ced. Country0; performance deferred."
   - id: AMR-ENTERPRISE-M3-CUSTODY-014
     depends_on: [AMR-ENTERPRISE-M2-ACCEPTANCE-014]
     priority: P0

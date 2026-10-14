@@ -16,9 +16,19 @@ An ordinary unvalued Manual Receipt added1EA atB. The previous IT1 candidate
 incorrectly admitted a1EA B-to-A review againstA's approved pool. No new GL or
 FIFO repricing occurred, but approved-source admission was false. Raw original
 SHA256: `8f7f061a6eaf50bcc5f4cae76976e072c8e44e6361f2877ecfdd49ff42e0a120`.
-It remains blocking until finite original source-line membership, a balanced
-unsupported receipt/delivery negative and legitimate prior IT1 relocation
-positive all pass. Aggregate quantity equality alone is insufficient.
+The final owned source-class cohort now passes10 actual native cases including
+finite original source-line membership, a balanced unsupported receipt/delivery
+negative and a legitimate prior IT1 relocation positive. It limits the source
+inspection to200 scoped Posted item lines and explicitly refuses multi-item
+Delivery adoption. Aggregate quantity equality alone is insufficient.
+An additional actual original showed that two36-value receipts consumed by one
+60-value Delivery leaked its whole evidence under a36 read cap, even though the
+remaining transferable value was12. That retained red is corrected by deriving
+whole immutable consumed-document policy contexts without changing old source
+JSON, seals or receipts; four actual read-permission cases pass. Browser input
+and repeated original-custody callback cases add two passes. These16 owned
+native passes and142 integrated contract passes do not replace real HTTPS or
+final integrated CI acceptance.
 
 | Guarantee | Current original evidence | Remaining gate |
 | --- | --- | --- |
@@ -32,7 +42,10 @@ M2 at6da has completed its54 original cloud gates; its current native closure
 records22 mandatory pytest partitions,58 sessions and1827 selected cases with
 zero critical skips/xfails/xpasses. Its21 original browser reports prove
 328-table restoration for that source. Those numbers are not reused as IT1
-or M3 final acceptance. M3 final source33b31d89 remains in cloud acceptance.
+or M3 final acceptance. M3 source33b31d89 has a failing native restore gate:
+the runner omitted its required private cashflow proof directory. Explicit
+runner-owned private initialization is under actual native qualification at
+6baff23e; no financial assertion or skip policy is weakened.
 The original rejected M3d5 parser-inventory run and its nested-query regression
 remain retained.
 

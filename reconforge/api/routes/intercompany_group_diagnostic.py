@@ -62,7 +62,7 @@ def parse_selection(raw: str) -> IntercompanyDiagnosticSelection:
         value = SelectionInput.model_validate(json.loads(raw, object_pairs_hook=pairs))
         return IntercompanyDiagnosticSelection(tuple(IntercompanyReportPin(SourceCashOpening(**pin.opening.model_dump()),
             pin.elimination_plan_id, pin.elimination_plan_digest, pin.report_digest) for pin in value.pins))
-    except (ValueError, ValidationError, FinancePostingError) as exc:
+    except (ValueError, ValidationError, FinancePostingError, RecursionError) as exc:
         raise APIError(status_code=400, code="intercompany_group_selection_invalid",
                        message="Select one to sixteen unique canonically ordered original source/report pins.") from exc
 

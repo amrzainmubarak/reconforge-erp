@@ -15,7 +15,7 @@ def test_explicit_canonical_original_selection_round_trips_without_inferred_open
     assert parse_selection(json.dumps(asdict(selection))) == selection
 
 
-@pytest.mark.parametrize("attack", ["float", "bool", "missing_opening", "unknown", "duplicate_source", "oversize", "duplicate_json"])
+@pytest.mark.parametrize("attack", ["float", "bool", "missing_opening", "unknown", "duplicate_source", "oversize", "duplicate_json", "deeply_nested"])
 def test_ambiguous_or_unbounded_selected_source_query_is_rejected(attack):
     selection, _, _ = fixture()
     value = asdict(selection)
@@ -35,6 +35,9 @@ def test_ambiguous_or_unbounded_selected_source_query_is_rejected(attack):
         raw += " " * 32_768
     if attack == "duplicate_json":
         raw = raw.replace('"seller_minor": 0', '"seller_minor": 1,"seller_minor": 0')
+    if attack == "deeply_nested":
+        raw = '{"pins":' + "[" * 4_000 + "0" + "]" * 4_000 + "}"
+        assert len(raw) < 32_768
     with pytest.raises(APIError) as error:
         parse_selection(raw)
     assert error.value.status_code == 400 and error.value.code == "intercompany_group_selection_invalid"

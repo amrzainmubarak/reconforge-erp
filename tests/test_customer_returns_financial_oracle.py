@@ -489,10 +489,10 @@ def test_observer_captures_sorted_original_row_text_once_per_table_and_preserves
     first = _capture_financial_originals(connection, "synthetic-tenant", root)
     original_bytes = {path.name: path.read_bytes() for path in root.iterdir()}
     second = _capture_financial_originals(connection, "synthetic-tenant", root)
-    assert first["capture"] == 1 and second["capture"] == 2
-    assert first["file_count"] == second["file_count"] == 13
+    assert first == second  # Full original/restored verify_cycles proof must remain comparable.
+    assert first["table_count"] == second["table_count"] == 13
     assert first["published"] is second["published"] is False
-    assert all({"number", "bytes", "sha256"} == set(row) for row in first["files"])
+    assert all({"table", "row_count", "row_text_bytes", "row_text_sha256"} == set(row) for row in first["tables"])
     assert all((root / name).read_bytes() == raw for name, raw in original_bytes.items())
     assert oracle.verify_directory(root)["captures"] == 2
     assert len(connection.queries) == 26

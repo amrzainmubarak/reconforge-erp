@@ -59,7 +59,7 @@ def _capture_financial_originals(connection: Any, tenant: str, root: Path) -> di
     capture = len(existing) // len(TABLES) + 1
     require(capture <= MAX_CAPTURES and len(existing) + len(TABLES) <= MAX_FILES,
             "Private financial original capture budget exceeded.")
-    files = []
+    tables = []
     for offset, table in enumerate(TABLES, start=1):
         # Every identifier comes from the closed, source-owned TABLES tuple.
         condition = "r.tenant_id=%s"
@@ -81,9 +81,14 @@ def _capture_financial_originals(connection: Any, tenant: str, root: Path) -> di
         with path.open("xb") as stream:
             stream.write(raw)
         require(path.read_bytes() == raw, "A private financial original changed during capture.")
-        files.append({"number": number, "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()})
-    return {"schema_version": "native-customer-return-original-custody-v1", "capture": capture, "file_count": len(files),
-            "files": files, "role": "existing-browser-poster-normal-database-role", "published": False}
+        row_bytes = json.dumps(rows, ensure_ascii=False, separators=(",", ":")).encode("utf8")
+        tables.append({"table": table, "row_count": len(rows), "row_text_bytes": len(row_bytes),
+                       "row_text_sha256": hashlib.sha256(row_bytes).hexdigest()})
+    # The restore gate compares complete verify_cycles return values. Raw file
+    # ordinals and envelope hashes are capture-specific and stay PRIVATE; only
+    # stable identities of the complete actual table rows enter that result.
+    return {"schema_version": "native-customer-return-original-custody-v1", "table_count": len(tables),
+            "tables": tables, "role": "existing-browser-poster-normal-database-role", "published": False}
 
 
 def verify_customer_returns_browser(runtime: ReceiptRuntime, *, custody_root: Path | None = None) -> dict[str, Any]:

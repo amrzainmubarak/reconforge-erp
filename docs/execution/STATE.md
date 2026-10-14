@@ -12543,3 +12543,15 @@ operation's count of exactly one and add duplicate/nested/legacy-flat controls.
 The FX client now tests real application assembly without injecting an extra
 router. Production API/authorization/accounting bytes remain unchanged. Preserve
 both rejected sources and raw receipts; fresh source acceptance is required.
+
+### 2026-10-14 — Own the real WebCrypto publication test sequence
+
+Currentc65 hosted web component gate rejected only the Arabic original-evidence
+publication case. Its original DOM retained source/native books with no alert,
+no status and no download; no financial or cryptographic defect is inferred.
+The focused unchanged six-case diagnostic passed locally, but that is not flaky
+acceptance. The test now controls the source-response commit and real WebCrypto
+completion separately from publication. Before publication, status/download are
+absent and verify remains disabled; only the genuine checked result releases it.
+Both locales retain actual cryptographic verification and original effect checks.
+No timeout increase, retry, mock digest, skip or production component change.

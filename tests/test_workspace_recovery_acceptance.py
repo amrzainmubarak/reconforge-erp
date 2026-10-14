@@ -58,7 +58,7 @@ def native_join_fixture(tmp_path: Path) -> tuple[Path, dict[str, Any], dict[str,
         paths[locale + "_attachment"] = attachment
         recovery.append(spec(RECOVERY_TITLE.format(locale=locale), "workspace-recovery-cycles.spec.ts",
             [{"name": name, "contentType": "application/json", "path": str(attachment)}]))
-    report = {"config": {"projects": [{"id": PROJECT, "name": PROJECT, "outputDir": str(artifacts),
+    report = {"config": {"workers": 1, "projects": [{"id": PROJECT, "name": PROJECT, "outputDir": str(artifacts),
         "retries": 0, "repeatEach": 1, "testDir": str(ROOT / "apps/web/live"), "testMatch": ["customer-returns-cycles.spec.ts", "workspace-recovery-cycles.spec.ts"]}]},
         "errors": [], "stats": {"expected": 3, "skipped": 0, "unexpected": 0, "flaky": 0,
             "duration": 1234.5, "startTime": "2026-10-14T00:00:00.000Z"},

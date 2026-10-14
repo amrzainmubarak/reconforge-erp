@@ -33,7 +33,7 @@ api_routes:
   - POST /api/v1/inventory-transfer/transfers/{identifier}/cancel
   - POST /api/v1/inventory-transfer/transfers/{identifier}/inverse
 cli_commands: []
-ui_routes: []
+ui_routes: [/inventory-transfer]
 import_schemas: [inventory-transfer-v1]
 export_schemas: [inventory-transfer-cost-v1, inventory-transfer-command-ack-v1, inventory-transfer-evidence-v1]
 synthetic_fixtures: [actual-approved-IRP-three-EA-USD3600-two-warehouse]
@@ -45,6 +45,7 @@ test_matrix:
   api_contract: tests/test_inventory_transfer_api_contract.py
   postgresql_initial: tests/test_postgres_inventory_transfer.py
   postgresql_authority: tests/test_postgres_inventory_transfer_read_authority.py
+  postgresql_shared_integration: tests/test_postgres_inventory_transfer_integration.py
   postgresql_browser_inputs: tests/test_postgres_inventory_transfer_browser.py
   independent_original_oracle: tests/test_inventory_transfer_cycle_oracle.py; tests/test_inventory_transfer_browser_custody.py
   required_browser: apps/web/live/inventory-transfer-cycle.spec.ts

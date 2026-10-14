@@ -95,6 +95,7 @@ export const navigationGroups: NavigationGroup[] = [
     items: [
       { key: "inventory", label: "inventory", icon: Boxes, page: "inventory", status: "foundation" },
       { key: "inventory-receipts", label: "inventoryReceipt", icon: Boxes, page: "inventoryReceipt" },
+      { key: "inventory-transfer", label: "inventoryTransfer", icon: Boxes, page: "inventoryTransfer" },
       { key: "manufacturing", label: "manufacturingCost", icon: Factory, page: "manufacturingCost", status: "foundation" },
     ],
   },

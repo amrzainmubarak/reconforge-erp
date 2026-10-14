@@ -22,6 +22,7 @@ HELPERS = (
     "manufacturing_execution_v2_browser", "intercompany_fx_browser_seed", "people_project_payroll_browser",
     "accrual_deferral_browser", "project_time_billing_browser",
     "manufacturing_supply_browser", "browser_diagnostic_redaction", "original_browser_download_verification",
+    "inventory_transfer_browser",
 )
 DIAGNOSTIC_HELPERS = (
     ".github/scripts/benchmark_wave5_profile_diagnostics.py",
@@ -489,6 +490,13 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/test_inventory_transfer.py", "tests/test_inventory_transfer_api_contract.py",
         "tests/test_postgres_inventory_transfer.py", "tests/test_postgres_inventory_transfer_integration.py",
         "tests/test_postgres_inventory_transfer_read_authority.py",
+        "tests/inventory_transfer_browser.py", "tests/test_postgres_inventory_transfer_browser.py",
+        "tests/test_inventory_transfer_browser_custody.py", "tests/test_inventory_transfer_cycle_oracle.py",
+        "tests/fixtures/inventory-transfer-original-v1.json.gz", "tests/fixtures/inventory-transfer-original-v1.custody.json",
+        ".github/scripts/verify_inventory_transfer_cycle_oracle.py",
+        "apps/web/src/components/InventoryTransferPage.tsx", "apps/web/src/inventory-transfer-data.ts",
+        "apps/web/src/inventory-transfer-data.test.ts", "apps/web/src/inventory-transfer-test-fixtures.ts",
+        "apps/web/live/inventory-transfer-cycle.spec.ts", "apps/web/live/inventory-transfer.playwright.config.ts",
         "docs/modules/inventory-transfer.yaml", "docs/inventory-transfer.md",
         "reconforge/infrastructure/postgres_manufacturing_supply_closure.py",
         "tests/browser_diagnostic_redaction.py",

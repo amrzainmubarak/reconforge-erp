@@ -328,7 +328,7 @@ def publish_original_oracle_custody(private: Path, output: Path, verified: dict[
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-native-restore", action="store_true")
-    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax", "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan"), default="expansion")
+    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax", "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer"), default="expansion")
     parser.add_argument("--runtime-root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "output/erp-expansion-20261009/browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
@@ -396,6 +396,19 @@ def main() -> int:
         extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + MANUFACTURING_EXECUTION_TABLES))
         tamper_statements = MANUFACTURING_EXECUTION_TAMPER
         workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + MANUFACTURING_EXECUTION_WORKSPACE_PROBE_TABLES))
+    elif args.scenario == "inventory-transfer":
+        from tests.inventory_transfer_browser import (
+            INVENTORY_TRANSFER_TABLES,
+            INVENTORY_TRANSFER_TAMPER,
+            INVENTORY_TRANSFER_WORKSPACE_PROBE_TABLES,
+            seed_inventory_transfer_browser,
+            verify_inventory_transfer_browser,
+        )
+        seed, verify_cycles = seed_inventory_transfer_browser, verify_inventory_transfer_browser
+        configuration = "apps/web/live/inventory-transfer.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + INVENTORY_TRANSFER_TABLES))
+        workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + INVENTORY_TRANSFER_WORKSPACE_PROBE_TABLES))
+        tamper_statements = INVENTORY_TRANSFER_TAMPER
     elif args.scenario == "manufacturing-supply-plan":
         from tests.manufacturing_supply_browser import (
             MANUFACTURING_SUPPLY_TABLES,
@@ -697,7 +710,7 @@ def main() -> int:
         if not origin.is_relative_to(runtime_root):
             raise ValueError("Expansion module origin is outside the integrated runtime checkout.")
         module_origins[module_name] = {"path": str(origin), "sha256": hashlib.sha256(origin.read_bytes()).hexdigest()}
-    if args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan"}:
+    if args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer"}:
         owner_module = "reconforge.infrastructure.postgres_intercompany_cashflow" if args.scenario == "intercompany-source-cashflow" else "reconforge.infrastructure.postgres_" + args.scenario.replace("-", "_")
         for module_name in dict.fromkeys((owner_module, seed.__module__, verify_cycles.__module__)):
             origin_file = importlib.import_module(module_name).__file__
@@ -791,6 +804,9 @@ def main() -> int:
         if args.scenario == "manufacturing-supply-plan":
             from tests.manufacturing_supply_browser import manufacturing_supply_browser_configuration
             environment["RECONFORGE_MANUFACTURING_SUPPLY_SOURCE"] = json.dumps(manufacturing_supply_browser_configuration(runtime))
+        if args.scenario == "inventory-transfer":
+            from tests.inventory_transfer_browser import inventory_transfer_browser_configuration
+            environment["RECONFORGE_INVENTORY_TRANSFER_SOURCE"] = json.dumps(inventory_transfer_browser_configuration(runtime))
         if args.scenario == "snapshots":
             from tests.enterprise_financial_snapshot_browser import financial_snapshot_oracle
             oracle_path = output / "financial-snapshot-oracle.json"

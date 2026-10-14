@@ -20,7 +20,7 @@ SHARDS = {
     "people-project-payroll", "accrual-deferral", "manufacturing-supply-plan", "project-time-billing", "project-source-reconciliation", "inventory-transfer",
 }
 INTEGRITY_FILES = {
-    "inventory-transfer": ("tests/test_postgres_inventory_transfer.py", "tests/test_postgres_inventory_transfer_integration.py", "tests/test_postgres_inventory_transfer_read_authority.py"),
+    "inventory-transfer": ("tests/test_postgres_inventory_transfer.py", "tests/test_postgres_inventory_transfer_integration.py", "tests/test_postgres_inventory_transfer_read_authority.py", "tests/test_postgres_inventory_transfer_browser.py"),
     "manufacturing-supply-plan": ("tests/test_postgres_manufacturing_supply_closure.py", "tests/test_postgres_manufacturing_supply_closure_authority.py", "tests/test_postgres_manufacturing_supply_plan.py", "tests/test_postgres_manufacturing_supply_browser_seed.py", "tests/test_postgres_manufacturing_supply_read_authority.py"),
     "project-time-billing": (
         "tests/test_postgres_project_time_billing.py", "tests/test_postgres_project_time_billing_api.py",
@@ -251,7 +251,7 @@ def test_enterprise_browser_matrix_requires_every_real_https_and_populated_resto
         "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets",
         "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax",
         "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing",
-        "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan",
+        "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer",
     ]
     assert job["strategy"]["fail-fast"] is False
     assert "continue-on-error" not in job

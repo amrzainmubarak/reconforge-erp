@@ -1536,3 +1536,16 @@ include tests/test_inventory_transfer.py
 include tests/test_inventory_transfer_api_contract.py
 include docs/modules/inventory-transfer.yaml
 include docs/inventory-transfer.md
+include tests/inventory_transfer_browser.py
+include tests/test_postgres_inventory_transfer_browser.py
+include tests/test_inventory_transfer_browser_custody.py
+include tests/test_inventory_transfer_cycle_oracle.py
+include tests/fixtures/inventory-transfer-original-v1.json.gz
+include tests/fixtures/inventory-transfer-original-v1.custody.json
+include .github/scripts/verify_inventory_transfer_cycle_oracle.py
+include apps/web/src/components/InventoryTransferPage.tsx
+include apps/web/src/inventory-transfer-data.ts
+include apps/web/src/inventory-transfer-data.test.ts
+include apps/web/src/inventory-transfer-test-fixtures.ts
+include apps/web/live/inventory-transfer-cycle.spec.ts
+include apps/web/live/inventory-transfer.playwright.config.ts

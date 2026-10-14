@@ -27,6 +27,7 @@ const operationalLabels: Partial<Record<StudioPage, MessageKey>> = {
   notifications: "notifications",
   budgetControl: "budgetControl",
   inventoryReceipt: "inventoryReceipt",
+  inventoryTransfer: "inventoryTransfer",
   durableJobs: "durableJobs",
   exceptions: "exceptions",
 };

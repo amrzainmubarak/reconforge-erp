@@ -1331,6 +1331,7 @@ include tests/test_financial_reporting.py
 include tests/test_postgres_financial_reporting.py
 include tests/test_stock_sales.py
 include tests/test_postgres_stock_sales.py
+include tests/test_postgres_stock_sales_read_authority.py
 include tests/test_postgres_stock_sales_api.py
 include tests/test_procurement_partial.py
 include tests/test_postgres_procurement_partial.py

@@ -12654,3 +12654,29 @@ completion separately from publication. Before publication, status/download are
 absent and verify remains disabled; only the genuine checked result releases it.
 Both locales retain actual cryptographic verification and original effect checks.
 No timeout increase, retry, mock digest, skip or production component change.
+
+### 2026-10-14 — Reject actual recovery failures and prove the SQL wait cause
+
+Frozenbb42 and188 each completed one business browser case and rejected both
+language recovery cases, without skips or flaky retries. bb42 used an ambiguous
+global Menu selector at320px; scope the real Topbar Menu.188 reached320/768px
+with zero serious/critical accessibility findings, then rejected two findings
+at1024px. Actual icon-rail CSS hides navigation labels there. Add localized
+accessible names to the same buttons/links, with five regression cases;731 React
+tests, typecheck and build pass. New actual1440px/manual reload and333-table
+restore remain pending. Earlier injected failure does not prove the cause of
+the historical unexplained blank screen.
+
+The existing lost-ACK/period-close native test also failed on188 before cloud
+cancellation. Unchanged-source reproduction observes replay waiting on the
+holder's advisory lock and revocation waiting on the replay's SHARE locks;
+the test thread synchronously waits for revocation before releasing the holder.
+All67 financial tables/148 rows remain byte-identical. Correct the test's two
+lawful linearizations, preserving the original statement timeout and production
+lock order; new source acceptance is still required.
+
+Independent row evidence now binds original row membership and both retained
+I/IO proof files through diagnostic publication. Synthetic drift cases refuse
+changed/missing proof bytes before and after publication. Raw financial rows
+remain private; no actual restored-row oracle pass is inferred from these tests.
+Comparative benchmarks remain deferred by the owner.

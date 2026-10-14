@@ -18,7 +18,7 @@ performance is deferred by the owner; cost per successful transaction is null.
 | Finance / treasury / group | M1 reciprocal FX trade/settlement/revaluation/translation/elimination; M2 accrual/deferral/inverse/replacement | Accepted M3 selected original Cash/group/Project diagnostics have actual source-owned native/browser/oracle custody and fresh independent original readers | Statutory group reporting, banking execution, ownership/NCI, country tax packs |
 | People / payroll | M1 private effective wage/approved time/budget-backed wage payable/partial cash; M2 independently priced public Project time | Private/public ownership and gross-wage arithmetic unchanged | Attendance/leave/shifts/benefits/deductions/self-service and legally documented country packs |
 | Projects / services / assets | Approved customer-priced time → AR → partial/final cash; original fixed-asset foundations | M3 original wage cost/revenue reconciliation preserves whole-document Cash scope | WBS/resources/entitlements/dispatch/SLAs and maintenance |
-| Enterprise UX / resilience | Existing bilingual role workspaces and approvals | Workspace-only ErrorBoundary keeps navigation and manual dashboard/reload recovery without automatic financial replay.726 React cases/typecheck/build passed. Actual injected negative and first positive component originals retained; strict reporter/private-file binding and final three-case TLS/restore acceptance pending | No inference that injected failure caused the earlier unexplained blank screen; no unperformed broad accessibility or user-efficiency claim |
+| Enterprise UX / resilience | Existing bilingual role workspaces and approvals | Workspace-only ErrorBoundary keeps navigation and manual dashboard/reload recovery without automatic financial replay.731 React cases/typecheck/build passed. Real negative cohorts retained; localized navigation names now survive the icon rail. Strict reporter/private-file binding and new three-case TLS/restore acceptance pending | No inference that injected failure caused the earlier unexplained blank screen; no unperformed broad accessibility or user-efficiency claim |
 
 | Required guarantee | Evidence and precise limit |
 | --- | --- |
@@ -33,3 +33,11 @@ authority correction and manual workspace recovery; then implement true partial-
 cost, AR and restitution ownership. Planned vectors do not complete CR2.
 Treasury/close, manufacturing planning and employee workflows follow actual
 cross-domain contracts. IFRS/US GAAP and country law support are not inferred.
+
+The independent customer-return verifier reads bounded original PostgreSQL row
+texts from thirteen tables with standard-library integer/Fraction arithmetic.
+Both isolated and isolated/optimized executions must agree. Original input
+membership, every byte/hash, and both retained proof files are joined before and
+after diagnostic publication. Their financial rows remain private. Synthetic
+reader tests prove this custody contract; actual native three-capture financial
+and restore acceptance remains required on the next frozen source.

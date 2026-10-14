@@ -13614,3 +13614,19 @@ every operation. Never-granted child levels keep existing fallback; withdrawn
 levels cannot become global through fresh snapshots. Lock current authorities
 before source waits and recheck after source locks. Reuse current Identity,
 ScopeAuthority, Money and GL; no migration147 for this application correction.
+
+### 2026-10-14 — Bind restored financial evidence and preserve authority ordering
+
+Financial row observations supplement the existing source-owned verifier and
+do not create another ledger. Capture bounded original row texts with ordinary
+tenant authority, independently calculate with integer/Fraction arithmetic,
+and retain equal isolated/optimized proofs privately. Seal exact input
+membership, bytes/hashes and both proof files before and after publication;
+quarantine publication on custody drift. Diagnostic summaries do not substitute
+for fresh original financial verification.
+
+Current-authority SHARE locks precede command/source waits. A withdrawal that
+starts after admission must wait for that reader's transaction; a committed
+withdrawal first must deny cached and fresh replay. Tests must release their
+own command holder independently of a SHARE-blocked revoker. Preserve native
+timeouts, original ACKs, immutable financial rows and all failed originals.

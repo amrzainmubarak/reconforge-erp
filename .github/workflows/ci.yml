@@ -441,6 +441,8 @@ jobs:
           - intercompany-group-reporting
           - people-project-payroll
           - procurement-sourcing
+          - procurement-sourcing-api
+          - manufacturing-sourcing
           - fx-revaluation
           - writeback
           - native
@@ -754,7 +756,13 @@ jobs:
               uv run --no-sync pytest tests/test_postgres_people_project_payroll.py tests/test_postgres_people_project_payroll_api.py tests/test_postgres_people_project_payroll_restore.py tests/test_postgres_people_project_dimension_pins.py tests/test_postgres_people_project_read_authority.py -q
               ;;
             procurement-sourcing)
-              uv run --no-sync pytest tests/test_postgres_procurement_sourcing.py tests/test_postgres_procurement_sourcing_api.py tests/test_postgres_manufacturing_sourcing.py -q
+              uv run --no-sync pytest tests/test_postgres_procurement_sourcing.py -q
+              ;;
+            procurement-sourcing-api)
+              uv run --no-sync pytest tests/test_postgres_procurement_sourcing_api.py -q
+              ;;
+            manufacturing-sourcing)
+              uv run --no-sync pytest tests/test_postgres_manufacturing_sourcing.py -q
               ;;
             supplier-returns)
               uv run --no-sync pytest tests/test_postgres_supplier_returns.py tests/test_postgres_supplier_returns_api.py -q

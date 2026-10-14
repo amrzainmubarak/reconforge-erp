@@ -16,7 +16,7 @@ SHARDS = {
     "industry-close", "receivables", "finance-posting", "inventory-payables", "erp-expansion", "finance-reporting",
     "commercial-integrity", "supply-integrity", "finance-integrity",
     "supplier-returns", "fx-revaluation",
-    "manufacturing-execution", "intercompany-operations", "intercompany-cashflow", "intercompany-group-reporting", "procurement-sourcing",
+    "manufacturing-execution", "intercompany-operations", "intercompany-cashflow", "intercompany-group-reporting", "procurement-sourcing", "procurement-sourcing-api", "manufacturing-sourcing",
     "people-project-payroll", "accrual-deferral", "manufacturing-supply-plan", "project-time-billing", "project-source-reconciliation", "inventory-transfer",
 }
 INTEGRITY_FILES = {
@@ -70,7 +70,9 @@ INTEGRITY_FILES = {
         "tests/test_postgres_intercompany_group_diagnostic.py", "tests/test_postgres_intercompany_group_diagnostic_api.py",
         "tests/test_intercompany_group_diagnostic_browser_fixture.py"),
     "people-project-payroll": ("tests/test_postgres_people_project_payroll.py", "tests/test_postgres_people_project_payroll_api.py", "tests/test_postgres_people_project_payroll_restore.py", "tests/test_postgres_people_project_dimension_pins.py", "tests/test_postgres_people_project_read_authority.py"),
-    "procurement-sourcing": ("tests/test_postgres_procurement_sourcing.py", "tests/test_postgres_procurement_sourcing_api.py", "tests/test_postgres_manufacturing_sourcing.py"),
+    "procurement-sourcing": ("tests/test_postgres_procurement_sourcing.py",),
+    "procurement-sourcing-api": ("tests/test_postgres_procurement_sourcing_api.py",),
+    "manufacturing-sourcing": ("tests/test_postgres_manufacturing_sourcing.py",),
 }
 PROOF_OWNERS = {
     "verify_postgres_writeback_identity_migration_matrix.py": "writeback",
@@ -154,7 +156,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 63  # Retain 62 accepted commands and add one complete transfer owner partition.
+    assert len(commands) == 65  # Retain the transfer owner and split three complete sourcing files into three commands.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)

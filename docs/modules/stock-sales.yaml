@@ -80,6 +80,8 @@ threat_model:
 benchmarks: []
 rollback_plan: empty migration downgrade restores exact predecessor receipt namespace functions; retained stock-sale history requires backup restore
 test_matrix:
+  - tests/test_stock_sales_money_context.py finite original-price policy affinity preserved phase amounts explicit sealed commercial parent projection and pre-source human authority
+  - tests/test_postgres_stock_sales_read_authority.py original quoted-price READ ceilings original phase WRITE amounts and actual current-role scope capacity-wait authority
   - tests/test_stock_sales.py exact discount and existing FIFO interpretation
   - tests/test_postgres_stock_sales.py actual stock-to-cash, independent review, detached native rollback and six concurrent reservations
   - tests/test_stock_commerce.py thousand-line exact aggregate and malformed quantity contracts

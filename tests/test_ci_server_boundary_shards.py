@@ -38,7 +38,7 @@ INTEGRITY_FILES = {
     ),
     "commercial-integrity": (
         "tests/test_postgres_commercial_collections.py", "tests/test_postgres_commercial_collection_cancellation.py",
-        "tests/test_postgres_customer_returns.py",
+        "tests/test_postgres_customer_returns.py", "tests/test_postgres_customer_return_read_authority.py",
     ),
     "supply-integrity": (
         "tests/test_postgres_landed_cost.py", "tests/test_postgres_landed_cost_api.py",
@@ -183,6 +183,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
         ("tests/test_postgres_financial_reporting.py", "finance-reporting"),
         ("tests/test_postgres_financial_reporting_api.py", "finance-reporting"),
         ("tests/test_postgres_stock_sales.py", "erp-expansion"),
+        ("tests/test_postgres_stock_sales_read_authority.py", "erp-expansion"),
         ("tests/test_postgres_stock_sales_api.py", "erp-expansion"),
         ("tests/test_postgres_procurement_partial.py", "erp-expansion"),
         ("tests/test_postgres_procurement_partial_api.py", "erp-expansion"),
@@ -211,6 +212,7 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
     ignored = {
         "tests/test_postgres_financial_source_roles.py",
         "tests/test_postgres_stock_sales.py", "tests/test_postgres_stock_sales_api.py",
+        "tests/test_postgres_stock_sales_read_authority.py",
         "tests/test_postgres_stock_commerce.py", "tests/test_postgres_stock_commerce_api.py",
         "tests/test_postgres_stock_commerce_migrations.py",
         "tests/test_postgres_financial_reporting_snapshots.py", "tests/test_postgres_financial_snapshot_recovery.py",

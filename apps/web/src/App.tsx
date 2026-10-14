@@ -4,6 +4,7 @@ import { MobileDock, Sidebar } from "./components/Navigation";
 import { AccessibilityPanel, CommandPalette } from "./components/Overlays";
 import { ErrorView, LoadingView } from "./components/StateViews";
 import { NoticesPanel, ProfilePanel, QuickPanel, Topbar, type OpenPanel } from "./components/Topbar";
+import { WorkspaceErrorBoundary } from "./components/WorkspaceErrorBoundary";
 import { loadStudioOverview } from "./data";
 import { translate, type MessageKey } from "./i18n";
 import { usePreferences } from "./preferences";
@@ -260,6 +261,7 @@ function StudioApp() {
         {openPanel === "quick" && !liveOperationalPage ? <QuickPanel translate={t} onNavigate={navigate} /> : null}
         {openPanel === "profile" && !liveOperationalPage ? <ProfilePanel translate={t} /> : null}
 
+        <WorkspaceErrorBoundary key={activePage} locale={preferences.locale} onDashboard={() => navigate("dashboard")} onReload={() => window.location.reload()}>
         {activePage === "stockSales" ? <Suspense fallback={<LoadingView translate={t} />}><StockSalesPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "procurementPartial" ? <Suspense fallback={<LoadingView translate={t} />}><ProcurementPartialPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "financialReporting" ? <Suspense fallback={<LoadingView translate={t} />}><FinancialReportingPage locale={preferences.locale} /></Suspense> : null}
@@ -347,6 +349,7 @@ function StudioApp() {
         {activePage === "durableJobs" ? (
           <Suspense fallback={<LoadingView translate={t} />}><JobOperationsWorkspace locale={preferences.locale} /></Suspense>
         ) : null}
+        </WorkspaceErrorBoundary>
       </div>
 
       <MobileDock

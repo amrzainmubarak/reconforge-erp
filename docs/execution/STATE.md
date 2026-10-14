@@ -1,5 +1,25 @@
 # Execution State
 
+## M3/M4 accepted; cohesive M5 source gate proceeds (2026-10-14)
+
+Current accepted dependency heads are M3 `18d81cc5` (CI62/62) and M4
+`d9f2e031` (CI64/64), with original downloaded archives, actual manual image
+security5/5, current-source package closure and independent original readers.
+PR135/136 final bodies were PATCH/GET verified; Draft status and main remain.
+Earlier sourcing timeout and missing local evidence remain separately disclosed.
+M5 corrects original-price/current-read authority across CR1/StockSales/Commerce
+without altering WRITE amounts or accepted financial history. Fresh Stock
+native9 and multi-warehouse commerce compatibility passed with integer/Fraction
+oracles; retained ACK regression is corrected by comparing actual row contents.
+An actual rejected Studio lazy asset also exposed missing workspace containment.
+The new bilingual manual recovery boundary has726 passing React cases. Strict
+private reporter/attachment custody and final three-case HTTPS/333-table restore
+and cohesive hosted acceptance remain pending. Source is frozen only after peer
+review; unpublished development receipts do not replace final source gates.
+No147 migration, new money/identity/GL engine, benchmark or statutory country
+acceptance follows. Performance is still deferred by the human; country packs0.
+See ENTERPRISE_COMPLETION_M5_2026-10-14.md and WORKTREE_RECOVERY_2026-10-14.md.
+
 ## Enterprise M1 integrated cycles; final hosted gate pending (2026-10-13)
 
 Draft [PR133](https://github.com/amrzainmubarak/reconforge-erp/pull/133) is above
@@ -12609,6 +12629,20 @@ The FX client now tests real application assembly without injecting an extra
 router. Production API/authorization/accounting bytes remain unchanged. Preserve
 both rejected sources and raw receipts; fresh source acceptance is required.
 
+### 2026-10-14 — Current original-credit money and authority correction
+
+M5 integrates the independently qualified CR1 correction: exposed quoted prices,
+FIFO values and original source totals use a finite captured-policy READ context;
+phase permissions retain original business-effect amounts. Current human/role/
+catalog and applicable historical scope kinds are locked before source waits.
+Fresh empty or partial snapshots cannot reinstate withdrawn bounded access.
+Original source/ACK/GL/AR and migration126 bytes are preserved; no147 is needed.
+Actual independent9 native cases pass431.652s with zero critical skips; existing
+USD parent/partial-refund compatibility passes separately. Root composed81
+passes. Whole frozen M5 TLS/restore/package/security/CI remains pending.
+Partial-stock CR2 remains design only. StockSales adjacent scope is under actual
+native audit, not yet a proven correction. Comparative benchmarks are deferred.
+
 ### 2026-10-14 — Own the real WebCrypto publication test sequence
 
 Currentc65 hosted web component gate rejected only the Arabic original-evidence
@@ -12620,3 +12654,29 @@ completion separately from publication. Before publication, status/download are
 absent and verify remains disabled; only the genuine checked result releases it.
 Both locales retain actual cryptographic verification and original effect checks.
 No timeout increase, retry, mock digest, skip or production component change.
+
+### 2026-10-14 — Reject actual recovery failures and prove the SQL wait cause
+
+Frozenbb42 and188 each completed one business browser case and rejected both
+language recovery cases, without skips or flaky retries. bb42 used an ambiguous
+global Menu selector at320px; scope the real Topbar Menu.188 reached320/768px
+with zero serious/critical accessibility findings, then rejected two findings
+at1024px. Actual icon-rail CSS hides navigation labels there. Add localized
+accessible names to the same buttons/links, with five regression cases;731 React
+tests, typecheck and build pass. New actual1440px/manual reload and333-table
+restore remain pending. Earlier injected failure does not prove the cause of
+the historical unexplained blank screen.
+
+The existing lost-ACK/period-close native test also failed on188 before cloud
+cancellation. Unchanged-source reproduction observes replay waiting on the
+holder's advisory lock and revocation waiting on the replay's SHARE locks;
+the test thread synchronously waits for revocation before releasing the holder.
+All67 financial tables/148 rows remain byte-identical. Correct the test's two
+lawful linearizations, preserving the original statement timeout and production
+lock order; new source acceptance is still required.
+
+Independent row evidence now binds original row membership and both retained
+I/IO proof files through diagnostic publication. Synthetic drift cases refuse
+changed/missing proof bytes before and after publication. Raw financial rows
+remain private; no actual restored-row oracle pass is inferred from these tests.
+Comparative benchmarks remain deferred by the owner.

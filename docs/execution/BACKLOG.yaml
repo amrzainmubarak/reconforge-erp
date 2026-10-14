@@ -1,12 +1,12 @@
 schema_version: 2
 updated_at: "2026-10-14"
 phase: "Phase 4 — Global Capability Expansion"
-active_sprint: "Accepted M1/M2 original source gates; M3 restore runner correction; M4 complete original warehouse transfer and restore acceptance; performance deferred"
+active_sprint: "Accepted M3/M4 source gates; M5 original-money current authority and private bilingual manual-recovery integration; performance deferred"
 snapshot:
-  evidence_base_commit: "bcc440896e1f499f10095a5cb32a04d98e7e57c1"
+  evidence_base_commit: "d9f2e031b553dbf4ff94da40815605738c5644c7"
   policy_change_commit: "the commit containing this file"
   published: true
-  publication: "Draft PR134 6da88aae code/source gates accepted above PR133; final body PATCH/GET independently retained; M3 native restore and M4 final gates pending; performance deferred and false"
+  publication: "Draft PR135 18d81cc5 CI62/62 and PR136 d9f2e031 CI64/64 accepted; final bodies PATCH/GET independently retained. M5 cohesive exact-head gates pending; performance deferred and false"
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
@@ -23,13 +23,22 @@ tasks:
     priority: P0
     area: original-reporting-custody
     title: Accept actual downloaded group cashflow and Project source-close originals with whole write-time custody and private diagnostic boundaries
-    status: in_progress
+    status: completed
+    exit_evidence: "Current18d81 CI62/62,28 native shards/63 mandatory sessions/1858 selected0critical skips,24 actual328-table HTTPS restores, exact-head manual image security5/5 and original independent readers. Earlier sourcing timeout retained."
   - id: AMR-ENTERPRISE-M4-TRANSFER-014
     depends_on: [AMR-ENTERPRISE-M2-002, AMR-ENTERPRISE-M3-CUSTODY-014]
     priority: P0
     area: governed-physical-stock-transfer
     title: Complete same-entity two-warehouse transfer and separately governed inverse with original FIFO GL preservation and finite structural custody
+    status: completed
+    exit_evidence: "Currentd9f2e CI64/64,29 shards/64 mandatory sessions/1903 selected0critical skips,25 actual333-table HTTPS restores, actual manual image security5/5, original transfer verifier twice."
+  - id: AMR-ENTERPRISE-M5-AUTHORITY-014
+    depends_on: [AMR-ENTERPRISE-M4-TRANSFER-014]
+    priority: P0
+    area: original-money-authority-and-workspace-resilience
+    title: Complete current original-price read authority and governed manual workspace recovery with private source-bound financial originals
     status: in_progress
+    exit_evidence: "Fresh native9 and four-tranche commerce/oracles passed;731 React/typecheck/build passed. bb42 and188 real three-case browser cohorts each rejected two recovery cases; original failures retained.188 existing replay test also rejected an observed application wait chain. Corrected localized navigation names, test ordering and input/proof custody require new frozen three-case TLS/333-table restore and cohesive CI."
   - id: AMR-ENTERPRISE-CR2-CONTRACT-014
     depends_on: [AMR-ENTERPRISE-M4-TRANSFER-014, AMR-WAVE4-001]
     priority: P1
@@ -10361,3 +10370,17 @@ tasks:
     title: Reconcile original public approved time wage Project cost customer-priced revenue and separately qualified whole-document Cash
     status: in_progress
     exit_evidence: "Owned original native/API source evidence and independent integer oracle; root automatically registered ALL4 GET and bilingual Studio pass targeted contracts51 React cases. Real TLS/final-source gate pending."
+  - id: AMR-ENTERPRISE-M5-001
+    depends_on: []
+    priority: P0
+    area: original-credit-current-authority
+    title: Protect original exposed money while retaining phase amounts and withdrawn scope boundaries
+    status: in_progress
+    exit_evidence: "Actual9 native cases and one USD compatibility case pass without skips; Root81 composed pass; frozen TLS/restore and whole CI pending. No SQL ceiling or migration147 claim."
+  - id: AMR-ENTERPRISE-M5-002
+    depends_on: [AMR-ENTERPRISE-M5-001]
+    priority: P0
+    area: stock-sales-current-authority
+    title: Audit actual retained unit-price disclosure and current grant withdrawal in StockSales
+    status: in_progress
+    exit_evidence: "Independent genuine KWD native RED audit running on unchanged source; no correction or completed capability claimed yet."

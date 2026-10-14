@@ -1,5 +1,22 @@
 # ReconForge Execution Decisions Log
 
+## Current money authority and private browser custody (2026-10-14)
+
+Original retained unit prices are READ exposure, independent of phase WRITE
+amount. Keep captured currency policies and named finite owner surfaces; recheck
+current human/role/catalog and scope on every retained read/ACK/replay. Reuse
+existing GL/FIFO/source financial ownership. Do not infer new SQL monetary
+ceilings from test-configured ABAC policies or relax immutable history.
+Contain workspace rendering failures inside the navigation shell, with explicit
+human dashboard/reload actions; do not automatically retry financial mutations.
+Keep full before/after financial browser originals private and unchanged. Bind
+their exact bytes to actual passed unretried locale cases and Playwright's owned
+attachment copies. Publish only a finite scalar projection, never raw bodies or
+absolute private attachment paths. Require all three cases, actual financial
+verification and populated restore; verify source/build/HEAD/clean after final
+publication. An injected asset failure cannot establish the cause of a previous
+unexplained blank screen. Old absent outputs are not reconstructed as originals.
+
 ## Enterprise M1 shared contracts (2026-10-13)
 
 Start from actual accepted542, preserve main/primary dirty files and old custody.
@@ -13587,3 +13604,29 @@ Each restore callback captures and verifies fresh actual originals, then returns
 the first already verified receipt only after exact proof equality and all eight
 write-time identity checks. Publish only that trusted finite custody packet.
 Local comparative benchmarks remain deferred; native test durations are not TPS.
+
+### 2026-10-14 — Exposed money and original approval amounts
+
+Use finite named original-money fields under the immutable captured currency
+policy for READ. Keep original source business-effect amount for phase WRITE.
+Require captured nonempty scope kinds union immutable historical grant kinds on
+every operation. Never-granted child levels keep existing fallback; withdrawn
+levels cannot become global through fresh snapshots. Lock current authorities
+before source waits and recheck after source locks. Reuse current Identity,
+ScopeAuthority, Money and GL; no migration147 for this application correction.
+
+### 2026-10-14 — Bind restored financial evidence and preserve authority ordering
+
+Financial row observations supplement the existing source-owned verifier and
+do not create another ledger. Capture bounded original row texts with ordinary
+tenant authority, independently calculate with integer/Fraction arithmetic,
+and retain equal isolated/optimized proofs privately. Seal exact input
+membership, bytes/hashes and both proof files before and after publication;
+quarantine publication on custody drift. Diagnostic summaries do not substitute
+for fresh original financial verification.
+
+Current-authority SHARE locks precede command/source waits. A withdrawal that
+starts after admission must wait for that reader's transaction; a committed
+withdrawal first must deny cached and fresh replay. Tests must release their
+own command holder independently of a SHARE-blocked revoker. Preserve native
+timeouts, original ACKs, immutable financial rows and all failed originals.

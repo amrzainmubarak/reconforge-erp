@@ -1,15 +1,19 @@
 """Atomic commercial parent over reusable native stock-to-cash tranches."""
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any
+from collections.abc import Mapping, Sequence
+from typing import Any, NoReturn
 
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor, canonical_json, digest_payload, text
 from reconforge.domain.stock_commerce import CommercialOrder
 from reconforge.domain.stock_sales import StockOrder
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope
-from reconforge.infrastructure.postgres_stock_sales import OPERATION_PERMISSIONS, PostgresStockSalesRepository
+from reconforge.infrastructure.postgres_stock_sales import (
+    OPERATION_PERMISSIONS,
+    PostgresStockSalesRepository,
+    stock_sales_money_context,
+)
 from reconforge.platform.common import platform_id
 from reconforge.platform.inventory_values import quantity_to_scaled
 
@@ -21,21 +25,69 @@ def _child_command(command: str, operation: str) -> str:
     return "commerce-native:" + digest_payload([command, operation])
 
 
+def stock_commerce_read_context(row: Mapping[str, Any], lines: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Bind public original line prices to the immutable commercial birth seal."""
+    def invalid() -> NoReturn:
+        raise FinancePostingError("commerce_evidence_invalid", "Commercial read requires complete sealed lines and captured policies.")
+
+    header, count = row.get("source"), row.get("line_count")
+    if (not isinstance(header, Mapping) or header.get("schema_version") != "stock-commerce-v1"
+            or type(count) is not int or not 1 <= count <= 1000 or len(lines) != count
+            or type(header.get("line_count")) is not int or header["line_count"] != count
+            or type(row.get("total_minor")) is not int or header.get("total_minor") != row["total_minor"]
+            or type(header.get("total_minor")) is not int or header.get("currency_code") != row.get("currency_code")):
+        invalid()
+    sources: list[Mapping[str, Any]] = []
+    policy: dict[str, Any] | None = None
+    gross = net = total = 0
+    fields = ("currency_code", "precision", "rounding_policy", "registry_version", "registry_digest")
+    for ordinal, line in enumerate(lines, 1):
+        source = line.get("source")
+        if (not isinstance(source, Mapping) or type(line.get("line_number")) is not int or line["line_number"] != ordinal
+                or line.get("tenant_id") != row.get("tenant_id") or line.get("order_id") != row.get("id")
+                or type(line.get("total_minor")) is not int or type(source.get("total_minor")) is not int
+                or line["total_minor"] != source["total_minor"]
+                or any(source.get(field) != header.get(field) for field in
+                       ("number", "customer_code", "customer_reference", "currency_code", "order_date"))):
+            invalid()
+        stock_sales_money_context({"currency_code": row["currency_code"], "total_minor": line["total_minor"], "source": source})
+        captured = {field: source["monetary_policy"][field] for field in fields}
+        if policy is not None and any(type(captured[field]) is not type(policy[field]) or captured[field] != policy[field] for field in fields):
+            invalid()
+        policy = captured
+        gross, net = max(gross, source["unit_price_minor"]), max(net, source["net_unit_price_minor"])
+        total += line["total_minor"]
+        sources.append(source)
+    if total != row["total_minor"] or digest_payload({"header": header, "lines": sources}) != row.get("source_digest"):
+        invalid()
+    # Progress totals are conserved beneath the complete parent aggregate by
+    # stock_commerce_close. Its public tranches expose no private FIFO costs.
+    return {"currency_code": row["currency_code"], "total_minor": row["total_minor"], "source": {
+        "currency_code": row["currency_code"], "total_minor": row["total_minor"],
+        "unit_price_minor": gross, "net_unit_price_minor": net, "monetary_policy": policy}}
+
+
 class PostgresStockCommerceRepository:
     def __init__(self, connection: Any, tenant_id: str, **scope: str) -> None:
         self.native = PostgresStockSalesRepository(connection, tenant_id, **scope)
         self.connection, self.tenant_id, self.scope = connection, self.native.tenant_id, self.native.scope
 
-    def _row(self, identifier: str, *, lock: bool = False) -> dict[str, Any]:
+    def _row(self, identifier: str, *, lock: bool = False, read_lock: bool = False) -> dict[str, Any]:
         statement = """SELECT * FROM reconforge.stock_commerce_orders WHERE tenant_id=%s AND id=%s
             AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s"""
         if lock:
             statement += " FOR UPDATE"
+        elif read_lock:
+            statement += " FOR SHARE"
         return self.native._one(statement, (self.tenant_id, text(identifier, "commercial order"),
             self.scope["workspace_id"], self.scope["organization_id"], self.scope["legal_entity_id"]))
 
     def _authority(self, actor: PostingActor, operation: str, row: Mapping[str, Any] | None = None) -> None:
-        for permission in sorted(COMMERCE_PERMISSIONS.get(operation, OPERATION_PERMISSIONS["create"] if operation == "create" else OPERATION_PERMISSIONS["submit"])):
+        permissions = COMMERCE_PERMISSIONS.get(operation, OPERATION_PERMISSIONS["create"] if operation == "create" else OPERATION_PERMISSIONS["submit"])
+        # The sole caller-supplied union is the checked-in commercial matrix,
+        # never command input. Pin it before the parent's source/command waits.
+        self.native._authority_locks(actor, operation, permissions=permissions)
+        for permission in sorted(permissions):
             self.native.authority._actor(actor, permission, mutation=operation != "read",
                 amount=row["total_minor"] if row else None, currency=row["currency_code"] if row else None)
         self.connection.execute("SELECT set_config('app.stock_commerce_actor_id',%s,true)", (actor.user_id,))
@@ -206,8 +258,18 @@ class PostgresStockCommerceRepository:
     def get(self, identifier: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.connection.transaction():
             ensure_repository_tenant_scope(self.connection, self.tenant_id)
-            self.native._actor(actor, "read", self._row(identifier))
+            self.native._authority_locks(actor, "read")
+            row = self._row(identifier, read_lock=True)
+            lines = [dict(line) for line in self.connection.execute("""SELECT l.tenant_id,l.order_id,l.line_number,l.total_minor,l.source
+                FROM reconforge.stock_commerce_lines l JOIN reconforge.stock_commerce_orders d
+                ON d.tenant_id=l.tenant_id AND d.id=l.order_id
+                WHERE d.tenant_id=%s AND d.id=%s AND d.workspace_id=%s AND d.organization_id=%s AND d.legal_entity_id=%s
+                ORDER BY l.line_number LIMIT 1001""", (self.tenant_id, identifier, self.scope["workspace_id"],
+                    self.scope["organization_id"], self.scope["legal_entity_id"])).fetchall()]
+            context = stock_commerce_read_context(row, lines)
+            self.native._actor(actor, "read", context)
             self.connection.execute("SELECT reconforge.stock_commerce_close(%s,%s)", (self.tenant_id, identifier))
+            self.native._actor(actor, "read", context)
             return self._snapshot(identifier)
 
     def list(self, *, after: str = "", limit: int = 50, actor: PostingActor) -> dict[str, Any]:

@@ -182,6 +182,7 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
                   <button
                     className={`nav-item ${activePage === item.page ? "nav-item--active" : ""}`}
                     type="button"
+                    aria-label={translate(item.label)}
                     aria-current={activePage === item.page ? "page" : undefined}
                     key={item.key}
                     onClick={() => {
@@ -195,13 +196,13 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
               }
               if (item.href) {
                 return (
-                  <a className="nav-item" href={item.href} target="_blank" rel="noreferrer" key={item.key} onClick={onMobileClose}>
+                  <a className="nav-item" aria-label={translate(item.label)} href={item.href} target="_blank" rel="noreferrer" key={item.key} onClick={onMobileClose}>
                     {content}
                   </a>
                 );
               }
               return (
-                <button className="nav-item" type="button" disabled key={item.key} title={translate("planned")}>
+                <button className="nav-item" type="button" aria-label={translate(item.label)} disabled key={item.key} title={translate("planned")}>
                   {content}
                 </button>
               );

@@ -1,5 +1,29 @@
 # ReconForge Execution Evidence Log
 
+## Fresh M3/M4 original acceptance and M5 integration (2026-10-14)
+
+M3 `18d81cc5`: CI38521912621 is62/62 successful; original final closure
+SHA06e49eb704c51d47cf2105898b6ad5c7953c2ee69faa3208176e47131ef37bb2.
+M4 `d9f2e031`: CI38522800958 is64/64 successful; original final closure
+SHAf384d4c5c68b87ea65677ba38d681abe6a4881520092b689154034d52ea1fcce.
+Actual image security5/5 each:0Critical/0High/9Medium/1Negligible; licenses65/68
+with three missing and no legal compatibility conclusion. Old failures retained.
+M5 fresh reconstructed Stock/Commerce native9 passed0critical skips; closure
+SHA7ec43ec7b11c585ae43a2f416d043f04c4860f96836e58fc88426e93740f21d8.
+Independent original integer/Fraction oracle checks23 raw67-table snapshots,
+preserving66 financial/source/audit rows and separately monotonic gate versions.
+Existing actual two-item/two-warehouse/four-paid-tranche commerce passed with
+oracle:receipts28000/COGS28000/revenueCash69000/14GL effects/Dr=Cr194000.
+Retained ACK/current-withdrawal regression passed1 case63.145s after replacing
+incorrect row-wrapper object comparison with exact contents/code checks. These
+test durations are not business throughput measurements.
+Actual Studio injected negative and first positive3-case originals remain
+component evidence only; earlier driver count/private publication refusals did
+not execute native restore. New whole React726/typecheck/build passed. Final
+strict case-bound HTTPS,333-table restore and frozen-source hosted gates pending.
+Fresh original files are byte-identically mirrored outside worktrees in
+F:/ReconForge_Evidence/recovery-20261014; absent historical outputs stay absent.
+
 ## Actual Wave5 closure and M1 executed integration checkpoints (2026-10-13)
 
 Wave5 original final closure SHA07bc3fd44b6de8b52d77ed35a8624c97cdfecaa754fbafea666dee7aa82c7f98
@@ -23532,6 +23556,26 @@ methods, unlike an OpenAPI dictionary. Public FastAPI release notes describe
 the retained-router change since0.137: https://fastapi.tiangolo.com/release-notes/.
 All old originals remain source-qualified; current final CI is still pending.
 
+### 2026-10-14 — Original CR1 read/write and withdrawn authority proof
+
+Final owned adapter working-byte SHA
+27cede1b6aae4f345efd39a5fb847ef59aa8528cc6f911e5a125b379696e0271.
+Actual native9 PASS431.652s/zero skips, original XML SHA
+15a6bea8b7a4502aa0a57b69a0be05daf0e07023d007c80f59a80620306aeb3c.
+Independent private closure SHA
+527f6807eded5bb80e3dcf923c1282361623fed1599d615280ef85bceaadff7e.
+Existing USD parent/refund1 PASS91.515s/zero skips, XML SHA
+95346f3dd3ee61b1dd641f27e0c2c8f577915dd07e05509371fbf059453ea56c.
+Four READ caps20 refuse retained3000.000 KWD unit price; phase WRITE20 admits
+original3.000/6.001 effect and WRITE6 refuses. Cached/fresh partial/all-empty
+withdrawal and both actual wait orders are covered.67 selected financial table
+strings remain exact within each fixture; cross-database equality not claimed.
+Prior true price/scope/write-context RED originals remain retained separately.
+Root composed81 PASS XML SHA
+4d8c72752862ff4d96d47002cbe32cf19b273cfa46f8d9bec83e3da542a84ac0.
+Affected production mypy/Ruff pass. Noncanonical test-only mypy found52 errors
+(11 own annotations/41 imported fixture); no suppression or test-mypy pass.
+
 ### 2026-10-14 — Preserve rejected original Arabic publication receipt
 
 CI38507877851/c65 web job115669639719 rejected one component case at original
@@ -23543,3 +23587,35 @@ verify is enabled, download absent, no alert/error text. Epoch transitions were
 not observable in that log and are not invented. Controlled source-response and
 real checked-result publication gates remove the test's implicit async ordering;
 new frozen whole CI remains required, with the rejected source preserved.
+
+### 2026-10-14 — Retain real recovery failures and bounded proof-custody checks
+
+Frozenbb42 actual business/recovery browser cohort1 PASS/2 FAIL/0 skip or flaky;
+the complete24-file original mirror SHA08bb0b7ea10a83cefb77fd2d45d611b6219f11114a649d48b348fbc428533b69
+retains the ambiguous real320px Menu selector failure. Frozen188 actual cohort
+again1 PASS/2 FAIL/0 skip or flaky; original report SHA
+4c4e3e08af82e97f2800c0c83e2470f93a08dd05b9f114fa06a081febe19d7b3.
+Both locales retained zero findings at320/768px and rejected two serious or
+critical findings at1024px. No1440px/reload or333-table restored-row verification
+is inferred. Original188 hosted terminal closure SHA
+a9dd1821181ba3af76a9155f58c98912cbbf4bd7a2987deb60bc51a9aedfb4a9
+also retains the existing lost-ACK SQL statement-timeout failure. The original
+CI failure predates cancellation; source188 actual manual security5/5 is a
+component result, not whole acceptance of a later source.
+
+Unchanged188 single-case native diagnosis observes holder→replay advisory wait
+and revoker→replay transaction wait.67 financial tables/148 rows stay exact;
+no database backend lock cycle or admitted unauthorized effect is claimed.
+The corrected case and localized navigation require new native/TLS acceptance.
+
+Root331 focused custody/reader cases and59 diagnostic-writer cases pass with
+zero skips/errors/failures; Bandit reports zero findings/errors.731 React cases,
+typecheck/build, Ruff and whole production Mypy792 files pass. Exact original
+component mirror SHA082eaedc2364ac933c3a73e90af4478424cd0556f44581a63f1eef137f39038a
+is outside the worktree. Independent peer36-case proof-custody closure SHA
+42fdf97d9ec2f5423b5cb6da1125f37e9c7784f1c7297da3149f3e3cc9291112
+reproduces refusal of changed/missing isolated proof files before/after real
+public moves. These execute synthetic standard-library readers, not a native
+database, browser or financial restore. The next frozen source still requires
+actual three-case TLS, thirteen-table original rows across three captures,
+isolated/optimized independent calculation and final cohesive CI.

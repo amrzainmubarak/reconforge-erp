@@ -98,6 +98,7 @@ def test_live_ci_general_gate_collects_every_advertised_contract() -> None:
         "tests/test_postgres_accrual_deferral_ownership.py": "accrual-deferral",
         "tests/test_postgres_accrual_deferral_restore.py": "accrual-deferral",
         "tests/test_postgres_stock_sales.py": "erp-expansion",
+        "tests/test_postgres_stock_sales_read_authority.py": "erp-expansion",
         "tests/test_postgres_stock_sales_api.py": "erp-expansion",
         "tests/test_postgres_procurement_partial.py": "erp-expansion",
         "tests/test_postgres_procurement_partial_api.py": "erp-expansion",

@@ -1,6 +1,25 @@
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 const base = process.env.RECONFORGE_ERP_LIVE_URL, tenant = process.env.RECONFORGE_ERP_TENANT, password = process.env.RECONFORGE_ERP_PASSWORD, source = process.env.RECONFORGE_CUSTOMER_RETURN_SOURCE;
+const clientDiagnostics = new WeakMap<Page, Record<string, unknown>[]>();
+function diagnosticText(value: string) {
+  let text = value;
+  for (const secret of [password, tenant, source]) if (secret) text = text.replaceAll(secret, "[redacted]");
+  return text.slice(0, 2000);
+}
+test.beforeEach(async ({ page }) => {
+  const events: Record<string, unknown>[] = [];
+  clientDiagnostics.set(page, events);
+  page.on("pageerror", error => { if (events.length < 32) events.push({ kind: "pageerror", name: error.name, message: diagnosticText(error.message), stack: diagnosticText(error.stack ?? "") }); });
+  page.on("requestfailed", request => {
+    if (request.resourceType() !== "script" || events.length >= 32) return;
+    const path = new URL(request.url()).pathname;
+    if (path.startsWith("/assets/")) events.push({ kind: "static-script-failure", path, error: diagnosticText(request.failure()?.errorText ?? "") });
+  });
+});
+test.afterEach(async ({ page }, info) => {
+  await info.attach("bounded-client-runtime-diagnostics", { body: Buffer.from(JSON.stringify(clientDiagnostics.get(page) ?? [])), contentType: "application/json" });
+});
 async function login(page: Page, username: string) {
   await page.goto(`${base}/admin-audit`);
   await page.getByLabel("Tenant ID", { exact: true }).fill(tenant!);

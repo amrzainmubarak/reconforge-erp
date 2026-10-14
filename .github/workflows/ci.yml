@@ -118,6 +118,7 @@ jobs:
           --ignore=tests/test_postgres_commercial_collections.py
           --ignore=tests/test_postgres_commercial_collection_cancellation.py
           --ignore=tests/test_postgres_customer_returns.py
+          --ignore=tests/test_postgres_customer_return_read_authority.py
           --ignore=tests/test_postgres_stock_sales_reversal_dispatch.py
           --ignore=tests/test_postgres_supplier_returns.py
           --ignore=tests/test_postgres_supplier_returns_api.py
@@ -144,6 +145,7 @@ jobs:
           --ignore=tests/test_postgres_stock_commerce_api.py
           --ignore=tests/test_postgres_stock_commerce_migrations.py
           --ignore=tests/test_postgres_stock_sales.py
+          --ignore=tests/test_postgres_stock_sales_read_authority.py
           --ignore=tests/test_postgres_stock_sales_api.py
 
       - name: CLI smoke
@@ -719,12 +721,12 @@ jobs:
               uv run --no-sync pytest tests/test_api_server_inventory_valuation.py -q
               ;;
             erp-expansion)
-              uv run --no-sync pytest tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q
+              uv run --no-sync pytest tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_read_authority.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q
               uv run --no-sync pytest tests/test_postgres_stock_commerce.py tests/test_postgres_stock_commerce_api.py tests/test_postgres_stock_commerce_migrations.py tests/test_postgres_procurement_multiline.py tests/test_postgres_procurement_multiline_api.py tests/test_postgres_procurement_multiline_migrations.py -q
               ;;
             commercial-integrity)
               uv run --no-sync pytest tests/test_postgres_commercial_collections.py tests/test_postgres_commercial_collection_cancellation.py -q
-              uv run --no-sync pytest tests/test_postgres_customer_returns.py -q
+              uv run --no-sync pytest tests/test_postgres_customer_returns.py tests/test_postgres_customer_return_read_authority.py -q
               ;;
             supply-integrity)
               uv run --no-sync pytest tests/test_postgres_landed_cost.py tests/test_postgres_landed_cost_api.py tests/test_postgres_landed_cost_cancellation.py -q

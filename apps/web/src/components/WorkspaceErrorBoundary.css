@@ -1,0 +1,9 @@
+.workspace-recovery { min-width: 0; }
+.workspace-recovery-panel { display: grid; gap: 1rem; width: 100%; max-width: 42rem; }
+.workspace-recovery-alert { display: grid; gap: 0.75rem; min-width: 0; overflow-wrap: anywhere; }
+.workspace-recovery-alert h1 { margin: 0; font-size: 1.25rem; line-height: 1.4; }
+.workspace-recovery-alert p { margin: 0; color: var(--text-secondary); }
+.workspace-recovery-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.workspace-recovery-actions button { max-inline-size: 100%; min-height: 2.75rem; padding: 0.75rem 1rem; white-space: normal; }
+.workspace-recovery-reload { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-raised); color: var(--text); cursor: pointer; }
+.workspace-recovery-reload:hover { background: var(--surface-hover); }

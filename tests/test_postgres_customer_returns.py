@@ -248,15 +248,20 @@ def test_cancel_releases_only_unposted_claim_retains_old_ack_and_current_revocat
             WHERE tenant_id=%s AND id=%s""", (runtime.tenant, replacement["id"])).fetchone()
         original_effects = connection.execute("""SELECT count(*) n FROM reconforge.finance_posting_effects
             WHERE tenant_id=%s""", (runtime.tenant,)).fetchone()
+        assert original_plan is not None and type(original_plan["original"]) is str
+        assert original_effects is not None and type(original_effects["n"]) is int
         with pytest.raises(FinancePostingError) as denied:
             PostgresCustomerReturnsRepository(connection, runtime.tenant).prepare(request(order_id), command_id="new-return", actor=actor)
         assert denied.value.code == "operational_actor_denied"
-        assert connection.execute("""SELECT response_json FROM reconforge.customer_return_commands
-            WHERE tenant_id=%s AND command_id='new-return'""", (runtime.tenant,)).fetchone() == retained
-        assert connection.execute("""SELECT to_jsonb(p)::text original FROM reconforge.customer_return_plans p
-            WHERE tenant_id=%s AND id=%s""", (runtime.tenant, replacement["id"])).fetchone() == original_plan
-        assert connection.execute("""SELECT count(*) n FROM reconforge.finance_posting_effects
-            WHERE tenant_id=%s""", (runtime.tenant,)).fetchone() == original_effects
+        retained_after = connection.execute("""SELECT response_json FROM reconforge.customer_return_commands
+            WHERE tenant_id=%s AND command_id='new-return'""", (runtime.tenant,)).fetchone()
+        plan_after = connection.execute("""SELECT to_jsonb(p)::text original FROM reconforge.customer_return_plans p
+            WHERE tenant_id=%s AND id=%s""", (runtime.tenant, replacement["id"])).fetchone()
+        effects_after = connection.execute("""SELECT count(*) n FROM reconforge.finance_posting_effects
+            WHERE tenant_id=%s""", (runtime.tenant,)).fetchone()
+        assert retained_after is not None and retained_after["response_json"] == retained["response_json"]
+        assert plan_after is not None and plan_after["original"] == original_plan["original"]
+        assert effects_after is not None and effects_after["n"] == original_effects["n"]
 
 
 def test_original_partial_delivery_cost_restores_after_later_sale_without_repricing_or_consumption_rewrite(

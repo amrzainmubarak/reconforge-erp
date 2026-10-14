@@ -601,6 +601,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/test_host_processor_observation.py", "reconforge/benchmark/host_processor_observation.py",
         "tests/test_wave4_posting_pair_verifier.py", ".github/scripts/verify_wave4_posting_pair.py",
         "tests/test_customer_returns.py", "tests/test_customer_returns_api.py", "tests/test_postgres_customer_returns.py",
+        "tests/test_postgres_customer_return_read_authority.py",
         "tests/test_postgres_stock_sales_reversal_dispatch.py",
         "tests/test_procurement_commitments.py", "tests/test_postgres_procurement_commitments.py", "tests/test_postgres_procurement_commitments_api.py",
         "tests/test_operational_fx_tax.py", "tests/test_postgres_operational_fx_tax.py", "tests/test_postgres_operational_fx_tax_api.py",

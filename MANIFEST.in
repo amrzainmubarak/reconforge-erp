@@ -1386,6 +1386,7 @@ include tests/customer_returns_browser.py
 include tests/erp_procurement_commitments_browser.py
 include tests/operational_fx_tax_browser_seed.py
 include tests/test_postgres_customer_returns.py
+include tests/test_postgres_customer_return_read_authority.py
 include tests/test_customer_returns.py
 include tests/test_customer_returns_api.py
 include tests/test_procurement_commitments.py

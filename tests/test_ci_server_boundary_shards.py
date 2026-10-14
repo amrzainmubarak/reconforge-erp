@@ -38,7 +38,7 @@ INTEGRITY_FILES = {
     ),
     "commercial-integrity": (
         "tests/test_postgres_commercial_collections.py", "tests/test_postgres_commercial_collection_cancellation.py",
-        "tests/test_postgres_customer_returns.py",
+        "tests/test_postgres_customer_returns.py", "tests/test_postgres_customer_return_read_authority.py",
     ),
     "supply-integrity": (
         "tests/test_postgres_landed_cost.py", "tests/test_postgres_landed_cost_api.py",

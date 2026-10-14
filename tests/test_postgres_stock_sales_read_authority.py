@@ -1,4 +1,8 @@
-"""Genuine KWD3 stock-price disclosure and current-scope regression contracts."""
+"""Genuine KWD3 price and current-authority contracts on ordinary PostgreSQL.
+
+The resumed cases are independently reconstructed from committed fixtures. They
+do not claim custody of the missing, previously uncommitted nine-case report.
+"""
 from __future__ import annotations
 
 import json
@@ -7,7 +11,7 @@ from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 from queue import Queue
-from time import monotonic, sleep
+from threading import Event
 from typing import Any
 
 import psycopg
@@ -15,11 +19,13 @@ import pytest
 
 from reconforge.auth.policy import evaluate_principal_access
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor
+from reconforge.domain.stock_commerce import CommercialLine, CommercialOrder
 from reconforge.domain.stock_sales import StockOrder
 from reconforge.infrastructure import postgres_operational_finance as financial_policy
 from reconforge.infrastructure import postgres_sales_revenue as sales_policy
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
+from reconforge.infrastructure.postgres_stock_commerce import PostgresStockCommerceRepository
 from reconforge.infrastructure.postgres_stock_sales import READ
 from reconforge.platform.common import ServerPrincipal, current_server_principal, server_principal_context
 from tests.test_postgres_customer_return_read_authority import (
@@ -98,6 +104,14 @@ def _read(connection: Any, runtime: KwdRuntime, sale: dict[str, Any], originals:
         assert result == original["result"]
     assert result["unit_price_minor"] == "3000000"
     return result
+
+
+def _denied_reads(connection: Any, runtime: KwdRuntime, sale: dict[str, Any],
+                  originals: dict[str, dict[str, Any]], actor: PostingActor) -> None:
+    for operation in ("get", "list", "historical-create-replay", "historical-submit-replay"):
+        with pytest.raises(FinancePostingError) as denied:
+            _read(connection, runtime, sale, originals, actor, operation)
+        assert "denied" in denied.value.code
 
 
 def test_actual_fractional_stock_quote_requires_all_four_finite_read_amount_contexts(
@@ -236,17 +250,16 @@ def test_actual_stock_native_capacity_wait_cannot_emit_after_committed_read_perm
         key = "work|kwd-entity|" + row["location_id"] + "|" + row["item_id"] + "|"
     readers: Queue[int] = Queue()
     revokers: Queue[int] = Queue()
+    admitted, release_reader = Event(), Event()
 
-    def reader() -> dict[str, Any]:
+    def reader() -> None:
         with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, **SCOPE) as connection, server_principal_context(principal):
             connection.execute("SET LOCAL statement_timeout='12s'")
             readers.put(connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"])
-            try:
-                result = _read(connection, runtime, sale, originals, actor, "get")
-                return {"admitted": True, "original_result": result}
-            except FinancePostingError as refused:
-                assert "denied" in refused.code
-                return {"admitted": False, "code": refused.code}
+            assert _read(connection, runtime, sale, originals, actor, "get") == sale
+            assert _read(connection, runtime, sale, originals, actor, "historical-create-replay") == originals["create"]["result"]
+            admitted.set()
+            assert release_reader.wait(timeout=6)
 
     def revoker() -> None:
         with psycopg.connect(runtime.admin_dsn) as connection:
@@ -263,37 +276,24 @@ def test_actual_stock_native_capacity_wait_cannot_emit_after_committed_read_perm
             _wait_on(runtime.admin_dsn, reader_pid, holder_pid)
             revoke_future = workers.submit(revoker)
             revoker_pid = revokers.get(timeout=6)
-            deadline = monotonic() + 6
-            authority_pinned = False
-            with psycopg.connect(runtime.admin_dsn) as probe:
-                while not revoke_future.done():
-                    if reader_pid in probe.execute("SELECT pg_blocking_pids(%s)", (revoker_pid,)).fetchone()[0]:
-                        authority_pinned = True
-                        break
-                    assert monotonic() < deadline, "Retirement must either commit or demonstrably wait on this exact reader."
-                    sleep(0.02)
-            retired_before_release = revoke_future.done()
-            if retired_before_release:
-                revoke_future.result(timeout=1)
-                assert not read_future.done()
-            else:
-                assert authority_pinned
-        finally:
+            _wait_on(runtime.admin_dsn, revoker_pid, reader_pid)
+            assert not revoke_future.done()
             native_holder.commit()
-        result = read_future.result(timeout=15)
+            assert admitted.wait(timeout=6)
+            assert not revoke_future.done(), "Current authority SHARE pins retirement until the original reader commits."
+        finally:
+            native_holder.rollback()
+            release_reader.set()
+        read_future.result(timeout=15)
         revoke_future.result(timeout=15)
     with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, **SCOPE) as connection, server_principal_context(principal):
-        for operation in ("get", "historical-create-replay"):
-            with pytest.raises(FinancePostingError) as denied:
-                _read(connection, runtime, sale, originals, actor, operation)
-            assert "denied" in denied.value.code
+        _denied_reads(connection, runtime, sale, originals, actor)
     _preserved(runtime, baseline, "native-capacity-permission-wait")
     _retain("stock-native-capacity-permission-wait.json", {"native_holder_pid": holder_pid, "reader_pid": reader_pid,
-        "revoker_pid": revoker_pid, "exact_native_capacity_wait_observed": True, "authority_share_pin_observed": authority_pinned,
-        "retirement_committed_before_source_release": retired_before_release, "reader_result": result,
+        "revoker_pid": revoker_pid, "exact_native_capacity_wait_observed": True, "authority_share_pin_observed": True,
+        "retirement_committed_before_source_release": False, "original_get_and_create_replay_completed": True,
         "cached_get_and_create_replay_deny_after_retirement": True, "original_66_financial_tables_unchanged": True,
         "persisted_sql_amount_ceiling_proven": False})
-    assert not (retired_before_release and result["admitted"]), "Original GET disclosed after READ retirement committed during its real native capacity wait."
 
 
 def test_actual_stock_write_threshold_preserves_whole_native_cycle_and_original_effect_amount(
@@ -334,3 +334,164 @@ def test_actual_stock_write_threshold_preserves_whole_native_cycle_and_original_
         "write_cap2_denies_original3_amount": True, "uncapped_read_price_minor": 3000000,
         "original_source": sale, "original_commands": originals, "original_66_financial_tables_unchanged": True,
         "persisted_sql_amount_ceiling_proven": False})
+
+
+def test_actual_stock_cached_actor_rechecks_all_seven_persisted_retirement_classes(
+        receipt_database: tuple[str, str]) -> None:
+    runtime, sale = _setup(receipt_database)
+    originals = _originals(runtime, sale)
+    baseline = _original_tables(runtime)
+    with runtime.actor("maker") as (_, _, actor):
+        principal = current_server_principal()
+        assert principal is not None
+    observations = []
+    for kind in ("human", "assignment", "role", "permission", "workspace", "organization", "legal_entity"):
+        with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, **SCOPE) as connection:
+            try:
+                with connection.transaction():
+                    retired = _retire(connection, runtime.tenant, kind)
+                    assert retired > 0
+                    with server_principal_context(principal):
+                        _denied_reads(connection, runtime, sale, originals, actor)
+                    observations.append({"retirement": kind, "persisted_rows_retired": retired,
+                        "all_four_cached_read_and_replay_paths_denied": True})
+                    raise _RollbackProbe()
+            except _RollbackProbe:
+                pass
+        _preserved(runtime, baseline, "seven-retirement-" + kind)
+        with runtime.actor("maker") as (connection, _, actor):
+            assert _read(connection, runtime, sale, originals, actor, "get") == sale
+    _retain("stock-seven-persisted-retirement-observations.json", {"observations": observations,
+        "original_source": sale, "original_commands": originals,
+        "original_66_financial_tables_unchanged": True, "persisted_sql_amount_ceiling_proven": False})
+
+
+@pytest.mark.parametrize("kind", ["permission", "legal_entity"])
+def test_actual_stock_retirement_first_reader_waits_before_source_and_denies(
+        receipt_database: tuple[str, str], kind: str) -> None:
+    runtime, sale = _setup(receipt_database)
+    originals = _originals(runtime, sale)
+    baseline = _original_tables(runtime)
+    with runtime.actor("maker") as (_, _, actor):
+        principal = current_server_principal()
+        assert principal is not None
+    started: Queue[int] = Queue()
+
+    def reader() -> None:
+        with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, **SCOPE) as connection, server_principal_context(principal):
+            connection.execute("SET LOCAL statement_timeout='12s'")
+            started.put(connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"])
+            _denied_reads(connection, runtime, sale, originals, actor)
+
+    with psycopg.connect(runtime.admin_dsn) as revoker, ThreadPoolExecutor(max_workers=1) as workers:
+        revoker_pid = revoker.execute("SELECT pg_backend_pid()").fetchone()[0]
+        if kind == "permission":
+            assert revoker.execute("""SELECT permission_name FROM reconforge.identity_role_permissions
+                WHERE tenant_id=%s AND permission_name='finance_core.read' AND active FOR UPDATE""",
+                (runtime.tenant,)).fetchall()
+        else:
+            assert revoker.execute("""SELECT id FROM reconforge.principal_scope_grants
+                WHERE tenant_id=%s AND id='kwd-maker-legal_entity' AND revoked_at IS NULL FOR UPDATE""",
+                (runtime.tenant,)).fetchone()
+        future = workers.submit(reader)
+        try:
+            reader_pid = started.get(timeout=6)
+            _wait_on(runtime.admin_dsn, reader_pid, revoker_pid)
+            # A queued authority admission must not own the immutable source.
+            with psycopg.connect(runtime.admin_dsn) as probe:
+                assert probe.execute("""SELECT id FROM reconforge.stock_sales_orders
+                    WHERE tenant_id=%s AND id=%s FOR UPDATE NOWAIT""", (runtime.tenant, sale["id"])).fetchone()
+            assert _retire(revoker, runtime.tenant, kind) > 0
+        finally:
+            revoker.commit()
+        future.result(timeout=15)
+    _preserved(runtime, baseline, "retirement-first-" + kind)
+    _retain("stock-native-retirement-first-" + kind + ".json", {"retirement": kind,
+        "reader_pid": reader_pid, "revoker_pid": revoker_pid, "exact_authority_blocking_edge_observed": True,
+        "source_update_nowait_succeeded_before_retirement_commit": True,
+        "all_four_cached_read_and_replay_paths_denied_after_commit": True,
+        "original_source": sale, "original_commands": originals, "original_66_financial_tables_unchanged": True})
+
+
+def test_actual_two_line_commerce_get_requires_each_original_line_price_context(
+        receipt_database: tuple[str, str], monkeypatch: pytest.MonkeyPatch) -> None:
+    runtime, sale = _setup(receipt_database)
+    _originals(runtime, sale)
+    with runtime.actor("maker") as (connection, _, actor):
+        owner = PostgresStockCommerceRepository(connection, runtime.tenant, **SCOPE,
+            organization_code="ORG", entity_code="ENTITY-KWD")
+        acknowledgement = owner.create(CommercialOrder("KWD_TWO_LINES", "KWD_CUSTOMER", "SYNTHETIC", "KWD", "2026-10-09", (
+            CommercialLine("KWD_ITEM", "KWD_MAIN", "STOCK", "0.001", 3000000, "Original first fractional line"),
+            CommercialLine("KWD_ITEM", "KWD_MAIN", "STOCK", "0.001", 3000000, "Original second fractional line"))),
+            command_id="kwd-two-line-original-create", actor=actor)
+        result = owner.get(acknowledgement["id"], actor=actor)
+    assert "lines" not in acknowledgement and result["total_minor"] == "6000"
+    assert len(result["lines"]) == 2 and all(line["source"]["unit_price_minor"] == "3000000" for line in result["lines"])
+    baseline = _original_tables(runtime)
+    selected, maximum = "finance_core.read", Decimal("20")
+    observations = []
+
+    def financial(principal: ServerPrincipal, **context: Any) -> Any:
+        if context["required_permission"] == selected:
+            observations.append({"permission": selected,
+                "amount": str(context["amount"]) if context["amount"] is not None else None,
+                "maximum": str(maximum)})
+            return evaluate_principal_access(principal, maximum_amount=maximum, **context)
+        return evaluate_principal_access(principal, **context)
+
+    def sales(principal: ServerPrincipal, **context: Any) -> Any:
+        if context["required_permission"] == selected and context["amount"] is not None:
+            return evaluate_principal_access(principal, maximum_amount=maximum, **context)
+        return evaluate_principal_access(principal, **context)
+
+    monkeypatch.setattr(financial_policy, "evaluate_principal_access", financial)
+    monkeypatch.setattr(sales_policy, "evaluate_principal_access", sales)
+    for permission in sorted(READ):
+        selected, maximum = permission, Decimal("20")
+        with runtime.actor("maker") as (connection, _, actor):
+            owner = PostgresStockCommerceRepository(connection, runtime.tenant, **SCOPE,
+                organization_code="ORG", entity_code="ENTITY-KWD")
+            with pytest.raises(FinancePostingError) as denied:
+                owner.get(acknowledgement["id"], actor=actor)
+            assert "denied" in denied.value.code
+        maximum = Decimal("4000")
+        with runtime.actor("maker") as (connection, _, actor):
+            owner = PostgresStockCommerceRepository(connection, runtime.tenant, **SCOPE,
+                organization_code="ORG", entity_code="ENTITY-KWD")
+            assert owner.get(acknowledgement["id"], actor=actor) == result
+        _preserved(runtime, baseline, "commerce-price-" + permission)
+    assert any(value["amount"] == "3000.000" for value in observations)
+    _retain("stock-commerce-original-two-line-read-context.json", {"observations": observations,
+        "original_header_acknowledgement": acknowledgement, "original_complete_get": result,
+        "parent_total_minor": 6000, "original_line_unit_price_minor": 3000000, "currency_precision": 3,
+        "each_of_four_read_caps20_denied_caps4000_allowed": True, "header_ack_exposes_no_lines": True,
+        "original_66_financial_tables_unchanged": True, "persisted_sql_amount_ceiling_proven": False,
+        "private_tranche_cogs_amount_not_publicly_exposed": True})
+
+
+def test_actual_currency_precision_sql_change_is_specific_native_integrity_refusal(
+        receipt_database: tuple[str, str]) -> None:
+    runtime, sale = _setup(receipt_database)
+    originals = _originals(runtime, sale)
+    baseline = _original_tables(runtime)
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, **SCOPE) as connection:
+        before = connection.execute("""SELECT to_jsonb(c)::text original FROM reconforge.currencies c
+            WHERE tenant_id=%s AND code='KWD'""", (runtime.tenant,)).fetchone()["original"]
+        with pytest.raises(psycopg.errors.RaiseException) as rejected, connection.transaction():
+            connection.execute("UPDATE reconforge.currencies SET minor_units=2 WHERE tenant_id=%s AND code='KWD'",
+                (runtime.tenant,))
+        assert rejected.value.sqlstate == "P0001"
+        assert rejected.value.diag.message_primary == "Currency code and precision are immutable; create an explicit new policy instead."
+        assert rejected.value.diag.constraint_name is None
+        after = connection.execute("""SELECT to_jsonb(c)::text original FROM reconforge.currencies c
+            WHERE tenant_id=%s AND code='KWD'""", (runtime.tenant,)).fetchone()["original"]
+        assert before == after
+    with runtime.actor("maker") as (connection, _, actor):
+        assert _read(connection, runtime, sale, originals, actor, "get") == sale
+        assert _read(connection, runtime, sale, originals, actor, "historical-create-replay") == originals["create"]["result"]
+    _preserved(runtime, baseline, "specific-currency-precision-refusal")
+    _retain("stock-currency-precision-native-refusal.json", {"sqlstate": "P0001",
+        "message_primary": rejected.value.diag.message_primary, "constraint_name": None,
+        "original_currency_row": before, "retained_currency_row": after,
+        "original_source": sale, "original_commands": originals, "original_66_financial_tables_unchanged": True,
+        "changed_live_master_replay_proven": False, "interpretation": "Native integrity refused the precision change; no changed-master replay occurred."})

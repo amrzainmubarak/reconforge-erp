@@ -652,52 +652,107 @@ def test_native_stock_lost_ack_after_period_close_rechecks_current_authority_aft
     receipt_database: tuple[str, str],
 ) -> None:
     import time
+    from queue import Queue
+    from threading import Event
 
     import psycopg
 
     from reconforge.domain.finance_posting import canonical_json
+    from reconforge.platform.common import current_server_principal, server_principal_context
     from tests.test_postgres_stock_sales import repository
 
-    runtime, source, _invoice = create_runtime(receipt_database, 0, quantity="5")
-    with runtime.actor("maker") as (connection, _, _actor):
-        retained = connection.execute("SELECT command_id,request,result FROM reconforge.stock_sales_commands WHERE tenant_id=%s AND order_id=%s AND operation='prepare-issue'",
-                                      (runtime.tenant, source)).fetchone()
-    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
-        connection.execute("UPDATE reconforge.fiscal_periods SET status='Closed' WHERE tenant_id=%s AND id='period'", (runtime.tenant,))
-    pids: dict[str, int] = {}
+    revocation = """UPDATE reconforge.identity_role_permissions SET active=FALSE,lifecycle_version=lifecycle_version+1,
+        revoked_at=now(),revoked_by='poster',revocation_reason_code='access_change' WHERE tenant_id=%s
+        AND role_id IN(SELECT id FROM reconforge.identity_roles WHERE tenant_id=%s AND name='receipt-operator')
+        AND permission_name='sales.manage'"""
 
-    def replay() -> dict[str, Any]:
-        with runtime.actor("maker") as (connection, _, actor):
-            pids["replay"] = connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+    def wait_on(observer: Any, waiter: int, holder: int) -> None:
+        deadline = time.monotonic() + 6
+        while holder not in observer.execute("SELECT pg_blocking_pids(%s)", (waiter,)).fetchone()[0]:
+            assert time.monotonic() < deadline, "The exact native waiter/blocker edge must be observed"
+            time.sleep(.05)
+
+    # Separate original sources exercise both legal linearizations without
+    # reactivating a retired permission or rewriting approved financial rows.
+    def check_ordering(ordering: str) -> None:
+        runtime, source, _invoice = create_runtime(receipt_database, 0, quantity="5")
+        with runtime.actor("maker") as (connection, _, cached_actor):
+            cached_principal = current_server_principal()
+            assert cached_principal is not None
+            retained = connection.execute("SELECT command_id,request,result FROM reconforge.stock_sales_commands WHERE tenant_id=%s AND order_id=%s AND operation='prepare-issue'",
+                                          (runtime.tenant, source)).fetchone()
+        with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
+            connection.execute("UPDATE reconforge.fiscal_periods SET status='Closed' WHERE tenant_id=%s AND id='period'", (runtime.tenant,))
+
+        def command(connection: Any, actor: Any, started: Queue[int] | None) -> dict[str, Any]:
+            if started is not None:
+                started.put(connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"])
             payload = dict(retained["request"]["payload"])
             return repository(connection, runtime).act(source, "prepare-issue", expected_version=payload.pop("expected_version"),
                 command_id=retained["command_id"], reason=payload.pop("reason"), parameters=payload, actor=actor)
 
-    assert replay() == retained["result"]
-    before = retained_state(runtime)
-    with ThreadPoolExecutor(max_workers=1) as workers:
-        with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as blocker:
-            holder = blocker.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
-            blocker.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
-                ("stock-command:" + canonical_json([runtime.tenant, "work", retained["command_id"]]),))
-            attempt = workers.submit(replay)
-            deadline = time.monotonic() + 20
-            blocked = False
-            with psycopg.connect(runtime.admin_dsn, autocommit=True) as observer:
-                while time.monotonic() < deadline:
-                    if "replay" in pids and holder in observer.execute("SELECT pg_blocking_pids(%s)", (pids["replay"],)).fetchone()[0]:
-                        blocked = True
-                        break
-                    time.sleep(.05)
-            assert blocked, "Lost acknowledgement retry must actually wait on its native command lock"
-            with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
-                assert connection.execute("""UPDATE reconforge.identity_role_permissions SET active=FALSE,lifecycle_version=lifecycle_version+1,
-                    revoked_at=now(),revoked_by='poster',revocation_reason_code='access_change' WHERE tenant_id=%s
-                    AND role_id IN(SELECT id FROM reconforge.identity_roles WHERE tenant_id=%s AND name='receipt-operator')
-                    AND permission_name='sales.manage'""", (runtime.tenant, runtime.tenant)).rowcount == 1
-        with pytest.raises(FinancePostingError):
-            attempt.result(timeout=60)
-    assert retained_state(runtime) == before
+        def replay(started: Queue[int] | None = None, *, cached: bool = True) -> dict[str, Any]:
+            if cached:
+                with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, workspace_id="work",
+                        organization_id="org", legal_entity_id="entity") as connection, server_principal_context(cached_principal):
+                    return command(connection, cached_actor, started)
+            with runtime.actor("maker") as (connection, _, actor):
+                return command(connection, actor, started)
+
+        assert replay() == retained["result"]
+        before = retained_state(runtime)
+        started: Queue[int] = Queue()
+        with psycopg.connect(runtime.admin_dsn, autocommit=True) as observer, ThreadPoolExecutor(max_workers=2) as workers:
+            if ordering == "reader-first":
+                revoked = Event()
+                retiring: Queue[int] = Queue()
+
+                def retire() -> int:
+                    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
+                        retiring.put(connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"])
+                        count = connection.execute(revocation, (runtime.tenant, runtime.tenant)).rowcount
+                    revoked.set()  # The database commit precedes this signal.
+                    return count
+
+                with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as blocker:
+                    holder = blocker.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+                    blocker.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+                        ("stock-command:" + canonical_json([runtime.tenant, "work", retained["command_id"]]),))
+                    attempt = workers.submit(replay, started)
+                    reader = started.get(timeout=6)
+                    wait_on(observer, reader, holder)
+                    retirement = workers.submit(retire)
+                    wait_on(observer, retiring.get(timeout=6), reader)
+                    assert not revoked.is_set() and not retirement.done()
+                    permission = observer.execute("""SELECT active FROM reconforge.identity_role_permissions WHERE tenant_id=%s
+                        AND role_id IN(SELECT id FROM reconforge.identity_roles WHERE tenant_id=%s AND name='receipt-operator')
+                        AND permission_name='sales.manage'""", (runtime.tenant, runtime.tenant)).fetchone()
+                    assert permission is not None and permission[0] is True
+                # Release the command holder before waiting for the revoker:
+                # an admitted replay pins authority through its exact ACK.
+                assert attempt.result(timeout=60) == retained["result"]
+                assert retirement.result(timeout=60) == 1 and revoked.is_set()
+            else:
+                with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as revoker:
+                    holder = revoker.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+                    assert revoker.execute(revocation, (runtime.tenant, runtime.tenant)).rowcount == 1
+                    attempt = workers.submit(replay, started)
+                    wait_on(observer, started.get(timeout=6), holder)
+                    assert not attempt.done()
+                with pytest.raises(FinancePostingError) as denied:
+                    attempt.result(timeout=60)
+                assert denied.value.code == "sales_actor_denied"
+        assert retained_state(runtime) == before
+        # A committed retirement denies both a retained server principal and
+        # a freshly authenticated principal, without emitting the old ACK.
+        for cached, code in ((True, "sales_actor_denied"), (False, "posting_permission_denied")):
+            with pytest.raises(FinancePostingError) as denied:
+                replay(cached=cached)
+            assert denied.value.code == code
+        assert retained_state(runtime) == before
+
+    check_ordering("reader-first")
+    check_ordering("retirer-first")
 
 
 def test_below_cost_native_stock_source_reads_and_replays_require_retained_cogs_amount_authority(

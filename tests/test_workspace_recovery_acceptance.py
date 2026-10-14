@@ -93,7 +93,8 @@ def test_genuine_private_attachment_and_sidecar_join_accepts_exact_three_first_a
     "business_title", "business_file", "recovery_title", "recovery_file", "suite_file", "multiple_projects",
     "project_id", "project_name", "unexpected_status", "expected_failure", "not_ok", "ok_as_int",
     "failed_result", "retry", "retry_as_bool", "two_results", "no_result", "result_errors", "report_errors",
-    "count_as_bool", "skipped", "unexpected", "flaky", "missing_project"])
+    "count_as_bool", "skipped", "unexpected", "flaky", "missing_project", "workers_bool", "workers_two",
+    "repeat_each_bool", "repeat_each_two", "suite_known_owner_mismatch"])
 def test_exact_case_project_outcome_and_first_attempt_binding_rejects_adversarial_report(tmp_path: Path, mutation: str) -> None:
     private, report, _ = native_join_fixture(tmp_path)
     spec = report["suites"][1]["specs"][0]
@@ -114,6 +115,8 @@ def test_exact_case_project_outcome_and_first_attempt_binding_rejects_adversaria
         spec["title" if mutation == "recovery_title" else "file"] = "unrelated"
     elif mutation == "suite_file":
         report["suites"][1]["file"] = "unrelated.spec.ts"
+    elif mutation == "suite_known_owner_mismatch":
+        report["suites"][1]["file"] = "customer-returns-cycles.spec.ts"
     elif mutation == "multiple_projects":
         spec["tests"].append(json.loads(json.dumps(test)))
     elif mutation in {"project_id", "project_name"}:
@@ -140,6 +143,10 @@ def test_exact_case_project_outcome_and_first_attempt_binding_rejects_adversaria
         report["stats"]["skipped"] = False
     elif mutation in {"skipped", "unexpected", "flaky"}:
         report["stats"][mutation] = 1
+    elif mutation in {"workers_bool", "workers_two"}:
+        report["config"]["workers"] = True if mutation == "workers_bool" else 2
+    elif mutation in {"repeat_each_bool", "repeat_each_two"}:
+        report["config"]["projects"][0]["repeatEach"] = True if mutation == "repeat_each_bool" else 2
     else:
         report["config"]["projects"] = []
     write_report(private, report)

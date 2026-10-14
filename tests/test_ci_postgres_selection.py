@@ -44,6 +44,7 @@ def test_live_ci_general_gate_collects_every_advertised_contract() -> None:
         "tests/test_postgres_inventory_transfer_integration.py": "inventory-transfer",
         "tests/test_postgres_inventory_transfer_read_authority.py": "inventory-transfer",
         "tests/test_postgres_inventory_transfer_browser.py": "inventory-transfer",
+        "tests/test_postgres_inventory_transfer_concurrency.py": "inventory-transfer",
         "tests/test_postgres_manufacturing_supply_plan.py": "manufacturing-supply-plan",
         "tests/test_postgres_manufacturing_supply_closure.py": "manufacturing-supply-plan",
         "tests/test_postgres_manufacturing_supply_closure_authority.py": "manufacturing-supply-plan",

@@ -1532,6 +1532,7 @@ include tests/test_optional_postgres_driver.py
 include tests/test_postgres_inventory_transfer.py
 include tests/test_postgres_inventory_transfer_integration.py
 include tests/test_postgres_inventory_transfer_read_authority.py
+include tests/test_postgres_inventory_transfer_concurrency.py
 include tests/test_inventory_transfer.py
 include tests/test_inventory_transfer_api_contract.py
 include docs/modules/inventory-transfer.yaml

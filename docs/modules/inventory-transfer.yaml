@@ -46,6 +46,7 @@ test_matrix:
   postgresql_initial: tests/test_postgres_inventory_transfer.py
   postgresql_authority: tests/test_postgres_inventory_transfer_read_authority.py
   postgresql_shared_integration: tests/test_postgres_inventory_transfer_integration.py
+  postgresql_concurrency: tests/test_postgres_inventory_transfer_concurrency.py
   postgresql_browser_inputs: tests/test_postgres_inventory_transfer_browser.py
   independent_original_oracle: tests/test_inventory_transfer_cycle_oracle.py; tests/test_inventory_transfer_browser_custody.py
   required_browser: apps/web/live/inventory-transfer-cycle.spec.ts

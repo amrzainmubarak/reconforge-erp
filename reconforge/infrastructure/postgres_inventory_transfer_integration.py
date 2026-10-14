@@ -17,22 +17,31 @@ NAMES = ("inventory_quantity_directory_close", "inventory_quantity_guard_birth",
 ORIGINAL_FUNCTIONS = tuple(_original(name) for name in NAMES)
 
 
+APPROVED_QUANTITY_BODY_SHA256 = {
+    "inventory_quantity_directory_close": "bd0acf1e9528e33bae48f43f616a150f2f818e33d171b362b3503400009e9abf",
+    "inventory_quantity_guard_birth": "64d5f58c778c41f3eb82f277d89c764552cf1caa004d4e037eed2fa310276a26",
+    "inventory_quantity_plan_namespace_guard": "795833891b8abe8e2d379234c92ab0d4a152975eac63899bc951c467a6baf83f",
+}
+
+PINNED_FUNCTIONS_SQL = r"""DO $transfer$ DECLARE f RECORD; BEGIN
+SELECT * INTO f FROM pg_proc WHERE oid=to_regprocedure('reconforge.inventory_quantity_directory_close()');
+IF f.oid IS NULL OR f.prosecdef OR f.prorettype<>'pg_catalog.trigger'::regtype OR f.provolatile<>'v' OR f.proparallel<>'u' OR f.prokind<>'f' OR f.proretset OR f.pronargs<>0 OR f.proleakproof OR f.prolang<>(SELECT oid FROM pg_language WHERE lanname='plpgsql') OR f.proconfig IS DISTINCT FROM ARRAY['search_path=pg_catalog']::text[] OR encode(sha256(convert_to(f.prosrc,'UTF8')),'hex')<>'bd0acf1e9528e33bae48f43f616a150f2f818e33d171b362b3503400009e9abf' THEN
+RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Original quantity contract drift: inventory_quantity_directory_close'; END IF;
+SELECT * INTO f FROM pg_proc WHERE oid=to_regprocedure('reconforge.inventory_quantity_guard_birth()');
+IF f.oid IS NULL OR f.prosecdef OR f.prorettype<>'pg_catalog.trigger'::regtype OR f.provolatile<>'v' OR f.proparallel<>'u' OR f.prokind<>'f' OR f.proretset OR f.pronargs<>0 OR f.proleakproof OR f.prolang<>(SELECT oid FROM pg_language WHERE lanname='plpgsql') OR f.proconfig IS DISTINCT FROM ARRAY['search_path=pg_catalog']::text[] OR encode(sha256(convert_to(f.prosrc,'UTF8')),'hex')<>'64d5f58c778c41f3eb82f277d89c764552cf1caa004d4e037eed2fa310276a26' THEN
+RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Original quantity contract drift: inventory_quantity_guard_birth'; END IF;
+SELECT * INTO f FROM pg_proc WHERE oid=to_regprocedure('reconforge.inventory_quantity_plan_namespace_guard()');
+IF f.oid IS NULL OR f.prosecdef OR f.prorettype<>'pg_catalog.trigger'::regtype OR f.provolatile<>'v' OR f.proparallel<>'u' OR f.prokind<>'f' OR f.proretset OR f.pronargs<>0 OR f.proleakproof OR f.prolang<>(SELECT oid FROM pg_language WHERE lanname='plpgsql') OR f.proconfig IS DISTINCT FROM ARRAY['search_path=pg_catalog']::text[] OR encode(sha256(convert_to(f.prosrc,'UTF8')),'hex')<>'795833891b8abe8e2d379234c92ab0d4a152975eac63899bc951c467a6baf83f' THEN
+RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Original quantity contract drift: inventory_quantity_plan_namespace_guard'; END IF;
+END $transfer$;"""
+
+
 def _pinned_functions() -> str:
-    checks = []
     for name, definition in zip(NAMES, ORIGINAL_FUNCTIONS, strict=True):
         body = definition.split("$quantity$")[1]
-        digest = hashlib.sha256(body.encode("utf8")).hexdigest()
-        checks.append(
-            "SELECT * INTO f FROM pg_proc WHERE oid=to_regprocedure('reconforge." + name + "()');\n"
-            "IF f.oid IS NULL OR f.prosecdef OR f.prorettype<>'pg_catalog.trigger'::regtype "
-            "OR f.provolatile<>'v' OR f.proparallel<>'u' "
-            "OR f.prokind<>'f' OR f.proretset OR f.pronargs<>0 OR f.proleakproof "
-            "OR f.prolang<>(SELECT oid FROM pg_language WHERE lanname='plpgsql') "
-            "OR f.proconfig IS DISTINCT FROM ARRAY['search_path=pg_catalog']::text[] "
-            "OR encode(sha256(convert_to(f.prosrc,'UTF8')),'hex')<>'" + digest + "' THEN\n"
-            "RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Original quantity contract drift: " + name + "'; END IF;"
-        )
-    return "DO $transfer$ DECLARE f RECORD; BEGIN\n" + "\n".join(checks) + "\nEND $transfer$;"
+        if hashlib.sha256(body.encode("utf8")).hexdigest() != APPROVED_QUANTITY_BODY_SHA256[name]:
+            raise RuntimeError("Approved original quantity source contract drift: " + name)
+    return PINNED_FUNCTIONS_SQL
 
 
 def _directory() -> str:

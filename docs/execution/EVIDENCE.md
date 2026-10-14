@@ -23482,3 +23482,20 @@ actual328-table populated restore/3tampers/zero new financial writes. XML
 454b314f4b7518793f2939b428ca73e9860fb53506a626ce89ffc366ebb5cb3b.
 Its hosted final gate remains pending; the required private directory is now
 explicitly created before mandatory native execution and raw dumps stay private.
+
+### 2026-10-14 — Exact language qualification and security correction
+
+The earlier0dd receipt's English/Arabic wording exceeded its actual required
+spec: that source proved English desktop plus Axe, not an Arabic/mobile run.
+Original report78e7 stays unchanged and remains English-only. New required
+Arabic390px scope/native-original read, RTL, overflow and Axe assertions are
+being added before final acceptance; no language result is inferred from labels.
+00fc PRSecurity rejected two B608 findings in shared quantity pin composition;
+subsequent Python dependency audits did not execute in those failed jobs.
+The literal approved three-function pin block now checks source body drift at
+import, with no suppression or optional native dependency. Generated UPGRADE
+SQL SHA9b078032e09ae9c70877dc3f912aa4b175d5e4b1eaa17562d3d782220dce386a
+and DOWNGRADE SQL SHAd08e2221d909730dfa213d649416fdc8167f901301ed57a4d412a0ce02da6f9e
+are exactly byte-identical before/after. Sixteen domain/pin-drift cases pass;
+whole source Bandit returns0 findings/errors. Original cloud rejection remains
+retained; final hosted acceptance requires the next exact frozen head.

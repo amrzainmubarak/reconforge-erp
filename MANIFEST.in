@@ -1342,6 +1342,7 @@ include docs/execution/NATIVE_SOURCING_PARTITION_RECOVERY_2026-10-14.md
 include apps/web/src/components/WorkspaceErrorBoundary.tsx
 include apps/web/src/components/WorkspaceErrorBoundary.css
 include apps/web/src/components/WorkspaceErrorBoundary.test.tsx
+include apps/web/src/components/Navigation.test.tsx
 include apps/web/src/App.workspace-recovery.test.tsx
 include apps/web/live/workspace-recovery-cycles.spec.ts
 include tests/test_postgres_stock_sales_api.py

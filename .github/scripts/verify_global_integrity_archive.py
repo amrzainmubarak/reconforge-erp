@@ -577,6 +577,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "apps/web/src/components/WorkspaceErrorBoundary.tsx",
         "apps/web/src/components/WorkspaceErrorBoundary.css",
         "apps/web/src/components/WorkspaceErrorBoundary.test.tsx",
+        "apps/web/src/components/Navigation.test.tsx",
         "apps/web/src/App.workspace-recovery.test.tsx",
         "apps/web/live/workspace-recovery-cycles.spec.ts",
         "tests/test_benchmark_evidence_index.py", "tests/test_alembic_postgres.py",

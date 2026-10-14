@@ -16,6 +16,7 @@ from reconforge.domain.operational_finance import exact_minor_text
 from reconforge.domain.stock_commerce import CommercialLine, CommercialOrder
 from reconforge.domain.stock_sales import StockOrder
 from reconforge.infrastructure.postgres_stock_commerce import (
+    COMMERCE_PERMISSIONS,
     PostgresStockCommerceRepository,
     stock_commerce_read_context,
 )
@@ -212,6 +213,15 @@ def test_current_permission_mapping_retirement_refuses_cached_principal(monkeypa
         owner._authority_locks(PostingActor("reader", "reader", READ), "read")
 
 
+@pytest.mark.parametrize("permissions", [frozenset(), READ - {"sales.read"}, READ | {"unknown.manage"}])
+def test_private_owner_union_cannot_drop_required_permissions_or_admit_unregistered_ones(permissions: frozenset[str]) -> None:
+    calls: list[str] = []
+    owner = repository(SimpleNamespace(execute=lambda *args: calls.append("native-query")))
+    with pytest.raises(FinancePostingError, match="finite owner permission union"):
+        owner._authority_locks(PostingActor("reader", "reader", READ), "read", permissions=permissions)
+    assert calls == []
+
+
 @pytest.mark.parametrize("boundary", ["actor-permission", "actor-step-up", "principal-step-up", "captured-scope"])
 def test_create_preflight_denies_before_any_command_source_or_quantity_wait(boundary: str, monkeypatch: pytest.MonkeyPatch) -> None:
     import reconforge.infrastructure.postgres_stock_sales as module
@@ -370,3 +380,25 @@ def test_commercial_get_pins_authority_before_source_and_rechecks_after_native_c
     monkeypatch.setattr(owner.native, "_actor", authorize)
     assert owner.get("parent", actor=PostingActor("reader", "reader", READ)) is view
     assert calls == ["current-authority", "source-share", "captured-read", "native-closure", "captured-read"]
+
+
+@pytest.mark.parametrize("operation", ["create", "open-tranche", "approve-tranche", "prepare-issue", "collect"])
+def test_commercial_authority_pins_fixed_union_before_parent_wait_and_preserves_aggregate(operation: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+    owner = PostgresStockCommerceRepository(SimpleNamespace(execute=lambda *args: calls.append("owner-context")), "tenant", **SCOPE)
+    parent, _ = commercial_rows()
+    permissions = COMMERCE_PERMISSIONS[operation]
+    actor = PostingActor("maker", "maker", permissions, step_up_active=True)
+
+    def pin(person: PostingActor, phase: str, *, permissions: frozenset[str]) -> None:
+        assert person is actor and phase == operation and permissions is COMMERCE_PERMISSIONS[operation]
+        calls.append("union-before-parent")
+
+    def unchanged_amount(person: PostingActor, permission: str, **context: Any) -> None:
+        assert context == {"mutation": True, "amount": 6000, "currency": "KWD"}
+        calls.append("original-parent-aggregate")
+
+    monkeypatch.setattr(owner.native, "_authority_locks", pin)
+    monkeypatch.setattr(owner.native.authority, "_actor", unchanged_amount)
+    owner._authority(actor, operation, parent)
+    assert calls == ["union-before-parent", *(["original-parent-aggregate"] * len(permissions)), "owner-context", "owner-context"]

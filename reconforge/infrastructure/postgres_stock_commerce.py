@@ -83,7 +83,11 @@ class PostgresStockCommerceRepository:
             self.scope["workspace_id"], self.scope["organization_id"], self.scope["legal_entity_id"]))
 
     def _authority(self, actor: PostingActor, operation: str, row: Mapping[str, Any] | None = None) -> None:
-        for permission in sorted(COMMERCE_PERMISSIONS.get(operation, OPERATION_PERMISSIONS["create"] if operation == "create" else OPERATION_PERMISSIONS["submit"])):
+        permissions = COMMERCE_PERMISSIONS.get(operation, OPERATION_PERMISSIONS["create"] if operation == "create" else OPERATION_PERMISSIONS["submit"])
+        # The sole caller-supplied union is the checked-in commercial matrix,
+        # never command input. Pin it before the parent's source/command waits.
+        self.native._authority_locks(actor, operation, permissions=permissions)
+        for permission in sorted(permissions):
             self.native.authority._actor(actor, permission, mutation=operation != "read",
                 amount=row["total_minor"] if row else None, currency=row["currency_code"] if row else None)
         self.connection.execute("SELECT set_config('app.stock_commerce_actor_id',%s,true)", (actor.user_id,))

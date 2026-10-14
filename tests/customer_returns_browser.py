@@ -1,11 +1,15 @@
 """Original-source credit/refund HTTPS fixture and independent populated-restore oracle."""
 
+import hashlib
+import json
+from pathlib import Path
 from typing import Any
 
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_customer_returns import PostgresCustomerReturnsRepository
 from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
 from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
+from tests.customer_returns_financial_oracle import MAX_CAPTURES, MAX_FILES, MAX_ORIGINAL_BYTES, NAME, TABLES
 from tests.erp_browser_seed import seed_erp_browser_principals
 from tests.gfo_browser_restore import require
 from tests.test_postgres_customer_returns import create_runtime
@@ -37,7 +41,52 @@ def customer_return_browser_source(runtime: ReceiptRuntime) -> str:
         return str(rows[0]["id"])
 
 
-def verify_customer_returns_browser(runtime: ReceiptRuntime) -> dict[str, Any]:
+def _capture_financial_originals(connection: Any, tenant: str, root: Path) -> dict[str, Any]:
+    """Observe exact source-owned rows with the existing normal actor; never write SQL."""
+    require(not root.is_symlink(), "Private financial original storage cannot be a symlink.")
+    root.mkdir(parents=True, exist_ok=True)
+    require(root.is_dir() and all(not parent.is_symlink() for parent in root.parents),
+            "Private financial originals must stay inside regular owned storage.")
+    existing = list(root.iterdir())
+    numbers = []
+    for path in existing:
+        matched = NAME.fullmatch(path.name)
+        require(matched is not None and path.is_file() and not path.is_symlink(),
+                "Private financial original storage contains an unclassified entry.")
+        numbers.append(int(matched[1]) if matched is not None else 0)
+    require(sorted(numbers) == list(range(1, len(existing) + 1)) and len(existing) % len(TABLES) == 0,
+            "Private financial originals cannot overwrite an incomplete previous capture.")
+    capture = len(existing) // len(TABLES) + 1
+    require(capture <= MAX_CAPTURES and len(existing) + len(TABLES) <= MAX_FILES,
+            "Private financial original capture budget exceeded.")
+    files = []
+    for offset, table in enumerate(TABLES, start=1):
+        # Every identifier comes from the closed, source-owned TABLES tuple.
+        condition = "r.tenant_id=%s"
+        if table in {"finance_entries", "finance_entry_lines"}:
+            entry = "r.id" if table == "finance_entries" else "r.entry_id"
+            condition += f" AND EXISTS(SELECT 1 FROM reconforge.finance_posting_effects f WHERE f.tenant_id=r.tenant_id AND f.entry_id={entry})"
+        elif table == "finance_accounts":
+            condition += " AND EXISTS(SELECT 1 FROM reconforge.finance_entry_lines l JOIN reconforge.finance_posting_effects f ON f.tenant_id=l.tenant_id AND f.entry_id=l.entry_id WHERE l.tenant_id=r.tenant_id AND l.account_id=r.id)"
+        rows = sorted(row["original"] for row in connection.execute(
+            f"SELECT to_jsonb(r)::text original FROM reconforge.{table} r WHERE {condition}", (tenant,)).fetchall())
+        require(len(rows) <= 64 and all(type(row) is str for row in rows), "Private financial row capture exceeds its finite fixture.")
+        packet = {"schema_version": "native-customer-return-row-original-v1", "capture": capture, "table": table, "rows": rows}
+        raw = (json.dumps(packet, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf8")
+        require(len(raw) <= MAX_ORIGINAL_BYTES, "Private financial row bytes exceed the bounded capture.")
+        number = len(existing) + offset
+        path = root / f"native-financial-snapshot-oracle-{number}.json"
+        require(not path.is_symlink() and not path.exists() and path.resolve().parent == root.resolve(),
+                "A private financial original cannot be replaced or escape its owned folder.")
+        with path.open("xb") as stream:
+            stream.write(raw)
+        require(path.read_bytes() == raw, "A private financial original changed during capture.")
+        files.append({"number": number, "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()})
+    return {"schema_version": "native-customer-return-original-custody-v1", "capture": capture, "file_count": len(files),
+            "files": files, "role": "existing-browser-poster-normal-database-role", "published": False}
+
+
+def verify_customer_returns_browser(runtime: ReceiptRuntime, *, custody_root: Path | None = None) -> dict[str, Any]:
     with runtime.actor("browser-poster") as (connection, _, actor):
         owner = PostgresCustomerReturnsRepository(connection, runtime.tenant)
         plans = connection.execute("SELECT id,operation,phase,amount_minor,invoice_id,payload FROM reconforge.customer_return_plans WHERE tenant_id=%s ORDER BY id", (runtime.tenant,)).fetchall()
@@ -69,7 +118,10 @@ def verify_customer_returns_browser(runtime: ReceiptRuntime) -> dict[str, Any]:
         values = {row["account_code"]: row["v"] for row in rows}
         require(all(values[account] == 0 for account in ("AR", "CASH", "REVENUE", "COGS", "REFUND")) and values["INVENTORY"] == 12000 and values["CLEARING"] == -12000, "Native final AR/cash/liability/revenue/COGS/inventory balances disagree with independent oracle.")
         require(connection.execute("SELECT count(*) n FROM reconforge.customer_return_commands WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 12, "Lost responses must retain exactly twelve commands across four governed plans.")
-        return {"credit_memo_id": parent["id"], "retained_customer_return_plans": 4, "posted_whole_credits": 1, "cancelled_reviewed_credits": 1,
+        proof: dict[str, Any] = {"credit_memo_id": parent["id"], "retained_customer_return_plans": 4, "posted_whole_credits": 1, "cancelled_reviewed_credits": 1,
                 "posted_partial_refunds": 2, "original_receipts_retained": 1, "posting_effects": 9, "credit_minor": "45000", "original_collected_minor": "10000",
                 "original_receivable_released_minor": "35000", "refund_total_minor": "10000", "refund_due_minor": "0", "restored_original_fifo_quantity": "10",
                 "restored_original_fifo_minor": "12000", "retained_original_consumptions": 1, "native_fifo_restitutions": 1, "gl_turnover_minor": "156000"}
+        if custody_root is not None:
+            proof["actual_row_original_custody"] = _capture_financial_originals(connection, runtime.tenant, custody_root)
+        return proof

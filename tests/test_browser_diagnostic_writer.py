@@ -570,3 +570,53 @@ def test_writer_refuses_a_classified_staging_symlink_without_writing_outside_pri
     result = writer.publish_browser_diagnostics(output, private, [PASSWORD])
     assert result["status"] == "quarantined" and writer._public_diagnostic_paths(output) == []
     assert list(outside.iterdir()) == [] and list(linked.iterdir()) == []
+
+
+@pytest.mark.parametrize("number", [1, 13, 169])
+def test_new_customer_return_financial_originals_stay_private_despite_old_general_basename_allowlist(tmp_path: Path, number: int) -> None:
+    output, private, _, _ = inputs(tmp_path)
+    original = private / "playwright-artifacts/native-customer-return-originals" / f"native-financial-snapshot-oracle-{number}.json"
+    original.parent.mkdir()
+    raw = json.dumps({"actual_private_financial_row": PRIVATE_MONEY, "source": PRIVATE_SOURCE}).encode()
+    original.write_bytes(raw)
+    assert writer._unchanged_original_artifact_name(original) is True
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD])
+    assert result["status"] == "published" and original.read_bytes() == raw
+    assert not (output / original.relative_to(private)).exists()
+    assert result["private_browser_artifacts"] == [{"artifact_index": 0,
+        "kind": "private-customer-return-financial-original", "original": {
+            "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}, "published": False}]
+    public = b"".join(path.read_bytes() for path in output.rglob("*") if path.is_file())
+    assert PRIVATE_MONEY.encode() not in public and PRIVATE_SOURCE.encode() not in public
+
+
+@pytest.mark.parametrize("basename", ["native-financial-snapshot-oracle-0.json", "native-financial-snapshot-oracle-170.json",
+    "native-financial-snapshot-oracle-01.json", "native-financial-snapshot-oracle-other.json"])
+def test_customer_return_private_family_refuses_unclassified_or_excess_financial_originals(tmp_path: Path, basename: str) -> None:
+    output, private, _, _ = inputs(tmp_path)
+    original = private / "playwright-artifacts/native-customer-return-originals" / basename
+    original.parent.mkdir()
+    original.write_bytes(PRIVATE_MONEY.encode())
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD])
+    assert result["status"] == "quarantined" and writer._public_diagnostic_paths(output) == []
+    assert original.read_bytes() == PRIVATE_MONEY.encode()
+
+
+def test_writer_refuses_late_customer_return_private_original_drift_without_publishing_financial_rows(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output, private, _, _ = inputs(tmp_path)
+    original = private / "playwright-artifacts/native-customer-return-originals/native-financial-snapshot-oracle-1.json"
+    original.parent.mkdir()
+    original.write_bytes(PRIVATE_MONEY.encode())
+    rename = Path.rename
+    def late_drift(path: Path, destination: Path) -> Path:
+        result = rename(path, destination)
+        if destination == output / "playwright.json":
+            original.write_bytes(b"deliberate-late-private-original-drift")
+        return result
+    monkeypatch.setattr(Path, "rename", late_drift)
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD])
+    assert result["status"] == "quarantined" and writer._public_diagnostic_paths(output) == []
+    assert original.read_bytes() == b"deliberate-late-private-original-drift"
+    assert not (output / original.relative_to(private)).exists()

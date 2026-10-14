@@ -64,6 +64,10 @@ WORKSPACE_ATTACHMENT = re.compile(
     r"playwright-artifacts/(?P<case>workspace-recovery-cycles--[A-Za-z0-9_-]{1,200}-customer-returns-chromium)/"
     r"attachments/workspace-recovery-(?P<locale>en|ar)-original-native-boundary-json-[0-9a-f]{40}\.json"
 )
+CUSTOMER_RETURN_PRIVATE_ORIGINAL = re.compile(
+    r"playwright-artifacts/native-customer-return-originals/native-financial-snapshot-oracle-"
+    r"(?:[1-9]|[1-9][0-9]|1[0-5][0-9]|16[0-9])\.json"
+)
 WORKSPACE_CASE_TITLES = {
     "customer-returns-cycles.spec.ts": {
         "actual original credit release partial cash refunds lost responses and bilingual native evidence": None,
@@ -244,6 +248,23 @@ def _require_workspace_originals_unchanged(private: Path, projections: list[dict
         raise ValueError("Workspace original custody changed before completed publication.")
 
 
+def _require_private_financial_originals_unchanged(private: Path, receipts: list[dict[str, Any]]) -> None:
+    expected = [record["original"] for record in receipts if record["kind"] == "private-customer-return-financial-original"]
+    observed = []
+    directory = private / "playwright-artifacts/native-customer-return-originals"
+    if directory.is_symlink():
+        raise ValueError("Private financial original storage cannot be a symbolic link.")
+    for path in sorted(directory.rglob("*")):
+        if path.is_dir() and not path.is_symlink():
+            continue
+        if CUSTOMER_RETURN_PRIVATE_ORIGINAL.fullmatch(path.relative_to(private).as_posix()) is None:
+            raise ValueError("Private financial original custody acquired an unclassified member.")
+        raw = _read_private_original(private, path, limit=diagnostic_redaction.MAX_WORKSPACE_RECOVERY_BYTES)
+        observed.append({"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()})
+    if observed != expected:
+        raise ValueError("Private financial originals changed before completed publication.")
+
+
 def _stage_original_browser_artifacts(output: Path, private: Path, known_private_values: list[str]) -> tuple[list[tuple[Path, Path]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     """Mirror original attachments byte-for-byte, without a financial parser."""
     artifacts = private / "playwright-artifacts"
@@ -261,6 +282,15 @@ def _stage_original_browser_artifacts(output: Path, private: Path, known_private
         if not source.is_file() or source.name == "error-context.md":
             continue
         name = source.relative_to(private).as_posix()
+        if name.startswith("playwright-artifacts/native-customer-return-originals/"):
+            if CUSTOMER_RETURN_PRIVATE_ORIGINAL.fullmatch(name) is None:
+                raise ValueError("Customer return financial custody is outside its finite private family.")
+            raw = _read_private_original(private, source, limit=diagnostic_redaction.MAX_WORKSPACE_RECOVERY_BYTES)
+            identity = {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+            original_identities.append((source, identity))
+            private_receipts.append({"artifact_index": len(private_receipts), "kind": "private-customer-return-financial-original",
+                "original": identity, "published": False})
+            continue
         if diagnostic_redaction.is_workspace_recovery_diagnostic_path(name):
             raw = _read_private_original(private, source, limit=diagnostic_redaction.MAX_WORKSPACE_RECOVERY_BYTES)
             derived = diagnostic_redaction.derive_workspace_recovery_diagnostic(name, raw,
@@ -378,6 +408,7 @@ def publish_browser_diagnostics(output: Path, private: Path, known_private_value
                 raise ValueError("A public browser diagnostic appeared during publication.")
             source.rename(destination)
         _require_workspace_originals_unchanged(private, workspace_receipts)
+        _require_private_financial_originals_unchanged(private, private_receipts)
         if workspace_verification is not None and require_workspace_recovery_acceptance(
                 private, known_private_values=known_private_values) != workspace_verification:
             raise ValueError("Workspace originals changed during completed publication.")

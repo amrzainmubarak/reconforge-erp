@@ -435,6 +435,8 @@ jobs:
           - supplier-returns
           - manufacturing-execution
           - intercompany-operations
+          - intercompany-cashflow
+          - intercompany-group-reporting
           - people-project-payroll
           - procurement-sourcing
           - fx-revaluation
@@ -739,7 +741,11 @@ jobs:
               ;;
             intercompany-operations)
               uv run --no-sync pytest tests/test_postgres_intercompany_operations.py tests/test_postgres_intercompany_operations_api.py tests/test_postgres_intercompany_fx.py tests/test_postgres_intercompany_fx_api.py -q
+              ;;
+            intercompany-cashflow)
               uv run --no-sync pytest tests/test_postgres_intercompany_cashflow.py tests/test_postgres_intercompany_cashflow_api.py tests/test_postgres_intercompany_cashflow_authority.py tests/test_postgres_intercompany_cashflow_restore.py tests/test_intercompany_cashflow_browser_fixture.py -q
+              ;;
+            intercompany-group-reporting)
               uv run --no-sync pytest tests/test_postgres_intercompany_fx_native_evidence_bundle.py tests/test_postgres_intercompany_group_diagnostic.py tests/test_postgres_intercompany_group_diagnostic_api.py tests/test_intercompany_group_diagnostic_browser_fixture.py tests/test_postgres_intercompany_fx_reporting_authority.py tests/test_postgres_intercompany_reporting_currency_precision.py -q
               ;;
             people-project-payroll)

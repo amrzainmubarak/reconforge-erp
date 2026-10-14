@@ -241,8 +241,22 @@ def test_cancel_releases_only_unposted_claim_retains_old_ack_and_current_revocat
         connection.execute("""UPDATE reconforge.identity_role_permissions SET active=FALSE,revoked_at=now(),revoked_by=%s,
             revocation_reason_code='access_change',lifecycle_version=lifecycle_version+1
             WHERE tenant_id=%s AND permission_name='finance_core.reverse'""", (actor.user_id, runtime.tenant))
-        with pytest.raises(FinancePostingError, match="denied"):
+        retained = connection.execute("""SELECT response_json FROM reconforge.customer_return_commands
+            WHERE tenant_id=%s AND command_id='new-return'""", (runtime.tenant,)).fetchone()
+        assert retained is not None and retained["response_json"] == replacement
+        original_plan = connection.execute("""SELECT to_jsonb(p)::text original FROM reconforge.customer_return_plans p
+            WHERE tenant_id=%s AND id=%s""", (runtime.tenant, replacement["id"])).fetchone()
+        original_effects = connection.execute("""SELECT count(*) n FROM reconforge.finance_posting_effects
+            WHERE tenant_id=%s""", (runtime.tenant,)).fetchone()
+        with pytest.raises(FinancePostingError) as denied:
             PostgresCustomerReturnsRepository(connection, runtime.tenant).prepare(request(order_id), command_id="new-return", actor=actor)
+        assert denied.value.code == "operational_actor_denied"
+        assert connection.execute("""SELECT response_json FROM reconforge.customer_return_commands
+            WHERE tenant_id=%s AND command_id='new-return'""", (runtime.tenant,)).fetchone() == retained
+        assert connection.execute("""SELECT to_jsonb(p)::text original FROM reconforge.customer_return_plans p
+            WHERE tenant_id=%s AND id=%s""", (runtime.tenant, replacement["id"])).fetchone() == original_plan
+        assert connection.execute("""SELECT count(*) n FROM reconforge.finance_posting_effects
+            WHERE tenant_id=%s""", (runtime.tenant,)).fetchone() == original_effects
 
 
 def test_original_partial_delivery_cost_restores_after_later_sale_without_repricing_or_consumption_rewrite(

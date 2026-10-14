@@ -100,6 +100,7 @@ def _public_diagnostic_paths(output: Path) -> list[Path]:
         # upload directory merely because the current child writes privately.
         paths.extend(path for path in sorted(artifacts.rglob("*"))
             if path.is_symlink() or path.is_file() and (path.name == "error-context.md"
+                or path.relative_to(artifacts).parts[0] == "native-customer-return-originals"
                 or not _unchanged_original_artifact_name(path)))
     projections = output / "workspace-recovery"
     if projections.is_symlink():

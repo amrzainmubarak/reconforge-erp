@@ -620,3 +620,18 @@ def test_writer_refuses_late_customer_return_private_original_drift_without_publ
     assert result["status"] == "quarantined" and writer._public_diagnostic_paths(output) == []
     assert original.read_bytes() == b"deliberate-late-private-original-drift"
     assert not (output / original.relative_to(private)).exists()
+
+
+def test_reused_public_customer_return_raw_rows_are_quarantined_before_generic_basename_exemption(tmp_path: Path) -> None:
+    output, private, _, _ = inputs(tmp_path)
+    stale = output / "playwright-artifacts/native-customer-return-originals/native-financial-snapshot-oracle-1.json"
+    stale.parent.mkdir()
+    raw = PRIVATE_MONEY.encode() + b" " + PRIVATE_SOURCE.encode()
+    stale.write_bytes(raw)
+    assert writer._unchanged_original_artifact_name(stale) is True
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD])
+    assert result["status"] == "quarantined" and writer._public_diagnostic_paths(output) == []
+    assert not stale.exists()
+    retained = private / "public-originals" / stale.relative_to(output)
+    assert retained.read_bytes() == raw
+    assert (private / "playwright.json").is_file()

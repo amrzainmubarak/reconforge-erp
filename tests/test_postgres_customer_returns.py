@@ -672,6 +672,26 @@ def test_native_stock_lost_ack_after_period_close_rechecks_current_authority_aft
             assert time.monotonic() < deadline, "The exact native waiter/blocker edge must be observed"
             time.sleep(.05)
 
+    def unchanged(before: dict[str, list[dict[str, Any]]], after: dict[str, list[dict[str, Any]]]) -> None:
+        # A historical ACK still runs the native close checks, which may
+        # advance this already-qualified coordination version. Preserve every
+        # table; only this finite counter may change, never identities or data.
+        gate = "inventory_quantity_claim_gates"
+        assert len(before) == len(after) == 67 and set(before) == set(after)
+        assert all(canonical_json(before[name]) == canonical_json(after[name]) for name in before if name != gate)
+
+        def identities(rows: list[dict[str, Any]]) -> dict[str, int]:
+            result: dict[str, int] = {}
+            for row in rows:
+                assert type(row["version"]) is int and row["version"] > 0
+                identity = canonical_json({key: value for key, value in row.items() if key != "version"})
+                assert identity not in result
+                result[identity] = row["version"]
+            return result
+
+        old, current = identities(before[gate]), identities(after[gate])
+        assert set(old) == set(current) and all(current[key] >= value for key, value in old.items())
+
     # Separate original sources exercise both legal linearizations without
     # reactivating a retired permission or rewriting approved financial rows.
     def check_ordering(ordering: str) -> None:
@@ -700,7 +720,7 @@ def test_native_stock_lost_ack_after_period_close_rechecks_current_authority_aft
                 return command(connection, actor, started)
 
         assert replay() == retained["result"]
-        before = retained_state(runtime)
+        before = retained_rows(runtime)
         started: Queue[int] = Queue()
         with psycopg.connect(runtime.admin_dsn, autocommit=True) as observer, ThreadPoolExecutor(max_workers=2) as workers:
             if ordering == "reader-first":
@@ -742,14 +762,14 @@ def test_native_stock_lost_ack_after_period_close_rechecks_current_authority_aft
                 with pytest.raises(FinancePostingError) as denied:
                     attempt.result(timeout=60)
                 assert denied.value.code == "sales_actor_denied"
-        assert retained_state(runtime) == before
+        unchanged(before, retained_rows(runtime))
         # A committed retirement denies both a retained server principal and
         # a freshly authenticated principal, without emitting the old ACK.
         for cached, code in ((True, "sales_actor_denied"), (False, "posting_permission_denied")):
             with pytest.raises(FinancePostingError) as denied:
                 replay(cached=cached)
             assert denied.value.code == code
-        assert retained_state(runtime) == before
+        unchanged(before, retained_rows(runtime))
 
     check_ordering("reader-first")
     check_ordering("retirer-first")

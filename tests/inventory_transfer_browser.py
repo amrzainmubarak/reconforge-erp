@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import sys
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -18,6 +19,7 @@ from tests.test_postgres_inventory_transfer import TABLES, transfer_runtime
 
 ROOT = Path(__file__).resolve().parents[1]
 _ORIGINAL_EXPORT_SHA256: dict[str, str] = {}
+_ORIGINAL_VERIFIED_RESULTS: dict[str, dict[str, Any]] = {}
 INVENTORY_TRANSFER_TABLES = (*TABLES, "inventory_quantity_source_guards", "inventory_quantity_source_releases", "inventory_quantity_claim_gates",
     "inventory_units_of_measure", "inventory_items", "inventory_locations", "inventory_warehouses", "inventory_movements", "inventory_movement_lines",
     "inventory_valuation_documents", "inventory_valuation_lines", "inventory_valuation_input_costs", "inventory_cost_layers", "inventory_layer_consumptions",
@@ -87,7 +89,25 @@ def inventory_transfer_browser_configuration(runtime: Any) -> dict[str, Any]:
             "period_id": "period", "posting_date": "2026-10-14", "reason": "Actual same-entity warehouse transfer"}}
 
 
-def verify_inventory_transfer_browser(runtime: Any, *, actor_name: str = "browser-poster") -> dict[str, Any]:
+def _verify_original_custody(verified: dict[str, Any]) -> None:
+    """Compare every member to its WRITE-time identity; never rebaseline files."""
+    packet, manifest = Path(verified["original_oracle_packet"]), verified["original_oracle_manifest"]
+    expected_manifest = (json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode()
+    members = [*manifest["members"], {"name": manifest["original_file"], "bytes": manifest["original_bytes"], "sha256": manifest["original_file_sha256"]},
+        {"name": "trusted-original-manifest.json", "bytes": len(expected_manifest), "sha256": verified["original_oracle_manifest_sha256"]}]
+    if packet.is_symlink() or {path.name for path in packet.iterdir()} != {member["name"] for member in members}:
+        raise ValueError("Original transfer custody has an unexpected member")
+    for member in members:
+        path = packet / member["name"]
+        if path.is_symlink() or member["bytes"] > 16_777_216:
+            raise ValueError("Original transfer custody member exceeds its admitted boundary")
+        with path.open("rb") as original:
+            raw = original.read(member["bytes"] + 1)
+        if len(raw) != member["bytes"] or hashlib.sha256(raw).hexdigest() != member["sha256"]:
+            raise ValueError("Original transfer custody differs from its retained WRITE-time identity")
+
+
+def verify_inventory_transfer_browser(runtime: Any, *, actor_name: str = "browser-poster", custody_root: Path | None = None) -> dict[str, Any]:
     """Retain original capture, execute isolated normal/optimized oracle and pin restore bytes."""
     proof = inventory_transfer_proof(runtime, actor_name=actor_name)
     raw = (json.dumps(proof, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
@@ -95,7 +115,8 @@ def verify_inventory_transfer_browser(runtime: Any, *, actor_name: str = "browse
     retained = _ORIGINAL_EXPORT_SHA256.get(runtime.tenant)
     if retained is not None and retained != digest:
         raise ValueError("Restored transfer originals differ from their retained successful capture")
-    base = Path(os.environ.get("RECONFORGE_IT1_ORACLE_CUSTODY_DIR", str(ROOT / "output/inventory-transfer-original-custody")))
+    base = custody_root or Path(os.environ.get("RECONFORGE_IT1_ORACLE_CUSTODY_DIR", str(ROOT / "output/inventory-transfer-original-custody")))
+    base = base.resolve()
     base.mkdir(parents=True, exist_ok=True)
     packet = base / ("capture-" + uuid4().hex)
     packet.mkdir(exist_ok=False)
@@ -134,7 +155,16 @@ def verify_inventory_transfer_browser(runtime: Any, *, actor_name: str = "browse
     with (packet / "trusted-original-manifest.json").open("xb") as target:
         target.write(manifest_raw)
     _ORIGINAL_EXPORT_SHA256.setdefault(runtime.tenant, digest)
-    return {"schema_version": "inventory-transfer-browser-native-verification-v1", "independent_financial_proof": proof,
+    verified = {"schema_version": "inventory-transfer-browser-native-verification-v1", "independent_financial_proof": proof,
         "independent_oracle": result, "original_oracle_packet": str(packet), "original_oracle_manifest": manifest,
         "original_oracle_manifest_sha256": hashlib.sha256(manifest_raw).hexdigest(), "browser_inventory_writes": True,
         "transfer_new_gl_effects": 0, "originals_preserved": True, "restore_rebaseline_allowed": False}
+    _verify_original_custody(verified)
+    original_result = _ORIGINAL_VERIFIED_RESULTS.get(runtime.tenant)
+    if original_result is not None:
+        _verify_original_custody(original_result)
+        if original_result["independent_financial_proof"] != proof or original_result["independent_oracle"] != result:
+            raise ValueError("Freshly verified restored source/oracle differs from the original successful result")
+        return deepcopy(original_result)
+    _ORIGINAL_VERIFIED_RESULTS[runtime.tenant] = deepcopy(verified)
+    return deepcopy(verified)

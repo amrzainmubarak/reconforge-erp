@@ -66,7 +66,7 @@ def test_actual_browser_human_native_cycle_isolated_original_oracle_and_no_resto
         content = (packet / member["name"]).read_bytes()
         assert len(content) == member["bytes"] and hashlib.sha256(content).hexdigest() == member["sha256"]
     assert json.loads((packet / "argv-I.json").read_bytes())[-2:] == ["--expected-export-sha256", manifest["original_file_sha256"]]
-    assert verify_inventory_transfer_browser(runtime)["original_oracle_manifest"]["restore_original_sha256"] == manifest["original_file_sha256"]
+    assert verify_inventory_transfer_browser(runtime) == verified
     import tests.inventory_transfer_browser as helper
 
     capture = helper.inventory_transfer_proof

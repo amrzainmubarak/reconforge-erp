@@ -14,7 +14,7 @@ it.each([
   const text = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const view = render(<Sidebar translate={text} collapsed={collapsed} mobileOpen={false}
     onCollapse={onCollapse} onMobileClose={onMobileClose} activePage="customerReturns" onNavigate={onNavigate} />);
-  const navigation = screen.getByRole("navigation", { name: text("primaryNavigation"), exact: true });
+  const navigation = screen.getByRole("navigation", { name: text("primaryNavigation") });
   const items = navigationGroups.flatMap(group => group.items);
   const names = items.map(item => text(item.label));
   expect(new Set(names).size).toBe(items.length);
@@ -27,7 +27,7 @@ it.each([
   for (const label of navigation.querySelectorAll<HTMLElement>(".nav-item-label, .nav-status")) label.style.display = "none";
   let navigationCalls = 0, closeCalls = 0;
   for (const item of items) {
-    const control = within(navigation).getByRole(item.href ? "link" : "button", { name: text(item.label), exact: true });
+    const control = within(navigation).getByRole(item.href ? "link" : "button", { name: text(item.label) });
     expect(control).toHaveAccessibleName(text(item.label));
     expect(control.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
     if (item.page) {
@@ -66,12 +66,12 @@ it("refreshes localized icon-only navigation names without firing a route or com
   const properties = { collapsed: true, mobileOpen: false, onCollapse: vi.fn(), onMobileClose,
     activePage: "customerReturns" as const, onNavigate };
   const view = render(<Sidebar {...properties} translate={key => translate("en", key)} />);
-  expect(screen.getByRole("button", { name: "Customer returns", exact: true })).toHaveAttribute("aria-current", "page");
+  expect(screen.getByRole("button", { name: "Customer returns" })).toHaveAttribute("aria-current", "page");
   view.rerender(<Sidebar {...properties} translate={key => translate("ar", key)} />);
-  const navigation = screen.getByRole("navigation", { name: "التنقل الرئيسي", exact: true });
+  const navigation = screen.getByRole("navigation", { name: "التنقل الرئيسي" });
   for (const label of navigation.querySelectorAll<HTMLElement>(".nav-item-label, .nav-status")) label.style.display = "none";
-  expect(within(navigation).getByRole("button", { name: "مرتجعات العملاء", exact: true })).toHaveAttribute("aria-current", "page");
-  expect(within(navigation).queryByRole("button", { name: "Customer returns", exact: true })).not.toBeInTheDocument();
+  expect(within(navigation).getByRole("button", { name: "مرتجعات العملاء" })).toHaveAttribute("aria-current", "page");
+  expect(within(navigation).queryByRole("button", { name: "Customer returns" })).not.toBeInTheDocument();
   expect(onNavigate).not.toHaveBeenCalled();
   expect(onMobileClose).not.toHaveBeenCalled();
 });

@@ -6,6 +6,8 @@ No DB, API, authorization, posting or end-to-end capability is asserted here.
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from copy import deepcopy
 from dataclasses import FrozenInstanceError, replace
 from fractions import Fraction
@@ -353,6 +355,64 @@ def test_consumption_and_history_resource_bounds_are_finite_without_skips() -> N
     assert full.value.code == "partial_return_history_full"
     with pytest.raises(FinancePostingError):
         collect_partial_return(history, 1)
+
+
+@pytest.mark.parametrize("optimized", [False, True], ids=["isolated", "isolated-optimized"])
+def test_isolated_runtime_keeps_financial_and_history_guards_with_optimization(optimized: bool) -> None:
+    program = r'''
+import json
+import pathlib
+import sys
+from dataclasses import replace
+sys.path.insert(0, sys.argv[1])
+import reconforge.domain.customer_partial_returns as domain
+from reconforge.domain.finance_posting import FinancePostingError
+from tests.test_customer_partial_returns_domain import source_for
+from tests.test_customer_partial_return_design import DESIGN
+expected_module = pathlib.Path(sys.argv[1]) / "reconforge/domain/customer_partial_returns.py"
+if pathlib.Path(domain.__file__).resolve() != expected_module.resolve():
+    raise RuntimeError("Isolated runtime imported a different source")
+history = domain.PartialReturnHistory(source_for(DESIGN["cases"][0]))
+plan = domain.prepare_partial_return(history, 1)
+if (plan.credit_minor, plan.cogs_restored_minor, plan.receivable_released_minor) != (2500, 1200, 2500):
+    raise RuntimeError("Independent original vector differs")
+domain.verify_partial_return_plan(plan)
+changed = domain.apply_partial_return(history, plan)
+paid = domain.PartialReturnHistory(source_for(DESIGN["cases"][2]))
+paid = domain.apply_partial_return(paid, domain.prepare_partial_return(paid, 1))
+broken_event = replace(changed.events[0])
+object.__setattr__(broken_event, "return_values", None)
+broken_history = domain.PartialReturnHistory(history.source, (broken_event,))
+def refused(call):
+    try:
+        call()
+    except FinancePostingError:
+        return
+    raise RuntimeError("A required financial guard disappeared")
+checks = (
+    lambda: domain.prepare_partial_return(history, True),
+    lambda: domain.prepare_partial_return(history, 1.0),
+    lambda: domain.prepare_partial_return(history, 4),
+    lambda: domain.verify_partial_return_plan(replace(plan, credit_minor=2501)),
+    lambda: domain.apply_partial_return(changed, plan),
+    lambda: domain.collect_partial_return(changed, 5001),
+    lambda: domain.refund_partial_return(paid, 2501),
+    lambda: domain.partial_return_balance(broken_history),
+)
+for check in checks:
+    refused(check)
+print(json.dumps({"schema_version": "partial-return-isolated-guard-v1", "optimized": not __debug__,
+                  "original_vector_verified": True, "required_refusals": len(checks)}))
+'''
+    completed = subprocess.run(
+        [sys.executable, "-I", *(["-O"] if optimized else []), "-c", program, str(Path(__file__).parents[1])],
+        text=True, capture_output=True, timeout=30, check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(completed.stdout) == {
+        "schema_version": "partial-return-isolated-guard-v1", "optimized": optimized,
+        "original_vector_verified": True, "required_refusals": 8,
+    }
 
 
 def test_maximum_exact_original_units_do_not_use_decimal_context_or_float_intermediates() -> None:

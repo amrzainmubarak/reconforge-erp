@@ -415,9 +415,11 @@ def partial_return_balance(history: PartialReturnHistory) -> PartialReturnBalanc
         if event.sequence != sequence or event.source_fingerprint != source_digest or event.previous_history_fingerprint != chain:
             raise FinancePostingError("partial_return_history_invalid", "History sequence, original source or retained prefix differs.")
         if event.kind == "Return":
-            assert event.return_values is not None  # established by explicit validation, never the admission check
-            values = _calculate(source, returned, credited, collected, event.return_values.quantity_scaled)
-            if canonical_json(asdict(event.return_values)) != canonical_json(asdict(values)):
+            retained_values = event.return_values
+            if retained_values is None:
+                raise FinancePostingError("partial_return_history_invalid", "Return history requires exact original portions.")
+            values = _calculate(source, returned, credited, collected, retained_values.quantity_scaled)
+            if canonical_json(asdict(retained_values)) != canonical_json(asdict(values)):
                 raise FinancePostingError("partial_return_history_invalid", "Retained return effects do not match original portions.")
             returned += values.quantity_scaled
             credited += values.credit_minor

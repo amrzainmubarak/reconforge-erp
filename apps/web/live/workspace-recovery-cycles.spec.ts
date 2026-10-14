@@ -57,7 +57,9 @@ async function originals(page: Page) {
 async function retain(info: TestInfo, name: string, value: unknown) {
   // The owned browser runner places outputPath in its PRIVATE diagnostic tree.
   // No cookies, passwords, headers, request bodies or financial API mocks.
-  await writeFile(info.outputPath(name), JSON.stringify(value, null, 2) + "\n", { flag: "wx" });
+  const path = info.outputPath(name);
+  await writeFile(path, JSON.stringify(value, null, 2) + "\n", { flag: "wx" });
+  await info.attach(name, { path, contentType: "application/json" });
 }
 
 for (const locale of ["en", "ar"] as const) {

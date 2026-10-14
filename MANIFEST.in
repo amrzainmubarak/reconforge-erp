@@ -1336,6 +1336,14 @@ include tests/test_stock_sales_money_context.py
 include docs/execution/STOCK_SALES_ORIGINAL_PRICE_READ_AUTHORITY_2026-10-14.md
 include docs/execution/CR1_ORIGINAL_MONEY_READ_AUTHORITY_2026-10-14.md
 include docs/execution/ENTERPRISE_COMPLETION_M5_2026-10-14.md
+include docs/execution/WORKTREE_RECOVERY_2026-10-14.md
+include docs/execution/ORIGINAL_MONEY_AUTHORITY_COMPETITOR_GAPS_2026-10-14.md
+include docs/execution/NATIVE_SOURCING_PARTITION_RECOVERY_2026-10-14.md
+include apps/web/src/components/WorkspaceErrorBoundary.tsx
+include apps/web/src/components/WorkspaceErrorBoundary.css
+include apps/web/src/components/WorkspaceErrorBoundary.test.tsx
+include apps/web/src/App.workspace-recovery.test.tsx
+include apps/web/live/workspace-recovery-cycles.spec.ts
 include tests/test_postgres_stock_sales_api.py
 include tests/test_procurement_partial.py
 include tests/test_postgres_procurement_partial.py

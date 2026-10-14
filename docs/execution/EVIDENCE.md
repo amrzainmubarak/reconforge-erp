@@ -23459,3 +23459,26 @@ valuation or GL engine exists; same-entity transfers preserve original pooled
 costs and financial effects. Multi-item Delivery adoption is explicitly refused.
 Comparative performance is deferred by the owner, cost per operation null,
 statutory country packs0;100K/1M/multi-region HA/DR remain unproven.
+
+### 2026-10-14 — Actual original transfer HTTPS and populated recovery
+
+Frozen0dd49c481226a49ec60f264d4684107c45c13582 passes actual Studio HTTPS1/1,
+zero skipped/unexpected/flaky, ordinary runtime role false/false, English/Arabic
+and exact four lost-response command recoveries. Native populated recovery
+compares333 whole tables/catalogs/ACLs, refuses3 meaningful tampers and retains
+the first trusted original callback after fresh verification. Source and built
+web are clean and unchanged; owned HTTPS process and container are removed.
+Original report2375516B SHA78e7e6072cc07df85024b5aa37fd9ba8e218a0e055548ed664cde580b9602cfa.
+Eight published originals retain exact bytes; actual raw1004702B SHA
+95b43cf262c3e5ae8169aa2f23eb5750f03be7a274c3325009c8bd4e90a5736b.
+Standalone normal/optimized oracle proves original3EA/3600, transfer1EA,
+compensating physical3/0, two Posted transfers, six independent human commands,
+new valuation0 and new GL0. Actual stdout585B preserves canonical WindowsCRLF.
+Original8704 browser passed but publication failed for an exact LF-only writer
+assumption; its raw packet stays private and is not recounted as full acceptance.
+Final same-source hosted acceptance remains pending. No benchmark claim follows.
+M3 frozen6baff native cashflow11 passes without skips/errors/failures, including
+actual328-table populated restore/3tampers/zero new financial writes. XML
+454b314f4b7518793f2939b428ca73e9860fb53506a626ce89ffc366ebb5cb3b.
+Its hosted final gate remains pending; the required private directory is now
+explicitly created before mandatory native execution and raw dumps stay private.

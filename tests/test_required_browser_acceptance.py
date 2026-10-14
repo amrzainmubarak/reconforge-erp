@@ -32,3 +32,23 @@ def test_required_wire_cycle_accepts_one_complete_nonflaky_execution() -> None:
 def test_required_wire_cycle_refuses_incomplete_execution(stats: Any) -> None:
     with pytest.raises(RuntimeError, match="browser"):
         RUNNER.require_browser_acceptance(stats)
+
+
+def test_return_wire_gate_requires_business_and_both_language_recovery_cases() -> None:
+    complete = {"expected": 3, "skipped": 0, "unexpected": 0, "flaky": 0}
+    RUNNER.require_browser_acceptance(complete, required_cases=3)
+    with pytest.raises(RuntimeError, match="browser"):
+        RUNNER.require_browser_acceptance(complete)
+    for expected in (0, 1, 2, 4, True):
+        with pytest.raises(RuntimeError, match="browser"):
+            RUNNER.require_browser_acceptance({**complete, "expected": expected}, required_cases=3)
+    for outcome in ("skipped", "unexpected", "flaky"):
+        for value in (1, False):
+            with pytest.raises(RuntimeError, match="browser"):
+                RUNNER.require_browser_acceptance({**complete, outcome: value}, required_cases=3)
+
+
+@pytest.mark.parametrize("required", [0, 2, 4, True, 3.0, "3", None])
+def test_browser_case_contract_cannot_be_widened_by_an_untyped_count(required: Any) -> None:
+    with pytest.raises(RuntimeError, match="browser"):
+        RUNNER.require_browser_acceptance({"expected": 3, "skipped": 0, "unexpected": 0, "flaky": 0}, required_cases=required)

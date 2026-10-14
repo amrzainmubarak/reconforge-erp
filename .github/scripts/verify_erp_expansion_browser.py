@@ -270,11 +270,13 @@ def tracked_status(directory: Path) -> str:
     )
 
 
-def require_browser_acceptance(stats: object) -> None:
+def require_browser_acceptance(stats: object, *, required_cases: int = 1) -> None:
     """An exit-zero process cannot replace execution of the required wire cycle."""
     if not isinstance(stats, dict):
         raise RuntimeError("Required browser execution statistics are missing")
-    for name, required in (("expected", 1), ("skipped", 0), ("unexpected", 0), ("flaky", 0)):
+    if type(required_cases) is not int or required_cases not in {1, 3}:
+        raise RuntimeError("Required browser scenario case count is invalid")
+    for name, required in (("expected", required_cases), ("skipped", 0), ("unexpected", 0), ("flaky", 0)):
         if type(stats.get(name)) is not int or stats[name] != required:
             raise RuntimeError(f"Required browser outcome count refused: {name}")
 
@@ -854,7 +856,8 @@ def main() -> int:
         if (private_diagnostics / "playwright.json").is_file():
             report["browser_counts"] = json.loads((private_diagnostics / "playwright.json").read_text(encoding="utf-8"))["stats"]
         if browser.returncode == 0:
-            require_browser_acceptance(report.get("browser_counts"))
+            require_browser_acceptance(report.get("browser_counts"),
+                required_cases=3 if args.scenario == "customer-returns" else 1)
             persisted_effects = verify_cycles(runtime)
             report["persisted_effects"] = persisted_effects
             if args.scenario in {"intercompany-source-cashflow", "intercompany-group-diagnostic", "project-source-reconciliation"}:

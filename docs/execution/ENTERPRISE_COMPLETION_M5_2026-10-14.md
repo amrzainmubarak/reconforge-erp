@@ -1,7 +1,10 @@
 # Enterprise completion: original money and current authority
 
-Bounded development above accepted M2 `6da88aae`. M3/M4 whole acceptance remains
-pending; rejected CI originals are retained. M5 whole CI is not accepted yet.
+Bounded development above accepted M2 `6da88aae`. Fresh hosted M4 acceptance is
+62/62 successful jobs on `5a4c15cc`; M3 sourcing exceeded its execution ceiling.
+M5 whole CI is not accepted yet. Missing local custody and fresh recovery are
+disclosed in `WORKTREE_RECOVERY_2026-10-14.md`; unavailable originals are not
+recreated or treated as newly verified evidence.
 All countries are a target; proven statutory country packs0. Comparative
 performance is deferred by the owner; cost per successful transaction is null.
 

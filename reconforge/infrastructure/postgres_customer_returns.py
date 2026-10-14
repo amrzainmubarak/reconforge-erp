@@ -173,14 +173,13 @@ class PostgresCustomerReturnsRepository:
             ("organization", "organization_id", principal.authorized_organization_ids),
             ("legal_entity", "legal_entity_id", principal.authorized_legal_entity_ids),
         ) if captured}
-        if not required:
-            # Grant history is append-only. A freshly empty snapshot after
-            # revocation must never promote a formerly scoped human to global.
-            history = records(self.connection.execute("""SELECT DISTINCT scope_type FROM reconforge.principal_scope_grants
-                WHERE tenant_id=%s AND principal_type='user' AND principal_id=%s ORDER BY scope_type""",
-                (self.tenant_id, actor.user_id)))
-            fields = {"workspace": "workspace_id", "organization": "organization_id", "legal_entity": "legal_entity_id"}
-            required = {(row["scope_type"], plan[fields[row["scope_type"]]]) for row in history}
+        # Grant history is append-only. An empty captured level after withdrawal
+        # must never promote that formerly bounded level to inherited access.
+        history = records(self.connection.execute("""SELECT DISTINCT scope_type FROM reconforge.principal_scope_grants
+            WHERE tenant_id=%s AND principal_type='user' AND principal_id=%s ORDER BY scope_type""",
+            (self.tenant_id, actor.user_id)))
+        fields = {"workspace": "workspace_id", "organization": "organization_id", "legal_entity": "legal_entity_id"}
+        required.update((row["scope_type"], plan[fields[row["scope_type"]]]) for row in history)
         if required:
             grants = records(self.connection.execute("""SELECT scope_type,scope_id FROM reconforge.principal_scope_grants
                 WHERE tenant_id=%s AND principal_type='user' AND principal_id=%s AND revoked_at IS NULL
@@ -198,8 +197,12 @@ class PostgresCustomerReturnsRepository:
             parent = self._row(str(plan["return_id"]))
             self._actor(actor, operation, parent)
         governed = customer_return_money_context(plan, parent=parent)
-        for permission in sorted(PERMISSIONS.get(operation, READ)):
+        for permission in sorted(READ):
             self.owner._actor(actor, permission, governed, mutation=operation != "read")
+        # Reading an exposed unit/layer value and approving a business effect
+        # have distinct amount contexts. Preserve the original phase ceiling.
+        for permission in sorted(PERMISSIONS.get(operation, READ) - READ):
+            self.owner._actor(actor, permission, plan, mutation=operation != "read")
         if operation != "read":
             self.connection.execute("SELECT set_config('app.customer_return_actor_id',%s,true)", (actor.user_id,))
 

@@ -9,9 +9,11 @@ from typing import Any
 import pytest
 
 from reconforge.auth.models import LocalUser
+from reconforge.auth.policy import evaluate_principal_access
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor, canonical_json
 from reconforge.domain.operational_finance import exact_minor_text
 from reconforge.infrastructure.postgres_customer_returns import (
+    PERMISSIONS,
     READ,
     PostgresCustomerReturnsRepository,
     customer_return_money_context,
@@ -237,3 +239,51 @@ def test_empty_cached_capture_uses_exact_existing_current_grants_when_history_is
     with server_principal_context(principal):
         PostgresCustomerReturnsRepository(connection, "tenant")._authority_locks(PostingActor("reader", "reader", READ), "read", original())
     assert connection.kinds_requested == ["workspace"]
+
+
+def test_fresh_partially_empty_principal_cannot_inherit_a_previously_bounded_retired_level() -> None:
+    connection = _AuthorityConnection({("workspace", "work"), ("organization", "org")},
+                                     historical_kinds={"workspace", "organization", "legal_entity"})
+    principal = ServerPrincipal(user=LocalUser(id="reader", username="reader", display_name="Reader"), permissions=READ,
+        authorized_workspace_ids=frozenset({"work"}), authorized_organization_ids=frozenset({"org"}))
+    with server_principal_context(principal), pytest.raises(FinancePostingError, match="scope authority"):
+        PostgresCustomerReturnsRepository(connection, "tenant")._authority_locks(PostingActor("reader", "reader", READ), "read", original())
+
+
+@pytest.mark.parametrize("read_cap,write_cap,allowed", [(None, "20", True), ("20", "20", False), (None, "6", False)])
+def test_exposed_read_sensitivity_does_not_raise_original_business_effect_cap(
+    monkeypatch: pytest.MonkeyPatch, read_cap: str | None, write_cap: str, allowed: bool,
+) -> None:
+    plan = original()
+    permissions = frozenset(PERMISSIONS["prepare"])
+    actor = PostingActor("maker", "maker", permissions, step_up_active=True)
+    principal = ServerPrincipal(user=LocalUser(id="maker", username="maker", display_name="Maker"),
+                                permissions=permissions, step_up_active=True)
+    commands: list[str] = []
+    repository = PostgresCustomerReturnsRepository(SimpleNamespace(execute=lambda query, params: commands.append(query)), "tenant")
+    monkeypatch.setattr(repository, "_authority_locks", lambda *args: None)
+    observed: dict[str, Decimal] = {}
+
+    def authorize(person: PostingActor, permission: str, scope: dict[str, Any], *, mutation: bool) -> None:
+        person.require(permission, mutation=mutation)
+        amount = Decimal(exact_minor_text(scope["amount_minor"], scope["currency_precision"]))
+        observed[permission] = amount
+        maximum = read_cap if permission in READ else write_cap
+        verdict = evaluate_principal_access(principal, required_permission=permission, tenant_id="tenant",
+            workspace_id="work", organization_id="org", entity_id="entity", amount=amount,
+            authorized_tenant_ids=frozenset({"tenant"}), authorized_workspace_ids=frozenset({"work"}),
+            authorized_organization_ids=frozenset({"org"}), authorized_entity_ids=frozenset({"entity"}),
+            maximum_amount=Decimal(maximum) if maximum is not None else None)
+        if not verdict.allowed:
+            raise FinancePostingError("operational_actor_denied", "Central authorization denied.")
+
+    monkeypatch.setattr(repository.owner, "_actor", authorize)
+    if allowed:
+        repository._actor(actor, "prepare", plan)
+        assert {observed[permission] for permission in READ} == {Decimal("3000.000")}
+        assert {observed[permission] for permission in permissions - READ} == {Decimal("6.001")}
+        assert len(commands) == 1
+    else:
+        with pytest.raises(FinancePostingError, match="authorization denied"):
+            repository._actor(actor, "prepare", plan)
+        assert commands == []

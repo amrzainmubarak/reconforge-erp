@@ -74,6 +74,7 @@ from reconforge.api.routes import (
     inventory_core,
     inventory_planning,
     inventory_receipt_posting,
+    inventory_transfer,
     inventory_valuation,
     inventory_valuation_reversal,
     landed_cost,
@@ -487,6 +488,7 @@ def create_api_app(
     app.include_router(inventory_core.router, prefix="/api/v1")
     app.include_router(inventory_planning.router, prefix="/api/v1")
     app.include_router(inventory_receipt_posting.router, prefix="/api/v1")
+    app.include_router(inventory_transfer.router, prefix="/api/v1")
     app.include_router(inventory_valuation.router, prefix="/api/v1")
     app.include_router(inventory_valuation_reversal.router, prefix="/api/v1")
     app.include_router(scim.router)
@@ -565,6 +567,7 @@ def create_api_app(
         inventory_core.router,
         inventory_planning.router,
         inventory_receipt_posting.router,
+        inventory_transfer.router,
         inventory_valuation.router,
         inventory_valuation_reversal.router,
     )

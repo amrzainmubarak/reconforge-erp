@@ -16,6 +16,7 @@ CURRENT_TENANT_SEEDED_PERMISSIONS = frozenset({
     "manufacturing_execution_v2.approve", "manufacturing_execution_v2.post",
     "accrual_deferral.read", "accrual_deferral.prepare", "accrual_deferral.review", "accrual_deferral.post",
     "manufacturing_supply_plan.read", "manufacturing_supply_plan.manage", "manufacturing_supply_plan.approve", "manufacturing_supply_plan.post",
+    "inventory_transfer.read", "inventory_transfer.manage", "inventory_transfer.approve", "inventory_transfer.post",
     "project_time_billing.read", "project_time_billing.manage", "project_time_billing.approve_price", "project_time_billing.prepare",
     "project_time_billing.collect", "project_time_billing.review", "project_time_billing.post",
     "intercompany_fx.read", "intercompany_fx.prepare", "intercompany_fx.review", "intercompany_fx.post",

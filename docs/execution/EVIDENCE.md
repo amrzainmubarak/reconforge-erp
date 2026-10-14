@@ -23435,6 +23435,71 @@ Root155 new custody/publication cases XML
 Actual late-original, output, command and publication counterexamples remain
 retained privately; no raw header/network diagnostics are public evidence.
 
+### 2026-10-14 — Accepted M2 and current M3/M4 integration subjects
+
+M2 exact6da88aae is accepted for its bounded code/source gates: actual CI54/54,
+22 mandatory pytest partitions/58 sessions/1827 selected with zero skips,
+xfails or xpasses; both Python versions6221 passes with663 separately recorded
+inherited prerequisites;21 actual HTTPS originals/328-table restores/3 tampers.
+Same-source manual security5/5 has0Critical/0High/9Medium/1Negligible and65/68
+licensed packages/3 missing; legal clearance remains false. Original closure
+SHA3b618127092df9eec9afed9b2c5f9f78f4a728d7e4d41938955a34d6fd03a4ab.
+PR134 final body PATCH and independent GET77553ced are published. Old failures
+and their original source subjects remain intact.
+M3 exact33b31d89 currently fails one native restore because CASHFLOW_PROOF_DIR
+was omitted by CI.6baff23e explicitly creates private runner custody; actual
+native qualification is pending. Its24 browser passes and package/security
+components are component-qualified only, not overall acceptance.
+M4 original-source adoption and whole consumed-document read caps close their
+actual counterexamples in16 owned native cases;142 integrated contracts and
+Studio typecheck/build pass. Four migration/catalog, sixteen structural native
+and seven actual contention/retry/SoD cases remain separately source-qualified.
+First actual integrated HTTPS/whole populated restore is pending. No new FIFO,
+valuation or GL engine exists; same-entity transfers preserve original pooled
+costs and financial effects. Multi-item Delivery adoption is explicitly refused.
+Comparative performance is deferred by the owner, cost per operation null,
+statutory country packs0;100K/1M/multi-region HA/DR remain unproven.
+
+### 2026-10-14 — Actual original transfer HTTPS and populated recovery
+
+Frozen0dd49c481226a49ec60f264d4684107c45c13582 passes actual Studio HTTPS1/1,
+zero skipped/unexpected/flaky, ordinary runtime role false/false, English/Arabic
+and exact four lost-response command recoveries. Native populated recovery
+compares333 whole tables/catalogs/ACLs, refuses3 meaningful tampers and retains
+the first trusted original callback after fresh verification. Source and built
+web are clean and unchanged; owned HTTPS process and container are removed.
+Original report2375516B SHA78e7e6072cc07df85024b5aa37fd9ba8e218a0e055548ed664cde580b9602cfa.
+Eight published originals retain exact bytes; actual raw1004702B SHA
+95b43cf262c3e5ae8169aa2f23eb5750f03be7a274c3325009c8bd4e90a5736b.
+Standalone normal/optimized oracle proves original3EA/3600, transfer1EA,
+compensating physical3/0, two Posted transfers, six independent human commands,
+new valuation0 and new GL0. Actual stdout585B preserves canonical WindowsCRLF.
+Original8704 browser passed but publication failed for an exact LF-only writer
+assumption; its raw packet stays private and is not recounted as full acceptance.
+Final same-source hosted acceptance remains pending. No benchmark claim follows.
+M3 frozen6baff native cashflow11 passes without skips/errors/failures, including
+actual328-table populated restore/3tampers/zero new financial writes. XML
+454b314f4b7518793f2939b428ca73e9860fb53506a626ce89ffc366ebb5cb3b.
+Its hosted final gate remains pending; the required private directory is now
+explicitly created before mandatory native execution and raw dumps stay private.
+
+### 2026-10-14 — Exact language qualification and security correction
+
+The earlier0dd receipt's English/Arabic wording exceeded its actual required
+spec: that source proved English desktop plus Axe, not an Arabic/mobile run.
+Original report78e7 stays unchanged and remains English-only. New required
+Arabic390px scope/native-original read, RTL, overflow and Axe assertions are
+being added before final acceptance; no language result is inferred from labels.
+00fc PRSecurity rejected two B608 findings in shared quantity pin composition;
+subsequent Python dependency audits did not execute in those failed jobs.
+The literal approved three-function pin block now checks source body drift at
+import, with no suppression or optional native dependency. Generated UPGRADE
+SQL SHA9b078032e09ae9c70877dc3f912aa4b175d5e4b1eaa17562d3d782220dce386a
+and DOWNGRADE SQL SHAd08e2221d909730dfa213d649416fdc8167f901301ed57a4d412a0ce02da6f9e
+are exactly byte-identical before/after. Sixteen domain/pin-drift cases pass;
+whole source Bandit returns0 findings/errors. Original cloud rejection remains
+retained; final hosted acceptance requires the next exact frozen head.
+
 ### 2026-10-14 — Bounded independent intercompany native acceptance
 
 Exact6baff intercompany native job115628650617 was cancelled at its existing

@@ -120,6 +120,27 @@ def outside_artifacts(output: Path) -> dict[str, bytes]:
     return untouched
 
 
+def test_actual_transfer_original_attachment_names_preserve_exact_bytes(tmp_path: Path) -> None:
+    output, private, _, _ = inputs(tmp_path)
+    names = ("inventory-transfer-browser-wire.json", "inventory-transfer-ar-mobile-read-boundary.json",
+        "inventory-transfer-IT1-S-" + "A" * 32 + "-evidence.json",
+        "inventory-transfer-IT1-S-" + "B" * 32 + "-evidence.json")
+    originals = {}
+    for name in names:
+        path = private / "playwright-artifacts" / name
+        raw = b'{"exact_minor":9000000000000000000,"currency":"KWD"}\r\n'
+        path.write_bytes(raw)
+        originals[name] = raw
+    receipt = writer.publish_browser_diagnostics(output, private, [TOKEN, CSRF, PASSWORD])
+    assert receipt["status"] == "published" and receipt["financial_artifacts_sanitized"] is False
+    for name, raw in originals.items():
+        assert (private / "playwright-artifacts" / name).read_bytes() == raw
+        assert (output / "playwright-artifacts" / name).read_bytes() == raw
+    for name in ("inventory-transfer-arbitrary-evidence.json", "inventory-transfer-IT1-S-short-evidence.json",
+                 "inventory-transfer-IT1-S-" + "G" * 32 + "-evidence.json", "inventory-transfer-network.json"):
+        assert writer._unchanged_original_artifact_name(Path(name)) is False
+
+
 def assert_untouched(output: Path, originals: dict[str, bytes]) -> None:
     assert {name: (output / name).read_bytes() for name in originals} == originals
 

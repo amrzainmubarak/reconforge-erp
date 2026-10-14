@@ -13573,3 +13573,17 @@ resolve only by same actor/command/body replay and original sealed receipt,
 never by substituting a later source GET. Keep20s unchanged and do not convert
 correct replay into a latency claim. Profiled source-history candidates remain
 unadopted until their measured value and all original guards are demonstrated.
+
+### 2026-10-14 — Original physical-source and whole-document transfer custody
+
+Adopt only finite supported original Posted physical lines, complete IRP owners,
+complete eligible one-line Delivery consumption owners and previously governed
+IT1 relocations. Bound source inspection to200 item lines and32 cost origins;
+refuse unsupported or multi-item classes. Review claims remain exclusive under
+shared pool-then-location locks. Current read authority includes the WHOLE
+original consumed-document amount, even if only a small residual is transferred.
+Derive that policy context without rewriting original source JSON or history.
+Each restore callback captures and verifies fresh actual originals, then returns
+the first already verified receipt only after exact proof equality and all eight
+write-time identity checks. Publish only that trusted finite custody packet.
+Local comparative benchmarks remain deferred; native test durations are not TPS.

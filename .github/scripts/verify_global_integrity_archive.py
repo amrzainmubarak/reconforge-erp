@@ -22,6 +22,8 @@ HELPERS = (
     "manufacturing_execution_v2_browser", "intercompany_fx_browser_seed", "people_project_payroll_browser",
     "accrual_deferral_browser", "project_time_billing_browser",
     "manufacturing_supply_browser", "browser_diagnostic_redaction", "original_browser_download_verification",
+    "inventory_transfer_browser",
+    "inventory_transfer_original_publication",
 )
 DIAGNOSTIC_HELPERS = (
     ".github/scripts/benchmark_wave5_profile_diagnostics.py",
@@ -480,6 +482,25 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "alembic/versions/0143_postgres_project_billing.py",
         "alembic/versions/0144_postgres_inventory_contracts.py",
         "alembic/versions/0145_postgres_supply_closure.py",
+        "alembic/versions/0146_postgres_inventory_transfer.py",
+        "reconforge/domain/inventory_transfer.py", "reconforge/application/inventory_transfer.py",
+        "reconforge/ports/inventory_transfer.py", "reconforge/api/routes/inventory_transfer.py",
+        "reconforge/infrastructure/postgres_inventory_transfer.py",
+        "reconforge/infrastructure/postgres_inventory_transfer_schema.py",
+        "reconforge/infrastructure/postgres_inventory_transfer_integration.py",
+        "tests/test_inventory_transfer.py", "tests/test_inventory_transfer_api_contract.py",
+        "tests/test_postgres_inventory_transfer.py", "tests/test_postgres_inventory_transfer_integration.py",
+        "tests/test_postgres_inventory_transfer_read_authority.py",
+        "tests/test_postgres_inventory_transfer_concurrency.py",
+        "tests/inventory_transfer_browser.py", "tests/test_postgres_inventory_transfer_browser.py",
+        "tests/inventory_transfer_original_publication.py", "tests/test_inventory_transfer_original_publication.py",
+        "tests/test_inventory_transfer_browser_custody.py", "tests/test_inventory_transfer_cycle_oracle.py",
+        "tests/fixtures/inventory-transfer-original-v1.json.gz", "tests/fixtures/inventory-transfer-original-v1.custody.json",
+        ".github/scripts/verify_inventory_transfer_cycle_oracle.py",
+        "apps/web/src/components/InventoryTransferPage.tsx", "apps/web/src/inventory-transfer-data.ts",
+        "apps/web/src/inventory-transfer-data.test.ts", "apps/web/src/inventory-transfer-test-fixtures.ts",
+        "apps/web/live/inventory-transfer-cycle.spec.ts", "apps/web/live/inventory-transfer.playwright.config.ts",
+        "docs/modules/inventory-transfer.yaml", "docs/inventory-transfer.md",
         "reconforge/infrastructure/postgres_manufacturing_supply_closure.py",
         "tests/browser_diagnostic_redaction.py",
         "tests/test_browser_diagnostic_redaction.py",
@@ -703,8 +724,8 @@ def main() -> int:
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--index-count", type=int, default=22)
-    parser.add_argument("--migration-count", type=int, default=144)
-    parser.add_argument("--migration-head", default="0145_pg_supply_closure")
+    parser.add_argument("--migration-count", type=int, default=145)
+    parser.add_argument("--migration-head", default="0146_pg_inventory_transfer")
     parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
     parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
     parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")

@@ -1530,3 +1530,26 @@ include tests/test_postgres_intercompany_fx_reporting_authority.py
 include tests/test_postgres_intercompany_reporting_currency_precision.py
 
 include tests/test_optional_postgres_driver.py
+include tests/test_postgres_inventory_transfer.py
+include tests/test_postgres_inventory_transfer_integration.py
+include tests/test_postgres_inventory_transfer_read_authority.py
+include tests/test_postgres_inventory_transfer_concurrency.py
+include tests/test_inventory_transfer.py
+include tests/test_inventory_transfer_api_contract.py
+include docs/modules/inventory-transfer.yaml
+include docs/inventory-transfer.md
+include tests/inventory_transfer_browser.py
+include tests/inventory_transfer_original_publication.py
+include tests/test_inventory_transfer_original_publication.py
+include tests/test_postgres_inventory_transfer_browser.py
+include tests/test_inventory_transfer_browser_custody.py
+include tests/test_inventory_transfer_cycle_oracle.py
+include tests/fixtures/inventory-transfer-original-v1.json.gz
+include tests/fixtures/inventory-transfer-original-v1.custody.json
+include .github/scripts/verify_inventory_transfer_cycle_oracle.py
+include apps/web/src/components/InventoryTransferPage.tsx
+include apps/web/src/inventory-transfer-data.ts
+include apps/web/src/inventory-transfer-data.test.ts
+include apps/web/src/inventory-transfer-test-fixtures.ts
+include apps/web/live/inventory-transfer-cycle.spec.ts
+include apps/web/live/inventory-transfer.playwright.config.ts

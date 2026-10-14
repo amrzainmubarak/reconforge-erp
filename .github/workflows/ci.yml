@@ -98,6 +98,11 @@ jobs:
           --ignore=tests/test_postgres_manufacturing_supply_closure_authority.py
           --ignore=tests/test_postgres_manufacturing_supply_browser_seed.py
           --ignore=tests/test_postgres_manufacturing_supply_read_authority.py
+          --ignore=tests/test_postgres_inventory_transfer.py
+          --ignore=tests/test_postgres_inventory_transfer_integration.py
+          --ignore=tests/test_postgres_inventory_transfer_read_authority.py
+          --ignore=tests/test_postgres_inventory_transfer_browser.py
+          --ignore=tests/test_postgres_inventory_transfer_concurrency.py
           --ignore=tests/test_postgres_project_time_billing.py
           --ignore=tests/test_postgres_project_time_billing_api.py
           --ignore=tests/test_postgres_project_time_billing_restore.py
@@ -260,7 +265,7 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets, procurement-commitments, customer-returns, supplier-returns, operational-fx-tax, manufacturing-execution, manufacturing-execution-v2, intercompany-operations, intercompany-fx, intercompany-source-cashflow, intercompany-group-diagnostic, people-project-payroll, procurement-sourcing, accrual-deferral, project-time-billing, project-source-reconciliation, manufacturing-supply-plan]
+        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets, procurement-commitments, customer-returns, supplier-returns, operational-fx-tax, manufacturing-execution, manufacturing-execution-v2, intercompany-operations, intercompany-fx, intercompany-source-cashflow, intercompany-group-diagnostic, people-project-payroll, procurement-sourcing, accrual-deferral, project-time-billing, project-source-reconciliation, manufacturing-supply-plan, inventory-transfer]
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -424,6 +429,7 @@ jobs:
           - finance-integrity
           - accrual-deferral
           - manufacturing-supply-plan
+          - inventory-transfer
           - project-time-billing
           - project-source-reconciliation
           - supplier-returns
@@ -771,6 +777,9 @@ jobs:
               ;;
             manufacturing-supply-plan)
               uv run --no-sync pytest tests/test_postgres_manufacturing_supply_closure.py tests/test_postgres_manufacturing_supply_closure_authority.py tests/test_postgres_manufacturing_supply_plan.py tests/test_postgres_manufacturing_supply_browser_seed.py tests/test_postgres_manufacturing_supply_read_authority.py -q
+              ;;
+            inventory-transfer)
+              uv run --no-sync pytest tests/test_postgres_inventory_transfer.py tests/test_postgres_inventory_transfer_integration.py tests/test_postgres_inventory_transfer_read_authority.py tests/test_postgres_inventory_transfer_browser.py tests/test_postgres_inventory_transfer_concurrency.py -q
               ;;
             project-time-billing)
               uv run --no-sync pytest tests/test_postgres_project_time_billing.py tests/test_postgres_project_time_billing_api.py tests/test_postgres_project_time_billing_restore.py tests/test_postgres_project_time_billing_read_authority.py -q

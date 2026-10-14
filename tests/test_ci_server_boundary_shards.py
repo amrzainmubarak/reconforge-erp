@@ -17,9 +17,10 @@ SHARDS = {
     "commercial-integrity", "supply-integrity", "finance-integrity",
     "supplier-returns", "fx-revaluation",
     "manufacturing-execution", "intercompany-operations", "intercompany-cashflow", "intercompany-group-reporting", "procurement-sourcing", "procurement-sourcing-api", "manufacturing-sourcing",
-    "people-project-payroll", "accrual-deferral", "manufacturing-supply-plan", "project-time-billing", "project-source-reconciliation",
+    "people-project-payroll", "accrual-deferral", "manufacturing-supply-plan", "project-time-billing", "project-source-reconciliation", "inventory-transfer",
 }
 INTEGRITY_FILES = {
+    "inventory-transfer": ("tests/test_postgres_inventory_transfer.py", "tests/test_postgres_inventory_transfer_integration.py", "tests/test_postgres_inventory_transfer_read_authority.py", "tests/test_postgres_inventory_transfer_browser.py", "tests/test_postgres_inventory_transfer_concurrency.py"),
     "manufacturing-supply-plan": ("tests/test_postgres_manufacturing_supply_closure.py", "tests/test_postgres_manufacturing_supply_closure_authority.py", "tests/test_postgres_manufacturing_supply_plan.py", "tests/test_postgres_manufacturing_supply_browser_seed.py", "tests/test_postgres_manufacturing_supply_read_authority.py"),
     "project-time-billing": (
         "tests/test_postgres_project_time_billing.py", "tests/test_postgres_project_time_billing_api.py",
@@ -155,7 +156,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 64  # Replace the complete three-file sourcing command with three complete-file commands.
+    assert len(commands) == 65  # Retain the transfer owner and split three complete sourcing files into three commands.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -256,7 +257,7 @@ def test_enterprise_browser_matrix_requires_every_real_https_and_populated_resto
         "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets",
         "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax",
         "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing",
-        "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan",
+        "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer",
     ]
     assert job["strategy"]["fail-fast"] is False
     assert "continue-on-error" not in job

@@ -309,6 +309,14 @@ def test_forward_upgrade_retains_native_source_empty_rollback_and_populated_cred
             app_user = psycopg.conninfo.conninfo_to_dict(database[1])["user"]
             for table in ("customer_return_plans", "customer_return_events", "customer_return_commands"):
                 admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(app_user)))
+            # The empty146 roundtrip recreates IT1 relations. Restore only
+            # SELECT so their exact empty populations stay visible in the old
+            # whole-history comparison; no source-owner DML or module role is granted.
+            for table in ("inventory_transfer_sources", "inventory_transfer_claims", "inventory_transfer_releases",
+                          "inventory_transfer_events", "inventory_transfer_commands"):
+                admin.execute(sql.SQL("GRANT SELECT ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(app_user)))
+                assert admin.execute("SELECT has_table_privilege(%s,%s,'SELECT')", (app_user, "reconforge." + table)).fetchone()[0] is True
+                assert admin.execute("SELECT has_table_privilege(%s,%s,'INSERT,UPDATE,DELETE')", (app_user, "reconforge." + table)).fetchone()[0] is False
             # Empty later migrations recreate the scoped Finance Core directory.
             # Restoring inverse prerequisites gives no personnel/module reads.
             admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE ON reconforge.financial_effect_claim_gates TO {}").format(sql.Identifier(app_user)))

@@ -116,12 +116,15 @@ for (const locale of ["en", "ar"] as const) {
         }
         const access = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
         const seriousCriticalViolationCount = access.violations.filter(issue => issue.impact === "serious" || issue.impact === "critical").length;
+        const violationIds = access.violations.filter(issue => issue.impact === "serious" || issue.impact === "critical")
+          .map(issue => issue.id).filter(id => /^[a-z][a-z0-9-]{0,79}$/.test(id)).slice(0, 32).sort();
         const overflowPixels = await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth));
         const recoveryButtonsVisible = await fallback.getByRole("button", { name: text.open, exact: true }).isVisible()
           && await fallback.getByRole("button", { name: text.reload, exact: true }).isVisible();
         responsiveChecks.push({ width, height: 900, direction: text.direction, overflowPixels,
           seriousCriticalViolationCount, primaryNavigationAvailable, usedMobileMenu, recoveryButtonsVisible });
-        expect(overflowPixels).toBe(0); expect(seriousCriticalViolationCount).toBe(0);
+        expect(overflowPixels).toBe(0);
+        expect(seriousCriticalViolationCount, `Standard Axe rule IDs at ${width}px (${locale}): ${violationIds.join(",")}`).toBe(0);
         expect(primaryNavigationAvailable && recoveryButtonsVisible).toBe(true);
         expect(mutations).toEqual([]); expect(abortedAssets).toHaveLength(1);
       }

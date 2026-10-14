@@ -299,6 +299,10 @@ def test_native_services_and_unconditional_report_retention_survive_partition() 
     assert live["env"]["RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE"] == "reconforge_ci_source"
     assert live["env"]["RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE"] == "reconforge_ci_admin"
     assert 'chmod 600 "$PGSERVICEFILE"' in live["run"]
+    assert live["env"]["RECONFORGE_CASHFLOW_PROOF_DIR"] == "${{ runner.temp }}/reconforge-cashflow-native-private"
+    assert 'mkdir -p "$RECONFORGE_CASHFLOW_PROOF_DIR"' in live["run"]
+    assert 'chmod 700 "$RECONFORGE_CASHFLOW_PROOF_DIR"' in live["run"]
+    assert live["run"].index('mkdir -p "$RECONFORGE_CASHFLOW_PROOF_DIR"') < live["run"].index('case "$RECONFORGE_SERVER_BOUNDARY_SHARD" in')
     assert 'pg_dump --format=custom --no-owner --no-privileges --file "$native_smoke_dump" --dbname service=reconforge_ci_source' in live["run"]
     assert 'test -s "$native_smoke_dump"' in live["run"]
     assert 'pg_restore --list "$native_smoke_dump"' in live["run"]

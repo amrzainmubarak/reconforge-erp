@@ -69,7 +69,7 @@ def fixture() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     typed_consumed, portions = [], []
     for n, used, value, remaining, remaining_value, returned, returned_value in ((1, 10, 12000, 0, 0, 10, 12000), (2, 5, 10000, 5, 10000, 2, 4000)):
         layer, consumption, valuation = f"layer{n}", f"consumption{n}", f"valuation{n}"
-        tables["inventory_cost_layers"].append({**{k: scope[k] for k in ("tenant_id", "workspace_id", "legal_entity_id", "item_id", "uom_id")}, "id": layer, "currency_code": "USD", "original_quantity_scaled": 10, "original_value_minor": value + remaining_value, "remaining_quantity_scaled": remaining, "remaining_value_minor": remaining_value, "inventory_lot_id": None, "source_valuation_line_id": f"valuation-line{n}"})
+        tables["inventory_cost_layers"].append({**{k: scope[k] for k in ("tenant_id", "workspace_id", "legal_entity_id", "item_id", "uom_id")}, "id": layer, "currency_code": "USD", "quantity_precision": 0, "original_quantity_scaled": 10, "original_value_minor": value + remaining_value, "remaining_quantity_scaled": remaining, "remaining_value_minor": remaining_value, "inventory_lot_id": None, "source_valuation_line_id": f"valuation-line{n}"})
         native = {"id": consumption, "cost_layer_id": layer, "workspace_id": scope["workspace_id"], "valuation_line_id": "valuation-line-out", "quantity_scaled": used, "value_minor": value}
         tables["inventory_layer_consumptions"].append(native)
         typed_consumed.append({"position": n, "consumption_id": consumption, "valuation_line_id": "valuation-line-out", "cost_layer_id": layer, "scope": scope, "quantity_precision": 0, "quantity_scaled": used, "value_minor": value, "currency_code": "USD"})
@@ -172,6 +172,9 @@ def test_direct_exact_quantity_conversion_is_bounded_before_fraction_constructio
     ("ar_invoice_lines", "tenant_id", "other"),
     ("inventory_layer_consumptions", "tenant_id", "other"),
     ("finance_accounts", "tenant_id", "other"),
+    ("stock_sales_orders", "quantity_precision", False),
+    ("inventory_valuation_lines", "quantity_precision", False),
+    ("inventory_movement_lines", "quantity_precision", False),
 ])
 def test_actual_columns_and_source_ownership_refuse_balanced_corruption(table: str, field: str, value: Any) -> None:
     raw, observed, _ = fixture()
@@ -180,7 +183,7 @@ def test_actual_columns_and_source_ownership_refuse_balanced_corruption(table: s
         oracle.verify_two_layer(raw, observed)
 
 
-@pytest.mark.parametrize("kind", ["missing", "duplicate", "swapped", "policy", "scope", "collected"])
+@pytest.mark.parametrize("kind", ["missing", "duplicate", "swapped", "policy", "scope", "collected", "typed-precision", "typed-consumption-precision"])
 def test_raw_or_typed_membership_and_historical_policy_cannot_drift(kind: str) -> None:
     raw, observed, _ = fixture()
     if kind == "missing":
@@ -193,6 +196,10 @@ def test_raw_or_typed_membership_and_historical_policy_cannot_drift(kind: str) -
         observed["captured_registry_snapshot"]["currencies"][0]["minor_units"] = 3
     elif kind == "scope":
         observed["typed_source"]["scope"]["tenant_id"] = "other"
+    elif kind == "typed-precision":
+        observed["typed_source"]["quantity_precision"] = False
+    elif kind == "typed-consumption-precision":
+        observed["typed_source"]["consumptions"][0]["quantity_precision"] = False
     else:
         observed["typed_source"]["collected_minor"] = 10001
     with pytest.raises(oracle.OracleRefusal):
@@ -218,6 +225,25 @@ def test_coherently_resealed_cash_lines_still_require_original_one_two_sequence(
     raw["tables"] = {name: sorted(canonical(row) for row in rows) for name, rows in tables.items()}
     with pytest.raises(oracle.OracleRefusal):
         oracle.verify_two_layer(raw, observed)
+
+
+@pytest.mark.parametrize("kind,value", [("changed", 1), ("boolean", False), ("null", None), ("fractional-token", 0.0), ("missing", None)])
+def test_coherent_before_after_layer_precision_drift_is_not_an_original_zero_scale(tmp_path: Path, kind: str, value: Any) -> None:
+    write_fixture(tmp_path)
+    raw = json.loads((tmp_path / "native-financial-rows-original-1.json").read_text(encoding="utf8"))
+    layer = json.loads(raw["tables"]["inventory_cost_layers"][0])
+    if kind == "missing":
+        layer.pop("quantity_precision")
+    else:
+        layer["quantity_precision"] = value
+    raw["tables"]["inventory_cost_layers"][0] = canonical(layer)
+    raw["tables"]["inventory_cost_layers"].sort()
+    # Both original envelopes agree; rejection must come from the independent
+    # finite financial scope, rather than a before/after byte drift alone.
+    for number in (1, 2):
+        (tmp_path / f"native-financial-rows-original-{number}.json").write_text(canonical(raw), encoding="utf8")
+    with pytest.raises(oracle.OracleRefusal):
+        oracle.verify_directory(tmp_path)
 
 
 @pytest.mark.parametrize("kind", ["source", "history", "plan", "roles", "amount", "account", "dimensions", "effect", "postable", "inverse", "approval", "zero-line"])

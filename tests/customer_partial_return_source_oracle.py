@@ -326,6 +326,7 @@ def _verify_two_layer(envelope: dict[str, Any], observed: dict[str, Any], propos
         require(native["valuation_line_id"] == detail["id"] and native["workspace_id"] == scope["workspace_id"])
         require(integer(layer["original_quantity_scaled"]) == 10 and integer(layer["remaining_quantity_scaled"]) == remaining_qty and integer(layer["remaining_value_minor"]) == remaining_value)
         require(integer(layer["original_value_minor"]) == used_value + remaining_value and layer["inventory_lot_id"] is None)
+        require(integer(layer["quantity_precision"]) == integer(typed["quantity_precision"]) == 0)
         require(all(layer[key] == scope[key] for key in ("tenant_id", "workspace_id", "legal_entity_id", "item_id", "uom_id")) and layer["currency_code"] == "USD")
         expected_consumption = {"position": number, "consumption_id": native["id"], "valuation_line_id": detail["id"], "cost_layer_id": layer["id"], "scope": scope, "quantity_precision": 0, "quantity_scaled": used_qty, "value_minor": used_value, "currency_code": "USD"}
         require(same(original, expected_consumption))

@@ -423,7 +423,9 @@ def derive_workspace_recovery_diagnostic(
     responsive_verified = len(responsive) == 4 and all(row["direction"] == ("rtl" if report["locale"] == "ar" else "ltr")
         and row["overflow_pixels"] == row["serious_critical_violation_count"] == 0
         and row["primary_navigation_available"] and row["recovery_buttons_visible"] for row in responsive)
-    injected_static_failure = len(aborted) == len(failed) == 1 and failed[0]["path"] == aborted[0] and failed[0]["method"] == "GET" and failed[0]["kind"] == "script"
+    injected_static_failure = (len(aborted) == len(failed) == 1 and failed[0]["path"] == aborted[0]
+        and failed[0]["method"] == "GET" and failed[0]["kind"] == "script"
+        and type(failed[0]["failure"]) is str and bool(failed[0]["failure"].strip()))
     verified = (report["recovered"] and equal and not errors and not mutations and injected_static_failure
                 and counts == {"fallbackHeadingCount": 0, "navigationCount": 1, "rootMainCount": 1}
                 and (report["schema_version"] == "workspace-recovery-native-v1" or responsive_verified))

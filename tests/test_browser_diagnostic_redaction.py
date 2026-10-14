@@ -349,6 +349,15 @@ def test_any_financial_mutation_or_extra_request_denies_recovery_verification_wi
     assert json.loads(project_workspace(report).content)["recovery_verified"] is False
 
 
+@pytest.mark.parametrize("failure", [None, "", " \n\t"])
+def test_missing_or_empty_static_failure_evidence_is_retained_without_verified_recovery(failure):
+    report = workspace_report()
+    report["failedRequests"][0]["failure"] = failure
+    public = json.loads(project_workspace(report).content)
+    assert public["failed_request_count"] == 1 and public["recovery_reported"] is True
+    assert public["financial_originals_equal"] is True and public["recovery_verified"] is False
+
+
 @pytest.mark.parametrize("count", [0, 1, 2, 3])
 def test_v2_responsive_failed_prefix_retains_negative_evidence_instead_of_claiming_complete_verification(count):
     report = workspace_report("v2")

@@ -23587,3 +23587,35 @@ verify is enabled, download absent, no alert/error text. Epoch transitions were
 not observable in that log and are not invented. Controlled source-response and
 real checked-result publication gates remove the test's implicit async ordering;
 new frozen whole CI remains required, with the rejected source preserved.
+
+### 2026-10-14 — Retain real recovery failures and bounded proof-custody checks
+
+Frozenbb42 actual business/recovery browser cohort1 PASS/2 FAIL/0 skip or flaky;
+the complete24-file original mirror SHA08bb0b7ea10a83cefb77fd2d45d611b6219f11114a649d48b348fbc428533b69
+retains the ambiguous real320px Menu selector failure. Frozen188 actual cohort
+again1 PASS/2 FAIL/0 skip or flaky; original report SHA
+4c4e3e08af82e97f2800c0c83e2470f93a08dd05b9f114fa06a081febe19d7b3.
+Both locales retained zero findings at320/768px and rejected two serious or
+critical findings at1024px. No1440px/reload or333-table restored-row verification
+is inferred. Original188 hosted terminal closure SHA
+a9dd1821181ba3af76a9155f58c98912cbbf4bd7a2987deb60bc51a9aedfb4a9
+also retains the existing lost-ACK SQL statement-timeout failure. The original
+CI failure predates cancellation; source188 actual manual security5/5 is a
+component result, not whole acceptance of a later source.
+
+Unchanged188 single-case native diagnosis observes holder→replay advisory wait
+and revoker→replay transaction wait.67 financial tables/148 rows stay exact;
+no database backend lock cycle or admitted unauthorized effect is claimed.
+The corrected case and localized navigation require new native/TLS acceptance.
+
+Root331 focused custody/reader cases and59 diagnostic-writer cases pass with
+zero skips/errors/failures; Bandit reports zero findings/errors.731 React cases,
+typecheck/build, Ruff and whole production Mypy792 files pass. Exact original
+component mirror SHA082eaedc2364ac933c3a73e90af4478424cd0556f44581a63f1eef137f39038a
+is outside the worktree. Independent peer36-case proof-custody closure SHA
+42fdf97d9ec2f5423b5cb6da1125f37e9c7784f1c7297da3149f3e3cc9291112
+reproduces refusal of changed/missing isolated proof files before/after real
+public moves. These execute synthetic standard-library readers, not a native
+database, browser or financial restore. The next frozen source still requires
+actual three-case TLS, thirteen-table original rows across three captures,
+isolated/optimized independent calculation and final cohesive CI.

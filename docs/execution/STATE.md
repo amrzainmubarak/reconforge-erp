@@ -12680,3 +12680,30 @@ I/IO proof files through diagnostic publication. Synthetic drift cases refuse
 changed/missing proof bytes before and after publication. Raw financial rows
 remain private; no actual restored-row oracle pass is inferred from these tests.
 Comparative benchmarks remain deferred by the owner.
+
+### 2026-10-14 — Integrate original partial-credit foundations and native parent order
+
+M6 begins above frozen M5 source23fe490e. Its actual local three-case TLS cohort
+passes with333 restored tables and three tamper refusals;39 private original-row
+inputs yield equal isolated/optimized proofs. Hosted64 jobs succeed; original
+ZIP custody/final evidence publication closes separately. Earlierbb42/188
+recovery failures and the original replay wait-chain rejection stay retained.
+
+Source00929829 fixes the real collection source to lock the immutable approved
+invoice's customer before the existing operational owner locks the invoice.
+The baseline8d951057 new test rejects with LockNotAvailable after an observed
+customer blocker; the corrected target passes, then all27 affected native
+collection/return cases pass with zero skips and unchanged server timeouts.
+Eight posted lines balance70000; AR44000, cash1000 and allocation1000 match
+the independently hand-calculated expectation. No universal deadlock or TPS
+claim follows from this bounded test.
+
+Commercial225 and Native516 provide immutable original-source/cumulative-history
+and nonpostable correction-template contracts. Root7d43 combined184 cases pass;
+targeted Ruff/mypy/Bandit pass. Tax/lot/serial facts are explicitly required,
+32 original FIFO portions and256 history events are bounded, and source/history
+seals reject stale or tampered plans. Positive integral original cost/revenue
+portions only; no implicit rounding. New templates retain original account/
+dimension/journal/currency pins and create no approval, entry ID or full inverse.
+Native ownership, partial-stock posting, API, Studio and migration remain absent.
+ADR0858 and the M6 matrix define remaining shared AR/valuation/receipt guards.

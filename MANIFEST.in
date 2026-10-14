@@ -1540,6 +1540,12 @@ include tests/test_browser_diagnostic_writer.py
 include tests/test_workspace_recovery_acceptance.py
 include tests/customer_returns_financial_oracle.py
 include tests/test_customer_returns_financial_oracle.py
+include reconforge/domain/customer_partial_returns.py
+include reconforge/domain/customer_partial_return_posting.py
+include tests/test_customer_partial_returns_domain.py
+include tests/test_customer_partial_return_posting.py
+include docs/adr/0858-original-partial-credit-contracts-and-customer-parent-locks.md
+include docs/execution/ENTERPRISE_COMPLETION_M6_2026-10-14.md
 include tests/original_browser_download_verification.py
 include tests/api_route_registration.py
 include tests/test_original_browser_download_verification.py

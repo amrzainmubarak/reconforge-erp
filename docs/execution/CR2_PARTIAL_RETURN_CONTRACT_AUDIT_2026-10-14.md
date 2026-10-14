@@ -1,7 +1,9 @@
 # CR2 partial customer return contract audit
 
-Status: proposed arithmetic contract only. No CR2 domain, database, native posting,
-API, Studio or migration has been implemented. Audited on owned merge
+Status: the historical proposed contract below is now backed by the bounded
+pure Source/history/plan and unapproved correction-template implementation in
+M6. Database, native CR2 posting, API, Studio and migration are not implemented.
+The original audit was performed on owned merge
 `f19e8bb8c9411332dcbb31ca8a71dc05d0448972`; the existing CR1 contract remains unchanged.
 
 CR1 already owns whole-tranche return and independently governed partial **cash
@@ -28,8 +30,10 @@ Three shared boundaries require an approved finite extension before native CR2:
    unique index admits only one reversal per valuation document. A partial Restore
    must have an explicit owner branch and structural source pins, with cumulative
    per-consumption quantity/value bounded by the original. Keep full CR1 and generic
-   inverse guards intact. Reusing native Restore rows can preserve the existing
-   cost-layer equation; adding a second valuation ledger is unnecessary.
+   inverse guards intact. The chosen native direction is additive source-owned
+   correction evidence over the same cost layers and physical receipt history;
+   preserve the full Restore contract rather than partially admitting its full
+   inverse rows. A second valuation ledger is unnecessary.
 2. Finance Posting requires exact full reversal snapshots and one committed
    `reverses_effect_id` per original. Partial credits cannot pretend to be full
    reversals. Use separately reviewed source-owned correction entries and an

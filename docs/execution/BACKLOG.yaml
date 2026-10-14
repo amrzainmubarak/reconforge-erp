@@ -1,12 +1,12 @@
 schema_version: 2
 updated_at: "2026-10-14"
 phase: "Phase 4 — Global Capability Expansion"
-active_sprint: "Accepted M3/M4 source gates; M5 original-money current authority and private bilingual manual-recovery integration; performance deferred"
+active_sprint: "M5 exact64-job scoped acceptance closed; M6 native29 parent-order and typed original partial-credit integration gates; performance deferred"
 snapshot:
-  evidence_base_commit: "d9f2e031b553dbf4ff94da40815605738c5644c7"
+  evidence_base_commit: "23fe490e3181eab020938c067c4f71a86521fee3"
   policy_change_commit: "the commit containing this file"
   published: true
-  publication: "Draft PR135 18d81cc5 CI62/62 and PR136 d9f2e031 CI64/64 accepted; final bodies PATCH/GET independently retained. M5 cohesive exact-head gates pending; performance deferred and false"
+  publication: "Draft PR135 18d81cc5 CI62/62, PR136 d9f2e031 CI64/64 and PR137 23fe490e CI64/64 scoped gates accepted. M5 final closure08fb3a32 and402-file external byte custody independently rehashed; reviewed final PR137 body publication closes separately. M6 final hosted gates pending; performance deferred and false"
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
@@ -37,14 +37,22 @@ tasks:
     priority: P0
     area: original-money-authority-and-workspace-resilience
     title: Complete current original-price read authority and governed manual workspace recovery with private source-bound financial originals
-    status: in_progress
-    exit_evidence: "Fresh native9 and four-tranche commerce/oracles passed;731 React/typecheck/build passed. bb42 and188 real three-case browser cohorts each rejected two recovery cases; original failures retained.188 existing replay test also rejected an observed application wait chain. Corrected localized navigation names, test ordering and input/proof custody require new frozen three-case TLS/333-table restore and cohesive CI."
+    status: completed
+    exit_evidence: "Exact23fe CI64/64,7018 Python perversion+663 inherited generic skips,731 React/92files+19 standardE2E;29 mandatory shards/64 sessions/1921 summed selected0critical skips;25 original native reports/27 first-attempt cases/333tables+3tampers each; exactmanualsecurity5/5. Private39 originals/freshIIO reader qualified. Final scopedclosure08fb3a32/402-file mirror975029bf independently rehashed. bb42/188 failures preserved; statutory0/performance deferred."
   - id: AMR-ENTERPRISE-CR2-CONTRACT-014
     depends_on: [AMR-ENTERPRISE-M4-TRANSFER-014, AMR-WAVE4-001]
     priority: P1
     area: cumulative-original-customer-credit-restoration
     title: Qualify append-only partial original stock credits collections and refunds only after finite native AR and valuation companion contracts
-    status: planned
+    status: in_progress
+    exit_evidence: "Pure Source225 and correction-template516 qualified97/184 cases, explicit original tax/tracking/source-policy facts and isolated optimized refusal guards. Root7d43 combined184 passes. Native CR2, API, Studio and migration remain missing; see ADR0858 and M6 completion matrix."
+  - id: AMR-ENTERPRISE-M6-COLLECTION-LOCK-014
+    depends_on: [AMR-ENTERPRISE-M5-AUTHORITY-014]
+    priority: P0
+    area: customer-invoice-parent-order
+    title: Preserve real collection financial effects while acquiring the immutable customer parent before the source invoice
+    status: in_progress
+    exit_evidence: "Original8d951057 baseline1 LockNotAvailable failure, candidate00929829 new native1/full27 pass. Tightened immutable-source statusc211cf50 target3/full29 native pass0 skips; ordinary role4false/source unchanged; receipt16a02094. Eight actual lines DrCr70000, AR44000 and cash/allocation1000. Frozen final M6 hosted/native/restore gates remain required; no performance gain inferred."
   - id: AMR-ENTERPRISE-M1-001
     depends_on: [AMR-WAVE5-001]
     priority: P0

@@ -920,6 +920,26 @@ surfaces:
       - Strict closed typed models admit only1..16 explicit source and report pins; domain validation retains canonical ordering, uniqueness and original seals before current authorized source capture.
       - No application pre-parse node or graph-depth profile is claimed; this read selection does not authenticate source documents or authorize financial posting.
     next_action: Keep the exact finite selection and current source authority; use a shared bounded graph decoder before widening the query or accepting uploaded documents.
+  - id: FI-047
+    name: Internal original partial-return evidence and unapproved correction templates
+    module_ids: [platform.core, finance.controls]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/domain/customer_partial_returns.py::OriginalPostingEvidence.snapshot
+      - reconforge/domain/customer_partial_return_posting.py::_decode
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_customer_partial_returns_domain.py, tests/test_customer_partial_return_posting.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - Uses the existing shared structured-document decoder with integer-only tokens, duplicate/non-finite rejection and graph budgets; no new direct json.loads or upload/file parser is introduced.
+      - Original snapshots retain65536 UTF-8 bytes,16384 nodes,depth24,1024 items/collection and65536 characters/scalar; correction templates retain2097152 bytes,32768 nodes,depth32,1024 items/collection and262144 characters/scalar. Root objects and canonical producer text are required before original Finance Posting schema/seal or closed correction-shape validation.
+      - Digests and bounded JSON do not attest native original ownership, account permission, current human authority, period openness, approval, or eligibility for native posting. Correction templates remain unapproved and nonpostable; only the first untaxed functional-currency untracked original-source contract is implemented.
+    next_action: Keep AST coverage exact and bind the future native CR2 source participant, SQL guards and real command/API/Studio acceptance before exposing a partial-stock workflow.
+
 direct_tabular_parser_allowlist:
   - path: reconforge/benchmark/amlsim_reconciliation.py
     parser: csv.DictReader

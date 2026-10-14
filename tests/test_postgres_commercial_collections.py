@@ -15,6 +15,105 @@ from tests.test_postgres_stock_sales import create_stock_runtime
 _ = receipt_database
 
 
+@pytest.mark.parametrize("state", ["Draft", "Submitted"])
+def test_mutable_invoice_refused_before_waiting_on_its_customer(
+    receipt_database: tuple[str, str], state: str,
+) -> None:
+    from reconforge.application.receivables import ReceivableInvoiceLineInput
+    from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
+
+    runtime = create_stock_runtime(receipt_database, seed_stock=False)
+    with runtime.actor("maker") as (connection, _, actor):
+        ar = PostgresReceivablesRepository(connection, runtime.tenant)
+        invoice = ar.create_invoice(invoice_number="MUTABLE-PARENT", customer_code="CUSTOMER",
+            invoice_date="2026-10-09", currency_code="USD", tax_minor=0,
+            lines=[ReceivableInvoiceLineInput("Mutable source", "1", 1000, 1000)],
+            workspace="work", organization_code="ORG", entity_code="ENTITY", actor_label=actor.username)
+        if state == "Submitted":
+            invoice = ar.submit_invoice(invoice["id"], expected_version=invoice["row_version"], actor_label=actor.username)
+        assert invoice["status"] == state
+
+    def read_source() -> str:
+        with runtime.actor("maker") as (connection, _, _actor):
+            with pytest.raises(FinancePostingError) as refused:
+                PostgresCommercialCollectionsRepository(connection, runtime.tenant)._source(invoice["id"])
+            return refused.value.code
+
+    with ThreadPoolExecutor(max_workers=1) as workers, runtime.actor("maker") as (holder, _, _actor):
+        holder.execute("SELECT id FROM reconforge.ar_customers WHERE tenant_id=%s AND id=%s FOR UPDATE",
+                       (runtime.tenant, invoice["customer_id"]))
+        # Completion while the mutable source's customer is still held
+        # proves refusal did not wait on a nonimmutable parent identity.
+        assert workers.submit(read_source).result(timeout=6) == "operational_source_state_invalid"
+    with runtime.actor("maker") as (connection, _, _actor):
+        retained = PostgresReceivablesRepository(connection, runtime.tenant).get_invoice(invoice["id"])
+        assert retained == invoice
+        assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s",
+                                  (runtime.tenant,)).fetchone()["n"] == 0
+
+
+def test_collection_post_waits_on_customer_before_owning_return_invoice(
+    receipt_database: tuple[str, str],
+) -> None:
+    """A real cash posting cannot invert the existing customer-return locks."""
+    import time
+    from queue import Queue
+
+    import psycopg
+
+    from reconforge.infrastructure.postgres_customer_returns import PostgresCustomerReturnsRepository
+    from tests.test_postgres_customer_returns import balances, create_runtime
+
+    runtime, source_id, invoice_id = create_runtime(receipt_database, 0)
+    plan = phase(runtime, prepare(runtime, invoice_id, 1000, "PARENT-ORDER"),
+                 "review", "checker", "review-PARENT-ORDER")
+    starting: Queue[int] = Queue()
+
+    def post_collection() -> dict[str, Any]:
+        with runtime.actor("poster") as (connection, _, actor):
+            starting.put(connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"])
+            return PostgresCommercialCollectionsRepository(connection, runtime.tenant).post(
+                plan["id"], expected_plan_digest=plan["plan_digest"], command_id="post-PARENT-ORDER",
+                reason="Real customer-ordered partial collection", actor=actor)
+
+    # Exactly one independent worker runs the real approved collection. The
+    # held parent is also the first parent of the existing CR1 source path.
+    with ThreadPoolExecutor(max_workers=1) as workers:
+        with runtime.actor("maker") as (holder, _, _actor):
+            customer_id = holder.execute("SELECT customer_id FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s",
+                                         (runtime.tenant, invoice_id)).fetchone()["customer_id"]
+            holder.execute("SELECT id FROM reconforge.ar_customers WHERE tenant_id=%s AND id=%s FOR UPDATE",
+                           (runtime.tenant, customer_id))
+            holder_pid = holder.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            posting = workers.submit(post_collection)
+            waiter_pid = starting.get(timeout=6)
+            with psycopg.connect(runtime.admin_dsn, autocommit=True) as observer:
+                deadline = time.monotonic() + 6
+                while holder_pid not in observer.execute("SELECT pg_blocking_pids(%s)", (waiter_pid,)).fetchone()[0]:
+                    assert time.monotonic() < deadline, "The cash worker must actually wait on the customer parent"
+                    time.sleep(.05)
+            assert not posting.done()
+            # Use a savepoint so the rejected baseline releases its held
+            # customer safely; NOWAIT detects inversion without waiting for
+            # the server's deadlock timeout or changing any timeout setting.
+            with holder.transaction():
+                assert holder.execute("SELECT id FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s FOR UPDATE NOWAIT",
+                                      (runtime.tenant, invoice_id)).fetchone()["id"] == invoice_id
+                source = PostgresCustomerReturnsRepository(holder, runtime.tenant)._source(source_id)
+                assert source["stock"]["invoice_id"] == invoice_id and source["allocated_minor"] == 0
+        posted = posting.result(timeout=60)
+    assert posted["status"] == "Posted"
+    assert balances(runtime) == {"AR": 44000, "REVENUE": -45000, "COGS": 12000,
+                                 "INVENTORY": 0, "CLEARING": -12000, "CASH": 1000}
+    with runtime.actor("maker") as (connection, _, _actor):
+        totals = connection.execute("""SELECT count(*) n,sum(l.debit_minor) dr,sum(l.credit_minor) cr
+            FROM reconforge.finance_entry_lines l JOIN reconforge.finance_posting_effects f
+            ON (f.tenant_id,f.entry_id)=(l.tenant_id,l.entry_id) WHERE f.tenant_id=%s""", (runtime.tenant,)).fetchone()
+        assert (totals["n"], totals["dr"], totals["cr"]) == (8, 70000, 70000)
+        assert connection.execute("SELECT sum(amount_minor) n FROM reconforge.ar_receipt_allocations WHERE tenant_id=%s AND invoice_id=%s",
+                                  (runtime.tenant, invoice_id)).fetchone()["n"] == 1000
+
+
 def invoiced(runtime: ReceiptRuntime) -> tuple[dict[str, Any], str]:
     result = commercial_order(runtime)
     result = act(runtime, result, "open-tranche", "maker", {"line_number": 1, "quantity": "10"})

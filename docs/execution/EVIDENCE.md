@@ -23642,3 +23642,22 @@ replace it without suppression. Root7d43 combined184 passes29.21s with targeted
 Ruff/mypy/Bandit0. Pure evidence is not native CR2 admission or financial posting.
 All original packets are outside managed worktrees under the recovery evidence
 root. Source-final gates, archive and hosted qualification remain pending for M6.
+
+### 2026-10-14 — Preserve M6 parser inventory rejection and use shared budgets
+
+Exact2d990891 Python3.12 original log101730B SHA
+1d89632c839a1c9a0e438dbd5b2f6f72bb6715c9c7bdea0f0c82af973e9aac5a
+and3.11 log101045B SHA
+9a192bf23c7d7857a96b2d902a6135aa107a793608025a7f751e8189d2df31f0
+each record7185 passed/663 inherited generic skips/one failure. The strict AST
+inventory correctly identified only the two new direct json.loads sites.
+Actual failed-runtime/tree bridge SHA
+c6d2bcb9caeb32b4eb897878f85883237057477318a6485f9b80ef1652cee1b3
+binds the job checkout to exact2d tree5708aa5b. No rerun, cancellation, timeout
+increase, skip or security-rule suppression is used as acceptance.
+
+Both readers now reuse the shared bounded structured-document decoder. FI-047
+records integer-only, duplicate/non-finite, UTF-8 and graph budgets with unchanged
+canonical/core/template checks. The targeted206 inventory/design/Domain/template
+cases pass; their uncommitted component originals remain labeled separately.
+Fresh frozen source qualification and cohesive CI remain required.

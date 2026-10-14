@@ -9,7 +9,6 @@ positive integral original minor-unit portions and no implicit rounding.
 
 from __future__ import annotations
 
-import json
 from dataclasses import asdict, dataclass, fields
 from typing import Any, Literal
 
@@ -23,11 +22,16 @@ from reconforge.domain.finance_posting import (
     validation_digest,
 )
 from reconforge.domain.receivables_policy import verify_receivables_policy
+from reconforge.io.structured import StructuredDocumentPolicy, parse_json_document
 from reconforge.utils.money import CurrencyRegistryContext, MinorMoney
 
 MAX_CONSUMPTIONS = 32
 MAX_HISTORY_EVENTS = 256
 MAX_ORIGINAL_SNAPSHOT_BYTES = 65_536
+ORIGINAL_PARTIAL_RETURN_JSON_POLICY = StructuredDocumentPolicy(
+    max_file_bytes=MAX_ORIGINAL_SNAPSHOT_BYTES, max_nodes=16_384, max_depth=24,
+    max_collection_items=1024, max_scalar_characters=65_536, max_yaml_aliases=1,
+)
 CONTRACT_VERSION = "customer-partial-return-domain-v1"
 
 
@@ -46,15 +50,6 @@ def _integer(value: object, field: str, *, zero: bool = False, maximum: int = MA
 def _digest(value: object, field: str) -> None:
     if type(value) is not str or len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
         raise FinancePostingError("partial_return_invalid", f"{field} must be an exact SHA-256 content digest.")
-
-
-def _unique_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    result: dict[str, Any] = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError("duplicate original snapshot key")
-        result[key] = value
-    return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,7 +92,8 @@ class OriginalPostingEvidence:
         try:
             if type(self.snapshot_json) is not str or len(self.snapshot_json.encode("utf-8")) > MAX_ORIGINAL_SNAPSHOT_BYTES:
                 raise ValueError("original snapshot exceeds the finite domain scope")
-            value = json.loads(self.snapshot_json, object_pairs_hook=_unique_pairs)
+            value = parse_json_document(self.snapshot_json, policy=ORIGINAL_PARTIAL_RETURN_JSON_POLICY,
+                                        reject_fractional_numbers=True)
             if type(value) is not dict or canonical_json(value) != self.snapshot_json:
                 raise ValueError("noncanonical original snapshot")
             if validation_digest(value) != self.validation_digest:

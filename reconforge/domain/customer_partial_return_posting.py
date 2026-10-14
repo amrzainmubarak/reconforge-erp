@@ -8,7 +8,6 @@ mandatory before an adapter can create or post any financial entry.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from datetime import date
 from typing import Any, NoReturn, cast
@@ -29,9 +28,14 @@ from reconforge.domain.finance_posting import (
     text,
     validation_digest,
 )
+from reconforge.io.structured import StructuredDocumentPolicy, parse_json_document
 
 TEMPLATE_VERSION = "customer-partial-return-correction-template-v1"
 CONTRACT_VERSION = "customer-partial-return-posting-contract-v1"
+PARTIAL_RETURN_TEMPLATE_JSON_POLICY = StructuredDocumentPolicy(
+    max_file_bytes=2_097_152, max_nodes=32_768, max_depth=32,
+    max_collection_items=1024, max_scalar_characters=262_144, max_yaml_aliases=1,
+)
 _SCOPE_FIELDS = ("tenant_id", "workspace_id", "organization_id", "legal_entity_id", "item_id", "location_id", "uom_id")
 _ROLE_FIELDS = ("receivable_account_id", "revenue_account_id", "inventory_account_id", "cogs_account_id", "refund_liability_account_id")
 
@@ -124,27 +128,16 @@ class PartialReturnAccountRoles:
                 "refund_liability_account_type": self.refund_liability_account_type}
 
 
-def _json_pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
-    result: dict[str, Any] = {}
-    for key, value in items:
-        _require(key not in result)
-        result[key] = value
-    return result
-
-
-def _json_number(_: str) -> NoReturn:
-    _refuse()
-
-
 def _decode(value: str) -> dict[str, Any]:
     _require(type(value) is str)
     try:
-        _require(len(value.encode("utf8")) <= 2_097_152)
-        result = json.loads(value, object_pairs_hook=_json_pairs, parse_float=_json_number, parse_constant=_json_number)
+        _require(len(value.encode("utf8")) <= PARTIAL_RETURN_TEMPLATE_JSON_POLICY.max_file_bytes)
+        result = parse_json_document(value, policy=PARTIAL_RETURN_TEMPLATE_JSON_POLICY,
+                                     reject_fractional_numbers=True)
         _require(type(result) is dict and canonical_json(result) == value)
     except (ValueError, RecursionError):
         _refuse()
-    return result
+    return cast(dict[str, Any], result)
 
 
 def _line(number: int, original: dict[str, Any], *, debit: int = 0, credit: int = 0,

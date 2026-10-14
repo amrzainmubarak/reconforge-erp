@@ -22,6 +22,7 @@ from reconforge.domain.customer_partial_returns import (
     MAX_CONSUMPTIONS,
     MAX_HISTORY_EVENTS,
     MAX_ORIGINAL_SNAPSHOT_BYTES,
+    ORIGINAL_PARTIAL_RETURN_JSON_POLICY,
     OriginalConsumption,
     OriginalPartialReturnSource,
     OriginalPostingEvidence,
@@ -42,6 +43,7 @@ from reconforge.domain.finance_posting import (
     make_entry_snapshot,
     validation_digest,
 )
+from reconforge.io.structured import StructuredDocumentError
 from reconforge.utils.money import CurrencyRegistryContext
 from tests.test_customer_partial_return_design import DESIGN, derive
 
@@ -529,3 +531,31 @@ def test_generated_prefix_costs_and_split_vs_whole_preserve_independent_financia
     if left.refund_due_minor:
         split = refund_partial_return(split, left.refund_due_minor)
     assert partial_return_balance(split).refund_due_minor == 0
+
+
+@pytest.mark.parametrize("kind", ["duplicate", "nonfinite", "fraction", "depth", "collection", "nodes"])
+def test_original_evidence_uses_shared_integer_only_bounded_json(kind: str) -> None:
+    policy = ORIGINAL_PARTIAL_RETURN_JSON_POLICY
+    if kind == "duplicate":
+        encoded = '{"x":1,"x":2}'
+    elif kind == "nonfinite":
+        encoded = '{"x":NaN}'
+    elif kind == "fraction":
+        encoded = '{"x":1.0}'
+    else:
+        graph: Any = 0
+        if kind == "depth":
+            for _ in range(policy.max_depth + 1):
+                graph = [graph]
+        elif kind == "collection":
+            graph = [0] * (policy.max_collection_items + 1)
+        else:
+            graph = [[0] * policy.max_collection_items
+                     for _ in range(policy.max_nodes // policy.max_collection_items)]
+        encoded = json.dumps({"graph": graph}, separators=(",", ":"))
+        assert len(encoded.encode("utf8")) <= policy.max_file_bytes
+    original = source_for(DESIGN["cases"][0]).original_revenue
+    with pytest.raises(FinancePostingError) as refused:
+        replace(original, snapshot_json=encoded)
+    assert refused.value.code == "partial_return_evidence_invalid"
+    assert isinstance(refused.value.__cause__, StructuredDocumentError)

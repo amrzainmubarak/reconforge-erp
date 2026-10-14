@@ -14,6 +14,7 @@ from typing import Any
 import pytest
 
 from reconforge.domain.customer_partial_return_posting import (
+    PARTIAL_RETURN_TEMPLATE_JSON_POLICY,
     PartialReturnAccountRoles,
     PartialReturnCorrectionTemplate,
     PartialReturnPostingContract,
@@ -29,6 +30,7 @@ from reconforge.domain.customer_partial_returns import (
     prepare_partial_return,
 )
 from reconforge.domain.finance_posting import FinancePostingError, canonical_json, validation_digest
+from reconforge.io.structured import StructuredDocumentError
 from tests.test_customer_partial_return_design import DESIGN, derive
 from tests.test_customer_partial_returns_domain import source_for
 
@@ -370,3 +372,35 @@ print(json.dumps({"schema_version": "partial-return-correction-isolated-guard-v1
         "schema_version": "partial-return-correction-isolated-guard-v1", "optimized": optimized,
         "original_vectors_verified": True, "required_refusals": 7,
     }
+
+
+@pytest.mark.parametrize("kind", ["duplicate", "nonfinite", "fraction", "depth", "collection", "nodes", "scalar", "bytes"])
+def test_correction_template_uses_shared_integer_only_bounded_json(kind: str) -> None:
+    policy = PARTIAL_RETURN_TEMPLATE_JSON_POLICY
+    if kind == "duplicate":
+        encoded = '{"x":1,"x":2}'
+    elif kind == "nonfinite":
+        encoded = '{"x":Infinity}'
+    elif kind == "fraction":
+        encoded = '{"x":1e0}'
+    else:
+        graph: Any = 0
+        if kind == "depth":
+            for _ in range(policy.max_depth + 1):
+                graph = [graph]
+        elif kind == "collection":
+            graph = [0] * (policy.max_collection_items + 1)
+        elif kind == "nodes":
+            graph = [[0] * policy.max_collection_items
+                     for _ in range(policy.max_nodes // policy.max_collection_items)]
+        elif kind == "scalar":
+            graph = "x" * (policy.max_scalar_characters + 1)
+        else:
+            graph = "x" * policy.max_file_bytes
+        encoded = json.dumps({"graph": graph}, separators=(",", ":"))
+        assert (len(encoded.encode("utf8")) > policy.max_file_bytes) == (kind == "bytes")
+    with pytest.raises(FinancePostingError) as refused:
+        PartialReturnCorrectionTemplate(encoded)
+    assert refused.value.code == "customer_partial_return_posting_invalid"
+    if kind != "bytes":
+        assert isinstance(refused.value.__context__, StructuredDocumentError)

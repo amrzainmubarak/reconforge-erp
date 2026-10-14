@@ -73,3 +73,12 @@ audit/outbox and bilingual operational acceptance remain required.
 Rollback: revert the additive pure contracts and their packaging declarations;
 the parent-lock correction has no schema change and may be reverted independently.
 Historical source-qualified failures and positive receipts stay retained.
+
+Frozen2d990891 hosted Python3.11/3.12 each rejected one exact AST parser-inventory
+gate: the two new direct JSON sites were unclassified. Retain those originals.
+Route both through the existing shared structured-document parser instead of
+adding decoder exceptions. Require integer-only tokens, duplicate/non-finite
+rejection and explicit UTF-8/node/depth/collection/scalar budgets. FI-047
+documents those internal profiles; original canonical/schema/digest and closed
+template validation still run after decoding. Targeted inventory/design/Domain/
+template qualification passes206 cases; new frozen-source acceptance is required.

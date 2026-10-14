@@ -55,3 +55,13 @@ Statutory country packs remain0 despite the all-country target. No IFRS/US GAAP
 or legal payroll/tax compliance is inferred. Comparative resource benchmarks
 remain deferred by the owner; new TPS, p99,100K/1M capacity, multi-region HA/DR
 and monetary operating-cost claims remain unproven.
+
+Hosted2d990891 is not accepted: Python3.11 and3.12 each recorded7185 successes,
+663 inherited generic skips and one failure in the exact AST JSON parser
+inventory. Both original job logs/source-tree bridge remain negative evidence.
+Both new internal readers now use the existing bounded structured-document
+parser with integer-only tokens, duplicate/non-finite and graph-budget rejection;
+FI-047 records their precise limits. Eight inventory plus198 design/Domain/
+template cases pass in the targeted206-case cohort, including14 new adversarial
+parser cases. The repaired source still requires fresh cohesive acceptance;
+successful2d component jobs do not qualify a later source.

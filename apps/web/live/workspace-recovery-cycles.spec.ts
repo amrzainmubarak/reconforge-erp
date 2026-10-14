@@ -105,7 +105,7 @@ for (const locale of ["en", "ar"] as const) {
       for (const width of [320, 768, 1024, 1440]) {
         await page.setViewportSize({ width, height: 900 });
         await expect(fallback).toHaveAttribute("dir", text.direction);
-        const menu = page.getByRole("button", { name: locale === "en" ? "Menu" : "القائمة", exact: true });
+        const menu = page.locator("header.topbar").getByRole("button", { name: locale === "en" ? "Menu" : "القائمة", exact: true });
         const usedMobileMenu = await menu.isVisible();
         if (usedMobileMenu) { await menu.focus(); await expect(menu).toBeFocused(); await menu.press("Enter"); }
         await expect(navigation).toBeInViewport();

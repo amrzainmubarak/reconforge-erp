@@ -12,6 +12,8 @@ from typing import Any
 
 import pytest
 
+from tests.test_browser_diagnostic_redaction import PRIVATE_MONEY, PRIVATE_SOURCE, workspace_report
+
 ROOT = Path(__file__).resolve().parents[1]
 specification = importlib.util.spec_from_file_location("owned_browser_diagnostic_writer", ROOT / ".github/scripts/verify_erp_expansion_browser.py")
 assert specification is not None and specification.loader is not None
@@ -448,3 +450,95 @@ def test_mocked_common_runner_keeps_raw_report_private_stats_exact_and_public_su
         assert TOKEN in (observed_report[0].parent / "runner-error.txt").read_text(encoding="utf8")
     captured = capsys.readouterr()
     assert all(secret not in captured.out + captured.err for secret in (TOKEN, CSRF, PASSWORD))
+
+
+def workspace_inputs(tmp_path: Path) -> tuple[Path, Path, dict[str, Path], dict[str, bytes]]:
+    output, private, _, _ = inputs(tmp_path)
+    paths, originals, attachments = {}, {}, []
+    for locale in ("en", "ar"):
+        case = f"workspace-recovery-cycles--synthetic-{locale}-customer-returns-chromium"
+        source = private / "playwright-artifacts" / case / f"workspace-recovery-{locale}-original-native-boundary.json"
+        source.parent.mkdir()
+        raw = json.dumps(workspace_report("v2", locale), ensure_ascii=False).encode()
+        source.write_bytes(raw)
+        copied = source.parent / "attachments" / f"workspace-recovery-{locale}-original-native-boundary-json-{'a' * 40}.json"
+        copied.parent.mkdir()
+        copied.write_bytes(raw)
+        paths[locale], paths[locale + "-copy"] = source, copied
+        originals[locale] = raw
+        attachments.append({"name": source.name, "contentType": "application/json", "path": str(copied)})
+    reporter = json.loads((private / "playwright.json").read_bytes())
+    reporter["suites"][0]["attachments"] = attachments
+    (private / "playwright.json").write_text(json.dumps(reporter), encoding="utf8")
+    return output, private, paths, originals
+
+
+def test_workspace_writer_publishes_only_finite_projections_and_preserves_both_private_originals(tmp_path: Path) -> None:
+    output, private, paths, originals = workspace_inputs(tmp_path)
+    untouched = outside_artifacts(output)
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD])
+    assert result["status"] == "published" and len(result["workspace_recovery_projections"]) == 2
+    assert len(result["private_browser_artifacts"]) == 4
+    for locale in ("en", "ar"):
+        assert paths[locale].read_bytes() == paths[locale + "-copy"].read_bytes() == originals[locale]
+        derived = json.loads((output / f"workspace-recovery/{locale}.json").read_bytes())
+        assert derived["locale"] == locale and derived["recovery_verified"] is derived["responsive_verified"] is True
+        assert derived["financial_originals_equal"] is True and derived["private_financial_originals_published"] is False
+        assert derived["original_sha256"] == hashlib.sha256(originals[locale]).hexdigest()
+        assert not (output / paths[locale].relative_to(private)).exists()
+        assert not (output / paths[locale + "-copy"].relative_to(private)).exists()
+    public = b"".join(path.read_bytes() for path in output.rglob("*") if path.is_file() and path.name not in untouched)
+    assert all(value.encode() not in public for value in (PRIVATE_SOURCE, PRIVATE_MONEY, str(private), PASSWORD))
+    assert writer._unchanged_original_artifact_name(paths["en"]) is False
+    assert_untouched(output, untouched)
+
+
+@pytest.mark.parametrize("attack", ["malformed", "duplicate_locale", "wrong_copy", "unclassified_copy", "body_only", "extra_attachment_field"])
+def test_workspace_writer_refuses_invalid_private_origins_before_any_projection_publication(tmp_path: Path, attack: str) -> None:
+    output, private, paths, _ = workspace_inputs(tmp_path)
+    untouched = outside_artifacts(output)
+    if attack == "malformed":
+        paths["en"].write_bytes(b'{"financial-private":true}')
+        paths["en-copy"].write_bytes(paths["en"].read_bytes())
+    elif attack == "duplicate_locale":
+        other = private / "playwright-artifacts/workspace-recovery-cycles--duplicate-customer-returns-chromium" / paths["en"].name
+        other.parent.mkdir()
+        other.write_bytes(paths["en"].read_bytes())
+    elif attack == "wrong_copy":
+        paths["en-copy"].write_bytes(paths["ar"].read_bytes())
+    elif attack == "unclassified_copy":
+        paths["en-copy"].with_name("workspace-recovery-en-original-native-boundary-random.json").write_bytes(paths["en"].read_bytes())
+    else:
+        report = json.loads((private / "playwright.json").read_bytes())
+        attached = report["suites"][0]["attachments"][0]
+        if attack == "body_only":
+            attached.pop("path")
+            attached["body"] = "c3ludGhldGljLXByaXZhdGU="
+        else:
+            attached["sourceMoney"] = PRIVATE_MONEY
+        (private / "playwright.json").write_text(json.dumps(report), encoding="utf8")
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD])
+    assert result["status"] == "quarantined" and result["workspace_recovery_projections"] == []
+    assert writer._public_diagnostic_paths(output) == []
+    assert paths["en"].is_file() and paths["en-copy"].is_file()
+    assert_untouched(output, untouched)
+
+
+@pytest.mark.parametrize("target", ["en", "en-copy"])
+def test_workspace_writer_quarantines_partial_projections_when_original_changes_during_publication(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, target: str,
+) -> None:
+    output, private, paths, _ = workspace_inputs(tmp_path)
+    untouched = outside_artifacts(output)
+    rename = Path.rename
+    def late_drift(path: Path, destination: Path) -> Path:
+        result = rename(path, destination)
+        if destination == output / "workspace-recovery/ar.json":
+            paths[target].write_bytes(b'{"deliberate-original-drift":true}')
+        return result
+    monkeypatch.setattr(Path, "rename", late_drift)
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD])
+    assert result["status"] == "quarantined" and writer._public_diagnostic_paths(output) == []
+    assert result["workspace_recovery_projections"] == []
+    assert paths[target].read_bytes() == b'{"deliberate-original-drift":true}'
+    assert_untouched(output, untouched)

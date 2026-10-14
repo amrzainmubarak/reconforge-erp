@@ -60,6 +60,19 @@ PUBLIC_ORIGINAL_JSON = re.compile(
     r"native-financial-snapshot-oracle(?:-[a-z0-9]+)?)\.json",
     re.IGNORECASE,
 )
+WORKSPACE_ATTACHMENT = re.compile(
+    r"playwright-artifacts/(?P<case>workspace-recovery-cycles--[A-Za-z0-9_-]{1,200}-customer-returns-chromium)/"
+    r"attachments/workspace-recovery-(?P<locale>en|ar)-original-native-boundary-json-[0-9a-f]{40}\.json"
+)
+WORKSPACE_CASE_TITLES = {
+    "customer-returns-cycles.spec.ts": {
+        "actual original credit release partial cash refunds lost responses and bilingual native evidence": None,
+    },
+    "workspace-recovery-cycles.spec.ts": {
+        f"actual rejected lazy workspace preserves {locale} navigation and manual recovery without financial replay": locale
+        for locale in ("en", "ar")
+    },
+}
 
 
 def private_diagnostics_directory(output: Path) -> Path:
@@ -84,6 +97,11 @@ def _public_diagnostic_paths(output: Path) -> list[Path]:
         paths.extend(path for path in sorted(artifacts.rglob("*"))
             if path.is_symlink() or path.is_file() and (path.name == "error-context.md"
                 or not _unchanged_original_artifact_name(path)))
+    projections = output / "workspace-recovery"
+    if projections.is_symlink():
+        raise ValueError("Public workspace recovery storage cannot be a symlink.")
+    if projections.is_dir():
+        paths.extend(path for path in sorted(projections.rglob("*")) if path.is_symlink() or path.is_file())
     return [path for path in paths if path.exists() or path.is_symlink()]
 
 
@@ -125,7 +143,95 @@ def _file_identity(path: Path) -> dict[str, Any]:
     return {"bytes": length, "sha256": digest.hexdigest()}
 
 
-def _stage_original_browser_artifacts(output: Path, private: Path, known_private_values: list[str]) -> tuple[list[tuple[Path, Path]], list[dict[str, Any]], list[dict[str, Any]]]:
+def _read_private_original(private: Path, path: Path, *, limit: int) -> bytes:
+    """Read a bounded regular original without following a private-tree symlink."""
+    if (private.is_symlink() or path.is_symlink() or not path.is_file()
+            or not path.resolve().is_relative_to(private.resolve())
+            or any(parent.is_symlink() for parent in path.parents if parent.is_relative_to(private))):
+        raise ValueError("Required browser original is outside its regular owned private tree.")
+    with path.open("rb") as stream:
+        raw = stream.read(limit + 1)
+    if len(raw) > limit or _file_identity(path) != {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}:
+        raise ValueError("Required browser original exceeds its bound or changed during capture.")
+    return raw
+
+
+def _workspace_attachment_original(private: Path, source: Path) -> tuple[Path, bytes]:
+    relative = source.relative_to(private).as_posix()
+    matched = WORKSPACE_ATTACHMENT.fullmatch(relative)
+    if matched is None:
+        raise ValueError("Workspace attachment is outside its finite private producer family.")
+    original = private / "playwright-artifacts" / matched["case"] / f"workspace-recovery-{matched['locale']}-original-native-boundary.json"
+    limit = diagnostic_redaction.MAX_WORKSPACE_RECOVERY_BYTES
+    raw = _read_private_original(private, original, limit=limit)
+    if _read_private_original(private, source, limit=limit) != raw:
+        raise ValueError("Workspace reporter attachment differs from its original private boundary.")
+    return original, raw
+
+
+def _playwright_original(private: Path, known_private_values: list[str]) -> tuple[dict[str, Any], bytes]:
+    raw = _read_private_original(private, private / "playwright.json", limit=diagnostic_redaction.MAX_DIAGNOSTIC_BYTES)
+    # The established diagnostic parser rejects duplicate/nonfinite fields and
+    # excessive depth/nodes. Timing floats in this reporter are nonfinancial.
+    diagnostic_redaction.derive_browser_diagnostic("playwright.json", raw,
+        sanitizer_source_sha256=hashlib.sha256(Path(diagnostic_redaction.__file__).read_bytes()).hexdigest(),
+        known_private_values=known_private_values)
+    return json.loads(raw), raw
+
+
+def _private_workspace_attachment_paths(report: dict[str, Any], private: Path) -> list[str]:
+    """Validate attached private JSON; hide its absolute path in generic reports."""
+    protected: list[str] = []
+
+    def walk(value: Any) -> None:
+        if isinstance(value, list):
+            for item in value:
+                walk(item)
+        elif isinstance(value, dict):
+            for attachment in value.get("attachments", []) if isinstance(value.get("attachments", []), list) else []:
+                if not isinstance(attachment, dict):
+                    raise ValueError("Workspace reporter attachment metadata is malformed.")
+                name = attachment.get("name")
+                if isinstance(name, str) and name.startswith("workspace-recovery-"):
+                    if (set(attachment) != {"name", "contentType", "path"}
+                            or name not in {f"workspace-recovery-{locale}-original-native-boundary.json" for locale in ("en", "ar")}
+                            or attachment["contentType"] != "application/json" or type(attachment["path"]) is not str):
+                        raise ValueError("Workspace reporter attachment metadata is outside its private contract.")
+                    path = Path(attachment["path"])
+                    if not path.is_absolute() or not path.is_relative_to(private):
+                        raise ValueError("Workspace reporter attachment path is outside its private tree.")
+                    relative = path.relative_to(private).as_posix()
+                    matched = WORKSPACE_ATTACHMENT.fullmatch(relative)
+                    if matched is None or name != f"workspace-recovery-{matched['locale']}-original-native-boundary.json":
+                        raise ValueError("Workspace reporter attachment locale or producer path differs.")
+                    _workspace_attachment_original(private, path)
+                    protected.extend((attachment["path"], path.as_posix()))
+            for item in value.values():
+                walk(item)
+
+    walk(report)
+    return protected
+
+
+def _require_workspace_originals_unchanged(private: Path, projections: list[dict[str, Any]]) -> None:
+    expected = {record["derived_relative_path"].split("/")[1].split(".")[0]:
+        {"bytes": record["original_bytes"], "sha256": record["original_sha256"]} for record in projections}
+    observed: dict[str, dict[str, Any]] = {}
+    for path in sorted((private / "playwright-artifacts").rglob("*")):
+        name = path.relative_to(private).as_posix()
+        if diagnostic_redaction.is_workspace_recovery_diagnostic_path(name):
+            locale = path.name.split("-")[2]
+            if locale in observed:
+                raise ValueError("Workspace original locale appeared twice during publication.")
+            raw = _read_private_original(private, path, limit=diagnostic_redaction.MAX_WORKSPACE_RECOVERY_BYTES)
+            observed[locale] = {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+        elif WORKSPACE_ATTACHMENT.fullmatch(name):
+            _workspace_attachment_original(private, path)
+    if observed != expected:
+        raise ValueError("Workspace original custody changed before completed publication.")
+
+
+def _stage_original_browser_artifacts(output: Path, private: Path, known_private_values: list[str]) -> tuple[list[tuple[Path, Path]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     """Mirror original attachments byte-for-byte, without a financial parser."""
     artifacts = private / "playwright-artifacts"
     if artifacts.is_symlink():
@@ -133,10 +239,43 @@ def _stage_original_browser_artifacts(output: Path, private: Path, known_private
     staged: list[tuple[Path, Path]] = []
     receipts = []
     private_receipts: list[dict[str, Any]] = []
+    workspace_receipts: list[dict[str, Any]] = []
+    original_identities: list[tuple[Path, dict[str, Any]]] = []
+    helper_sha = hashlib.sha256(Path(diagnostic_redaction.__file__).read_bytes()).hexdigest()
     for source in sorted(artifacts.rglob("*")):
         if source.is_symlink():
             raise ValueError("A browser artifact cannot traverse a symbolic link.")
         if not source.is_file() or source.name == "error-context.md":
+            continue
+        name = source.relative_to(private).as_posix()
+        if diagnostic_redaction.is_workspace_recovery_diagnostic_path(name):
+            raw = _read_private_original(private, source, limit=diagnostic_redaction.MAX_WORKSPACE_RECOVERY_BYTES)
+            derived = diagnostic_redaction.derive_workspace_recovery_diagnostic(name, raw,
+                sanitizer_source_sha256=helper_sha, known_private_values=known_private_values)
+            projected_name = derived.receipt["derived_relative_path"]
+            if any(record["derived_relative_path"] == projected_name for record in workspace_receipts):
+                raise ValueError("A workspace locale original cannot appear twice.")
+            destination = output / projected_name
+            if (destination.exists() or destination.is_symlink() or (output / "workspace-recovery").is_symlink()
+                    or not destination.resolve().is_relative_to(output.resolve())):
+                raise ValueError("Workspace projection destination is not a fresh owned path.")
+            copy = private / "derived-workspace-public" / projected_name
+            copy.parent.mkdir(parents=True, exist_ok=True)
+            with copy.open("xb") as target:
+                target.write(derived.content)
+            identity = {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+            original_identities.append((source, identity))
+            staged.append((copy, destination))
+            workspace_receipts.append(derived.receipt)
+            private_receipts.append({"artifact_index": len(private_receipts), "kind": "private-workspace-financial-boundary",
+                "original": identity, "published": False})
+            continue
+        if WORKSPACE_ATTACHMENT.fullmatch(name):
+            original, raw = _workspace_attachment_original(private, source)
+            identity = {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+            original_identities.extend(((source, identity), (original, identity)))
+            private_receipts.append({"artifact_index": len(private_receipts), "kind": "private-workspace-reporter-attachment",
+                "original": identity, "published": False})
             continue
         # Trace/HAR/network containers can retain authentication headers. They
         # remain original private files, even when a future config enables them.
@@ -167,10 +306,13 @@ def _stage_original_browser_artifacts(output: Path, private: Path, known_private
                 raise ValueError("An original browser artifact changed during byte-preserving capture.")
             staged.append((copy, destination))
         receipts.append({"relative_path": name, "original": identity, "public_copy": identity, "content_transform": False})
-    return staged, receipts, private_receipts
+    if any(_file_identity(path) != identity for path, identity in original_identities):
+        raise ValueError("A workspace original changed before completed projection staging.")
+    return staged, receipts, private_receipts, workspace_receipts
 
 
-def publish_browser_diagnostics(output: Path, private: Path, known_private_values: list[str]) -> dict[str, Any]:
+def publish_browser_diagnostics(output: Path, private: Path, known_private_values: list[str], *,
+        workspace_verification: dict[str, Any] | None = None) -> dict[str, Any]:
     """Publish only complete derived diagnostics; financial bytes are excluded."""
     helper_source = Path(diagnostic_redaction.__file__).read_bytes()
     helper_sha = hashlib.sha256(helper_source).hexdigest()
@@ -180,13 +322,18 @@ def publish_browser_diagnostics(output: Path, private: Path, known_private_value
         "writer": {"source_sha256": hashlib.sha256(writer_source).hexdigest(), "source_bytes": len(writer_source)},
         "private_storage": "sibling-outside-public-browser-artifact-directory", "private_run_id": private.name,
         "financial_artifacts_sanitized": False, "artifacts": [], "original_custody": [],
-        "unchanged_browser_artifacts": [], "private_browser_artifacts": [], "status": "quarantined"}
+        "unchanged_browser_artifacts": [], "private_browser_artifacts": [], "workspace_recovery_projections": [], "status": "quarantined"}
     try:
         quarantined = _quarantine_public_diagnostics(output, private)
         inputs = {name: private / name for name in ("browser.log", "playwright.json") if (private / name).exists()}
         inputs.update({name: path for name, path in quarantined.items() if name.startswith("playwright-artifacts/")})
         if (private / "playwright-artifacts").is_symlink():
             raise ValueError("Private browser artifact storage cannot be a symlink.")
+        if (private / "playwright.json").exists():
+            reporter, _ = _playwright_original(private, known_private_values)
+            private_paths = _private_workspace_attachment_paths(reporter, private)
+        else:
+            private_paths = []
         inputs.update({path.relative_to(private).as_posix(): path
             for path in sorted((private / "playwright-artifacts").rglob("error-context.md"))})
         staged = []
@@ -200,24 +347,33 @@ def publish_browser_diagnostics(output: Path, private: Path, known_private_value
                 "original_bytes": path.stat().st_size,
                 "original_sha256": hashlib.sha256(raw).hexdigest() if len(raw) <= diagnostic_redaction.MAX_DIAGNOSTIC_BYTES else None})
             derived = diagnostic_redaction.derive_browser_diagnostic(name, raw,
-                sanitizer_source_sha256=helper_sha, known_private_values=known_private_values)
+                sanitizer_source_sha256=helper_sha, known_private_values=known_private_values + private_paths)
             destination = private / "derived-public" / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             with destination.open("xb") as stream:
                 stream.write(derived.content)
             staged.append((destination, output / name))
             receipt["artifacts"].append(derived.receipt)
-        unchanged_staged, unchanged_receipts, private_receipts = _stage_original_browser_artifacts(output, private, known_private_values)
+        unchanged_staged, unchanged_receipts, private_receipts, workspace_receipts = _stage_original_browser_artifacts(output, private, known_private_values)
         receipt["private_browser_artifacts"] = private_receipts
         staged.extend(unchanged_staged)
+        if workspace_verification is not None:
+            current_verification = require_workspace_recovery_acceptance(private, known_private_values=known_private_values)
+            if current_verification != workspace_verification:
+                raise ValueError("Workspace originals differ from the successful native acceptance binding.")
         # Every sanitizer completed before the first public diagnostic appears.
         for source, destination in staged:
             destination.parent.mkdir(parents=True, exist_ok=True)
             if destination.exists() or destination.is_symlink():
                 raise ValueError("A public browser diagnostic appeared during publication.")
             source.rename(destination)
+        _require_workspace_originals_unchanged(private, workspace_receipts)
+        if workspace_verification is not None and require_workspace_recovery_acceptance(
+                private, known_private_values=known_private_values) != workspace_verification:
+            raise ValueError("Workspace originals changed during completed publication.")
         receipt["status"] = "published"
         receipt["unchanged_browser_artifacts"] = unchanged_receipts
+        receipt["workspace_recovery_projections"] = workspace_receipts
     except Exception:
         # Never echo the exception; it may contain a private value or header.
         try:
@@ -279,6 +435,92 @@ def require_browser_acceptance(stats: object, *, required_cases: int = 1) -> Non
     for name, required in (("expected", required_cases), ("skipped", 0), ("unexpected", 0), ("flaky", 0)):
         if type(stats.get(name)) is not int or stats[name] != required:
             raise RuntimeError(f"Required browser outcome count refused: {name}")
+
+
+def require_workspace_recovery_acceptance(private: Path, *, known_private_values: list[str]) -> dict[str, Any]:
+    """Bind both private originals to actual passed, unretried Playwright cases."""
+    reporter, reporter_raw = _playwright_original(private, known_private_values)
+    require_browser_acceptance(reporter.get("stats"), required_cases=3)
+    if reporter.get("errors") != []:
+        raise ValueError("Required browser reporter contains global errors.")
+    _private_workspace_attachment_paths(reporter, private)
+    cases: dict[tuple[str, str], dict[str, Any]] = {}
+
+    def collect(suites: Any, depth: int = 0) -> None:
+        if type(suites) is not list or len(suites) > 20 or depth > 20:
+            raise ValueError("Required browser suites exceed their finite case contract.")
+        for suite in suites:
+            if type(suite) is not dict or type(suite.get("specs", [])) is not list:
+                raise ValueError("Required browser suite metadata is malformed.")
+            for spec in suite.get("specs", []):
+                if type(spec) is not dict or type(spec.get("file")) is not str or type(spec.get("title")) is not str:
+                    raise ValueError("Required browser case metadata is malformed.")
+                key = (spec["file"], spec["title"])
+                if (key in cases or key[0] not in WORKSPACE_CASE_TITLES
+                        or key[1] not in WORKSPACE_CASE_TITLES[key[0]] or spec.get("ok") is not True
+                        or type(spec.get("tests")) is not list or len(spec["tests"]) != 1):
+                    raise ValueError("Required browser case identity or success differs from its contract.")
+                executed = spec["tests"][0]
+                if (type(executed) is not dict or executed.get("projectId") != "customer-returns-chromium"
+                        or executed.get("projectName") != "customer-returns-chromium"
+                        or executed.get("expectedStatus") != "passed" or executed.get("status") != "expected"
+                        or type(executed.get("results")) is not list or len(executed["results"]) != 1):
+                    raise ValueError("Required browser case was not executed once in its exact native project.")
+                result = executed["results"][0]
+                if (type(result) is not dict or result.get("status") != "passed" or type(result.get("retry")) is not int
+                        or result["retry"] != 0 or result.get("errors") != [] or result.get("error") is not None
+                        or type(result.get("attachments")) is not list):
+                    raise ValueError("Required browser case contains errors, retries or missing attachments.")
+                cases[key] = result
+            collect(suite.get("suites", []), depth + 1)
+
+    collect(reporter.get("suites"))
+    expected = {(file, title) for file, titles in WORKSPACE_CASE_TITLES.items() for title in titles}
+    if set(cases) != expected:
+        raise ValueError("Required browser reporter is missing an exact business or recovery case.")
+    helper_sha = hashlib.sha256(Path(diagnostic_redaction.__file__).read_bytes()).hexdigest()
+    records, projection_receipts = [], []
+    attached_paths: set[Path] = set()
+    for (file, title), result in cases.items():
+        locale = WORKSPACE_CASE_TITLES[file][title]
+        if locale is None:
+            continue
+        attachments = result["attachments"]
+        if len(attachments) != 1:
+            raise ValueError("A passed workspace case must retain exactly one private original attachment.")
+        attachment = attachments[0]
+        if (type(attachment) is not dict or set(attachment) != {"name", "contentType", "path"}
+                or attachment["name"] != f"workspace-recovery-{locale}-original-native-boundary.json"
+                or attachment["contentType"] != "application/json" or type(attachment["path"]) is not str):
+            raise ValueError("Workspace case attachment does not identify its original locale.")
+        copied = Path(attachment["path"])
+        if not copied.is_absolute() or not copied.is_relative_to(private) or copied in attached_paths:
+            raise ValueError("Workspace case attachment cannot escape or duplicate its private original.")
+        original, raw = _workspace_attachment_original(private, copied)
+        relative = original.relative_to(private).as_posix()
+        derived = diagnostic_redaction.derive_workspace_recovery_diagnostic(relative, raw,
+            sanitizer_source_sha256=helper_sha, known_private_values=known_private_values)
+        public = json.loads(derived.content)
+        if (public["locale"] != locale or public["private_schema_version"] != "workspace-recovery-native-v2"
+                or public["recovery_verified"] is not True or public["responsive_verified"] is not True):
+            raise ValueError("Workspace original does not prove complete native recovery and responsive checks.")
+        identity = {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+        records.append({"locale": locale, "original": identity, "reporter_attachment_copy": identity,
+            "actual_case_passed_once": True, "private_financial_originals_published": False})
+        projection_receipts.append(derived.receipt)
+        attached_paths.add(copied)
+    private_copies = {path for path in (private / "playwright-artifacts").rglob("*")
+        if WORKSPACE_ATTACHMENT.fullmatch(path.relative_to(private).as_posix())}
+    if private_copies != attached_paths:
+        raise ValueError("Workspace private reporter copies include an unbound original.")
+    _require_workspace_originals_unchanged(private, projection_receipts)
+    if _file_identity(private / "playwright.json") != {"bytes": len(reporter_raw), "sha256": hashlib.sha256(reporter_raw).hexdigest()}:
+        raise ValueError("Workspace reporter changed before completed native case binding.")
+    return {"schema_version": "workspace-recovery-native-case-binding-v1",
+        "original_reporter": {"bytes": len(reporter_raw), "sha256": hashlib.sha256(reporter_raw).hexdigest()},
+        "sanitizer_source_sha256": helper_sha, "exact_business_and_recovery_cases": 3,
+        "locales": sorted(records, key=lambda record: record["locale"]),
+        "raw_financial_originals_published": False, "previous_blank_screen_cause_proven": False}
 
 
 def publish_original_oracle_custody(private: Path, output: Path, verified: dict[str, Any]) -> dict[str, Any]:
@@ -858,6 +1100,9 @@ def main() -> int:
         if browser.returncode == 0:
             require_browser_acceptance(report.get("browser_counts"),
                 required_cases=3 if args.scenario == "customer-returns" else 1)
+            if args.scenario == "customer-returns":
+                report["workspace_recovery_verification"] = require_workspace_recovery_acceptance(
+                    private_diagnostics, known_private_values=secret_values)
             persisted_effects = verify_cycles(runtime)
             report["persisted_effects"] = persisted_effects
             if args.scenario in {"intercompany-source-cashflow", "intercompany-group-diagnostic", "project-source-reconciliation"}:
@@ -906,7 +1151,9 @@ def main() -> int:
                     break
                 time.sleep(.1)
         report["wall_seconds"] = round(time.monotonic() - started, 3)
-        publication = publish_browser_diagnostics(output, private_diagnostics, secret_values)
+        verification = report.get("workspace_recovery_verification")
+        publication = publish_browser_diagnostics(output, private_diagnostics, secret_values,
+            workspace_verification=verification if isinstance(verification, dict) else None)
         report["browser_diagnostics"] = publication
         if publication["status"] != "published":
             report["status"] = "failed"

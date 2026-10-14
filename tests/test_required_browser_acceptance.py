@@ -75,6 +75,91 @@ def test_isolated_financial_original_input_seal_refuses_drift_before_diagnostic_
     assert not (output / "playwright-artifacts/native-customer-return-originals").exists()
 
 
+@pytest.mark.parametrize("captures", [1, 3])
+def test_isolated_financial_proofs_and_inputs_remain_private_after_complete_publication(tmp_path: Path, captures: int) -> None:
+    """Real isolated stdlib readers over synthetic rows; no database or browser."""
+    private = tmp_path / "private"
+    originals = private / "playwright-artifacts/native-customer-return-originals"
+    originals.mkdir(parents=True)
+    for capture in range(1, captures + 1):
+        write_capture(originals, rows(), capture)
+    input_bytes = {path.name: path.read_bytes() for path in originals.iterdir()}
+    verified = RUNNER.verify_customer_return_original_rows(private, required_captures=captures)
+    executions = private / "independent-customer-return-row-verification"
+    proof_bytes = {name: (executions / name).read_bytes() for name in ("I.json", "IO.json")}
+    (private / "browser.log").write_bytes(b"Scoped synthetic reader custody status200\n")
+    output = tmp_path / "public"
+    output.mkdir()
+
+    published = RUNNER.publish_browser_diagnostics(output, private, [], financial_verification=verified)
+
+    assert published["status"] == "published"
+    RUNNER.require_financial_original_binding(private, verified)
+    assert input_bytes == {path.name: path.read_bytes() for path in originals.iterdir()}
+    assert proof_bytes == {name: (executions / name).read_bytes() for name in proof_bytes}
+    assert proof_bytes["I.json"] == proof_bytes["IO.json"]
+    assert not (output / "playwright-artifacts/native-customer-return-originals").exists()
+    assert not (output / "independent-customer-return-row-verification").exists()
+    assert not list(output.rglob("I.json")) and not list(output.rglob("IO.json"))
+
+
+@pytest.mark.parametrize("name", ["I.json", "IO.json"])
+@pytest.mark.parametrize("drift", ["changed", "missing"])
+@pytest.mark.parametrize("stage", ["before_publication", "after_public_move"])
+def test_isolated_financial_proof_custody_refuses_drift_around_publication(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str, drift: str, stage: str,
+) -> None:
+    private = tmp_path / "private"
+    originals = private / "playwright-artifacts/native-customer-return-originals"
+    originals.mkdir(parents=True)
+    write_capture(originals, rows())
+    input_bytes = {path.name: path.read_bytes() for path in originals.iterdir()}
+    verified = RUNNER.verify_customer_return_original_rows(private, required_captures=1)
+    executions = private / "independent-customer-return-row-verification"
+    original_proof = (executions / name).read_bytes()
+    (private / "browser.log").write_bytes(b"Scoped synthetic reader custody status200\n")
+    output = tmp_path / "public"
+    output.mkdir()
+    mutated = False
+
+    def mutate_proof() -> None:
+        nonlocal mutated
+        if drift == "changed":
+            (executions / name).write_bytes(b'{"changed_after_isolated_reader":true}\n')
+        else:
+            (executions / name).rename(executions / ("retained-missing-" + name))
+        mutated = True
+
+    if stage == "before_publication":
+        mutate_proof()
+        with pytest.raises(ValueError):
+            RUNNER.require_financial_original_binding(private, verified)
+    else:
+        original_rename = Path.rename
+
+        def rename_and_drift(path: Path, target: Path) -> Path:
+            result = original_rename(path, target)
+            if target == output / "browser.log":
+                mutate_proof()
+            return result
+
+        monkeypatch.setattr(Path, "rename", rename_and_drift)
+
+    published = RUNNER.publish_browser_diagnostics(output, private, [], financial_verification=verified)
+
+    assert mutated, "The intended before/after-publication drift boundary must actually execute."
+    assert published["status"] == "quarantined"
+    assert RUNNER._public_diagnostic_paths(output) == []
+    assert input_bytes == {path.name: path.read_bytes() for path in originals.iterdir()}
+    if drift == "missing":
+        assert (executions / ("retained-missing-" + name)).read_bytes() == original_proof
+        assert not (executions / name).exists()
+    else:
+        assert (executions / name).read_bytes() != original_proof
+    assert not (output / "playwright-artifacts/native-customer-return-originals").exists()
+    assert not (output / "independent-customer-return-row-verification").exists()
+
+
 def test_required_wire_cycle_accepts_one_complete_nonflaky_execution() -> None:
     RUNNER.require_browser_acceptance({"expected": 1, "skipped": 0, "unexpected": 0, "flaky": 0, "duration": 100})
 

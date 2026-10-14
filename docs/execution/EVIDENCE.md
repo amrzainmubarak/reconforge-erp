@@ -23619,3 +23619,26 @@ public moves. These execute synthetic standard-library readers, not a native
 database, browser or financial restore. The next frozen source still requires
 actual three-case TLS, thirteen-table original rows across three captures,
 isolated/optimized independent calculation and final cohesive CI.
+
+### 2026-10-14 — M6 original-source contracts and real collection lock correction
+
+Parent-order original custody SHA
+c75e9251649e4bb7e032bce6218e4283c10ecb4156718be45cddf4b137e099e3
+retains baseline8d951057 one LockNotAvailable rejection and corrected00929829
+one native pass. Full affected27-case native integration0 skips is separately
+retained with mirror SHA
+a4bbbbbf0982ec20dc4e1f698ee60415c10f871c0e659600b05cb3db13d30236.
+Source receipts verify unchanged source bytes, normal role and server timeouts.
+Static reciprocal peer closure35dc79a78986ae727540204f817693559fedbde1be3889cb4bd41909773f4025
+binds the actual production/test source and original receipts; no duplicate DB
+run or universal concurrency claim is inferred.
+
+Commercial Domain22509ff6:97 design+Domain cases0 skips, closure
+bccc2d96d2a61d10439db454d82587bfbd79fc96afcbcc9eb85da6170309aa91.
+Native correction-template51616df0:184 combined cases0 skips, closure
+50ab95e031107837627cec13354f76b22db4e8866502b7e226e4186ec70c33a8.
+Original production assert BanditB101 finding remains retained; explicit guards
+replace it without suppression. Root7d43 combined184 passes29.21s with targeted
+Ruff/mypy/Bandit0. Pure evidence is not native CR2 admission or financial posting.
+All original packets are outside managed worktrees under the recovery evidence
+root. Source-final gates, archive and hosted qualification remain pending for M6.

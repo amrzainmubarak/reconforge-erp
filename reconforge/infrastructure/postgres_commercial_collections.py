@@ -55,10 +55,12 @@ class PostgresCommercialCollectionsRepository:
         # parent before the operational owner locks the invoice: receipt
         # posting and original merchandise returns take this same order.
         identities = records(self.connection.execute(
-            "SELECT customer_id FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s",
+            "SELECT customer_id,status FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s",
             (self.tenant_id, invoice_id)))
         if not identities:
             raise FinancePostingError("operational_source_not_found", "Native source is absent or outside scope.")
+        if identities[0]["status"] not in {"Approved", "PartiallyPaid", "Paid"}:
+            raise FinancePostingError("operational_source_state_invalid", "A submitted/approved native source is required.")
         self.connection.execute("SELECT id FROM reconforge.ar_customers WHERE tenant_id=%s AND id=%s FOR UPDATE",
                                 (self.tenant_id, identities[0]["customer_id"]))
         source = self.owner._source("ARReceipt", invoice_id, final=True, settlement=True)

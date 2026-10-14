@@ -1,7 +1,7 @@
 schema_version: 2
 updated_at: "2026-10-14"
 phase: "Phase 4 — Global Capability Expansion"
-active_sprint: "Accepted M3/M4 source gates; M5 original-money current authority and private bilingual manual-recovery integration; performance deferred"
+active_sprint: "M5 exact64-job acceptance custody; M6 real collection parent-order correction and typed original partial-credit contracts; performance deferred"
 snapshot:
   evidence_base_commit: "d9f2e031b553dbf4ff94da40815605738c5644c7"
   policy_change_commit: "the commit containing this file"
@@ -44,7 +44,15 @@ tasks:
     priority: P1
     area: cumulative-original-customer-credit-restoration
     title: Qualify append-only partial original stock credits collections and refunds only after finite native AR and valuation companion contracts
-    status: planned
+    status: in_progress
+    exit_evidence: "Pure Source225 and correction-template516 qualified97/184 cases, explicit original tax/tracking/source-policy facts and isolated optimized refusal guards. Root7d43 combined184 passes. Native CR2, API, Studio and migration remain missing; see ADR0858 and M6 completion matrix."
+  - id: AMR-ENTERPRISE-M6-COLLECTION-LOCK-014
+    depends_on: [AMR-ENTERPRISE-M5-AUTHORITY-014]
+    priority: P0
+    area: customer-invoice-parent-order
+    title: Preserve real collection financial effects while acquiring the immutable customer parent before the source invoice
+    status: in_progress
+    exit_evidence: "Original8d951057 baseline1 LockNotAvailable failure, candidate00929829 new native1 pass and full27 collection/return cases0 skips. Eight actual lines DrCr70000, AR44000 and cash/allocation1000. Frozen final M6 hosted/native/restore gates remain required; no performance gain inferred."
   - id: AMR-ENTERPRISE-M1-001
     depends_on: [AMR-WAVE5-001]
     priority: P0

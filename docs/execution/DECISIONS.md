@@ -13630,3 +13630,18 @@ starts after admission must wait for that reader's transaction; a committed
 withdrawal first must deny cached and fresh replay. Tests must release their
 own command holder independently of a SHARE-blocked revoker. Preserve native
 timeouts, original ACKs, immutable financial rows and all failed originals.
+
+### 2026-10-14 — Customer parent order and source-pinned partial corrections
+
+Acquire the immutable approved invoice's customer before its operational source
+invoice in commercial collection admission. Keep the existing owner, effects,
+authority and timeout contracts. Observe actual blockers and use NOWAIT to
+reproduce the inversion without changing production deadlock settings.
+
+Adopt pure original partial-credit contracts and unapproved posting templates
+before admitting native effects. Required original tax/tracking facts cannot
+default missing data to a supported scope. Native CR2 must add source-owned
+correction evidence over existing cost layers/receipts and GL, preserve all full
+inverse constraints, and use one per-invoice AR residual and actual OLD/NEW
+allocation delta. A digest or typed account pin is not native authorization.
+See ADR0858; no147, native command or partial-stock UI is claimed yet.

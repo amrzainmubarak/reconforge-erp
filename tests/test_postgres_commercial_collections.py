@@ -15,6 +15,43 @@ from tests.test_postgres_stock_sales import create_stock_runtime
 _ = receipt_database
 
 
+@pytest.mark.parametrize("state", ["Draft", "Submitted"])
+def test_mutable_invoice_refused_before_waiting_on_its_customer(
+    receipt_database: tuple[str, str], state: str,
+) -> None:
+    from reconforge.application.receivables import ReceivableInvoiceLineInput
+    from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
+
+    runtime = create_stock_runtime(receipt_database, seed_stock=False)
+    with runtime.actor("maker") as (connection, _, actor):
+        ar = PostgresReceivablesRepository(connection, runtime.tenant)
+        invoice = ar.create_invoice(invoice_number="MUTABLE-PARENT", customer_code="CUSTOMER",
+            invoice_date="2026-10-09", currency_code="USD", tax_minor=0,
+            lines=[ReceivableInvoiceLineInput("Mutable source", "1", 1000, 1000)],
+            workspace="work", organization_code="ORG", entity_code="ENTITY", actor_label=actor.username)
+        if state == "Submitted":
+            invoice = ar.submit_invoice(invoice["id"], expected_version=invoice["row_version"], actor_label=actor.username)
+        assert invoice["status"] == state
+
+    def read_source() -> str:
+        with runtime.actor("maker") as (connection, _, _actor):
+            with pytest.raises(FinancePostingError) as refused:
+                PostgresCommercialCollectionsRepository(connection, runtime.tenant)._source(invoice["id"])
+            return refused.value.code
+
+    with ThreadPoolExecutor(max_workers=1) as workers, runtime.actor("maker") as (holder, _, _actor):
+        holder.execute("SELECT id FROM reconforge.ar_customers WHERE tenant_id=%s AND id=%s FOR UPDATE",
+                       (runtime.tenant, invoice["customer_id"]))
+        # Completion while the mutable source's customer is still held
+        # proves refusal did not wait on a nonimmutable parent identity.
+        assert workers.submit(read_source).result(timeout=6) == "operational_source_state_invalid"
+    with runtime.actor("maker") as (connection, _, _actor):
+        retained = PostgresReceivablesRepository(connection, runtime.tenant).get_invoice(invoice["id"])
+        assert retained == invoice
+        assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s",
+                                  (runtime.tenant,)).fetchone()["n"] == 0
+
+
 def test_collection_post_waits_on_customer_before_owning_return_invoice(
     receipt_database: tuple[str, str],
 ) -> None:

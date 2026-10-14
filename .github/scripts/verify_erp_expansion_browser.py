@@ -50,7 +50,7 @@ PUBLIC_ORIGINAL_JSON = re.compile(
     r"cashflow-(?:view|original|original-wire|browser-read-boundary)|"
     r"group-diagnostic-(?:view|original|original-wire|browser-read-boundary|source-capture-reads)|"
     r"project-source-(?:view|original|close-view|close-original|browser-boundary)|"
-    r"inventory-transfer-(?:browser-wire|IT1-S-[0-9a-f]{32}-evidence)|"
+    r"inventory-transfer-(?:browser-wire|ar-mobile-read-boundary|IT1-S-[0-9a-f]{32}-evidence)|"
     r"(?:fx-proof|ic-proof|fixed-asset-proof)-[a-z0-9-]+|ic-group-report|"
     r"intercompany-fx-(?:stage-[0-9]+|management-report|report-download|proof-ar-mobile)|"
     r"accrual-deferral-native-proof-en|manufacturing-supply-original-replay-custody|"

@@ -122,7 +122,7 @@ def outside_artifacts(output: Path) -> dict[str, bytes]:
 
 def test_actual_transfer_original_attachment_names_preserve_exact_bytes(tmp_path: Path) -> None:
     output, private, _, _ = inputs(tmp_path)
-    names = ("inventory-transfer-browser-wire.json",
+    names = ("inventory-transfer-browser-wire.json", "inventory-transfer-ar-mobile-read-boundary.json",
         "inventory-transfer-IT1-S-" + "A" * 32 + "-evidence.json",
         "inventory-transfer-IT1-S-" + "B" * 32 + "-evidence.json")
     originals = {}

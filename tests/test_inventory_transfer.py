@@ -72,3 +72,15 @@ def test_full_original_source_value_authority_exceeds_selected_portion() -> None
         exposed_minor({"remaining_value_minor": 0, "sources": []})
     with pytest.raises(FinancePostingError):
         exposed_minor({"remaining_value_minor": 1200, "sources": [{"exposed_amounts_minor": [36.0]}]})
+
+
+@pytest.mark.parametrize("position", range(3))
+def test_quantity_migration_refuses_changed_original_source_instead_of_rebaselining_its_pin(
+        monkeypatch: pytest.MonkeyPatch, position: int) -> None:
+    from reconforge.infrastructure import postgres_inventory_transfer_integration as integration
+
+    definitions = list(integration.ORIGINAL_FUNCTIONS)
+    definitions[position] = definitions[position].replace("$quantity$", "$quantity$\n-- changed original source", 1)
+    monkeypatch.setattr(integration, "ORIGINAL_FUNCTIONS", tuple(definitions))
+    with pytest.raises(RuntimeError, match="Approved original quantity source contract drift"):
+        integration._pinned_functions()

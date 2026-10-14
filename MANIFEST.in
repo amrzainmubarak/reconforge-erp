@@ -1522,6 +1522,7 @@ include tests/test_project_source_close_oracle.py
 include tests/test_browser_diagnostic_redaction.py
 include tests/test_browser_diagnostic_writer.py
 include tests/original_browser_download_verification.py
+include tests/api_route_registration.py
 include tests/test_original_browser_download_verification.py
 
 include tests/test_postgres_intercompany_fx_reporting_authority.py

@@ -371,7 +371,7 @@ def test_browser_process_raw_bytes_and_timeout_are_private_without_exception_val
     assert captured.out == "" and captured.err == ""
 
 
-@pytest.mark.parametrize("mode", ["passed", "browser_failed", "native_exception"])
+@pytest.mark.parametrize("mode", ["passed", "browser_failed", "native_exception", "publication_source_drift"])
 def test_mocked_common_runner_keeps_raw_report_private_stats_exact_and_public_summary_value_free(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], mode: str,
 ) -> None:
@@ -437,6 +437,13 @@ def test_mocked_common_runner_keeps_raw_report_private_stats_exact_and_public_su
         stdout = cid if "run" in argv or "inspect" in argv else "127.0.0.1:55555" if "port" in argv else ""
         return subprocess.CompletedProcess(argv, 0, stdout, "")
     monkeypatch.setattr(writer.subprocess, "run", process)
+    if mode == "publication_source_drift":
+        publish = writer.publish_browser_diagnostics
+        def drift(*args: Any, **kwargs: Any) -> dict[str, Any]:
+            result = publish(*args, **kwargs)
+            monkeypatch.setattr(writer, "source_digest", lambda *args: "deliberately-changed-source-digest")
+            return result
+        monkeypatch.setattr(writer, "publish_browser_diagnostics", drift)
     assert writer.main() == (0 if mode == "passed" else 1)
     report = json.loads((output / "report.json").read_bytes())
     assert report["browser_counts"] == stats and report["owned_container_removed"] is True
@@ -448,6 +455,8 @@ def test_mocked_common_runner_keeps_raw_report_private_stats_exact_and_public_su
     assert TOKEN in observed_report[0].read_text(encoding="utf8")
     if mode == "native_exception":
         assert TOKEN in (observed_report[0].parent / "runner-error.txt").read_text(encoding="utf8")
+    if mode == "publication_source_drift":
+        assert report["source_unchanged"] is False and report["status"] == "failed"
     captured = capsys.readouterr()
     assert all(secret not in captured.out + captured.err for secret in (TOKEN, CSRF, PASSWORD))
 
@@ -542,3 +551,22 @@ def test_workspace_writer_quarantines_partial_projections_when_original_changes_
     assert result["workspace_recovery_projections"] == []
     assert paths[target].read_bytes() == b'{"deliberate-original-drift":true}'
     assert_untouched(output, untouched)
+
+
+@pytest.mark.parametrize("staging", ["derived-workspace-public", "derived-public", "unchanged-public"])
+def test_writer_refuses_a_classified_staging_symlink_without_writing_outside_private_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, staging: str,
+) -> None:
+    """Exercise the same denial branch without requiring Windows link privilege."""
+    output, private, _, _ = workspace_inputs(tmp_path)
+    outside = tmp_path / "outside-owned-stage"
+    outside.mkdir()
+    linked = private / staging
+    linked.mkdir()
+    if staging == "unchanged-public":
+        (private / "playwright-artifacts/native-cycle/cashflow-original.json").write_bytes(b'{"minor":1}')
+    is_symlink = Path.is_symlink
+    monkeypatch.setattr(Path, "is_symlink", lambda path: path == linked or is_symlink(path))
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD])
+    assert result["status"] == "quarantined" and writer._public_diagnostic_paths(output) == []
+    assert list(outside.iterdir()) == [] and list(linked.iterdir()) == []

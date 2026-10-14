@@ -156,6 +156,19 @@ def _read_private_original(private: Path, path: Path, *, limit: int) -> bytes:
     return raw
 
 
+def _owned_private_staging_path(private: Path, relative: str) -> Path:
+    destination = private / relative
+    if (private.is_symlink() or destination.is_symlink() or destination.exists()
+            or not destination.resolve().is_relative_to(private.resolve())
+            or any(parent.is_symlink() for parent in destination.parents if parent.is_relative_to(private))):
+        raise ValueError("Private browser staging must be a fresh regular owned path.")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if (not destination.resolve().is_relative_to(private.resolve())
+            or any(parent.is_symlink() for parent in destination.parents if parent.is_relative_to(private))):
+        raise ValueError("Private browser staging changed during owned directory creation.")
+    return destination
+
+
 def _workspace_attachment_original(private: Path, source: Path) -> tuple[Path, bytes]:
     relative = source.relative_to(private).as_posix()
     matched = WORKSPACE_ATTACHMENT.fullmatch(relative)
@@ -259,8 +272,7 @@ def _stage_original_browser_artifacts(output: Path, private: Path, known_private
             if (destination.exists() or destination.is_symlink() or (output / "workspace-recovery").is_symlink()
                     or not destination.resolve().is_relative_to(output.resolve())):
                 raise ValueError("Workspace projection destination is not a fresh owned path.")
-            copy = private / "derived-workspace-public" / projected_name
-            copy.parent.mkdir(parents=True, exist_ok=True)
+            copy = _owned_private_staging_path(private, "derived-workspace-public/" + projected_name)
             with copy.open("xb") as target:
                 target.write(derived.content)
             identity = {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
@@ -298,8 +310,7 @@ def _stage_original_browser_artifacts(output: Path, private: Path, known_private
             if not destination.is_file() or _file_identity(destination) != identity:
                 raise ValueError("An existing original browser artifact cannot be overwritten.")
         else:
-            copy = private / "unchanged-public" / name
-            copy.parent.mkdir(parents=True, exist_ok=True)
+            copy = _owned_private_staging_path(private, "unchanged-public/" + name)
             with source.open("rb") as original, copy.open("xb") as target:
                 shutil.copyfileobj(original, target, length=65_536)
             if _file_identity(copy) != identity or _file_identity(source) != identity:
@@ -348,8 +359,7 @@ def publish_browser_diagnostics(output: Path, private: Path, known_private_value
                 "original_sha256": hashlib.sha256(raw).hexdigest() if len(raw) <= diagnostic_redaction.MAX_DIAGNOSTIC_BYTES else None})
             derived = diagnostic_redaction.derive_browser_diagnostic(name, raw,
                 sanitizer_source_sha256=helper_sha, known_private_values=known_private_values + private_paths)
-            destination = private / "derived-public" / name
-            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination = _owned_private_staging_path(private, "derived-public/" + name)
             with destination.open("xb") as stream:
                 stream.write(derived.content)
             staged.append((destination, output / name))
@@ -441,6 +451,15 @@ def require_workspace_recovery_acceptance(private: Path, *, known_private_values
     """Bind both private originals to actual passed, unretried Playwright cases."""
     reporter, reporter_raw = _playwright_original(private, known_private_values)
     require_browser_acceptance(reporter.get("stats"), required_cases=3)
+    config = reporter.get("config")
+    if type(config) is not dict or type(config.get("projects")) is not list or len(config["projects"]) != 1:
+        raise ValueError("Required browser configuration must own one exact native project.")
+    project = config["projects"][0]
+    if (type(project) is not dict or project.get("id") != "customer-returns-chromium"
+            or project.get("name") != "customer-returns-chromium" or type(project.get("retries")) is not int
+            or project["retries"] != 0 or type(project.get("repeatEach")) is not int or project["repeatEach"] != 1
+            or type(config.get("workers")) is not int or config["workers"] != 1):
+        raise ValueError("Required browser configuration differs from its unretried single-worker native project.")
     if reporter.get("errors") != []:
         raise ValueError("Required browser reporter contains global errors.")
     _private_workspace_attachment_paths(reporter, private)
@@ -450,13 +469,14 @@ def require_workspace_recovery_acceptance(private: Path, *, known_private_values
         if type(suites) is not list or len(suites) > 20 or depth > 20:
             raise ValueError("Required browser suites exceed their finite case contract.")
         for suite in suites:
-            if type(suite) is not dict or type(suite.get("specs", [])) is not list:
+            if (type(suite) is not dict or type(suite.get("specs", [])) is not list
+                    or type(suite.get("file")) is not str or suite["file"] not in WORKSPACE_CASE_TITLES):
                 raise ValueError("Required browser suite metadata is malformed.")
             for spec in suite.get("specs", []):
                 if type(spec) is not dict or type(spec.get("file")) is not str or type(spec.get("title")) is not str:
                     raise ValueError("Required browser case metadata is malformed.")
                 key = (spec["file"], spec["title"])
-                if (key in cases or key[0] not in WORKSPACE_CASE_TITLES
+                if (key in cases or key[0] != suite["file"] or key[0] not in WORKSPACE_CASE_TITLES
                         or key[1] not in WORKSPACE_CASE_TITLES[key[0]] or spec.get("ok") is not True
                         or type(spec.get("tests")) is not list or len(spec["tests"]) != 1):
                     raise ValueError("Required browser case identity or success differs from its contract.")
@@ -1158,6 +1178,21 @@ def main() -> int:
         if publication["status"] != "published":
             report["status"] = "failed"
             report["error"] = "Browser diagnostic publication refused; private originals are quarantined."
+        # Publication is part of the source-bound gate. Preserve earlier pins
+        # and refuse drift that occurs after restore while diagnostics publish.
+        report["source_commit_after_publication"] = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=runtime_root, text=True).strip()  # nosec B603 B607
+        report["tracked_status_after_publication"] = tracked_status(runtime_root)
+        report["source_unchanged"] = report.get("source_unchanged", True) is True and (
+            source_digest(runtime_root) == report["source_sha256"]
+            and report["source_commit_after_publication"] == report["source_commit"])
+        report["built_web_unchanged"] = report.get("built_web_unchanged", True) is True and (
+            built_web_digest(args.web_root.resolve()) == report["built_web_sha256"])
+        report["tracked_clean_after_publication"] = not report["tracked_status_after_publication"]
+        if not report["source_unchanged"] or not report["built_web_unchanged"] or not report["tracked_clean_after_publication"]:
+            report["status"] = "failed"
+            report["error"] = "Frozen source or built Studio changed before completed publication."
+        report["wall_seconds"] = round(time.monotonic() - started, 3)
         for filename in ("browser.log", "playwright.json", "https-runtime.log", "migration.log"):
             path = output / filename
             if path.exists():

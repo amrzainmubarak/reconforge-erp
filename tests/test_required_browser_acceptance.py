@@ -7,6 +7,8 @@ from typing import Any
 
 import pytest
 
+from tests.test_customer_returns_financial_oracle import rows, write_capture
+
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location(
     "required_erp_browser_runner", ROOT / ".github/scripts/verify_erp_expansion_browser.py",
@@ -14,6 +16,34 @@ SPEC = importlib.util.spec_from_file_location(
 assert SPEC is not None and SPEC.loader is not None
 RUNNER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(RUNNER)
+
+
+def test_required_financial_row_reader_executes_both_isolated_modes_over_complete_private_cohort(tmp_path: Path) -> None:
+    """Synthetic reader orchestration; this test executes no database or browser."""
+    private = tmp_path / "private"
+    originals = private / "playwright-artifacts/native-customer-return-originals"
+    originals.mkdir(parents=True)
+    for capture in range(1, 4):
+        write_capture(originals, rows(), capture)
+    before = {path.name: path.read_bytes() for path in originals.iterdir()}
+    proof = RUNNER.verify_customer_return_original_rows(private, required_captures=3)
+    assert proof["status"] == "passed" and proof["isolated_actual_executions"] == 2
+    assert proof["captures"] == 3 and proof["tables_per_capture"] == 13
+    assert proof["optimized_result_bytes_equal"] is True and proof["raw_financial_originals_published"] is False
+    assert before == {path.name: path.read_bytes() for path in originals.iterdir()}
+    assert (private / "independent-customer-return-row-verification/I.json").read_bytes() == (
+        private / "independent-customer-return-row-verification/IO.json").read_bytes()
+
+
+def test_required_financial_row_reader_refuses_incomplete_restore_cohort(tmp_path: Path) -> None:
+    private = tmp_path / "private"
+    originals = private / "playwright-artifacts/native-customer-return-originals"
+    originals.mkdir(parents=True)
+    write_capture(originals, rows())
+    with pytest.raises(ValueError, match="complete required native cohort"):
+        RUNNER.verify_customer_return_original_rows(private, required_captures=3)
+    assert (private / "independent-customer-return-row-verification/I.json").is_file()
+    assert (private / "independent-customer-return-row-verification/IO.json").is_file()
 
 
 def test_required_wire_cycle_accepts_one_complete_nonflaky_execution() -> None:

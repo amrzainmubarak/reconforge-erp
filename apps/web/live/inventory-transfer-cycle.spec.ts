@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page, type Request } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { createHash } from "node:crypto";
 import { writeFile } from "node:fs/promises";
@@ -67,6 +67,66 @@ async function phase(page: Page, id: string, operation: "review" | "post", lost 
   return command(page, form, operation === "review" ? "Review and reserve original stock" : "Post reviewed transfer", `${root}/transfers/${id}/${operation}`, lost);
 }
 
+interface PostedSubject {
+  id: string; number: string; source_digest: string; native_movement_id: string;
+  native_response: { head: { id: string; status: string }; lines: Array<{ id: string; movement_id: string }> };
+}
+async function arabicMobileReads(page: Page, artifacts: string, subjects: PostedSubject[], originals: Array<{ subject: string; bytes: number; sha256: string }>) {
+  const mutations: string[] = [], reads: Array<{ subject: string; source_digest: string; native_movement_id: string; native_line_id: string; bytes: number; sha256: string }> = [];
+  const watch = (request: Request) => { if (new URL(request.url()).pathname.startsWith("/api/v1/") && !["GET", "HEAD", "OPTIONS"].includes(request.method())) mutations.push(`${request.method()} ${new URL(request.url()).pathname}`); };
+  page.on("request", watch);
+  try {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole("button", { name: "Switch language", exact: true }).click();
+    await expect(page.locator("html")).toHaveAttribute("lang", "ar"); await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect(page.getByRole("heading", { name: "تحويل بين المستودعات", exact: true })).toBeVisible();
+    await page.getByRole("navigation", { name: "تنقل الهاتف", exact: true }).getByRole("button", { name: "القائمة", exact: true }).click();
+    const navigation = page.getByRole("navigation", { name: "التنقل الرئيسي", exact: true }); await expect(navigation).toBeVisible();
+    await navigation.getByRole("button", { name: "تحويل بين المستودعات", exact: true }).click();
+    const main = page.locator("main#main-content"); await expect(main).toHaveAttribute("dir", "rtl");
+    const scope = main.getByRole("form", { name: "تطبيق النطاق", exact: true });
+    for (const [label, value] of Object.entries({ "معرّف مساحة العمل": "work", "معرّف المنظمة": "org", "معرّف الكيان القانوني": "entity" })) {
+      const input = scope.getByLabel(label, { exact: true }); await expect(input).toBeEnabled(); await input.fill(value);
+    }
+    const listing = page.waitForResponse(reply => reply.url().endsWith(`${root}/transfers`) && reply.request().method() === "GET");
+    await scope.getByRole("button", { name: "تطبيق النطاق", exact: true }).click();
+    const response = await listing; expect(response.status()).toBe(200); const current = await response.json();
+    expect(current.transfers.map((row: { id: string }) => row.id).sort()).toEqual(subjects.map(row => row.id).sort());
+    const select = main.getByRole("combobox", { name: "التحويل المحفوظ", exact: true }); await expect(select).toBeEnabled();
+    for (const subject of subjects) {
+      expect(current.transfers.find((row: { id: string }) => row.id === subject.id)).toEqual(subject);
+      await expect(select.locator(`option[value="${subject.id}"]`)).toHaveCount(1); await select.selectOption(subject.id); await expect(select).toHaveValue(subject.id);
+      await expect(main.getByRole("heading", { name: `${subject.number} · مرحّل`, exact: true })).toBeVisible();
+      await expect(main.getByText(subject.native_movement_id, { exact: true })).toBeVisible();
+      const disclosure = main.locator("details").filter({ has: page.getByText("أدلة المصدر الأصلي المحفوظة", { exact: true }) });
+      await disclosure.locator("summary").click();
+      const evidence = disclosure.getByLabel("أدلة المصدر الأصلي المحفوظة", { exact: true }); await expect(evidence).toBeVisible();
+      const rendered = JSON.parse((await evidence.textContent())!); expect(rendered).toEqual(subject);
+      expect(rendered.native_response.head.id).toBe(subject.native_movement_id); expect(rendered.native_response.head.status).toBe("Posted");
+      expect(rendered.native_response.lines).toHaveLength(1); expect(rendered.native_response.lines[0].movement_id).toBe(subject.native_movement_id);
+      expect(rendered.native_response.lines[0].id).toBe(subject.native_response.lines[0].id);
+      const original = originals.find(row => row.subject === subject.id)!; expect(original).toBeDefined();
+      const wire = await page.request.get(`${base}${root}/transfers/${subject.id}/evidence`, { headers: { "X-ReconForge-Tenant": tenant!, "X-ReconForge-Workspace": "work", "X-ReconForge-Organization": "org", "X-ReconForge-Legal-Entity": "entity" } });
+      expect(wire.status()).toBe(200); const raw = await wire.body(), sha256 = createHash("sha256").update(raw).digest("hex");
+      expect(raw.length).toBe(original.bytes); expect(sha256).toBe(original.sha256); expect(JSON.parse(raw.toString("utf8")).source).toEqual(subject);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      const accessibility = await new AxeBuilder({ page }).include("#main-content").analyze();
+      expect(accessibility.violations.filter(row => ["critical", "serious"].includes(row.impact ?? ""))).toEqual([]);
+      reads.push({ subject: subject.id, source_digest: subject.source_digest, native_movement_id: subject.native_movement_id, native_line_id: subject.native_response.lines[0].id, bytes: raw.length, sha256 });
+      await disclosure.locator("summary").click();
+    }
+    expect(mutations).toEqual([]);
+    await page.screenshot({ path: join(artifacts, "inventory-transfer-ar-mobile.png"), fullPage: true });
+    await page.getByRole("button", { name: "تبديل اللغة", exact: true }).click();
+    await expect(page.locator("html")).toHaveAttribute("lang", "en"); await expect(main).toHaveAttribute("dir", "ltr");
+    await expect(page.getByRole("heading", { name: "Warehouse transfer", exact: true })).toBeVisible();
+    await page.setViewportSize({ width: 1440, height: 900 }); expect(mutations).toEqual([]);
+    await writeFile(join(artifacts, "inventory-transfer-ar-mobile-read-boundary.json"), JSON.stringify({ schema_version: "inventory-transfer-ar-mobile-read-boundary-v1",
+      locale: "ar", direction: "rtl", viewport: { width: 390, height: 844 }, current_scope: source.scope, reads,
+      browser_financial_writes: false, api_mutations: mutations, horizontal_overflow: false, serious_critical_accessibility_violations: 0, returned_locale: "en" }, null, 2) + "\n", { flag: "wx" });
+  } finally { page.off("request", watch); }
+}
+
 test("actual same-entity two-warehouse transfer and independent original inverse preserve FIFO GL and retained replies", async ({ page }) => {
   test.setTimeout(240_000);
   const artifacts = process.env.RECONFORGE_ERP_BROWSER_ARTIFACTS;
@@ -101,4 +161,5 @@ test("actual same-entity two-warehouse transfer and independent original inverse
     forward_subject: posted.source.id, inverse_subject: compensated.source.id, browser_inventory_writes: true, transfer_new_gl_effects: 0, browser_only_fixture_documents_created: true }, null, 2) + "\n", { flag: "wx" });
   expect(losses).toHaveLength(4); expect(errors).toEqual([]);
   const accessibility = await new AxeBuilder({ page }).include("main").analyze(); expect(accessibility.violations.filter(row => ["critical", "serious"].includes(row.impact ?? ""))).toEqual([]);
+  await arabicMobileReads(page, artifacts!, [posted.source, compensated.source], originals); expect(errors).toEqual([]);
 });

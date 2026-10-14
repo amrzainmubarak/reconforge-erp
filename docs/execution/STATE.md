@@ -12731,3 +12731,16 @@ arithmetic and final Root/hosted gates remain pending on this source. The initia
 No native CR2 command, partial-stock financial effect, migration147, API or Studio
 workflow is claimed. ADR0859 and the M7 matrix retain the next shared dependencies;
 performance is deferred and all-country statutory packs remain0.
+
+M6 frozenf0 hosted/source acceptance closes atd54c0b57: actual CI64/64/manual
+Security5/5,25 original reports/27 first-attempt cases,333 tables/3 tamper refusals
+and39 private original financial inputs. Root independently rehashed582 originals
+and separately reviewed/published PR138 exact title/body once, then fresh GET
+verified Draft/head/base/body; publication489ce33f. No source/main/merge changed.
+
+M7 Source+oracle integratione0 passes263 pure cases and archive03f4 unchanged,
+as component evidence. The standalone verifier's layer-precision omission was
+found independently: actual layers remain0, but synthetic coherent layer1/missing
+rows passed36cc. Narrowbb806 checks strict integer layer precision0 with67 pure
+cases and new actual unchanged-original isolated readers. Root's corrected final
+source, genuine unposted proposal capture and hosted M7 gates remain required.

@@ -23680,3 +23680,17 @@ Production fileda47717b and test3fb74b49 are independently pinned. The original
 62d1-pass/5-failure cohort, missing old fixture files and least-privilege catalog
 setup error remain separately retained; no skips or grants bypass them.
 Root integrated source, independent row oracle and mandatory CI remain pending.
+
+M6 final closure d54c0b57c19868771159f1c9dd3707a92849cc4bf22778526695bdb84a6c5bf2
+and582-file manifest5d6371612921abdede67ac938261330e098debbd1fb407eb03a8ef56b9345b03
+were rehashed independently by Root. Actual64/64 CI,7200 Python passes perversion,
+1924 mandatory summed selections and manual5/5 are source-bound. PR138 single
+PATCH HTTP200 and fresh GET verified exact reviewed8207B bodyfbfb08fe; separate
+publicationclosure489ce33ff4901a703a04ace58ba2efde47db73879eb10f4aaaa6a8f70f85b7c9.
+
+Sourcee0 component263/0 failures/errors/skips and archive03f4aea9ef1152dd714febab91464d0b7b613fe0829062a15e00bede34fc1f6c
+remain retained. Narrow standalone row-verifier correctionbb806 has67 pure cases,
+actual -I/-I -O target/full unchanged input custody and byte-equal mode proofs;
+closure3d96c2bdb695b8a4d41837fc9bebc4156f533db08defa8f6833b1a145a06a43c.
+The synthetic earlier-reader layer1/missing counterexample is retained separately;
+no actual native source/input was modified, and the mapper production is unchanged.

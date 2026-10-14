@@ -5,6 +5,12 @@ claim_boundary: >-
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
 current_source_migration_head: "0146_pg_inventory_transfer"
+native_sourcing_partition:
+  claim_boundary: Complete existing native sourcing files have independent required CI owners; this mapping adds no service or parity claim.
+  complete_file_owners:
+    tests/test_postgres_procurement_sourcing.py: procurement-sourcing
+    tests/test_postgres_procurement_sourcing_api.py: procurement-sourcing-api
+    tests/test_postgres_manufacturing_sourcing.py: manufacturing-sourcing
 native_source_extensions:
   claim_boundary: Separate native owner kernels compose existing services; these entries do not retroactively increase historical application-service parity counts.
   ci_shard: erp-expansion

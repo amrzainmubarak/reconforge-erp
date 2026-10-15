@@ -16,6 +16,7 @@ from reconforge.infrastructure.postgres_customer_partial_returns_schema import S
 from reconforge.infrastructure.postgres_customer_returns_schema import _FORWARD_SQL as RETURN_EXTENSION
 from reconforge.infrastructure.postgres_finance_posting import records
 from reconforge.infrastructure.postgres_inventory_valuation import POSTGRES_INVENTORY_VALUATION_SCHEMA_SQL
+from reconforge.infrastructure.postgres_receipt_fifo_chronology import UPGRADE_SQL as RECEIPT_FIFO_SQL
 from reconforge.infrastructure.postgres_stock_sales_schema import POSTGRES_STOCK_SALES_SCHEMA_SQL
 
 
@@ -62,7 +63,10 @@ ORIGINAL_FUNCTIONS = {
     "stock_sales_public": _original("stock_sales_public", POSTGRES_STOCK_SALES_SCHEMA_SQL),
     "inventory_valuation_guard": _original("inventory_valuation_guard", POSTGRES_INVENTORY_VALUATION_SCHEMA_SQL),
     "customer_partial_return_protect": _original("customer_partial_return_protect", STORAGE_SQL, delimiter="$cr2$"),
+    "guard_inventory_receipt_link": _original("guard_inventory_receipt_link", RECEIPT_FIFO_SQL, delimiter="$irp$"),
 }
+if hashlib.sha256(ORIGINAL_FUNCTIONS["guard_inventory_receipt_link"].split("$irp$")[1].encode()).hexdigest() != "28714e6437896868dac96f5f59e2bc303dd7834bf09695d73b3dba39b7fc208c":
+    raise ValueError("The actual retained native receipt chronology anchor differs.")
 
 ADMISSION_SQL = r"""
 CREATE FUNCTION reconforge.customer_partial_return_zero_stock_cost(t TEXT,w TEXT,o TEXT,e TEXT,i TEXT,allocations JSONB)
@@ -328,8 +332,26 @@ def _valuation_guard() -> str:
 """)
 
 
+def _receipt_guard() -> str:
+    """Patch only chronology predicates in the exact retained native guard."""
+    value = ORIGINAL_FUNCTIONS["guard_inventory_receipt_link"]
+    value = _replace(value,
+        "  AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_reversals prior_reverse WHERE prior_reverse.tenant_id=m.tenant_id AND prior_reverse.reversal_movement_id=m.id AND prior_reverse.status='Approved'))",
+        "  AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_reversals prior_reverse WHERE prior_reverse.tenant_id=m.tenant_id AND prior_reverse.reversal_movement_id=m.id AND prior_reverse.status='Approved')\n  AND NOT reconforge.customer_partial_return_valued_movement(m.tenant_id,m.id))")
+    return _replace(value, """ OR EXISTS(SELECT 1 FROM reconforge.inventory_movements m JOIN reconforge.inventory_valuation_documents v ON v.tenant_id=m.tenant_id AND v.movement_id=m.id
+  WHERE m.tenant_id=p.tenant_id AND m.workspace_id=p.workspace_id AND m.organization_id=p.organization_id AND m.legal_entity_id=p.legal_entity_id
+  AND EXISTS(SELECT 1 FROM reconforge.inventory_movement_lines l WHERE l.tenant_id=m.tenant_id AND l.movement_id=m.id AND l.item_id=p.item_id) AND v.status='Approved' AND (m.movement_date,m.movement_number)>(p.posting_date,p.movement_number)) THEN""",
+        """ OR EXISTS(SELECT 1 FROM reconforge.inventory_movements m
+  WHERE m.tenant_id=p.tenant_id AND m.workspace_id=p.workspace_id AND m.organization_id=p.organization_id AND m.legal_entity_id=p.legal_entity_id
+  AND EXISTS(SELECT 1 FROM reconforge.inventory_movement_lines l WHERE l.tenant_id=m.tenant_id AND l.movement_id=m.id AND l.item_id=p.item_id)
+  AND(EXISTS(SELECT 1 FROM reconforge.inventory_valuation_documents v WHERE v.tenant_id=m.tenant_id AND v.movement_id=m.id AND v.status='Approved')
+   OR(m.status='Posted' AND reconforge.customer_partial_return_valued_movement(m.tenant_id,m.id)))
+  AND(m.movement_date,m.movement_number)>(p.posting_date,p.movement_number)) THEN""")
+
+
 UPGRADED_FUNCTIONS = {
     "stock_sales_close": _dispatch(), "stock_sales_public": _public(), "inventory_valuation_guard": _valuation_guard(),
+    "guard_inventory_receipt_link": _receipt_guard(),
     "customer_partial_return_protect": _replace(ORIGINAL_FUNCTIONS["customer_partial_return_protect"],
         "reconforge.customer_partial_return_native_source(NEW.tenant_id,NEW.source_order_id)",
         "reconforge.customer_partial_return_source_dispatch(NEW.tenant_id,NEW.source_order_id)").replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1),
@@ -436,9 +458,13 @@ END $cr148zs$;
 """
 
 
-def _preflight(*, upgraded_only: bool = False) -> str:
+def _preflight(*, upgraded_only: bool = False, only: str | None = None) -> str:
+    if only is not None and only not in ORIGINAL_FUNCTIONS:
+        raise ValueError("The finite native preflight function is unknown.")
     clauses = []
     for name, original in ORIGINAL_FUNCTIONS.items():
+        if only is not None and only != name:
+            continue
         choices = [UPGRADED_FUNCTIONS[name]] if upgraded_only else [original, UPGRADED_FUNCTIONS[name]]
         hashes_list = []
         for value in choices:
@@ -528,3 +554,18 @@ def verify_zero_stock_functions(connection: Any) -> None:
         raise ValueError("The complete versioned zero-stock native contract is required.")
     connection.execute(_preflight(upgraded_only=True))
     connection.execute(_helpers_preflight())
+
+
+def install_customer_partial_return_receipt_chronology(connection: Any) -> None:
+    """Reapply only the pinned148 predicate after the legacy receipt installer.
+
+    Root installer orchestration calls this after its retained147 installers.
+    An absent148 marker preserves the original receipt installation exactly.
+    Unknown original metadata or bodies fail closed before replacement; CREATE
+    OR REPLACE preserves the existing OID, owner, ACL and trigger bindings.
+    """
+    marker = records(connection.execute("SELECT to_regprocedure('reconforge.customer_partial_return_rounding_version()') present"))[0]["present"]
+    if marker is None:
+        return
+    connection.execute(_preflight(only="guard_inventory_receipt_link"))
+    connection.execute(UPGRADED_FUNCTIONS["guard_inventory_receipt_link"])

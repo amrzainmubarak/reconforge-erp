@@ -121,6 +121,27 @@ def test_final_foreign_refund_cannot_leave_hidden_functional_liability() -> None
     assert monetary.monetary_invoice_balance(value, total_minor=1000, allocated_minor=800) == value
 
 
+@pytest.mark.parametrize("hidden_release", [False, True])
+def test_no_functional_entitlement_or_release_without_its_foreign_prefix(hidden_release: bool) -> None:
+    value = balance()
+    value.update(transaction_refunded_minor="0", functional_refund_released_minor="1",
+                 transaction_refund_due_minor="200", functional_refund_due_minor="299")
+    if not hidden_release:
+        # Independent C counterexample: no foreign entitlement/refund, yet a
+        # fabricated exhausted L liability that a final-due-only check misses.
+        value.update(transaction_collected_minor="600", transaction_refund_entitlement_minor="0",
+                     transaction_refund_due_minor="0", functional_refund_entitlement_minor="1",
+                     functional_refund_due_minor="0")
+    with pytest.raises(PlatformError, match="carrying conservation"):
+        monetary.monetary_invoice_balance(value, total_minor=1000, allocated_minor=800 if hidden_release else 600)
+
+
+def test_positive_foreign_entitlement_and_refund_may_have_zero_functional_value() -> None:
+    value = balance()
+    value.update(functional_refund_entitlement_minor="0", functional_refund_released_minor="0", functional_refund_due_minor="0")
+    assert monetary.monetary_invoice_balance(value, total_minor=1000, allocated_minor=800) == value
+
+
 @pytest.mark.parametrize("extra", [True, False])
 def test_balance_has_no_extension_or_implicit_integer_coercion(extra: bool) -> None:
     value = balance()

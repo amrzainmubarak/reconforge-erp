@@ -136,6 +136,8 @@ def monetary_invoice_balance(value: object, *, total_minor: int, allocated_minor
             or money["transaction_refund_entitlement_minor"] != entitlement
             or money["transaction_refund_due_minor"] != entitlement - money["transaction_refunded_minor"]
             or money["functional_refund_due_minor"] != money["functional_refund_entitlement_minor"] - money["functional_refund_released_minor"]
+            or (entitlement == 0 and money["functional_refund_entitlement_minor"] != 0)
+            or (money["transaction_refunded_minor"] == 0 and money["functional_refund_released_minor"] != 0)
             or (money["transaction_outstanding_minor"] == 0 and money["functional_outstanding_minor"] != 0)
             or (money["transaction_refund_due_minor"] == 0 and money["functional_refund_due_minor"] != 0)):
         raise PlatformError("Original monetary invoice balance disagrees with actual AR authority or carrying conservation.")

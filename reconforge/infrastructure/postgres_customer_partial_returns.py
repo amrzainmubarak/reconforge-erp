@@ -193,10 +193,21 @@ class PostgresCustomerPartialReturnsRepository:
     def _actor(self, actor: PostingActor, operation: str, context: Mapping[str, Any]) -> None:
         self.legacy._authority_locks(actor, operation, context)
         governed = customer_return_money_context({**context, "operation": "Return"}) if "source_snapshot" in context else dict(context)
+        zero_options = {"allow_zero_amount": True} if (
+            self.protocol_version == 2 and context.get("schema_version") == "customer-partial-return-v2"
+            and context.get("allocation_policy") == ALLOCATION_POLICY
+            and context.get("operation") in {"Return", "ReverseReturn"}
+            and type(context.get("quantity_scaled")) is int and context["quantity_scaled"] > 0
+            and all(type(context.get(key)) is int and context[key] == 0
+                    for key in ("amount_minor", "credit_minor", "cogs_restored_minor"))
+            # prepare authorizes the validated contract before materializing its
+            # empty entries. Persisted lifecycle commands retain that exact [] .
+            and context.get("entries", []) == []
+        ) else {}
         for permission in sorted(READ):
-            self.owner._actor(actor, permission, governed, mutation=operation != "read")
+            self.owner._actor(actor, permission, governed, mutation=operation != "read", **zero_options)
         for permission in sorted(PERMISSIONS.get(operation, READ) - READ):
-            self.owner._actor(actor, permission, context, mutation=operation != "read")
+            self.owner._actor(actor, permission, context, mutation=operation != "read", **zero_options)
         if operation != "read":
             self.connection.execute("SELECT set_config('app.customer_partial_return_actor_id',%s,true)", (actor.user_id,))
 

@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { execFileSync } from "node:child_process";
 import type { PartialReturnPlan } from "../src/customer-partial-returns-data";
 
 const base = process.env.RECONFORGE_ERP_LIVE_URL, tenant = process.env.RECONFORGE_ERP_TENANT;
@@ -52,6 +53,9 @@ async function command(page: Page, path: string, trigger: () => Promise<void>, l
     finally { finish(); }
   }, { times: 1 });
   await trigger(); await done; expect(status).toBe(200); expect(Boolean(committed)).toBe(true);
+  // Retain the actual committed state before the human retry; post() observes
+  // the retained ACK again and must deduplicate this same native history row.
+  if (path.endsWith("/post")) captureCommitted(committed!);
   const retry = page.getByRole("button", { name: "Retry retained partial command", exact: true }); await expect(retry).toBeVisible();
   for (const name of ["Whole original tranche", "Partial return cycle", "Apply scope", "Sign out"]) await expect(page.getByRole("button", { name, exact: true })).toBeDisabled();
   const response = page.waitForResponse(reply => reply.url().endsWith(path) && reply.request().method() === "POST");
@@ -80,7 +84,18 @@ async function phase(page: Page, id: string, action: "review" | "post" | "cancel
   const result = await command(page, `${root}/plans/${id}/${action}`, () => form.getByRole("button", { name, exact: true }).click(), lose);
   expect(result.phase).toBe(action === "review" ? 1 : action === "post" ? 2 : 3); return result;
 }
-async function post(page: Page, plan: PartialReturnPlan, lose = false) { await phase(page, plan.id, "review"); return phase(page, plan.id, "post", lose); }
+function captureCommitted(plan: PartialReturnPlan): void {
+  const python = process.env.RECONFORGE_PARTIAL_PYTHON, runtime = process.env.RECONFORGE_PARTIAL_RUNTIME_ROOT;
+  expect(Boolean(python && runtime && process.env.RECONFORGE_PARTIAL_CUSTODY_ROOT), "Owned private native committed-row observer is required.").toBe(true);
+  execFileSync(python!, ["-m", "tests.customer_partial_returns_browser", "capture"], { cwd: runtime!,
+    env: { ...process.env, RECONFORGE_PARTIAL_POSTED_PLAN: plan.id, RECONFORGE_PARTIAL_POSTED_DIGEST: plan.plan_digest },
+    stdio: "pipe", maxBuffer: 16_384, timeout: 30_000 });
+}
+async function post(page: Page, plan: PartialReturnPlan, lose = false) {
+  await phase(page, plan.id, "review"); const posted = await phase(page, plan.id, "post", lose);
+  // Observe committed SQL through a separate normal-role lease, never a proof API.
+  captureCommitted(posted); return posted;
+}
 async function prepareFromPosted(page: Page, parent: PartialReturnPlan, operation: "refund" | "reverse", amount?: string) {
   await login(page, "browser-maker"); await enter(page, parent.id);
   const name = operation === "refund" ? "Prepare governed refund" : "Prepare governed reversal";

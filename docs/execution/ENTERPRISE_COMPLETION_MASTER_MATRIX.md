@@ -91,7 +91,22 @@ or restitution→zero-cost resale→new-return integration. The separate stdlib 
 Dr=Cr81000; isolated normal/optimized proof bytes agree, closure238aa11f.
 M7.6 remains INCOMPLETE. The recovered Root checkout
 matches all4355 frozen f205 tracked file hashes after an unexplained loss of
-active worktree directories; agent uncommitted-source recovery remains open.
+active worktree directories. Agent drafts are now reconstructed from owned
+recorded writes and durably checkpointed; they lack independent pre-loss byte
+comparison, and component checks cannot qualify unexecuted business cycles.
+
+The retained0099 AR compatibility repair passes its unchanged populated native
+restore at8e1dcfcd:1 PASS/0 failure/error/skip12.719s,11 matching table digests,
+15 legacy SQL denials and3 forged policy refusals; independent closurea4eb1e72.
+New zero-stock integration remains unaccepted:3947 SQL compilation fails;
+ac7's empty147↔148 full catalog/data/OID roundtrip passes1/1 in47.578s, but its
+business2 fail at the shared trigger;4236 business2 expose an alias collision
+and backdated fixture; c255 business2 expose nullable claim/entry handling and
+receipt chronology after source-owned CR2 physical corrections. Each negative
+retains unchanged source, cleanup and zero skips. Fixes require affected native
+reruns, exact zero-source SQL controls, all four actual new HTTPS/restore cases
+and final cohesive CI. Neither synthetic reader controls nor a compiled migration
+close operational M7.6. Independent proof of zero-cost resale remains pending.
 
 Each row records existence, completeness, end-to-end operation, integration,
 independent financial/operational proof, security/concurrency/restore proof,

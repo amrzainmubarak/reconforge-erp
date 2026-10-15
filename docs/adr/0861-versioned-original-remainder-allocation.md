@@ -41,6 +41,22 @@ sequence, policy and signed before-value witnesses. Existing cost-v2 arithmetic
 and keysets remain strict. Migration replay verifies exact bodies/catalog
 metadata, and destructive downgrade refuses retained v2 evidence before mutation.
 
+Restituted inventory can have positive physical quantity and zero residual cost.
+Its subsequent native Stock issue uses an explicit restituted-cost policy and
+captured IT1-v3 originals. The zero-total issue keeps three humans, physical
+movement and approved valuation; it has no COGS entry or effect. A mixed issue
+keeps its real positive total COGS. Only an explicit factual original-v2 source
+may carry absent original COGS, bound to actual immutable zero consumptions and
+the earlier restitution. Legacy original-v1 facts and fingerprints stay strict.
+No zero-cost capability is accepted before real resale, return, SQL, HTTPS and
+populated restore gates qualify the same integrated source.
+
+An exact closed CR2 physical correction is valued by its original restitution
+and financial owner even when it has no generic valuation document. Receipt
+chronology must validate that native phase2/history/source/movement ownership,
+preserve refusal of unknown unvalued movements, and count later closed corrections
+as backdate blockers. A movement namespace or Generated flag alone is insufficient.
+
 ## Acceptance
 
 Independently verify FIFO1001/3 partitions111→334,334,333 and21→667,334;

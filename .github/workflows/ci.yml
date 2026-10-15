@@ -275,7 +275,7 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets, procurement-commitments, customer-returns, customer-partial-returns, customer-partial-return-remainder-ordinary, customer-partial-return-remainder-zero, customer-partial-return-remainder-refund, supplier-returns, operational-fx-tax, manufacturing-execution, manufacturing-execution-v2, intercompany-operations, intercompany-fx, intercompany-source-cashflow, intercompany-group-diagnostic, people-project-payroll, procurement-sourcing, accrual-deferral, project-time-billing, project-source-reconciliation, manufacturing-supply-plan, inventory-transfer]
+        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets, procurement-commitments, customer-returns, customer-partial-returns, customer-partial-return-remainder-ordinary, customer-partial-return-remainder-zero, customer-partial-return-remainder-refund, customer-partial-return-restituted, supplier-returns, operational-fx-tax, manufacturing-execution, manufacturing-execution-v2, intercompany-operations, intercompany-fx, intercompany-source-cashflow, intercompany-group-diagnostic, people-project-payroll, procurement-sourcing, accrual-deferral, project-time-billing, project-source-reconciliation, manufacturing-supply-plan, inventory-transfer]
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5

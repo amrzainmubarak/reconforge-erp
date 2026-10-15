@@ -1,5 +1,32 @@
 # ReconForge Execution Evidence Log
 
+## M7 retained AR restore and zero-stock integration negatives — 2026-10-15
+
+Actual8e1dcfcd executes the unchanged populated0099 AR restore1 PASS/0 error,
+failure or skip in12.719s. Eleven table digests match after actual native restore;
+15 legacy raw denials and3 forged currency-policy refusals remain enforced.
+Source unchanged, ordinary role five false,30s child connection bound and owned
+databases removed. Independent11-original peer closure
+`a4eb1e72b56bf6e12f982a155e2e5161d67e7ef9c0c6fb1813eecf1ff83e216f`
+is retained in `ar0099-8e1dcfcd-independent-peer-v1-private`. The1,193,824-byte
+dump was in memory; only its digest is retained, not an invented binary original.
+
+New restituted Stock actual negatives remain separately retained under the
+external recovery root; all have zero skips, unchanged source and owned cleanup:
+
+| Exact subject / private folder | Actual result | Root cause reached |
+| --- | --- | --- |
+| 3947c290 / m7-zero-stock-native-3947c290-v1-private | 1 failure/2 setup errors,23.906s |148 source-close SQL CASE compilation; no business cycle |
+| ac7fa09a / m7-empty148-catalog-cb027-root-v1-private |1 PASS,47.578s | Full empty147↔148 catalog/data/function identities, replay and metadata-tamper refusal |
+| ac7fa09a / m7-zero-stock-two-ac7fa09a-v1-private |2 failures,16.891s | Shared valuation trigger binds status on a different relation |
+| 4236c2dc / m7-zero-stock-two-4236c2dc-v1-private |2 failures,65.344s | New v3 alias collision; mixed fixture correctly refuses backdating |
+| c2556150 / m7-zero-stock-two-c2556150-v1-private |2 failures,71.031s | Zero delivery nullable-composite claim/entry; real later-receipt chronology gap |
+
+No new zero-stock financial proof or actual v2 HTTPS/restore is accepted by these
+receipts. Narrow fixes preserve the original entry roles and receipt chronology;
+source-owned corrections need complete native ownership, not a generic Generated
+movement exemption. Existing5017/998 component results keep their exact subjects.
+
 ## M7 actual zero-leg replay and SQL authority checkpoints — 2026-10-15
 
 Frozen `998f7fe0e6b294dc409c2e39a2dda6fd7ef3bf31` executes the zero lifecycle

@@ -201,6 +201,25 @@ def test_remainder_publication_rebinds_originals_before_and_after_staging(
     assert writer._public_diagnostic_paths(output) == []
 
 
+@pytest.mark.parametrize("failure_call", [1, 2])
+def test_restituted_publication_rebinds_originals_before_and_after_staging(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_call: int,
+) -> None:
+    from tests import customer_partial_return_restituted_browser_reader as reader
+    output, private, _, _ = inputs(tmp_path)
+    calls = []
+    def refuse(selected: Path, proof: dict[str, Any], *, require_restore: bool) -> None:
+        assert selected == private and proof == {"test_only_binding": True} and require_restore is True
+        calls.append(selected)
+        if len(calls) == failure_call:
+            raise ValueError("Deliberate restituted publication refusal, not native proof.")
+    monkeypatch.setattr(reader, "require_restituted_original_binding", refuse)
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD],
+        restituted_financial_verification={"test_only_binding": True}, restituted_require_restore=True)
+    assert result["status"] == "quarantined" and len(calls) == failure_call
+    assert writer._public_diagnostic_paths(output) == []
+
+
 def outside_artifacts(output: Path) -> dict[str, bytes]:
     untouched = {"financial-original.json": b'{"minor":9000000000000000000,"currency":"KWD"}\n',
         "independent-oracle.json": b'{"passed":true,"source_sha256":"trusted"}',

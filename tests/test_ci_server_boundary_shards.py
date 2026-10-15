@@ -271,6 +271,7 @@ def test_enterprise_browser_matrix_requires_every_real_https_and_populated_resto
         "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets",
         "procurement-commitments", "customer-returns", "customer-partial-returns",
         "customer-partial-return-remainder-ordinary", "customer-partial-return-remainder-zero", "customer-partial-return-remainder-refund",
+        "customer-partial-return-restituted",
         "supplier-returns", "operational-fx-tax",
         "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing",
         "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer",

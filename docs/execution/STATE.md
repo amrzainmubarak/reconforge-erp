@@ -2,6 +2,23 @@
 
 ## Completion first — one domain at a time (2026-10-15)
 
+The new restituted Stock cycle is still unaccepted. Actual3947 fails at148 SQL
+compilation (1 failure/2 setup errors); narrow CASE fix ac7 then passes the empty
+147↔148 catalog/data/OID roundtrip1/1 in47.578s. Its business2 first fail on
+polymorphic trigger record access; subsequent4236 business2 expose a new alias
+collision and correctly refused backdated fixture. Subsequentc255 business2 reach
+zero delivery but expose nullable-composite claim/entry handling and an actual
+receipt-chronology integration gap after a CR2 physical correction. All originals
+retain zero skips, unchanged source and owned-DB cleanup. The next narrow fix
+binds real empty entry descriptors and exact closed CR2 valuation ownership;
+no operational success, actual v2 HTTPS or populated-zero restore is claimed.
+
+The unchanged populated0099 AR restore passes on frozen8e1dcfcd:1/0 failures,
+errors or skips in12.719s, preserving11 table digests,15 legacy raw denials and3
+forged policy refusals. Independent peer a4eb1e72 rehashes all11 originals and4358
+source contents; the fixture stays at0099. This closes the old AR compatibility
+checkpoint only. CI38685992235 remains the original failed hosted run.
+
 Current M7 closure remains OPEN. On frozen998f7fe0 the affected zero lifecycle
 executes1 PASS/0 failure/error/skip in126.516s, and the five direct-SQL/authority
 cases execute5 PASS/0 failure/error/skip in238.657s. Both retain unchanged source,
@@ -21,8 +38,10 @@ files are retained. The subsequent998 fix preserves original monetary exposure
 while explicitly admitting only the v2 zero-leg shape. No zero journal is introduced.
 An unexpected disappearance of active worktree inner directories required fresh
 managed checkouts from retained refs. Root f205 source4355/4355 byte hashes match;
-main and both primary dirty-file hashes remain unchanged. Agent uncommitted
-drafts are being recovered separately and are not accepted functionality.
+main and both primary dirty-file hashes remain unchanged. Agent drafts were
+reconstructed from owned recorded writes and checkpointed with targeted checks;
+no independent comparison to the lost uncommitted bytes or whole-domain acceptance
+is claimed.
 
 Actual additive148 migration gates on frozen8f163527:3 PASS/0 failure/error/skip,
 516.031 seconds. Empty147→148→147 restores all rows/catalog/function identities;

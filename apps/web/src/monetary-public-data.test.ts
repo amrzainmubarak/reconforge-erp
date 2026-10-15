@@ -131,3 +131,23 @@ it("refuses a mutation without CSRF proof before sending a network request", asy
   await expect(monetaryRequest({ ...session, csrfToken: "" }, scope, command.path, command)).rejects.toThrow();
   expect(fetcher).not.toHaveBeenCalled();
 });
+
+it.each(["overcollection", "overentitlement", "zero-entitlement", "zero-refunded"])("refuses a coherent impossible public balance: %s", mutation => {
+  const raw = { ...fixtures.balance, transaction_collected_minor: "1200", transaction_credited_minor: "600", transaction_outstanding_minor: "0", functional_outstanding_minor: "0",
+    transaction_refund_entitlement_minor: "600", functional_refund_entitlement_minor: "750", transaction_refunded_minor: "0", functional_refund_released_minor: "0",
+    transaction_refund_due_minor: "600", functional_refund_due_minor: "750" };
+  if (mutation === "overcollection") Object.assign(raw, { transaction_collected_minor: "1201", transaction_credited_minor: "0", transaction_refund_entitlement_minor: "1", transaction_refund_due_minor: "1", functional_refund_entitlement_minor: "1", functional_refund_due_minor: "1" });
+  if (mutation === "overentitlement") Object.assign(raw, { transaction_credited_minor: "1200", transaction_refund_entitlement_minor: "1200", transaction_refund_due_minor: "1200", functional_refund_entitlement_minor: "1501", functional_refund_due_minor: "1501" });
+  if (mutation === "zero-entitlement") Object.assign(raw, { transaction_credited_minor: "0", transaction_refund_entitlement_minor: "0", transaction_refund_due_minor: "0", functional_refund_entitlement_minor: "1", functional_refund_released_minor: "1", functional_refund_due_minor: "0" });
+  if (mutation === "zero-refunded") Object.assign(raw, { functional_refund_released_minor: "1", functional_refund_due_minor: "749" });
+  expect(() => parseMonetaryPartialBalance(raw, scope, raw.source_order_id)).toThrow();
+});
+
+it("preserves valid collected-plus-credit above original gross and positive foreign amounts with zero functional legs", () => {
+  const raw = { ...fixtures.balance, transaction_collected_minor: "1200", transaction_credited_minor: "600", transaction_outstanding_minor: "0", functional_outstanding_minor: "0",
+    transaction_refund_entitlement_minor: "600", functional_refund_entitlement_minor: "750", transaction_refunded_minor: "100", functional_refund_released_minor: "125",
+    transaction_refund_due_minor: "500", functional_refund_due_minor: "625" };
+  expect(parseMonetaryPartialBalance(raw, scope, raw.source_order_id)).toEqual(raw);
+  Object.assign(raw, { functional_refund_entitlement_minor: "0", functional_refund_released_minor: "0", functional_refund_due_minor: "0" });
+  expect(parseMonetaryPartialBalance(raw, scope, raw.source_order_id)).toEqual(raw);
+});

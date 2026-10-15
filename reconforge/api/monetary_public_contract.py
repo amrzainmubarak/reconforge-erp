@@ -114,7 +114,9 @@ def balance_fields(row: Mapping[str, Any], *, identity: bool = False) -> None:
     for key in ("active_plan_id", "active_revaluation_plan_id"):
         text(row[key], nullable=True)
     require(amounts["transaction_original_gross_minor"] > 0 and amounts["functional_original_gross_minor"] > 0)
-    require(amounts["transaction_credited_minor"] <= amounts["transaction_original_gross_minor"])
+    require(amounts["transaction_credited_minor"] <= amounts["transaction_original_gross_minor"]
+            and amounts["transaction_collected_minor"] <= amounts["transaction_original_gross_minor"]
+            and amounts["functional_refund_entitlement_minor"] <= amounts["functional_original_gross_minor"])
     residual = amounts["transaction_original_gross_minor"] - amounts["transaction_collected_minor"] - amounts["transaction_credited_minor"]
     require(amounts["transaction_outstanding_minor"] == max(residual, 0)
             and amounts["transaction_refund_entitlement_minor"] == max(-residual, 0))
@@ -123,7 +125,9 @@ def balance_fields(row: Mapping[str, Any], *, identity: bool = False) -> None:
     require(amounts["transaction_refund_due_minor"] == amounts["transaction_refund_entitlement_minor"] - amounts["transaction_refunded_minor"]
             and amounts["functional_refund_due_minor"] == amounts["functional_refund_entitlement_minor"] - amounts["functional_refund_released_minor"])
     require((amounts["transaction_outstanding_minor"] != 0 or amounts["functional_outstanding_minor"] == 0)
-            and (amounts["transaction_refund_due_minor"] != 0 or amounts["functional_refund_due_minor"] == 0))
+            and (amounts["transaction_refund_due_minor"] != 0 or amounts["functional_refund_due_minor"] == 0)
+            and (amounts["transaction_refund_entitlement_minor"] != 0 or amounts["functional_refund_entitlement_minor"] == 0)
+            and (amounts["transaction_refunded_minor"] != 0 or amounts["functional_refund_released_minor"] == 0))
     if identity:
         for first, second in (("transaction_original_gross_minor", "functional_original_gross_minor"),
                               ("transaction_outstanding_minor", "functional_outstanding_minor"),
@@ -132,4 +136,4 @@ def balance_fields(row: Mapping[str, Any], *, identity: bool = False) -> None:
                               ("transaction_refunded_minor", "functional_refund_released_minor")):
             require(amounts[first] == amounts[second])
     # Collection admission is prefix-time and native-owned. Do not impose the
-    # incorrect final-state C <= G predicate after governed credit/refund history.
+    # incorrect final-state C + credited <= G predicate after governed credits.

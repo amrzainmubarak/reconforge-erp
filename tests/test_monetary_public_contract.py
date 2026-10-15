@@ -279,3 +279,34 @@ def test_identity_merchandise_credit_cannot_report_fx_or_mismatched_currency_amo
     raw["monetary"].update(functional_alignment_loss_minor="1", functional_alignment_gain_minor="0", functional_receivable_released_minor="401", functional_turnover_minor="801")
     with pytest.raises(MonetaryResponseError):
         project_monetary_partial_plan(raw, SCOPE)
+
+
+@pytest.mark.parametrize("mutation", ["overcollection", "overentitlement", "zero-entitlement", "zero-refunded"])
+def test_monetary_balance_refuses_impossible_captured_cash_or_refund_carrying_values(mutation: str) -> None:
+    raw = partial_balance_fixture()
+    raw.update(transaction_collected_minor="1200", transaction_credited_minor="600", transaction_outstanding_minor="0", functional_outstanding_minor="0",
+        transaction_refund_entitlement_minor="600", functional_refund_entitlement_minor="750", transaction_refunded_minor="0", functional_refund_released_minor="0",
+        transaction_refund_due_minor="600", functional_refund_due_minor="750")
+    if mutation == "overcollection":
+        raw.update(transaction_collected_minor="1201", transaction_credited_minor="0", transaction_refund_entitlement_minor="1", transaction_refund_due_minor="1",
+            functional_refund_entitlement_minor="1", functional_refund_due_minor="1")
+    elif mutation == "overentitlement":
+        raw.update(transaction_credited_minor="1200", transaction_refund_entitlement_minor="1200", transaction_refund_due_minor="1200",
+            functional_refund_entitlement_minor="1501", functional_refund_due_minor="1501")
+    elif mutation == "zero-entitlement":
+        raw.update(transaction_credited_minor="0", transaction_refund_entitlement_minor="0", transaction_refund_due_minor="0",
+            functional_refund_entitlement_minor="1", functional_refund_released_minor="1", functional_refund_due_minor="0")
+    else:
+        raw.update(functional_refund_released_minor="1", functional_refund_due_minor="749")
+    with pytest.raises(MonetaryResponseError):
+        project_monetary_partial_balance(raw, SCOPE)
+
+
+def test_monetary_balance_allows_refundable_credit_above_cash_residual_and_small_zero_functional_legs() -> None:
+    raw = partial_balance_fixture()
+    raw.update(transaction_collected_minor="1200", transaction_credited_minor="600", transaction_outstanding_minor="0", functional_outstanding_minor="0",
+        transaction_refund_entitlement_minor="600", functional_refund_entitlement_minor="750", transaction_refunded_minor="100", functional_refund_released_minor="125",
+        transaction_refund_due_minor="500", functional_refund_due_minor="625")
+    assert project_monetary_partial_balance(raw, SCOPE) == raw
+    raw.update(functional_refund_entitlement_minor="0", functional_refund_released_minor="0", functional_refund_due_minor="0")
+    assert project_monetary_partial_balance(raw, SCOPE) == raw

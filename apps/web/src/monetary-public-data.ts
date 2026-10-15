@@ -95,12 +95,16 @@ export function validateMonetaryBalance(row: Record<string, unknown>, identity =
   monetaryNullableText(row.active_plan_id); monetaryNullableText(row.active_revaluation_plan_id);
   if (BigInt(row.transaction_original_gross_minor as string) <= 0n || BigInt(row.functional_original_gross_minor as string) <= 0n
       || BigInt(row.transaction_credited_minor as string) > BigInt(row.transaction_original_gross_minor as string)
+      || BigInt(row.transaction_collected_minor as string) > BigInt(row.transaction_original_gross_minor as string)
+      || BigInt(row.functional_refund_entitlement_minor as string) > BigInt(row.functional_original_gross_minor as string)
       || BigInt(row.transaction_refunded_minor as string) + BigInt(row.transaction_refund_due_minor as string) !== BigInt(row.transaction_refund_entitlement_minor as string)
       || BigInt(row.functional_refund_released_minor as string) + BigInt(row.functional_refund_due_minor as string) !== BigInt(row.functional_refund_entitlement_minor as string)) monetaryInvalid();
   const residual = BigInt(row.transaction_original_gross_minor as string) - BigInt(row.transaction_collected_minor as string) - BigInt(row.transaction_credited_minor as string);
   if (row.transaction_outstanding_minor !== (residual > 0n ? residual : 0n).toString() || row.transaction_refund_entitlement_minor !== (residual < 0n ? -residual : 0n).toString()
       || row.transaction_outstanding_minor === "0" && row.functional_outstanding_minor !== "0"
-      || row.transaction_refund_due_minor === "0" && row.functional_refund_due_minor !== "0") monetaryInvalid();
+      || row.transaction_refund_due_minor === "0" && row.functional_refund_due_minor !== "0"
+      || row.transaction_refund_entitlement_minor === "0" && row.functional_refund_entitlement_minor !== "0"
+      || row.transaction_refunded_minor === "0" && row.functional_refund_released_minor !== "0") monetaryInvalid();
   if (identity && [["transaction_original_gross_minor", "functional_original_gross_minor"], ["transaction_outstanding_minor", "functional_outstanding_minor"],
     ["transaction_refund_entitlement_minor", "functional_refund_entitlement_minor"], ["transaction_refund_due_minor", "functional_refund_due_minor"],
     ["transaction_refunded_minor", "functional_refund_released_minor"]].some(([first, second]) => row[first] !== row[second])) monetaryInvalid();

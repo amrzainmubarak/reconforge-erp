@@ -169,8 +169,9 @@ def _snapshot() -> str:
   PERFORM reconforge.it1_assert(history_count<=200 AND layer.remaining_quantity_scaled=layer.original_quantity_scaled-consumed_quantity+restored_quantity""")
     source = _replace(source, "   AND layer.remaining_value_minor=layer.original_value_minor-consumed_value", "   AND layer.remaining_value_minor=layer.original_value_minor-consumed_value+restored_value")
     source = _replace(source, "  sources:=sources||jsonb_build_array(original);quantities:=quantities+layer.remaining_quantity_scaled;values_minor:=values_minor+layer.remaining_value_minor;", r"""  IF jsonb_array_length(corrections)>0 THEN
-   SELECT amounts||COALESCE(jsonb_agg((value#>>'{entry,total_debit_minor}')::bigint),'[]'::jsonb)
-    ||COALESCE(jsonb_agg((value#>>'{entry,total_credit_minor}')::bigint),'[]'::jsonb) INTO amounts FROM jsonb_array_elements(corrections);
+   SELECT amounts||COALESCE(jsonb_agg((value#>>'{entry,total_debit_minor}')::bigint ORDER BY ordinal),'[]'::jsonb)
+    ||COALESCE(jsonb_agg((value#>>'{entry,total_credit_minor}')::bigint ORDER BY ordinal),'[]'::jsonb) INTO amounts
+    FROM jsonb_array_elements(corrections) WITH ORDINALITY ordered_corrections(value,ordinal);
    original:=original||jsonb_build_object('partial_return_corrections',corrections,'exposed_amounts_minor',amounts);
   END IF;
   sources:=sources||jsonb_build_array(original);quantities:=quantities+layer.remaining_quantity_scaled;values_minor:=values_minor+layer.remaining_value_minor;

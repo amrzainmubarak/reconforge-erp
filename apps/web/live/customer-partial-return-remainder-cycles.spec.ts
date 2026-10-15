@@ -105,6 +105,41 @@ async function prepareFromPosted(page: Page, parent: PartialReturnPlanV2, operat
     ...(amount ? { "Refund amount in exact minor units": amount } : {}) });
   return command(page, `${root}/plans/${parent.id}/${operation === "refund" ? "refunds" : "reversals"}`, () => form.getByRole("button", { name, exact: true }).click());
 }
+async function readCreditAdjustedAging(page: Page, plan: PartialReturnPlanV2, expected: number) {
+  // The retained replay observation is already sealed. These read-only audit
+  // appends belong to the NEXT economic capture, before its real posting.
+  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Receivables", exact: true }).click();
+  const listed = page.waitForResponse(reply => new URL(reply.url()).pathname === "/api/v1/receivables/invoices" && reply.request().method() === "GET");
+  await page.getByRole("combobox", { name: "Authorized workspace", exact: true }).selectOption("work");
+  const response = await listed; expect(response.status()).toBe(200);
+  const records = await response.json(); const original = records.invoices.find((record: { id: string }) => record.id === plan.invoice_id);
+  expect(Boolean(original)).toBe(true);
+  await page.getByRole("button", { name: `Review ${original.invoice_number}`, exact: true }).click();
+  const cash = page.getByRole("region", { name: "Cash receipts and allocations", exact: true });
+  await expect(cash.getByText("Current customer receivable exposure:", { exact: false })).toContainText(`${new Intl.NumberFormat("en").format(expected)} USD`);
+  const form = cash.getByRole("form", { name: "Read current receivables aging", exact: true });
+  await form.getByLabel("Aging as-of date", { exact: true }).fill(postingDate);
+  const loaded = page.waitForResponse(reply => new URL(reply.url()).pathname === "/api/v1/receivables/aging-by-currency" && reply.request().method() === "GET");
+  await form.getByRole("button", { name: "Read current receivables aging", exact: true }).click(); expect((await loaded).status()).toBe(200);
+  const result = cash.getByRole("region", { name: "Authorized receivables aging result", exact: true }); await expect(result).toBeVisible();
+  if (expected) await expect(result.getByText("Open receivables total:", { exact: false })).toContainText(`${expected} USD`);
+  else await expect(result.getByText("No approved open invoices were returned in this workspace.", { exact: true })).toBeVisible();
+  for (const locale of ["en", "ar"] as const) {
+    if (locale === "ar") await page.getByRole("button", { name: "Switch language", exact: true }).click();
+    await expect(page.locator("main#main-content")).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
+    await expect(page.getByRole("heading", { name: locale === "ar" ? "أعمار الذمم المدينة في مساحة العمل" : "Workspace receivables aging", exact: true })).toBeVisible();
+    for (const width of [320, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth))).toBe(0);
+      expect((await new AxeBuilder({ page }).analyze()).violations.map(value => value.id)).toEqual([]);
+    }
+  }
+  await page.getByRole("button", { name: "Switch language", exact: true }).click();
+  await expect(page.locator("main#main-content")).toHaveAttribute("dir", "ltr");
+  // Establish an unmount barrier before any next economic command/capture.
+  // This prevents a still-mounted AR reader from appending later policy audit.
+  await page.goto("about:blank");
+}
 test("actual governed v2 remainder and zero-leg customer return cycle", async ({ page }) => {
   test.setTimeout(360_000);
   expect(Boolean(base && tenant && password && source && ["ordinary", "zero", "refund"].includes(selectedCase ?? "")), "Owned migrated native148 HTTPS fixture and fixed case are required.").toBe(true);
@@ -122,7 +157,8 @@ test("actual governed v2 remainder and zero-leg customer return cycle", async ({
       const prepared = await prepareReturn(page, "1");
       expect([prepared.credit_minor, prepared.cogs_restored_minor]).toEqual(["1000", cost]);
       expect(prepared.entries.map(entry => entry.purpose)).toEqual(["RevenueCredit", "CostRestoration"]);
-      await publish(prepared, index === 0);
+      const posted = await publish(prepared, index === 0);
+      if (index === 0) await readCreditAdjustedAging(page, posted, 2000);
     }
   } else if (selectedCase === "zero") {
     const cancelled = await prepareReturn(page, "1"); expect(cancelled.entries).toEqual([]);
@@ -152,6 +188,7 @@ test("actual governed v2 remainder and zero-leg customer return cycle", async ({
     const parent = await publish(last);
     await publish(await prepareFromPosted(page, parent, "refund", "3000"));
     const refund = await publish(await prepareFromPosted(page, parent, "refund", "7000"), true);
+    await readCreditAdjustedAging(page, refund, 0);
     await publish(await prepareFromPosted(page, refund, "reverse"));
     await publish(await prepareFromPosted(page, parent, "refund", "7000"));
   }

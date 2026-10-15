@@ -1,5 +1,36 @@
 # ReconForge Execution Decisions Log
 
+## Explicit zero-effect authority and retained empty entries (2026-10-15)
+
+Shared Money/authorization stays positive-only by default. Only the finite native
+protocol2/remaining-original-v1 Return or ReverseReturn shape with positive exact
+quantity and all-zero monetary legs opts into amount0 and an empty entry list.
+Original captured currency policy and monetary exposure remain verified. Exact
+ACK replay must pass the same current authority projection as first preparation;
+no synthetic positive amount, missing exposure or zero journal is substituted.
+Actual998 zero lifecycle and five SQL/authority cases pass without skips; their
+source-bound receipts do not close the pending v2 Studio/restore/stock-reuse scope.
+
+## One-domain completion contract (2026-10-15)
+
+The user's finish-to-done instruction supersedes parallel domain expansion.
+Use ENTERPRISE_COMPLETION_MASTER_MATRIX.md as the sole current closure inventory;
+preserve old milestone documents as source-bound history. All three agents close
+M7 together before Advanced Manufacturing. Keep the existing GL/Money/Identity/
+FIFO engines. CR2 uses additive corrections and immutable original-consumption
+restorations, separate from the original full-inverse uniqueness contract.
+Cash allocations are capped against their historical prefix, so a later valid
+credit may create a refund obligation without invalidating earlier collections.
+An unfinished source adapter, API or screen is never a completed business cycle.
+Heavy comparative performance and production qualification follow functional
+closure; they are not inferred from development gates or local restore.
+ADR0860 records the implemented native correction and economic-history contract.
+Returned-stock transfers retain signed versioned correction capture while old
+IT1-v1 evidence keeps its original reader. All CR2 raw browser observations stay
+in a distinct private custody tree, independently verified under -I/-I-O and
+rebound before/after public diagnostic publication. Misplaced raw attachment
+families are refused before any generic original-file basename exemption.
+
 ## Current money authority and private browser custody (2026-10-14)
 
 Original retained unit prices are READ exposure, independent of phase WRITE
@@ -13645,3 +13676,20 @@ correction evidence over existing cost layers/receipts and GL, preserve all full
 inverse constraints, and use one per-invoice AR residual and actual OLD/NEW
 allocation delta. A digest or typed account pin is not native authorization.
 See ADR0858; no147, native command or partial-stock UI is claimed yet.
+
+### 2026-10-15 — Native source mapping is evidence, not posting authority
+
+Reuse existing CR1 scoped source, original FIFO consumption and reviewed GL/cash
+links. Preserve reviewed issue order and exact native NUMERIC text. Original
+inbound valuation supplies captured currency policy, not recalculated original
+cost. A canonical decoded observation must not claim PostgreSQL original bytes.
+Keep initial captured collections immutable when native partial history exists;
+later receipts require ordered native history and independently pinned owners.
+
+The adapter neither authenticates nor locks nor posts. Keep current human/grant
+admission, customer→invoice→stock order, same-layer additive restoration, shared
+AR residual and reciprocal CR1/full-inverse exclusion as native owner obligations.
+Observed SELECT-only statements do not revoke application DML ACLs. Pin actual
+definer/owner/ACL context before changing shared hooks; no invoker-label shortcut
+proves actor RLS. Retain environmental setup failures separately from financial
+test failures. See ADR0859; no147 or partial-stock API/Studio action is added.

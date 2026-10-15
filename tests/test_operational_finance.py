@@ -43,6 +43,20 @@ def test_reject_inexact_or_unsupported_money(amount: int, precision: int) -> Non
         exact_minor_text(amount, precision)
 
 
+@pytest.mark.parametrize("precision", range(9))
+def test_explicit_zero_authority_preserves_exact_currency_precision(precision: int) -> None:
+    expected = "0" if precision == 0 else "0." + "0" * precision
+    assert exact_minor_text(0, precision, allow_zero=True) == expected
+    with pytest.raises(FinancePostingError):
+        exact_minor_text(0, precision)
+
+
+@pytest.mark.parametrize("value,precision", [(True, 2), (-1, 2), (9_000_000_000_000_000_001, 2), (0, True), (0, 9)])
+def test_zero_authority_opt_in_still_rejects_inexact_negative_or_out_of_bound_money(value: int, precision: int) -> None:
+    with pytest.raises(FinancePostingError):
+        exact_minor_text(value, precision, allow_zero=True)
+
+
 def test_closed_native_source_request() -> None:
     assert request().payload()["source_kind"] == "ARInvoice"
     for invalid in (

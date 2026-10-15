@@ -25,11 +25,11 @@ EXPANSION_TABLES = (
     "financial_opening_links", "financial_reporting_commands",
 )
 
-# This append-only chain has one sequence/previous-hash lineage per tenant and
+# This append-only chain and its sequence head have one lineage per tenant and
 # no workspace/entity columns (postgres_domain.py). It remains in the complete
 # row/catalog/FORCE RLS snapshot and unbound tenant probe, not the workspace
 # concealment claim. No operational inventory or financial table is exempt.
-TENANT_GLOBAL_AUDIT_TABLES = ("domain_audit_events",)
+TENANT_GLOBAL_AUDIT_TABLES = ("domain_audit_events", "domain_audit_ledger_state")
 
 
 def verify_expansion_cycles(runtime: ReceiptRuntime) -> dict[str, Any]:

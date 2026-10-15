@@ -185,7 +185,10 @@ class PostgresCommercialCollectionsRepository:
                 raise FinancePostingError("collection_limit", "The invoice exceeds the bounded 200-installment evidence budget.")
             if any(source[k] != args[k] for k in ("workspace_id", "organization_id", "legal_entity_id")):
                 raise FinancePostingError("collection_scope_denied", "Source is outside selected hierarchy.")
-            if request.amount_minor > source["amount_minor"] - allocated:
+            current_residual = records(self.connection.execute(
+                "SELECT reconforge.customer_partial_return_outstanding(%s,%s) AS amount",
+                (self.tenant_id, request.source_id)))[0]["amount"]
+            if request.amount_minor > current_residual:
                 raise FinancePostingError("collection_amount_invalid", "Installment exceeds the current receivable residual.")
             identifier = "CA1-" + uuid4().hex
             amount = exact_minor_text(request.amount_minor, precision)

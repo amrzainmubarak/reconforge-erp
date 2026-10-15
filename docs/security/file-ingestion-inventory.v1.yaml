@@ -939,6 +939,44 @@ surfaces:
       - Original snapshots retain65536 UTF-8 bytes,16384 nodes,depth24,1024 items/collection and65536 characters/scalar; correction templates retain2097152 bytes,32768 nodes,depth32,1024 items/collection and262144 characters/scalar. Root objects and canonical producer text are required before original Finance Posting schema/seal or closed correction-shape validation.
       - Digests and bounded JSON do not attest native original ownership, account permission, current human authority, period openness, approval, or eligibility for native posting. Correction templates remain unapproved and nonpostable; only the first untaxed functional-currency untracked original-source contract is implemented.
     next_action: Keep AST coverage exact and bind the future native CR2 source participant, SQL guards and real command/API/Studio acceptance before exposing a partial-stock workflow.
+  - id: FI-048
+    name: Internal canonical observations of a preauthorized native partial-return source
+    module_ids: [platform.core, finance.controls]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_customer_partial_return_source.py::NativePartialReturnSourceEvidence.original_source
+      - reconforge/infrastructure/postgres_customer_partial_return_source.py::NativePartialReturnSourceEvidence.collection_evidence
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_postgres_customer_partial_return_source.py, tests/test_customer_partial_return_source_oracle.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - Reuses the shared structured-document decoder with integer-only tokens, duplicate/non-finite rejection and2097152 UTF-8 bytes,50000 nodes,depth32,1000 items/collection and131072 characters/scalar; no new direct JSON parser or upload boundary is added.
+      - The exact original envelope and collection list root types, closed envelope fields and canonical producer text are required. Returned mutable projections are fresh copies; their strings are canonical decoded observations, not original PostgreSQL byte attestation.
+      - The adapter's supplied connection/envelope must already be authorized; current human/permission/period locks and source revalidation remain the composing owner's responsibility. SELECT-only mapper statements do not imply read-only application table ACLs.
+      - This finite source mapping supplies no claim, approved account, command, physical partial receipt, AR adjustment or financial posting. Independent raw native row-text custody is retained separately and proposals remain unposted.
+    next_action: Bind future native CR2 source ownership, shared AR and same-layer restoration guards before admitting any financial effect; keep byte-original evidence separate from decoded content.
+  - id: FI-049
+    name: Internal explicit restituted-cost original evidence
+    module_ids: [platform.core, finance.controls]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/domain/customer_partial_return_cost_evidence.py::OriginalRestitutedCostEvidence.snapshot
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_customer_partial_return_zero_stock.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - Reuses the shared integer-only structured decoder with duplicate and non-finite rejection and bounds of6291456 UTF-8 bytes,131072 nodes,depth48,4096 items per collection and262144 characters per scalar; no upload boundary is introduced.
+      - Canonical root, seven factual fields, explicit restituted Stock-v2 policy, actual valuation/consumption affinity and zero-only absent COGS are required; a digest authenticates supplied content only.
+      - Native source ownership, current actor and third-human duties, exact layer changes, atomic posting and populated restore need independent database evidence; parser tests do not close those gates.
+    next_action: Qualify native zero-cost resale and repeated return, SQL bypass and populated restore before accepting the new factual-source path.
 
 direct_tabular_parser_allowlist:
   - path: reconforge/benchmark/amlsim_reconciliation.py

@@ -88,9 +88,9 @@ class StockIssuePreparation:
         return result
 
 
-def freeze_fifo(layers: Sequence[Mapping[str, Any]], quantity_scaled: int) -> tuple[list[dict[str, Any]], int]:
+def freeze_fifo(layers: Sequence[Mapping[str, Any]], quantity_scaled: int, *, allow_zero: bool = False) -> tuple[list[dict[str, Any]], int]:
     """Use the existing exact FIFO allocator; retain every selected residual."""
-    if type(quantity_scaled) is not int or quantity_scaled <= 0:
+    if type(allow_zero) is not bool or type(quantity_scaled) is not int or quantity_scaled <= 0:
         raise FinancePostingError("stock_sales_quantity_invalid", "Positive scaled quantity is required.")
     remaining, total = quantity_scaled, 0
     allocations: list[dict[str, Any]] = []
@@ -98,11 +98,11 @@ def freeze_fifo(layers: Sequence[Mapping[str, Any]], quantity_scaled: int) -> tu
         if not remaining:
             break
         available, value = layer["remaining_quantity_scaled"], layer["remaining_value_minor"]
-        if type(available) is not int or type(value) is not int or available <= 0 or value <= 0:
+        if type(available) is not int or type(value) is not int or available <= 0 or value < 0 or (value == 0 and not allow_zero):
             raise FinancePostingError("stock_sales_fifo_invalid", "FIFO residuals must be exact positive integers.")
         selected = min(available, remaining)
-        cost = allocate_fifo_value(value, available, selected)
-        if cost <= 0:
+        cost = allocate_fifo_value(value, available, selected, allow_zero=allow_zero)
+        if cost == 0 and not allow_zero:
             raise FinancePostingError("stock_sales_fifo_invalid", "Issue quantity would consume a zero-value FIFO fraction.")
         allocations.append({"cost_layer_id": layer["id"], "row_version": layer["row_version"],
             "remaining_quantity_scaled": available, "remaining_value_minor": value,

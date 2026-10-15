@@ -1,5 +1,272 @@
 # ReconForge Execution Evidence Log
 
+Cancellation qualification `bf9c3e91183f9f4cfcd32d75b118cca0dcc8450dedffc5b50085024efe98e262`
+(7209 bytes) preserves official cdd job116479467387 metadata: Studio composite
+build active, HTTPS never started, total25 minutes. Direct logs return404;
+bounded full-run ZIP transfers remain incomplete. The exact npm/build/Playwright
+subcommand and cancellation cause are unknown. No timeout, assertion or scanner
+policy was relaxed, and no hosted product success is inferred.
+
+## M7 original AR reports, Studio aging and mixed-cost proof — 2026-10-15
+
+Actualc70bc2f4 affected settlement2 PASS122.828s/0 skips, source unchanged and
+owned DB cleanup. All79 raw tables remain in7 version2 captures; old5017/78-table
+files and reader stay unchanged. Fresh-I/-I-O v2 proof79b15c2c derives cash-split
+9/18/205000 and observed-wait race9/19/221000, full79 rollback and empty witness
+table. Two-mode closure813f8f563a18b7848be08f1b5adbb32b838d4c8b59c1de93ca6e8d8f3e31c7db.
+Native public invoice/exposure/aging assertions execute at all seven checkpoints.
+
+Actual713e1bf8 ordinary/refund with new AR aging pass156.250/217.406s, one browser
+case each, retry0/0 skipped/unexpected/flaky. Both source/build remain unchanged
+and owned runtimes are removed. Studio reads2000/0 minor units; bilingual/RTL,
+four-width Axe, return-to-English and unmount assertions pass. Independent raw
+and restore peers0368741c/01bcaabc derive6 NEW effects/12 lines/4001 and8 NEW/17/81000;
+79 financial tables restore660/1140 rows. All340 tables/catalog,81 tenant and77
+workspace probes, and three tamper refusals per run pass. Earlier5cdb selector
+failure is retained; only the exact current Arabic button selector changed.
+
+Actual5cdb89c1 mixed-stock original-capture case1 PASS153.907s retains four79-table
+captures unchanged. Frozen new reader48fd independent-I/-I-O proof
+90d1bd4b713479eaf4ac91dc5e1acd84c07707adb7a5a6a0fd26059a9dc12157 derives
+stages3→223→323→433, final9 TOTAL effects/18 lines/Dr=Cr433, real aggregateCOGS10
+with ordered0/10 consumptions and returns100/0 plus100/10. Original qualification
+984fc4059936c5c18dba05cb02029f7f08832ca79bef3b78b5dee6a287a1b05c retains early
+reader-shape refusals and later canonical Manual/entry-ID and aggregate-line
+corrections. No native input was altered and no current authority claim follows.
+Source qualification5b7ca82e and final peer9a4f6faa bind22 pure controls and
+unchanged five older readers.
+
+Corrected native backdate case cdd1 PASS39.250s proves Python and actual SQL
+refusal/full79 rollback; earlier373 cohort remains5 PASS/1 FAIL. Hosted cdd
+CI38751026869 terminal68 success/4 failure/1 cancelled/1 skipped remains retained;
+the fourth browser job reaches25 minutes during Studio build, before HTTPS; its original
+setup logs await root-cause review. Stat and exact79
+helper repairs have targeted successes. Package preflight713 refuses missing
+ADR0861; explicit MANIFEST fix ac5fec69 passes actual source/wheel archive gate,
+report5b19022a. Gitleaks8.30.1 tree/HEAD scans pass after exact protocol fixture
+reuse, without config/ignore changes; the unrelated local-all-refs synthetic
+fixture finding remains a negative outside candidate ancestry. New final-head
+CI/security, original tax/FX functionality and M7 closure remain open.
+
+## M7 actual zero-resale HTTPS and hostile SQL cohort — 2026-10-15
+
+Frozen373362a6 actual zero-resale HTTPS and populated restore pass243.031s;
+original report `m7-restituted-https-373362a6-v1/report.json`. Four captures and
+three observations each retain79 tables. Five real effects/10 lines/Dr=Cr203,
+no original resale COGS or fake zero journal, two source-owned returns and exact
+79-table/1518-row financial restore are independently verified. Fresh isolated
+proofs match596a72557c8b48d1e565442bdbe4dc4cd024b266990c56bb6eb68f72ff89128d.
+The old-return reversal is refused after actual consumption; ACK retry is safe.
+Browser1 expected/0 skipped/unexpected/flaky, source/build unchanged and owned
+runtime removed. Three tamper refusals and81 protected/81 tenant/77 workspace
+probes pass. Current authority is not inferred from this offline financial proof.
+
+The same frozen source executes new full5 hostile SQL cases plus affected mixed:
+5 PASS/1 FAIL/0 error/skip358.344s with unchanged source and owned-DB cleanup.
+Mixed and first4 security cases pass; fifth fails at observation SQL reserved
+alias day, before its intended backdate guard. Narrow test-only alias correction
+is unaccepted until its affected rerun. Original XML/logs remain in
+`m7-zero-stock-five-security-and-mixed-373362a6-v1-private`. The previous5f1
+negative remains separately retained. Full Ruff, mypy809 and Bandit succeed on
+373362a6; CI38749652508 is pending, not green. Ordinary9af independent original
+peer closes951737e5f81497dac9c833b981ce8c83e8d27c2be9fdd7e43b392d185ba50e5d.
+All of M7 remains open pending final cohesive acceptance and remaining cases.
+
+## M7 actual v2 HTTPS and independently read zero resale — 2026-10-15
+
+Frozen9af22802 ordinary HTTPS/populated restore report passes in139.953s with
+source/build unchanged and owned runtime removed. Three posted returns retain
+four economic captures and two later observations; the isolated original readers
+produce equal proof3d0c8bcf8c52820a41ad0afb4291eed3bfafc39a069a0090ab23ecadb3c61ae2:
+6 new effects/12 lines/Dr=Cr4001, all79 restored financial tables/646 rows equal.
+This is functional execution time, not a throughput benchmark. B product peer
+c1afe7d6 binds actual browser assertions and first-attempt success; C original
+custody peer is a separate receipt. Original report is retained externally in
+`m7-remainder-ordinary-https-9af22802-v1`.
+
+The same head's selected zero-cost resale/new-return native case passes; four
+original79-table captures total1,405,489 bytes. C fresh-I/-I-O verification derives
+5 actual effects/10 lines/Dr=Cr203 with no fake zero journal; proof63d87ce3 and
+source/raw qualification3d3bc3d35444d55397a2af9dabb50368ce1de23455f413f8d31dde31a130d240.
+The whole cohort remains2 PASS/1 FAIL/0 skips. Subsequent5f1ea229 executes the
+affected mixed case plus changed empty148 roundtrip:1 PASS/1 FAIL/0 skips,
+191.953s, source unchanged and owned-DB cleanup. Mixed posting now succeeds past
+chronology but its observation SQL has an ambiguous value_minor; the exact
+one-column qualification is pending acceptance. Native negative originals remain
+in `m7-mixed-zero-and-empty-5f1ea229-v2-private`; the earlier short-head preflight
+refusal remains separately retained. M7 remains OPEN, final CI and other v2
+HTTPS/restore cases unaccepted.
+
+## M7 retained AR restore and zero-stock integration negatives — 2026-10-15
+
+Actual8e1dcfcd executes the unchanged populated0099 AR restore1 PASS/0 error,
+failure or skip in12.719s. Eleven table digests match after actual native restore;
+15 legacy raw denials and3 forged currency-policy refusals remain enforced.
+Source unchanged, ordinary role five false,30s child connection bound and owned
+databases removed. Independent11-original peer closure
+`a4eb1e72b56bf6e12f982a155e2e5161d67e7ef9c0c6fb1813eecf1ff83e216f`
+is retained in `ar0099-8e1dcfcd-independent-peer-v1-private`. The1,193,824-byte
+dump was in memory; only its digest is retained, not an invented binary original.
+
+New restituted Stock actual negatives remain separately retained under the
+external recovery root; all have zero skips, unchanged source and owned cleanup:
+
+| Exact subject / private folder | Actual result | Root cause reached |
+| --- | --- | --- |
+| 3947c290 / m7-zero-stock-native-3947c290-v1-private | 1 failure/2 setup errors,23.906s |148 source-close SQL CASE compilation; no business cycle |
+| ac7fa09a / m7-empty148-catalog-cb027-root-v1-private |1 PASS,47.578s | Full empty147↔148 catalog/data/function identities, replay and metadata-tamper refusal |
+| ac7fa09a / m7-zero-stock-two-ac7fa09a-v1-private |2 failures,16.891s | Shared valuation trigger binds status on a different relation |
+| 4236c2dc / m7-zero-stock-two-4236c2dc-v1-private |2 failures,65.344s | New v3 alias collision; mixed fixture correctly refuses backdating |
+| c2556150 / m7-zero-stock-two-c2556150-v1-private |2 failures,71.031s | Zero delivery nullable-composite claim/entry; real later-receipt chronology gap |
+
+No new zero-stock financial proof or actual v2 HTTPS/restore is accepted by these
+receipts. Narrow fixes preserve the original entry roles and receipt chronology;
+source-owned corrections need complete native ownership, not a generic Generated
+movement exemption. Existing5017/998 component results keep their exact subjects.
+
+## M7 actual zero-leg replay and SQL authority checkpoints — 2026-10-15
+
+Frozen `998f7fe0e6b294dc409c2e39a2dda6fd7ef3bf31` executes the zero lifecycle
+1 PASS/0 failure/error/skip in126.516s and the five affected SQL/security cases
+5 PASS/0 failure/error/skip in238.657s. Originals remain outside public diagnostics:
+`m7-native-zero-replay-998f7fe0-v2-private` and
+`m7-native-zero-five-security-998f7fe0-v1-private`, under the retained recovery root.
+Their ten-file closure hashes are respectively
+`309da3abda91e5077b05bfa45dec482f4d448132b332d7e986da55ad04a894b9` and
+`4d35591bfe2a57b11e18ccae4675371509d7c11516dce126599cf28db79c587c`.
+Each preserves full before/after4355-file source, actual JUnit, normal-role
+admission, stdout/stderr, executed controller and owned-DB membership. Source
+contents agree with retained Git and explicit Windows checkout line-ending policy;
+ordinary role flags remain five false, statement timeout30s, cleanup true.
+The zero lifecycle exercises exact ACK replay, review/post/reverse, zero effects
+and separate revenue/cost legs. SQL cases exercise null/malformed policy, forged
+before-value, historic-witness reuse, four parent scope boundaries and revoked
+posting authority. Neither receipt claims whole16, HTTPS/restore, financial oracle,
+benchmark or M7 acceptance. The earlier12c and f205 failures remain unchanged.
+
+Separate independent reader768 qualifies actual12c's six-event refunds from seven
+original79-table captures:8 new effects/17 lines/Dr=Cr81000. Fresh isolated normal
+and optimized readers return identical1090-byte proof, SHAab441783d5e329f5d7b54c566d902aec55bdca72d19c1d49d7b607ff48789020;
+closure238aa11f and source bridge4926cc00 bind the original3,033,331-byte capture
+and retained12c source. This is a posted-refund component, not a whole-domain claim.
+
+## M7 executed zero-leg negatives and source recovery — 2026-10-15
+
+Native12c314ee16 executes10PASS/6FAIL/0skip in889.172s; original11-member
+custody `5654c1aee90d96886e9a35ecbaa75f95190da0c5626add595990f02db6e2f910`
+retains the shared positive-amount authority failures and the successful actual
+split-refund seven raw captures. Affected f2052c2c6/6 fail in150.390s at the
+legacy retained-ACK projection's nonempty-entry assumption. Source and owned
+cleanup checks pass on both subjects. Failed SQL cases do not inherit acceptance.
+External originals are under `F:\ReconForge_Evidence\recovery-20261014` with
+prefixes `m7-frozen148-native-12c314ee-v1-private` and
+`m7-frozen148-affected-zero-f2052c2c-v1-private`.
+
+Active worktree inner directories unexpectedly disappeared after these runs.
+Fresh Root checkout f205 matches all4355 original tracked hashes; source recovery
+receipt is `m7-worktree-incident-20261015-v1-private/root-source-recovery.json`.
+No cause, uncommitted-agent recovery or further acceptance is inferred from it.
+
+## M7 additive148 migration checkpoint — 2026-10-15
+
+Frozen8f163527d9c703d4f9bc5866dc7f513081dc2e90 executed3 native migration
+cases, all passed without skips in516.031 seconds. Full catalog/data/function-OID
+roundtrip, retained posted-v1 history/ACK compatibility, tuple/mapping installer
+replay and retained-v2 non-destructive downgrade refusal are executed. Source
+before/after hashes match; all owned fixture databases were removed. Original
+external packet `F:\ReconForge_Evidence\recovery-20261014\m7-frozen148-migration-8f163527-v1-private`
+has10 members; closure SHA256
+`fc8814818856bc517866c2417f3e2b9ad2fc589f998fe99168288e937eab1e3c`.
+This is migration-specific evidence; it does not accept v2 operational posting,
+zero-cost stock reuse, HTTPS, populated-zero restore or the whole M7 domain.
+
+## M7 actual5017 integration and preserved CI metadata failure (2026-10-15)
+
+Actual local affected5/0 skips closesa302dfc73bc078461aa9bbdbd8a87a66be1184bcd92c334d2cffdd50574e3be9.
+Independent cash-split/race derivation9a8de59403c4c46e12cbe88da343866f1acad8bb30e2350dfbba9f65b68fa7a2
+checks7×78 original captures and two actual wait edges; its39-file byte mirror
+closeseaa5ff0567b7bda2a67d6e8d9ef1af67160d9ed32f59f211743ca4ea6e2f2126.
+Actual eight-event HTTPS,339-table populated restore and three tamper refusals
+pass on unchanged5017 source/build. Fresh isolated-I/-I-O proofs match the original
+driver proof622900550a368d82e2b0cf6aec9a1a96dcef15d70cc52aad2157ad0c8ad526e5;
+independent closured33dd4d6cadf763e0042cddd00ad00365fc192bdea558757e9739c5d376724d8,
+178-file byte-mirrore29f216e405a6a1b0c523fd376faaf103a9ab2ab4767917a7cf3683f925d98ec.
+Official hosted native6+10+1 and whole security18 also pass without skips.
+Official image-security38686174692 passes5/5; raw artifact closurefa66c859c195d038eeee676714a01b4504d78b4acbabc6efe7ebd642a67a230f
+retains0 Critical/High,9 Medium,1 Negligible,65/68 license metadata and no legal
+assessment. CI38685992235 is not accepted: both Python jobs fail only the obsolete
+phase-name test. Original logs a7ae180b1f1724b9559c6c3d2b3f5532ca46e1f92253064d2658e281c4c6cb57
+and9f93d6a2807c17fa8b7e353d406e8c075a4e3a7b1ddc9f3ddb5c648691e2b108
+remain outside the repository. Test-only80cb9ba2 retains the historical workstreams
+and strictly verifies the new completion-first contract;11 targeted tests pass.
+No original failure is relabeled; additive148/v2 work is not accepted by5017 proof.
+
+## M7 native integration and actual observer root cause (2026-10-15)
+
+Original12a migration roundtrip closesca46ef2ff918f54939b1faf8e1a752611b8fbc473bbbaf119a029e02d40f4dd9.
+Actual7d transfer+scope-wait2 PASS close14c460fdc86e4eaa9bff41c3ce67c11d8cdf0d70b64c06255b0a1e739032a023;
+actual095 rounded-original+Consumable2 PASS closec8d0c2622c075db52dc72ca95681c399ddccc587c11bc89843b90999a7666fd0.
+Each is source-unchanged,0 skips and owned-fixture-clean; none is final CI.
+Whole18 security executed15 PASS/3 FAIL/0 errors/skips in1388.157s on unchanged095,
+with owned-fixture cleanup. Original23-file/3858766-byte negative closure
+53c3f6978a20074a5ec520783672f185b08f98edc6632031a8031a1c559a2b60
+preserves the genuine results. The private-DTO read and two double-call/exception-
+layer harness failures precede required wait/rollback assertions; no acceptance
+is borrowed from their observed guard refusals. HTTPS7d/8f original failures remain retained. The
+diagnostic8f observer preserves the complete refused78-table snapshot and still
+fails closed. Independent diffce14448ea5fce2ada305d125608ffd26e1ae2cf1137bd6fbccba3aee4df53517
+proves76 business tables byte-identical,18 new authorization.policy_decision
+events, immutable prior audit rows, contiguous valid SHA chain and correct head.
+This supports a supplemental observation contract; it does not accept HTTPS or
+restore. Full-repo095 Ruff/mypy802/Bandit pass after four closed-constant DDL
+false positives were independently reviewed and narrowly annotated. Emitted
+UPGRADE/DOWNGRADE/RECEIPT SQL hashes remain exactly unchanged; the original four
+Medium/Low-confidence findings remain in m7-7d3f88a1-static-v1/bandit-original.log.
+
+## M7 actual posted proof and lifecycle gate (2026-10-15)
+
+Frozen025b09aa actual two-layer repeated return, later real collection and two
+refunds passed with unchanged source. Original raw packet is2503235 bytes,
+SHA851cf8190b31a986848e28a7e9e0c03c1f818ef13883c9651768e449ed6fb2f7.
+Separate stdlib readers under -I/-I-O produce byte-equal proofs. The current
+reader independently derives12 effects,24 lines andDr=Cr238000; proof
+SHA25771af99a4ad960f0083049dd26d88cdae755f3b298e42ee4cc30531a105a22,
+closureb441421812bb269d9044d0d8b851b063a6512be9be62bd8e671fcc36196ffcc7.
+These original subjects remain under the external recovery evidence root in
+independent-025b09aa-posted-reader-v1; they do not qualify later source changes.
+Frozenea457 actual cancellation, reversal, caps/replay, three-human SoD and
+fractional cases5 passed. Scope withdrawal reached the intended refusal after
+a proven wait edge; its wrong expected denial code failed the test before the
+78-table unchanged assertion. Correction08e98a57 still requires native rerun.
+The transfer case did not execute after that maxfail stop. New shared transfer
+hooks, HTTPS/restore and cohesive final CI are not accepted by these receipts.
+
+## M7 native development failures retained (2026-10-15)
+
+The master matrix records implemented versus accepted scope. Frozen95c4ec2e
+native6 failed (0 skips, 429.672s); frozen6bc08a3d first-cycle failed (0 skips,
+103.609s). Both source-before/after manifests match. The latter reaches posting
+inside a transaction, then SQL replay closure fails and the transaction rolls
+back; this is not evidence of a committed cycle. Original controllers, logs,
+JUnit and manifests remain under the external recovery evidence root, in
+m7-native-cycle-95c4ec2e-v1-private and m7-native-first-cycle-6bc08a3d-v2-private.
+Hosted source-component CI38650603290 remains failed: three exact CI-inventory
+contracts, followed by missing archive report after pytest stopped the job.
+Corrected finite native file ownership passes8 local CI contracts. No historical
+failure was relabeled or removed, and no manual security run was dispatched.
+
+## Completion inventory and bounded M7 source qualification (2026-10-15)
+
+Current closure status is recorded only in ENTERPRISE_COMPLETION_MASTER_MATRIX.md.
+Original M3/M4 closure bytes and fresh official Draft head/base GETs were verified
+without repeating accepted tests. Frozen0b source qualification passed275 targeted
+tests/zero failures/errors/skips; publication-source archive closes07b58d0b.
+The already-started actual native source cohort completed6/zero skips with unchanged
+source and owned cleanup; genuine unposted proposal and isolated-mode proofs close
+ccb25aa9292737c6c7254d3770396340d851124f47fd6f8bf3222690fcb131ba.
+These are source/component proofs, not actual posted partial-return acceptance.
+Current new native owner/shared147/API/Studio development remains unaccepted.
+
 ## Fresh M3/M4 original acceptance and M5 integration (2026-10-14)
 
 M3 `18d81cc5`: CI38521912621 is62/62 successful; original final closure
@@ -23661,3 +23928,36 @@ records integer-only, duplicate/non-finite, UTF-8 and graph budgets with unchang
 canonical/core/template checks. The targeted206 inventory/design/Domain/template
 cases pass; their uncommitted component originals remain labeled separately.
 Fresh frozen source qualification and cohesive CI remain required.
+
+### 2026-10-15 — M7 actual native source component and original custody
+
+Agent sourcef3b6fac8247ed9a113f4e78274be0b7792be8388 qualifies the internal
+mapper only: target1 pass40.703s, full6 pass145.063s, zero failure/error/skip,
+unchanged source and ordinary five elevated role flags false. These are test
+durations, not resource/throughput benchmarks. Twelve same-case raw captures
+retain72 table populations and exact NUMERIC witnesses unchanged; five successful
+mapper observations are retained. No serialized actual proposal is present in
+that original packet, so its absence is not silently reconstructed as evidence.
+
+External27-file/3,488,976B custody manifest SHA
+e62a4c5bbd1af28f8321e3be9a064ae3165c0445c1d9f2e9bf9c7866a32fc756,
+closure1c9140e29ea55570b805431109d29a3007e568fff4eaacc92cbcfce2cefd2904,
+XML065c89c44273f083811525764a67b1daa352ff1dae1e3cf6cf200397e9847fd8.
+Production fileda47717b and test3fb74b49 are independently pinned. The original
+62d1-pass/5-failure cohort, missing old fixture files and least-privilege catalog
+setup error remain separately retained; no skips or grants bypass them.
+Root integrated source, independent row oracle and mandatory CI remain pending.
+
+M6 final closure d54c0b57c19868771159f1c9dd3707a92849cc4bf22778526695bdb84a6c5bf2
+and582-file manifest5d6371612921abdede67ac938261330e098debbd1fb407eb03a8ef56b9345b03
+were rehashed independently by Root. Actual64/64 CI,7200 Python passes perversion,
+1924 mandatory summed selections and manual5/5 are source-bound. PR138 single
+PATCH HTTP200 and fresh GET verified exact reviewed8207B bodyfbfb08fe; separate
+publicationclosure489ce33ff4901a703a04ace58ba2efde47db73879eb10f4aaaa6a8f70f85b7c9.
+
+Sourcee0 component263/0 failures/errors/skips and archive03f4aea9ef1152dd714febab91464d0b7b613fe0829062a15e00bede34fc1f6c
+remain retained. Narrow standalone row-verifier correctionbb806 has67 pure cases,
+actual -I/-I -O target/full unchanged input custody and byte-equal mode proofs;
+closure3d96c2bdb695b8a4d41837fc9bebc4156f533db08defa8f6833b1a145a06a43c.
+The synthetic earlier-reader layer1/missing counterexample is retained separately;
+no actual native source/input was modified, and the mapper production is unchanged.

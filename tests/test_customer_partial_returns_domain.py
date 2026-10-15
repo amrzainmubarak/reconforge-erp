@@ -91,6 +91,40 @@ def source_for(case: dict[str, Any]) -> OriginalPartialReturnSource:
     )
 
 
+def rounded_original_case(gross_minor: int = 2378) -> dict[str, Any]:
+    case = deepcopy(DESIGN["cases"][0])
+    case.update(quantity_precision=3, quantity_scaled=2500, gross_minor=gross_minor,
+                net_unit_price_minor=951, collected_minor=0)
+    case["consumptions"] = [{"id": "ROUNDED-ORIGINAL-CONSUMPTION", "layer_id": "ORIGINAL-LAYER",
+                             "quantity_scaled": 2500, "value_minor": 3000}]
+    return case
+
+
+def test_existing_half_up_original_preserves_actual_gross_and_exact_partial_portions() -> None:
+    # Accepted original SalesLine: 2.5 * 951 = 2377.5 -> 2378. The correction
+    # apportions that immutable posted gross, not a freshly rounded 1.25 * 951.
+    source = source_for(rounded_original_case())
+    history = PartialReturnHistory(source)
+    original = source.fingerprint_payload
+    with pytest.raises(FinancePostingError, match="integral"):
+        prepare_partial_return(history, 1)
+    first = prepare_partial_return(history, 1250)
+    assert Fraction(2378 * 1250, 2500) == first.credit_minor == 1189
+    assert Fraction(3000 * 1250, 2500) == first.cogs_restored_minor == 1500
+    assert first.receivable_released_minor == 1189 and first.refund_entitlement_delta_minor == 0
+    history = apply_partial_return(history, first)
+    second = prepare_partial_return(history, 1250)
+    history = apply_partial_return(history, second)
+    assert (partial_return_balance(history).credited_minor, partial_return_balance(history).cogs_restored_minor) == (2378, 3000)
+    assert source.fingerprint_payload == original
+
+
+@pytest.mark.parametrize("gross_minor", [2377, 2379])
+def test_balanced_original_evidence_cannot_change_the_existing_half_up_quote(gross_minor: int) -> None:
+    with pytest.raises(FinancePostingError, match="Original revenue"):
+        source_for(rounded_original_case(gross_minor))
+
+
 @pytest.mark.parametrize("case", DESIGN["cases"], ids=lambda case: case["id"])
 def test_all_seven_manual_vectors_agree_with_independent_original_fraction_oracle(case: dict[str, Any]) -> None:
     original = deepcopy(case)

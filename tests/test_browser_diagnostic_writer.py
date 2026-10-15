@@ -109,6 +109,117 @@ def inputs(tmp_path: Path, *, unexpected: int = 0) -> tuple[Path, Path, dict[str
     return output, private, raw, stats
 
 
+@pytest.mark.parametrize("directory", ["native-customer-partial-return-originals", "Native-Customer-Partial-Return-Originals",
+                                      "native-customer-partial-return-failed-observation-originals", "Native-Customer-Partial-Return-Failed-Observation-Originals",
+                                      "native-customer-partial-return-observation-originals", "Native-Customer-Partial-Return-Observation-Originals",
+                                      "native-customer-partial-return-remainder-originals", "Native-Customer-Partial-Return-Remainder-Originals",
+                                      "native-customer-partial-return-remainder-observation-originals", "Native-Customer-Partial-Return-Remainder-Observation-Originals",
+                                      "native-customer-partial-return-remainder-failed-observation-originals", "Native-Customer-Partial-Return-Remainder-Failed-Observation-Originals",
+                                      "native-customer-partial-return-restituted-originals", "Native-Customer-Partial-Return-Restituted-Originals",
+                                      "native-customer-partial-return-restituted-observation-originals", "Native-Customer-Partial-Return-Restituted-Observation-Originals",
+                                      "native-customer-partial-return-restituted-failed-observation-originals", "Native-Customer-Partial-Return-Restituted-Failed-Observation-Originals"])
+def test_partial_return_raw_family_in_reused_public_output_is_retained_privately(tmp_path: Path, directory: str) -> None:
+    output, private, _, _ = inputs(tmp_path)
+    family = output / directory
+    family.mkdir()
+    raw = b'{"private_original_minor":9000000000000000000,"source":"retain-exact-private"}\n'
+    (family / "committed-capture-0.json").write_bytes(raw)
+    result = writer.publish_browser_diagnostics(output, private, [TOKEN, CSRF, PASSWORD])
+    assert result["status"] == "published"
+    assert not (family / "committed-capture-0.json").exists()
+    assert (private / "public-originals" / directory / "committed-capture-0.json").read_bytes() == raw
+    assert all(path.read_bytes() != raw for path in output.rglob("*") if path.is_file())
+
+
+@pytest.mark.parametrize("directory", ["native-customer-partial-return-originals", "Native-Customer-Partial-Return-Originals",
+                                      "native-customer-partial-return-failed-observation-originals", "Native-Customer-Partial-Return-Failed-Observation-Originals",
+                                      "native-customer-partial-return-observation-originals", "Native-Customer-Partial-Return-Observation-Originals",
+                                      "native-customer-partial-return-remainder-originals", "Native-Customer-Partial-Return-Remainder-Originals",
+                                      "native-customer-partial-return-remainder-observation-originals", "Native-Customer-Partial-Return-Remainder-Observation-Originals",
+                                      "native-customer-partial-return-remainder-failed-observation-originals", "Native-Customer-Partial-Return-Remainder-Failed-Observation-Originals",
+                                      "native-customer-partial-return-restituted-originals", "Native-Customer-Partial-Return-Restituted-Originals",
+                                      "native-customer-partial-return-restituted-observation-originals", "Native-Customer-Partial-Return-Restituted-Observation-Originals",
+                                      "native-customer-partial-return-restituted-failed-observation-originals", "Native-Customer-Partial-Return-Restituted-Failed-Observation-Originals"])
+@pytest.mark.parametrize("basename", ["native-financial-snapshot-oracle-1.json", "original.sql", "original.png"])
+@pytest.mark.parametrize("location", ["reused-public", "private-attachment"])
+@pytest.mark.parametrize("case_alias", [False, True])
+def test_mislocated_partial_return_raw_attachment_cannot_use_generic_original_allowlist(
+    tmp_path: Path, directory: str, basename: str, location: str, case_alias: bool,
+) -> None:
+    output, private, _, _ = inputs(tmp_path)
+    base = output if location == "reused-public" else private
+    artifacts = base / "playwright-artifacts"
+    original = (artifacts / "case-alias" if case_alias else artifacts) / directory / basename
+    original.parent.mkdir(parents=True)
+    raw = PRIVATE_MONEY.encode() + b" " + PRIVATE_SOURCE.encode()
+    original.write_bytes(raw)
+    assert writer._unchanged_original_artifact_name(original) is True
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD])
+    assert result["status"] == "quarantined" and writer._public_diagnostic_paths(output) == []
+    retained = private / "public-originals" / original.relative_to(output) if location == "reused-public" else original
+    assert retained.read_bytes() == raw
+    assert not (output / "playwright-artifacts" / directory / basename).exists()
+
+
+@pytest.mark.parametrize("failure_call", [1, 2])
+def test_partial_return_publication_requires_binding_before_and_after_staging(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_call: int,
+) -> None:
+    from tests import customer_partial_return_browser_reader as reader
+    output, private, _, _ = inputs(tmp_path)
+    calls = []
+    def refuse(selected: Path, proof: dict[str, Any]) -> None:
+        assert selected == private and proof == {"test_only_binding": True}
+        calls.append(selected)
+        if len(calls) == failure_call:
+            raise ValueError("Deliberate publication binding refusal, not native proof.")
+    monkeypatch.setattr(reader, "require_customer_partial_return_original_binding", refuse)
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD],
+        partial_financial_verification={"test_only_binding": True})
+    assert result["status"] == "quarantined" and len(calls) == failure_call
+    assert writer._public_diagnostic_paths(output) == []
+
+
+@pytest.mark.parametrize("failure_call", [1, 2])
+def test_remainder_publication_rebinds_originals_before_and_after_staging(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_call: int,
+) -> None:
+    from tests import customer_partial_return_remainder_browser_reader as reader
+    output, private, _, _ = inputs(tmp_path)
+    calls = []
+    def refuse(selected: Path, proof: dict[str, Any], *, case: str, require_restore: bool) -> None:
+        assert selected == private and proof == {"test_only_binding": True}
+        assert case == "zero" and require_restore is True
+        calls.append(selected)
+        if len(calls) == failure_call:
+            raise ValueError("Deliberate remainder publication refusal, not native proof.")
+    monkeypatch.setattr(reader, "require_remainder_original_binding", refuse)
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD],
+        remainder_financial_verification={"test_only_binding": True},
+        remainder_case="zero", remainder_require_restore=True)
+    assert result["status"] == "quarantined" and len(calls) == failure_call
+    assert writer._public_diagnostic_paths(output) == []
+
+
+@pytest.mark.parametrize("failure_call", [1, 2])
+def test_restituted_publication_rebinds_originals_before_and_after_staging(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_call: int,
+) -> None:
+    from tests import customer_partial_return_restituted_browser_reader as reader
+    output, private, _, _ = inputs(tmp_path)
+    calls = []
+    def refuse(selected: Path, proof: dict[str, Any], *, require_restore: bool) -> None:
+        assert selected == private and proof == {"test_only_binding": True} and require_restore is True
+        calls.append(selected)
+        if len(calls) == failure_call:
+            raise ValueError("Deliberate restituted publication refusal, not native proof.")
+    monkeypatch.setattr(reader, "require_restituted_original_binding", refuse)
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD],
+        restituted_financial_verification={"test_only_binding": True}, restituted_require_restore=True)
+    assert result["status"] == "quarantined" and len(calls) == failure_call
+    assert writer._public_diagnostic_paths(output) == []
+
+
 def outside_artifacts(output: Path) -> dict[str, bytes]:
     untouched = {"financial-original.json": b'{"minor":9000000000000000000,"currency":"KWD"}\n',
         "independent-oracle.json": b'{"passed":true,"source_sha256":"trusted"}',
@@ -623,9 +734,11 @@ def test_writer_refuses_late_customer_return_private_original_drift_without_publ
 
 
 @pytest.mark.parametrize("directory", ["native-customer-return-originals", "Native-Customer-Return-Originals"])
-def test_reused_public_customer_return_raw_rows_are_quarantined_before_generic_basename_exemption(tmp_path: Path, directory: str) -> None:
+@pytest.mark.parametrize("case_alias", [False, True])
+def test_reused_public_customer_return_raw_rows_are_quarantined_before_generic_basename_exemption(tmp_path: Path, directory: str, case_alias: bool) -> None:
     output, private, _, _ = inputs(tmp_path)
-    stale = output / "playwright-artifacts" / directory / "native-financial-snapshot-oracle-1.json"
+    artifacts = output / "playwright-artifacts"
+    stale = (artifacts / "case-alias" if case_alias else artifacts) / directory / "native-financial-snapshot-oracle-1.json"
     stale.parent.mkdir(parents=True)
     raw = PRIVATE_MONEY.encode() + b" " + PRIVATE_SOURCE.encode()
     stale.write_bytes(raw)

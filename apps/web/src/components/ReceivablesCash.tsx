@@ -6,6 +6,7 @@ import { ReceivablesPolicy } from "./ReceivablesPolicy";
 import { arTranslate, type ArMessage } from "../receivables-i18n";
 import { arFetch, cashAllocationRequest, cashReceiptRequest, loadCashCustomer, loadCashExposure, loadCashInvoice, loadCashPage, loadReceipt, parseReceipt, type ArCustomer, type ArInvoice, type ArPage, type ArReceipt, type CashRequest, type ReceivablesIdentity } from "../receivables-data";
 import type { Locale } from "../types";
+import { ReceivablesAging } from "./ReceivablesAging";
 
 export function ReceivablesCash({ invoiceId, workspace, identity, locale, onLockChange, onAccessRefresh, onChanged }: { invoiceId: string; workspace: string; identity: ReceivablesIdentity; locale: Locale; onLockChange: (locked: boolean) => void; onAccessRefresh: () => void; onChanged: () => void }) {
   const auth = useBrowserSession();
@@ -114,6 +115,7 @@ export function ReceivablesCash({ invoiceId, workspace, identity, locale, onLock
     {!invoice || !customer || !page ? <p role="status">{t("loading")}</p> : <>
       <p>{t("customer")}: <strong><bdi>{customer.customer_code} · {customer.name} · {customer.currency_code}</bdi></strong></p><div className="ar-amounts"><strong>{t("cashInvoiceBalance")}: <bdi>{money(invoice.outstanding_minor)}</bdi></strong><span>{t("cashCustomerBalance")}: <bdi>{money(exposure!, { currency_code: customer.currency_code })}</bdi></span></div>
       <ReceivablesPolicy record={invoice} locale={locale} id="cash-money-note" />
+      <ReceivablesAging invoice={invoice} customer={customer} workspace={workspace} locale={locale} disabled={locked} onDenied={onAccessRefresh} />
       {!receiptReady && hasCapturedPolicy(invoice) ? <p role="status">{t("ar_monetary_policy_mismatch")}</p> : null}
       {!allowed ? <p>{t("cashReadOnly")}</p> : !elevated ? <p>{t("cashReauthNeeded")}</p> : !open ? <p>{t("cashNoOpenInvoice")}</p> : !receiptReady ? null : <form onSubmit={(event) => prepare(event, "receipt")}><h3>{t("cashReceipt")}</h3><fieldset aria-label={t("cashReceipt")} disabled={locked || created}>
         <label>{t("cashNumber")}<input required maxLength={64} pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" value={number} onChange={(event) => setNumber(event.target.value)} /></label>

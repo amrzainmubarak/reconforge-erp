@@ -20,12 +20,48 @@ export interface ArReceipt extends ArMoneyRecord {
   allocations: { invoice_id: string; amount_minor: ArMinor }[];
 }
 export interface CashRequest { path: string; body: object; kind: "receipt" | "allocation"; amount: bigint; allocation: bigint; receiptId?: string }
+export const agingBuckets = ["Current", "1-30", "31-60", "61-90", "90+"] as const;
+export type AgingBucket = typeof agingBuckets[number];
+export interface ArAgingItem { invoice_id: string; invoice_number: string; customer_code: string; customer_name: string; currency_code: string; invoice_date: string; due_date: string; total_minor: number; outstanding_minor: number; days_overdue: number; bucket: AgingBucket }
+export interface ArAgingGroup { currency_code: string; items: ArAgingItem[]; bucket_totals_minor: Record<AgingBucket, number>; total_outstanding_minor: number }
+export interface ArAging { schema_version: 1; as_of_date: string; currency_groups: ArAgingGroup[] }
 const root = "/api/v1/receivables";
 const object = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const text = (value: unknown): value is string => typeof value === "string";
 const strings = (value: unknown): value is string[] => Array.isArray(value) && value.every(text);
 const safe = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 function invalid(): never { throw new Error("ar_contract_invalid"); }
+const closed = (value: unknown, keys: readonly string[]): value is Record<string, unknown> => object(value) && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
+const boundedText = (value: unknown): value is string => typeof value === "string" && value.length > 0 && value.length <= 500 && !/[\x00-\x1f\x7f]/.test(value);
+const calendarDate = (value: unknown): value is string => typeof value === "string" && /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value) && value >= "0001-01-01" && Number.isFinite(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+
+/** The existing aging API sends integer minor units without a captured scale.
+ * Refuse unsafe numeric transport and never infer precision from a live registry. */
+export function parseArAging(value: unknown, asOfDate: string): ArAging {
+  if (!calendarDate(asOfDate) || !closed(value, ["schema_version", "as_of_date", "currency_groups"]) || value.schema_version !== 1 || value.as_of_date !== asOfDate || !Array.isArray(value.currency_groups) || value.currency_groups.length > 1000) invalid();
+  const seen = new Set<string>(); let count = 0, previous = "";
+  for (const group of value.currency_groups) {
+    if (!closed(group, ["currency_code", "items", "bucket_totals_minor", "total_outstanding_minor"]) || typeof group.currency_code !== "string" || !/^[A-Z]{3}$/.test(group.currency_code) || group.currency_code <= previous || !Array.isArray(group.items) || !group.items.length || !closed(group.bucket_totals_minor, agingBuckets) || !safe(group.total_outstanding_minor) || !group.total_outstanding_minor) invalid();
+    previous = group.currency_code;
+    const buckets = Object.fromEntries(agingBuckets.map(bucket => [bucket, 0n])) as Record<AgingBucket, bigint>;
+    let total = 0n;
+    for (const item of group.items) {
+      if (++count > 10000 || !closed(item, ["invoice_id", "invoice_number", "customer_code", "customer_name", "currency_code", "invoice_date", "due_date", "total_minor", "outstanding_minor", "days_overdue", "bucket"]) || ![item.invoice_id, item.invoice_number, item.customer_code, item.customer_name].every(boundedText) || seen.has(String(item.invoice_id)) || item.currency_code !== group.currency_code || !calendarDate(item.invoice_date) || !calendarDate(item.due_date) || item.due_date < item.invoice_date || !safe(item.total_minor) || !safe(item.outstanding_minor) || !item.outstanding_minor || item.outstanding_minor > item.total_minor || !safe(item.days_overdue)) invalid();
+      const days = Math.max((Date.parse(`${asOfDate}T00:00:00Z`) - Date.parse(`${item.due_date}T00:00:00Z`)) / 86400000, 0);
+      const bucket = days === 0 ? "Current" : days <= 30 ? "1-30" : days <= 60 ? "31-60" : days <= 90 ? "61-90" : "90+";
+      if (item.days_overdue !== days || item.bucket !== bucket) invalid();
+      seen.add(String(item.invoice_id)); buckets[bucket] += BigInt(item.outstanding_minor); total += BigInt(item.outstanding_minor);
+    }
+    const totals = group.bucket_totals_minor;
+    if (total !== BigInt(group.total_outstanding_minor) || agingBuckets.some(bucket => { const amount = totals[bucket]; return !safe(amount) || BigInt(amount) !== buckets[bucket]; })) invalid();
+  }
+  return value as unknown as ArAging;
+}
+
+export async function loadArAging(session: BrowserAdminSession, workspace: string, asOfDate: string, signal?: AbortSignal): Promise<ArAging> {
+  if (!boundedText(workspace) || !calendarDate(asOfDate)) invalid();
+  return parseArAging(await arFetch(session, `${root}/aging-by-currency?as_of_date=${asOfDate}`, workspace, { signal }), asOfDate);
+}
 
 /** Money stays text/BigInt until the validated, exactly representable JSON boundary. */
 export function minorInteger(value: string): bigint {

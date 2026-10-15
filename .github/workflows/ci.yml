@@ -119,6 +119,15 @@ jobs:
           --ignore=tests/test_postgres_commercial_collection_cancellation.py
           --ignore=tests/test_postgres_customer_returns.py
           --ignore=tests/test_postgres_customer_return_read_authority.py
+          --ignore=tests/test_postgres_customer_partial_return_source.py
+          --ignore=tests/test_postgres_customer_partial_returns.py
+          --ignore=tests/test_postgres_customer_partial_return_posted_security.py
+          --ignore=tests/test_postgres_customer_partial_return_transfer.py
+          --ignore=tests/test_postgres_customer_partial_return_rounding.py
+          --ignore=tests/test_postgres_customer_partial_return_rounding_migration.py
+          --ignore=tests/test_postgres_customer_partial_return_rounding_security.py
+          --ignore=tests/test_postgres_customer_partial_return_zero_stock.py
+          --ignore=tests/test_postgres_customer_partial_return_zero_stock_security.py
           --ignore=tests/test_postgres_stock_sales_reversal_dispatch.py
           --ignore=tests/test_postgres_supplier_returns.py
           --ignore=tests/test_postgres_supplier_returns_api.py
@@ -267,7 +276,7 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets, procurement-commitments, customer-returns, supplier-returns, operational-fx-tax, manufacturing-execution, manufacturing-execution-v2, intercompany-operations, intercompany-fx, intercompany-source-cashflow, intercompany-group-diagnostic, people-project-payroll, procurement-sourcing, accrual-deferral, project-time-billing, project-source-reconciliation, manufacturing-supply-plan, inventory-transfer]
+        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets, procurement-commitments, customer-returns, customer-partial-returns, customer-partial-return-remainder-ordinary, customer-partial-return-remainder-zero, customer-partial-return-remainder-refund, customer-partial-return-restituted, supplier-returns, operational-fx-tax, manufacturing-execution, manufacturing-execution-v2, intercompany-operations, intercompany-fx, intercompany-source-cashflow, intercompany-group-diagnostic, people-project-payroll, procurement-sourcing, accrual-deferral, project-time-billing, project-source-reconciliation, manufacturing-supply-plan, inventory-transfer]
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -427,6 +436,11 @@ jobs:
         shard:
           # Exercise changed-owner invariants before the legacy partition.
           - commercial-integrity
+          - customer-partial-cycle
+          - customer-partial-security
+          - customer-partial-rounding
+          - customer-partial-rounding-migration
+          - customer-partial-rounding-security
           - supply-integrity
           - finance-integrity
           - accrual-deferral
@@ -727,6 +741,23 @@ jobs:
             commercial-integrity)
               uv run --no-sync pytest tests/test_postgres_commercial_collections.py tests/test_postgres_commercial_collection_cancellation.py -q
               uv run --no-sync pytest tests/test_postgres_customer_returns.py tests/test_postgres_customer_return_read_authority.py -q
+              ;;
+            customer-partial-cycle)
+              uv run --no-sync pytest tests/test_postgres_customer_partial_return_source.py -q
+              uv run --no-sync pytest tests/test_postgres_customer_partial_returns.py -q
+              uv run --no-sync pytest tests/test_postgres_customer_partial_return_transfer.py -q
+              ;;
+            customer-partial-security)
+              uv run --no-sync pytest tests/test_postgres_customer_partial_return_posted_security.py -q
+              ;;
+            customer-partial-rounding)
+              uv run --no-sync pytest tests/test_postgres_customer_partial_return_rounding.py tests/test_postgres_customer_partial_return_zero_stock.py -q
+              ;;
+            customer-partial-rounding-migration)
+              uv run --no-sync pytest tests/test_postgres_customer_partial_return_rounding_migration.py -q
+              ;;
+            customer-partial-rounding-security)
+              uv run --no-sync pytest tests/test_postgres_customer_partial_return_rounding_security.py tests/test_postgres_customer_partial_return_zero_stock_security.py -q
               ;;
             supply-integrity)
               uv run --no-sync pytest tests/test_postgres_landed_cost.py tests/test_postgres_landed_cost_api.py tests/test_postgres_landed_cost_cancellation.py -q

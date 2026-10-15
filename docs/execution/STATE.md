@@ -1,5 +1,157 @@
 # Execution State
 
+## Completion first — one domain at a time (2026-10-15)
+
+Latest integrated slice: actualc70 settlement/cash-race2 PASS, including native
+invoice/exposure/current and overdue aging at seven stages. New79-table originals
+independently derive9/18/205000 and9/19/221000 (I/IO closure813f8f56).
+Actual713 ordinary/refund Studio aging, bilingual HTTPS and populated restore
+pass on the new985c4a build; independent peers0368741c/01bcaabc bind6 NEW/12/4001
+and8 NEW/17/81000, with79-table restores660/1140 rows. Actual5cdb mixed0+10
+consumption passes; new frozen48fd reader independently derives9 TOTAL effects,
+18 lines/Dr=Cr433, equal-I/IO proof90d1bd4b and closure984fc405. Actual corrected
+backdate security passes1/1 atcdd. Component results retain their own heads.
+
+CI38751026869 on cdd is a preserved terminal failure: Python8385 PASS plus one
+bad lstat test double, and native8 PASS/2 FAIL on obsolete78-table capture.
+The aggregate fails closed. Terminal totals are68 success/4 failure/1 cancelled/
+1 skipped; the fourth HTTPS job reaches its25-minute limit during Studio build, before HTTPS,
+and bounded log retrieval retains404 and incomplete ZIP originals. The exact
+composite subcommand/cause remains unknown, receipt bf9c3e91. Both narrow fixes
+execute their targeted gates;
+Linux affected stat case also passes. Original Gitleaks protocol-fixture false
+positive is corrected without scanner exceptions; tree and HEAD-history scans
+pass. Local all-refs scan separately refuses an old synthetic fixture in a
+nonancestor local branch; it is not relabeled as a candidate-history success.
+Package preflight first refused missing ADR0861; the explicit manifest fix then
+passes source/wheel inspection at ac5fec69. Cohesive new-head CI and security
+qualification remain pending. M7 stays OPEN, including its original tax/FX gap;
+the team has not advanced to Manufacturing or another major domain.
+
+Earlier scoped checkpoints retain their exact heads and outcomes below.
+
+Frozen373362a6 actual zero-resale HTTPS/populated restore passes243.031s:
+4 checkpoints/79 tables/2 sources,5 actual effects/10 lines/Dr=Cr203,
+3 later observations/76 valid audit appends and79 restored tables/1518 rows.
+The actual old-return dependency refusal, lost ACK, bilingual/RTL/Axe assertions,
+three tamper refusals and source/build/runtime cleanup pass. Isolated proof
+596a7255 is byte equal. Native full new5-security plus affected mixed executes
+5 PASS/1 FAIL/0 skips358.344s; mixed and first4 hostile cases pass. The fifth
+observation stops at reserved SQL alias day before the intended backdate check;
+its two-name test-only correction still needs execution. Root's full Ruff,
+mypy809 and Bandit pass. Draft139 now holds373362a6 and CI38749652508 is pending;
+this is not final acceptance. Remaining zero/refund HTTPS and final-head gates
+remain OPEN. Ordinary9af independent custody closes951737e5, preserving the
+original340-table restore and the distinct later identity_users probe checkpoint.
+
+Earlier scoped checkpoints follow without changing their original outcomes.
+
+Latest scoped evidence: ordinary-v2 HTTPS on frozen9af22802 passes3 posted
+returns, lost-response replay, bilingual/RTL/accessibility assertions and populated
+restore. Independent isolated readers agree on6 new effects/12 lines/Dr=Cr4001;
+all79 restored financial tables/646 rows match. Product peer c1afe7d6 verifies the
+actual browser original; independent custody review remains separate. The same
+head's zero-cost resale/new-return case passes and its four79-table raw captures
+independently yield5 effects/10 lines/Dr=Cr203, closure3d3bc3d3. Its whole native
+cohort remains2 PASS/1 FAIL. The SQL chronology fix then passes the empty148
+catalog/data/OID roundtrip at5f1ea229; mixed posting proceeds but its observation
+query fails on an ambiguous column. Original failures remain retained. The narrow
+query correction, new hostile SQL cases, remaining v2 HTTPS/restore cases and
+final unified CI are not accepted yet. M7 remains OPEN; no new major domain.
+
+The following paragraphs preserve earlier checkpoints and their original scope.
+
+The new restituted Stock cycle is still unaccepted. Actual3947 fails at148 SQL
+compilation (1 failure/2 setup errors); narrow CASE fix ac7 then passes the empty
+147↔148 catalog/data/OID roundtrip1/1 in47.578s. Its business2 first fail on
+polymorphic trigger record access; subsequent4236 business2 expose a new alias
+collision and correctly refused backdated fixture. Subsequentc255 business2 reach
+zero delivery but expose nullable-composite claim/entry handling and an actual
+receipt-chronology integration gap after a CR2 physical correction. All originals
+retain zero skips, unchanged source and owned-DB cleanup. The next narrow fix
+binds real empty entry descriptors and exact closed CR2 valuation ownership;
+no operational success, actual v2 HTTPS or populated-zero restore is claimed.
+
+The unchanged populated0099 AR restore passes on frozen8e1dcfcd:1/0 failures,
+errors or skips in12.719s, preserving11 table digests,15 legacy raw denials and3
+forged policy refusals. Independent peer a4eb1e72 rehashes all11 originals and4358
+source contents; the fixture stays at0099. This closes the old AR compatibility
+checkpoint only. CI38685992235 remains the original failed hosted run.
+
+Current M7 closure remains OPEN. On frozen998f7fe0 the affected zero lifecycle
+executes1 PASS/0 failure/error/skip in126.516s, and the five direct-SQL/authority
+cases execute5 PASS/0 failure/error/skip in238.657s. Both retain unchanged source,
+ordinary five-false role flags,30s statement timeout and owned-DB cleanup.
+Original ten-file closures309da3ab and4d35591b bind these specific gates;
+4355 tracked Git contents and explicit checkout line-ending policies agree.
+This is not a whole16-case rerun, HTTPS, populated-zero restore or final acceptance.
+The zero lifecycle now replays exact ACKs, posts/reverses zero effects and single
+revenue/cost legs without a zero journal. The SQL gates reject forged before-value,
+reused zero witnesses, malformed policies and revoked posting authority.
+
+The original native12c314ee16 cases execute
+10PASS/6FAIL/0skip (889.172s); the affected f2052c2c6 cases fail at a distinct
+retained-ACK empty-entry monetary projection (150.390s), after first preparation
+succeeds. Both runs have unchanged source and owned-DB cleanup. Original negative
+files are retained. The subsequent998 fix preserves original monetary exposure
+while explicitly admitting only the v2 zero-leg shape. No zero journal is introduced.
+An unexpected disappearance of active worktree inner directories required fresh
+managed checkouts from retained refs. Root f205 source4355/4355 byte hashes match;
+main and both primary dirty-file hashes remain unchanged. Agent drafts were
+reconstructed from owned recorded writes and checkpointed with targeted checks;
+no independent comparison to the lost uncommitted bytes or whole-domain acceptance
+is claimed.
+
+Actual additive148 migration gates on frozen8f163527:3 PASS/0 failure/error/skip,
+516.031 seconds. Empty147→148→147 restores all rows/catalog/function identities;
+retained posted-v1 history and original ACK survive upgrade/downgrade; retained
+v2 source refuses downgrade before any catalog/data mutation. Tuple/dict installer
+replay retains the full upgraded snapshot. Source unchanged and owned databases
+removed. Original10-member custody fc881481 is retained externally. This closes
+that migration checkpoint only. New v2 operations/security/HTTPS/zero-stock reuse
+and final cohesive acceptance remain open.
+
+Current5017 actual affected5 and hosted native18 pass with zero critical skips.
+Its full eight-event Studio HTTPS cycle and populated339-table restore pass;
+independent raw-row proofs derive17 effects/35 lines/Dr=Cr385000. Separate new
+cash-split/wait-race raw proofs derive9/18/205000 and9/19/221000. Manual image
+security5/5 passes with0 Critical/High and retained Medium/license gaps.
+Full CI38685992235 is not accepted:62 successful jobs,4 failures and1 skipped.
+Both Python versions failed one stale phase-name assertion; AR restore at retained
+0099 encountered a new147 column, and the aggregate boundary job failed closed.
+Strict current-governance correction80cb9ba2 passes11 targeted cases. The AR
+compatibility fix is in progress without upgrading its old fixture to hide the bug;
+the original hosted failures remain retained. The same three agents now close
+M7.6's remaining-value and zero-leg paths under additive148/ADR0861, with preserved
+legacy versions and no new major domain. New v2 functionality lacks cohesive
+final acceptance, actual v2 HTTPS/populated restore and zero-stock reuse proof.
+The earlier component subjects below retain their original outcomes.
+
+The authoritative remaining-work inventory is
+[ENTERPRISE_COMPLETION_MASTER_MATRIX.md](ENTERPRISE_COMPLETION_MASTER_MATRIX.md).
+M3/M4 original closure bytes and fresh official Draft heads were verified without
+repeating their accepted tests. M5/M6 scoped acceptance remains retained.
+The following paragraph is the preserved earlier checkpoint, superseded by the
+executed5017 outcomes above; its original negative receipts remain immutable.
+M7 partial customer returns are OPEN. Native025 now posts actual repeated returns,
+later collection and partial refunds; an isolated independent reader derives
+12 effects/24 lines/Dr=Cr238000 from original rows. Nativeea457 lifecycle5 passed;
+the scope-wait expected-code failure is retained. Actual7d transfer/retry/scope
+withdrawal both pass; actual095 rounded original/Consumable both pass. Whole18
+SQL/security executed15 PASS/3 FAIL/0 skips on095; the original negative closure
+53c3f697 is preserved. Three narrow harness corrections require affected reruns;
+their remaining wait/rollback assertions are not accepted. Actual8f HTTPS first post/replay reaches a failed
+observer comparison; retained originals prove only valid authorization-audit
+growth, with all76 business tables unchanged. Source545 supplemental-observation
+contracts have339 targeted passes, without an actual HTTPS acceptance. Full78 observations,
+eight-event HTTPS, populated restore and final-source acceptance remain required.
+Three agents now cooperate on this same domain: native owner/data, API/Studio,
+independent financial/security/recovery verification. Root owns shared migrations
+and integration. No new domain or small successor milestone is opened.
+Functional closure precedes comparative benchmarks and production qualification.
+Main and both primary dirty files retain their original heads and SHA256 values.
+The historical checkpoints below remain original subjects, not current priorities.
+
 ## M3/M4 accepted; cohesive M5 source gate proceeds (2026-10-14)
 
 Current accepted dependency heads are M3 `18d81cc5` (CI62/62) and M4
@@ -12707,3 +12859,40 @@ portions only; no implicit rounding. New templates retain original account/
 dimension/journal/currency pins and create no approval, entry ID or full inverse.
 Native ownership, partial-stock posting, API, Studio and migration remain absent.
 ADR0858 and the M6 matrix define remaining shared AR/valuation/receipt guards.
+
+### 2026-10-15 — Integrate native original-source membership before CR2 effects
+
+M7 composes the qualified original partial-return domain with an internal native
+source mapper over existing invoice, issue, valuation, movement, posting and cash
+owners. Agentf3b target1/full6 actual PostgreSQL cases pass with zero skips; all12
+case-bound before/after captures retain unchanged exact row texts from72 tables.
+Native quantity uses NUMERIC::text and retained quantity text, never binary float.
+Reviewed FIFO issue order is preserved despite reversed layer ID ordering.
+Captured inbound currency policy does not replace original consumed/posted cost.
+
+The mapper and observer execute SELECTs; ordinary table ACLs still allow guarded
+DML. Actual current catalog retains15 function definitions/owners/ACLs/configs,
+including three selected inventory definers, and seven FORCE-RLS tables. Five
+ordinary elevated attributes and schemaCREATE remain false; alembic_version
+visibility is explicitly denied, with fixture migration logs retained separately.
+
+Root owns CI mandatory-shard selection, parser inventory, source archive pins,
+module metadata and the integrated freeze. Independent stdlib original-row
+arithmetic and final Root/hosted gates remain pending on this source. The initial
+62d native failure and missing-environment/catalog preflights remain negatives.
+No native CR2 command, partial-stock financial effect, migration147, API or Studio
+workflow is claimed. ADR0859 and the M7 matrix retain the next shared dependencies;
+performance is deferred and all-country statutory packs remain0.
+
+M6 frozenf0 hosted/source acceptance closes atd54c0b57: actual CI64/64/manual
+Security5/5,25 original reports/27 first-attempt cases,333 tables/3 tamper refusals
+and39 private original financial inputs. Root independently rehashed582 originals
+and separately reviewed/published PR138 exact title/body once, then fresh GET
+verified Draft/head/base/body; publication489ce33f. No source/main/merge changed.
+
+M7 Source+oracle integratione0 passes263 pure cases and archive03f4 unchanged,
+as component evidence. The standalone verifier's layer-precision omission was
+found independently: actual layers remain0, but synthetic coherent layer1/missing
+rows passed36cc. Narrowbb806 checks strict integer layer precision0 with67 pure
+cases and new actual unchanged-original isolated readers. Root's corrected final
+source, genuine unposted proposal capture and hosted M7 gates remain required.

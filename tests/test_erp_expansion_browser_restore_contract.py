@@ -71,8 +71,9 @@ class Runtime:
 
 
 def harness(monkeypatch: pytest.MonkeyPatch, *, damage: str | None = None, leak_table: str | None = None,
-            unbound_leak_table: str | None = None) -> tuple[Runtime, list[tuple[str, ...]], list[Runtime]]:
-    protected = tuple(dict.fromkeys(restore.FINANCIAL_TABLES + restore.EXPANSION_TABLES + MANUFACTURING_EXECUTION_TABLES))
+            unbound_leak_table: str | None = None,
+            additional_tables: tuple[str, ...] = ()) -> tuple[Runtime, list[tuple[str, ...]], list[Runtime]]:
+    protected = tuple(dict.fromkeys(restore.FINANCIAL_TABLES + restore.EXPANSION_TABLES + MANUFACTURING_EXECUTION_TABLES + additional_tables))
     calls: list[tuple[str, ...]] = []
     restored: list[Runtime] = []
     original = {"tables": {name: {"rows": 1, "sha256": "original-" + name} for name in protected},
@@ -146,6 +147,34 @@ def test_explicit_workspace_contract_excludes_only_original_tenant_global_audit_
     assert all(name in probes for name in ("inventory_movements", "inventory_movement_lines", "inventory_valuation_documents",
                                           "inventory_valuation_lines", "inventory_cost_layers", "inventory_layer_consumptions",
                                           "finance_entries", "finance_entry_lines", "finance_posting_effects", "outbox_events"))
+
+
+@pytest.mark.parametrize("unbound_leak", [False, True])
+def test_audit_sequence_head_keeps_full_catalog_rows_and_unbound_probe(monkeypatch: pytest.MonkeyPatch, unbound_leak: bool) -> None:
+    # Both relations have tenant-only FORCE RLS in postgres_domain.py. Neither
+    # possesses workspace/entity columns; no operational relation is exempted.
+    assert restore.TENANT_GLOBAL_AUDIT_TABLES == ("domain_audit_events", "domain_audit_ledger_state")
+    runtime, calls, _ = harness(monkeypatch, additional_tables=("domain_audit_ledger_state",),
+                              unbound_leak_table="domain_audit_ledger_state" if unbound_leak else None)
+    extensions = restore.EXPANSION_TABLES + MANUFACTURING_EXECUTION_TABLES + ("domain_audit_ledger_state",)
+    probes = tuple(dict.fromkeys(name for name in extensions if name not in restore.TENANT_GLOBAL_AUDIT_TABLES))
+
+    def run() -> dict[str, Any]:
+        return restore.verify_expansion_native_restore(runtime, "owned-test-only",
+            verify_cycles=lambda _: {"native_effect": "same-original-effect"},
+            extension_tables=extensions, workspace_probe_tables=probes, tamper_statements=("TAMPER",))
+
+    if unbound_leak:
+        with pytest.raises(AssertionError, match="Unbound native read leaked: domain_audit_ledger_state"):
+            run()
+        return
+    result = run()
+    assert result["tenant_global_audit_tables"] == ["domain_audit_events", "domain_audit_ledger_state"]
+    assert result["scope_probe_counts"] == {"protected": 48, "unbound_tenant": 48,
+                                             "sibling_workspace": len(probes), "tenant_global_audit": 2}
+    assert len(calls) == 4 and all("domain_audit_ledger_state" in members for members in calls)
+    assert result["protected_financial_tables"] == result["unbound_tenant_probe_tables"]
+    assert "domain_audit_ledger_state" in result["snapshot"]["tables"]
 
 
 @pytest.mark.parametrize("damage", ["unknown", "duplicate", "native_inventory_omitted", "owner_omitted", "empty"])

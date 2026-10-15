@@ -1,16 +1,26 @@
 schema_version: 2
-updated_at: "2026-10-14"
-phase: "Phase 4 — Global Capability Expansion"
-active_sprint: "M5 exact64-job scoped acceptance closed; M6 native29 parent-order and typed original partial-credit integration gates; performance deferred"
+updated_at: "2026-10-15"
+phase: "Enterprise ERP v1.0 — Functional Completion"
+active_sprint: "One-domain closure: M7 actual partial customer returns; then Advanced Manufacturing; no new fragmented milestones; comparative benchmarks deferred"
+completion_source_of_truth: "docs/execution/ENTERPRISE_COMPLETION_MASTER_MATRIX.md"
+major_domain_wip_limit: 1
+completion_status_values: [VERIFIED COMPLETE, INCOMPLETE, BLOCKED, NOT STARTED]
 snapshot:
   evidence_base_commit: "23fe490e3181eab020938c067c4f71a86521fee3"
   policy_change_commit: "the commit containing this file"
   published: true
-  publication: "Draft PR135 18d81cc5 CI62/62, PR136 d9f2e031 CI64/64 and PR137 23fe490e CI64/64 scoped gates accepted. M5 final closure08fb3a32 and402-file external byte custody independently rehashed; reviewed final PR137 body publication closes separately. M6 final hosted gates pending; performance deferred and false"
+  publication: "Draft PR135 18d81cc5 CI62/62, PR136 d9f2e031 CI64/64, PR137 23fe490e CI64/64 and PR138 f0d90b26 CI64/64 scoped gates accepted. M6 closure d54c0b57/582-file mirror5d637161 independently rehashed; exact reviewed PR138 title/body single PATCH and fresh GET close489ce33f. M7 requires final cohesive acceptance; performance deferred and false"
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-ENTERPRISE-M7-NATIVE-SOURCE-015
+    depends_on: [AMR-ENTERPRISE-CR2-CONTRACT-014, AMR-ENTERPRISE-M6-COLLECTION-LOCK-014]
+    priority: P0
+    area: original-native-partial-return-source-membership
+    title: Rebind original FIFO invoice posting and collection owners before admitting partial correction effects
+    status: in_progress
+    exit_evidence: "Completion matrix is sole remaining-work inventory. Original scoped W5/M1-M6 acceptance preserved. M7v1 actual5017 and all4v2 HTTPS/restore cycles qualified on recorded heads; new713 Studio aging ordinary/refund peers0368741c/01bcaabc prove6 NEW/12/4001 and8 NEW/17/81000. Nativec70 split/wait2PASS +79-table IIO proofs9/18/205000 and9/19/221000. Actualmixed5cdb1PASS and frozen48fd independent9 TOTAL/18/433 closure984fc405. Corrected backdate case cdd1PASS. Original failed hosted cdd CI retained; exact79/stat/fixture/ADR-package fixes targeted green. Cohesive new-head CI/security and original tax/FX functionality remain open. M7INCOMPLETE; no next domain; benchmarks deferred."
   - id: AMR-ENTERPRISE-M2-ACCEPTANCE-014
     depends_on: [AMR-ENTERPRISE-M2-001, AMR-ENTERPRISE-M2-002, AMR-ENTERPRISE-M2-003]
     priority: P0
@@ -51,8 +61,8 @@ tasks:
     priority: P0
     area: customer-invoice-parent-order
     title: Preserve real collection financial effects while acquiring the immutable customer parent before the source invoice
-    status: in_progress
-    exit_evidence: "Original8d951057 baseline1 LockNotAvailable failure, candidate00929829 new native1/full27 pass. Tightened immutable-source statusc211cf50 target3/full29 native pass0 skips; ordinary role4false/source unchanged; receipt16a02094. Eight actual lines DrCr70000, AR44000 and cash/allocation1000. Frozen final M6 hosted/native/restore gates remain required; no performance gain inferred."
+    status: completed
+    exit_evidence: "Actual finalf0 CI64/64/manualSecurity5/5, Python7200 each/663 inheritedgeneric skips; mandatory29shards64sessions1924 summedselected0critical skips,25native reports27cases/333tables3tampers and exact original financial readers. Root rehashed582 originals/32460513B; acceptanceclosured54c0b57 and single exact PR138 bodyPATCH/GET publication489ce33f. Earlier8d LockNotAvailable/2d AST failure remain negatives; no performance gain inferred."
   - id: AMR-ENTERPRISE-M1-001
     depends_on: [AMR-WAVE5-001]
     priority: P0

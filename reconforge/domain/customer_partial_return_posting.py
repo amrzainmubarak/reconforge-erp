@@ -286,6 +286,8 @@ def build_partial_return_posting_contract(plan: PartialReturnPlan, *, roles: Par
     verify_partial_return_plan(plan)
     _require(type(roles) is PartialReturnAccountRoles and type(intent) is PartialReturnPostingIntent)
     source = plan.source
+    if source.original_cogs is None:
+        _refuse()
     role_payload, requested = roles.payload(), intent.payload()
     _require(roles.scope == source.scope and roles.source_fingerprint == plan.source_fingerprint)
     _require(canonical_json(_policy_payload(roles.currency_policy)) == canonical_json(_policy_payload(source.currency_policy)))

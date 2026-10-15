@@ -12,6 +12,7 @@ export interface StockOrder extends SalesScope {
   created_by: string; approved_by: string | null; issue_preparer_id: string | null; issue_reviewer_id: string | null; monetary_policy: { precision: number };
   movement_id: string | null; valuation_id: string | null; cogs_entry_id: string | null; cogs_effect_id: string | null;
   invoice_id: string | null; invoice_plan_id: string | null; collection_plan_id: string | null; receipt_id: string | null;
+  cost_admission_policy?: "partial-return-restituted-v1";
   events: { version: number; actor_id: string; operation: string; reason: string; status: StockStage; audit_event_id: string }[];
 }
 export interface StockOptions extends SalesOptions {
@@ -56,7 +57,16 @@ export function parseStockOrder(value: unknown, scope: SalesScope, identifier?: 
   });
   if (row.events.length !== row.row_version || object(row.events.at(-1)).status !== row.status) invalid();
   const stage = stockStages.indexOf(row.status as StockStage);
-  if (stage >= 6 && stage < 13 && ["movement_id", "valuation_id", "cogs_entry_id", "cogs_effect_id"].some((key) => !row[key])) invalid();
+  const restituted = Object.hasOwn(row, "cost_admission_policy");
+  if (restituted) {
+    if (row.cost_admission_policy !== "partial-return-restituted-v1" || row.cogs_minor === null
+        || !events.some(event => object(event).operation === "prepare-issue")) invalid();
+    if (row.cogs_minor === "0") {
+      if (row.cogs_entry_id !== null || row.cogs_effect_id !== null) invalid();
+    } else if (!row.cogs_entry_id) invalid();
+  }
+  const deliveryFields = ["movement_id", "valuation_id", ...(!restituted || row.cogs_minor !== "0" ? ["cogs_entry_id", "cogs_effect_id"] : [])];
+  if (stage >= 6 && stage < 13 && deliveryFields.some((key) => !row[key])) invalid();
   if (row.status === "Paid" && (!row.invoice_id || !row.receipt_id || !row.collection_plan_id)) invalid();
   return row as unknown as StockOrder;
 }

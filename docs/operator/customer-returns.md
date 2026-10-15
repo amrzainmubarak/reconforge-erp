@@ -1,4 +1,4 @@
-# Whole customer returns and partial cash refunds
+# Customer returns and governed cash refunds
 
 CR1 supports the complete delivered tranche of an original zero-tax,
 functional-currency native stock invoice. Original quantities, FIFO cost,
@@ -87,3 +87,134 @@ any retained plan, including cancelled drafts, refuses history-discarding
 downgrade. Preserve failed upgrade/restore diagnostics. Populated rollback
 requires the verified pre-upgrade database backup; validate source/effect,
 nonowner FORCE RLS, head, row/function fingerprints and SQL tamper refusal.
+
+## Native partial merchandise corrections (CR2, experimental)
+
+Revision0147 adds a correction owner over the existing Stock/FIFO, AR, cash and
+Finance Posting engines. Revision0148 adds the separately versioned remaining-value
+policy and its immutable allocation witnesses. The module remains experimental;
+source-qualified native and HTTPS/restore receipts do not replace the final
+cohesive CI gate. Track acceptance and the open tax/FX dependency in
+`docs/execution/ENTERPRISE_COMPLETION_MASTER_MATRIX.md`.
+
+### Choose the retained source protocol
+
+In **Customer returns**, use **Partial return cycle** for the existing v1 contract,
+or **Partial return with remainder allocation** for the new v2 contract. Supply
+an eligible original Stock order, fiscal period/date, refund liability and cash
+references, reason and an exact positive `quantity_scaled` string. The source
+balance exposes its retained quantity precision: at precision3, returning1.25
+base units requires `quantity_scaled` equal to `"1250"`. Do not send a decimal
+quantity, a JSON float, or a client-selected allocation/rounding policy.
+
+The server fixes `remaining-original-v1` when a new source is born through v2.
+An existing v1 source and its commands keep v1 semantics; opening v2 does not
+upgrade that history. V1 lists only legacy plans and refuses v2 get/balance or
+mutation with an explicit protocol conflict. V2 reads a closed v1/v2 union, but
+commands and retries must use the retained plan's original route and protocol.
+The Studio follows that route automatically without changing an unknown command.
+
+Both protocols expose `/api/v{1|2}/customer-partial-returns/plans`, exact
+`/plans/{id}` reads, `/plans/{id}/review`, `/post`, `/cancel`,
+`/plans/{posted_return_id}/refunds`, `/plans/{posted_original_id}/reversals`,
+and `/sources/{source_order_id}/balance`. Mutations require current human
+permissions, step-up, the authorized workspace/organization/entity and exact
+command/version/digest. Scope comes from the server-authorized headers.
+
+### Quantities, revenue and cost
+
+The bounded source is one native delivered Stock tranche, Stock or Consumable,
+zero tax, functional currency and untracked base units. V1 requires positive
+proportional revenue and cost portions that resolve to integral minor units;
+nonintegral portions refuse. Native v2 requires the retained revenue policy
+`ROUND_HALF_UP` and calculates from the active original remaining quantity/value
+prefix: revenue uses that captured HALF_UP rule, cost
+uses the existing FIFO HALF_EVEN rule, and exhaustion takes the final residual.
+The immutable before-quantity/value witnesses and signed history conserve both
+original amounts. A reversal copies the original actual amounts and witnesses;
+it does not round them again using a later remaining balance.
+
+A v2 return can have positive quantity with revenue0, cost0, one real monetary
+leg or both. Only nonzero aggregate monetary legs produce GL entries; physical
+receipt, exact layer restoration/witness, source ownership, maker/checker/poster, current authority,
+immutable history, audit and outbox remain mandatory even when no GL entry is
+created. A zero-valued portion inside a positive aggregate cost leg shares that
+real aggregate effect. Do not fabricate a zero journal or treat a missing effect
+as permission to skip the native physical/source controls.
+
+The current balance reports actual allocated cash, net credits, open AR and
+refund entitlement separately. Outstanding AR is `max(gross - actual allocated
+cash - posted net credits, 0)`. Collections remain real native cash events;
+no cash is inferred from a credit. A later credit may legitimately create a
+refund liability after earlier collections. Prepare refunds only against a
+posted return and the current liability, with three distinct authorized humans.
+Histories retain at most256 economic events, at most32 original FIFO consumptions,
+and one pending phase per source; at history256 a new preparation is refused.
+
+### Restituted zero cost and warehouse transfers
+
+A zero-cost resale original is admitted only through the native
+`partial-return-restituted-v1` Stock issue policy and the closed
+`stock-sales-restituted-cost-v1` factual evidence. The owner verifies the prior
+restoration, original consumption membership, physical delivery, Approved
+valuation and captured cost evidence. For total COGS0, entry/effect are explicitly
+absent; a positive total still requires its real COGS effect even when one
+consumption is zero. A caller flag, a digest alone or arbitrary free stock is
+not sufficient admission. Old positive-source fingerprints remain unchanged.
+
+IT1 cost-v1 and legacy cost-v2 evidence keep their original readers and
+meaning. A pool containing remaining-policy corrections uses
+`inventory-transfer-cost-v3`, retaining signed source history order and scoped
+before-quantity/value witnesses. Legacy corrections retain their old evidence;
+they are not silently tagged with the new policy. These captures and any genuine
+zero-consumption admission remain subject to native transfer/source closure
+and current permissions.
+
+Cancel only an unposted correction. Prepare a governed reversal against the
+exact posted return/refund; only the latest unreversed economic operation
+qualifies. Any later immutable layer consumption prevents reversing a return,
+even after a resale is itself returned. Original approved sale terms, invoice gross/lines, FIFO consumption and posted
+financial evidence remain immutable. Current invoice status/row version and
+credit-aware balance projections can change through their native owners.
+
+### Read current AR exposure and aging
+
+Open **Receivables**, choose the authorized workspace and review the original
+invoice. **Cash receipts and allocations** shows the server's current invoice
+outstanding and customer credit exposure after posted credits and actual cash
+allocations. **Workspace receivables aging** is read-only: choose an aging date
+and explicitly select **Read current receivables aging**. The view calls
+`GET /api/v1/receivables/aging-by-currency?as_of_date=YYYY-MM-DD`, keeps currencies
+separate and verifies the five bucket/item/total equations.
+
+The selected date classifies the age of current open balances; it does not
+reconstruct historical balances. Paid/zero-outstanding invoices are omitted.
+This aging DTO has no captured decimal scale or exact-text monetary companions,
+so Studio labels exact currency minor units and refuses unsafe numeric transport
+instead of inferring two decimal places or substituting zero. Pending financial
+commands block this read; scope/session changes, authority refusal and later
+cash changes clear or invalidate old results. Arabic/English and RTL use the
+same authoritative values.
+
+### Retry, upgrade and rollback
+
+After response loss, preserve the actor, route/protocol, command ID, body and
+digest and retry the same retained command. Refresh native evidence to learn a
+later phase. Current identity, scope, permissions and captured money authorization are
+rechecked; a revoked grant can deny replay. New lifecycle/posting actions require
+an open period. An authorized cached ACK returns the retained response without
+reposting or reopening its original period. Refreshing is not a posting retry,
+and a retained earlier ACK does not imply its phase is still current.
+
+Revision0147 preflights original function bodies/execution metadata. Its empty
+owner downgrade restores original functions; retained CR2 history, including
+cancelled plans, prevents destructive downgrade. Revision0148 preserves eligible
+retained v1 history, but refuses downgrade when retained v2 source/witness,
+cost-v3 transfer or restituted-cost Stock issue/proof would be discarded,
+including a mixed issue with positive total COGS.
+Use the verified pre-upgrade populated backup/restore procedure in that case;
+never delete witnesses or edit source policy to force a downgrade.
+
+Taxed or foreign-currency original returns, tax adjustments and FX settlement
+remain outside this bounded contract and explicitly refuse. No country-specific
+compliance or complete M7/platform acceptance is implied by these operations.

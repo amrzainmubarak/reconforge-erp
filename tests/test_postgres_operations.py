@@ -50,8 +50,10 @@ def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None
         "0140_pg_people_project_payroll",
         "0141_pg_accrual_deferral", "0142_pg_manufacturing_supply", "0143_pg_project_billing", "0144_pg_inventory_contracts", "0145_pg_supply_closure",
         "0146_pg_inventory_transfer",
+        "0147_pg_customer_partial_returns",
+        "0148_pg_partial_return_rounding",
     )
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 145
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 147
 
 
 def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:

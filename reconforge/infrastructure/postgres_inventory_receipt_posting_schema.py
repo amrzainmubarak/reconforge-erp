@@ -934,3 +934,11 @@ def install_postgres_inventory_receipt_posting_schema(connection: Any) -> None:
     from reconforge.infrastructure.postgres_receipt_fifo_chronology import install_postgres_receipt_fifo_chronology
 
     install_postgres_receipt_fifo_chronology(connection)
+    from reconforge.infrastructure.postgres_customer_partial_return_shared_hooks import RECEIPT_REINSTALL_SQL
+
+    connection.execute(RECEIPT_REINSTALL_SQL)
+    from reconforge.infrastructure.postgres_customer_partial_return_zero_stock_hooks import (
+        install_customer_partial_return_receipt_chronology,
+    )
+
+    install_customer_partial_return_receipt_chronology(connection)

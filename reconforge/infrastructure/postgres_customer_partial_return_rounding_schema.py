@@ -330,11 +330,22 @@ def _preflight(*, upgraded_only: bool = False) -> str:
         definitions = [UPGRADED_FUNCTIONS[name]] if upgraded_only else [original, UPGRADED_FUNCTIONS[name]]
         hashes = ",".join(repr(hashlib.sha256(value.split("$cr2$")[1].encode()).hexdigest()) for value in definitions)
         signature = "text,text,integer" if name.endswith("_public") else "text,text"
+        returns = "jsonb" if name.endswith(("_public", "_balance")) else "void"
+        volatility = "s" if name.endswith("_public") else "v"
+        arguments = "ARRAY['t','i','selected_phase']::text[]" if name.endswith("_public") else "ARRAY['t','i']::text[]"
+        defaults = "1" if name.endswith("_public") else "0"
         template = """ SELECT * INTO native FROM pg_proc WHERE oid=to_regprocedure('reconforge.@@NAME@@(@@SIGNATURE@@)');
- IF native.oid IS NULL OR native.prosecdef OR native.proconfig IS DISTINCT FROM ARRAY['search_path=pg_catalog']::text[]
+ IF native.oid IS NULL OR native.prosecdef OR native.proretset OR native.proleakproof OR native.proisstrict OR native.prokind<>'f'
+ OR native.prolang<>(SELECT oid FROM pg_language WHERE lanname='plpgsql') OR native.prorettype<>'@@RETURNS@@'::regtype
+ OR native.provolatile<>'@@VOLATILITY@@' OR native.proparallel<>'u' OR native.provariadic<>0
+ OR native.proargnames IS DISTINCT FROM @@ARGUMENTS@@ OR native.proargmodes IS NOT NULL OR native.pronargdefaults<>@@DEFAULTS@@
+ OR native.proconfig IS DISTINCT FROM ARRAY['search_path=pg_catalog']::text[]
  OR encode(sha256(convert_to(native.prosrc,'UTF8')),'hex') NOT IN(@@HASHES@@) THEN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Original partial allocation execution contract drift'; END IF;"""
-        clauses.append(template.replace("@@NAME@@", name).replace("@@SIGNATURE@@", signature).replace("@@HASHES@@", hashes))
+        for key, selected in (("NAME", name), ("SIGNATURE", signature), ("HASHES", hashes), ("RETURNS", returns),
+                              ("VOLATILITY", volatility), ("ARGUMENTS", arguments), ("DEFAULTS", defaults)):
+            template = template.replace("@@" + key + "@@", selected)
+        clauses.append(template)
     return "DO $cr148$ DECLARE native RECORD;BEGIN\n" + "\n".join(clauses) + "\nEND $cr148$;"
 
 
@@ -362,6 +373,36 @@ DROP FUNCTION reconforge.customer_partial_return_rounding_version();
 """
 
 
+def _new_helpers_preflight() -> str:
+    """Pin all additional148 executable bodies and their declared metadata."""
+    originals = set(ORIGINAL_FUNCTIONS) | {"it1_cost_snapshot", "it1_cost_originals"}
+    statements = re.findall(r"CREATE(?: OR REPLACE)? FUNCTION reconforge\.([a-z0-9_]+)\(([^)]*)\) RETURNS ([A-Za-z]+)\s+"
+        r"LANGUAGE (plpgsql|sql)([^$]+)AS (\$[a-z0-9]+\$)(.*?)\6;", UPGRADE_SQL, re.S)
+    clauses = []
+    for name, arguments, returns, language, attributes, _delimiter, body in statements:
+        if name in originals:
+            continue
+        pairs = [argument.strip().split() for argument in arguments.split(",")] if arguments.strip() else []
+        signature = ",".join(pair[1].lower() for pair in pairs)
+        argnames = "ARRAY[" + ",".join(repr(pair[0]) for pair in pairs) + "]::text[]" if pairs else "NULL::text[]"
+        volatility = "i" if "IMMUTABLE" in attributes else "s" if "STABLE" in attributes else "v"
+        template = """ SELECT * INTO native FROM pg_proc WHERE oid=to_regprocedure('reconforge.@@NAME@@(@@SIGNATURE@@)');
+ IF native.oid IS NULL OR native.prosecdef OR native.proretset OR native.proleakproof OR native.proisstrict OR native.prokind<>'f'
+ OR native.prolang<>(SELECT oid FROM pg_language WHERE lanname='@@LANGUAGE@@') OR native.prorettype<>'@@RETURNS@@'::regtype
+ OR native.provolatile<>'@@VOLATILITY@@' OR native.proparallel<>'u' OR native.provariadic<>0 OR native.pronargdefaults<>0
+ OR native.proargmodes IS NOT NULL OR native.proargnames IS DISTINCT FROM @@ARGUMENTS@@
+ OR native.proconfig IS DISTINCT FROM ARRAY['search_path=pg_catalog']::text[]
+ OR encode(sha256(convert_to(native.prosrc,'UTF8')),'hex')<>'@@HASH@@' THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Remaining-original native helper contract drift'; END IF;"""
+        for key, selected in (("NAME", name), ("SIGNATURE", signature), ("LANGUAGE", language), ("RETURNS", returns.lower()),
+                              ("VOLATILITY", volatility), ("ARGUMENTS", argnames), ("HASH", hashlib.sha256(body.encode()).hexdigest())):
+            template = template.replace("@@" + key + "@@", selected)
+        clauses.append(template)
+    if len(clauses) != 12:
+        raise ValueError("The finite148 invoker helper membership differs.")
+    return "DO $cr148$ DECLARE native RECORD;BEGIN\n" + "\n".join(clauses) + "\nEND $cr148$;"
+
+
 def install_customer_partial_return_rounding(connection: Any) -> None:
     """Idempotent retained148 verifier; no legacy body is overwritten here."""
     exists = records(connection.execute("SELECT to_regprocedure('reconforge.customer_partial_return_rounding_version()') present"))[0]["present"]
@@ -369,3 +410,4 @@ def install_customer_partial_return_rounding(connection: Any) -> None:
         return
     connection.execute(_preflight(upgraded_only=True))
     connection.execute(transfer_preflight(upgraded_only=True))
+    connection.execute(_new_helpers_preflight())

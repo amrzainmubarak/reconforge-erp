@@ -4,12 +4,20 @@ The independent posted-cycle oracle is owned separately. These cases exercise
 the real command owner and retained native effects, not synthetic SQL postings.
 """
 
+import json
+import os
+import stat
+import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from fractions import Fraction
+from pathlib import Path
+from queue import Queue
 from typing import Any
 
 import pytest
 
+from reconforge.domain.commercial_collections import CommercialCollectionPreparation
 from reconforge.domain.customer_partial_return_commands import (
     CustomerPartialRefundPreparation,
     CustomerPartialReturnPreparation,
@@ -19,10 +27,11 @@ from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.sales_revenue import SalesInvoicePreparation
 from reconforge.domain.stock_sales import StockOrder
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
+from reconforge.infrastructure.postgres_commercial_collections import PostgresCommercialCollectionsRepository
 from reconforge.infrastructure.postgres_customer_partial_returns import PostgresCustomerPartialReturnsRepository
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
 from tests.test_postgres_commercial_collections import complete, prepare
-from tests.test_postgres_customer_partial_return_source import two_layer_source
+from tests.test_postgres_customer_partial_return_source import create_two_layer_source, two_layer_source
 from tests.test_postgres_customer_returns import balances, configure_runtime, create_runtime, retained_state
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, create_receipt_runtime, receipt_database
 from tests.test_postgres_stock_sales import create_reserved_order, create_stock_runtime, execute
@@ -278,3 +287,156 @@ def test_existing_consumable_stock_source_posts_partial_credit_and_original_fifo
     assert (state["gross_minor"], state["remaining_quantity_scaled"], state["outstanding_minor"]) == (9000, 1000, 4500)
     values = balances(runtime)
     assert (values["INVENTORY"], values["CLEARING"], values["COGS"], values["AR"], values["REVENUE"]) == (10800, -12000, 1200, 4500, -4500)
+
+
+def settlement_private_directory() -> Path | None:
+    private_output = os.environ.get("RECONFORGE_PARTIAL_CYCLE_PRIVATE_OUTPUT")
+    if private_output is None:
+        return None
+    destination = Path(private_output)
+    if not destination.is_absolute() or ".." in destination.parts:
+        raise AssertionError("Native originals require an explicit owned private directory.")
+    for ancestor in (destination, *destination.parents):
+        attributes = getattr(ancestor.lstat(), "st_file_attributes", 0)
+        if ancestor.is_symlink() or attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+            raise AssertionError("Native originals cannot follow linked private directories.")
+    if not destination.is_dir():
+        raise AssertionError("Native originals require an existing private directory.")
+    return destination.resolve(strict=True)
+
+
+def settlement_originals(runtime: ReceiptRuntime, checkpoint: str) -> dict[str, tuple[str, ...]]:
+    """Keep exact SQL row text; the optional destination is explicitly private."""
+    from psycopg import sql
+
+    state = {}
+    with runtime.actor("maker") as (connection, _, _actor):
+        tables = connection.execute("""SELECT table_name FROM information_schema.tables
+            WHERE table_schema='reconforge' AND table_type='BASE TABLE'
+            AND table_name ~ '^(customer_return_|customer_partial_return_|commercial_collection_|stock_|finance_|ar_|inventory_|operational_finance_|domain_audit_|outbox_)'
+            ORDER BY table_name""").fetchall()
+        assert len(tables) == 78
+        for row in tables:
+            state[row["table_name"]] = tuple(value["original"] for value in connection.execute(sql.SQL(
+                "SELECT to_jsonb(r)::text original FROM reconforge.{} r WHERE tenant_id=%s ORDER BY to_jsonb(r)::text"
+            ).format(sql.Identifier(row["table_name"])), (runtime.tenant,)).fetchall())
+    destination = settlement_private_directory()
+    if destination is not None:
+        assert checkpoint in {"split-before-credit", "split-after-credit", "split-after-2000", "split-after-refusal",
+                              "split-after-1500", "race-before-credit", "race-after-refusal"}
+        with (destination / ("native-partial-settlement-" + checkpoint + "-original-v1.json")).open("x", encoding="utf-8", newline="\n") as stream:
+            json.dump({"schema_version": "native-partial-settlement-row-text-v1", "checkpoint": checkpoint,
+                       "tenant_id": runtime.tenant, "tables": state}, stream, sort_keys=True, separators=(",", ":"))
+            stream.write("\n")
+    return state
+
+
+def settlement_totals(runtime: ReceiptRuntime, expected_effects: int, expected_lines: int, expected_turnover: int) -> None:
+    with runtime.actor("maker") as (connection, _, _actor):
+        row = connection.execute("""SELECT count(DISTINCT f.id) effects,count(*) lines,
+            sum(l.debit_minor)::text debit,sum(l.credit_minor)::text credit
+            FROM reconforge.finance_posting_effects f JOIN reconforge.finance_entry_lines l
+            ON(l.tenant_id,l.entry_id)=(f.tenant_id,f.entry_id) WHERE f.tenant_id=%s""", (runtime.tenant,)).fetchone()
+        assert (row["effects"], row["lines"], Fraction(row["debit"]), Fraction(row["credit"])) == (
+            expected_effects, expected_lines, expected_turnover, expected_turnover)
+
+
+def test_credit_adjusted_residual_accepts_two_genuine_cash_installments_and_rolls_back_overcap(receipt_database: tuple[str, str]) -> None:
+    runtime, source_id, invoice_id = create_two_layer_source(receipt_database)
+    settlement_originals(runtime, "split-before-credit")
+    posted(runtime, prepare_return(runtime, source_id, 12, 0, "split-credit-first"))
+    settlement_originals(runtime, "split-after-credit")
+    assert balance(runtime, source_id)["outstanding_minor"] == 3500
+    complete(runtime, prepare(runtime, invoice_id, 2000, "SPLIT-2000"), "SPLIT-2000")
+    before = settlement_originals(runtime, "split-after-2000")
+    assert (balance(runtime, source_id)["outstanding_minor"], balance(runtime, source_id)["history_version"]) == (1500, 2)
+    with pytest.raises(FinancePostingError) as refused:
+        prepare(runtime, invoice_id, 2000, "SPLIT-OVERCAP")
+    assert refused.value.code == "collection_amount_invalid"
+    if settlement_originals(runtime, "split-after-refusal") != before:
+        raise AssertionError("A refused overcap cash preparation changed native original rows.")
+    complete(runtime, prepare(runtime, invoice_id, 1500, "SPLIT-1500"), "SPLIT-1500")
+    settlement_originals(runtime, "split-after-1500")
+    current = balance(runtime, source_id)
+    assert (current["outstanding_minor"], current["collected_minor"], current["history_version"], current["refund_due_minor"]) == (0, 13500, 3, 0)
+    values = balances(runtime)
+    assert (values["INVENTORY"], values["CLEARING"], values["COGS"], values["AR"], values["CASH"], values["REVENUE"]) == (26000, -32000, 6000, 0, 13500, -13500)
+    settlement_totals(runtime, 9, 18, 205000)
+    with runtime.actor("maker") as (connection, _, _actor):
+        events = connection.execute("""SELECT sequence,kind,amount_minor FROM reconforge.customer_partial_return_history
+            WHERE tenant_id=%s ORDER BY sequence""", (runtime.tenant,)).fetchall()
+        assert [(r["sequence"], r["kind"], r["amount_minor"]) for r in events] == [(1, "Return", 0), (2, "Collection", 2000), (3, "Collection", 1500)]
+
+
+def test_credit_post_precedes_waiting_cash_prepare_and_rechecks_the_committed_residual(receipt_database: tuple[str, str]) -> None:
+    import psycopg
+
+    runtime, source_id, invoice_id = create_two_layer_source(receipt_database)
+    posted(runtime, prepare_return(runtime, source_id, 12, 0, "race-first-credit"))
+    reviewed = phase(runtime, prepare_return(runtime, source_id, 3, 1, "race-remaining-credit"), "review", "checker")
+    settlement_originals(runtime, "race-before-credit")
+    starting: Queue[tuple[str, int]] = Queue()
+    edges = []
+
+    def post_credit() -> dict[str, Any]:
+        with runtime.actor("poster") as (connection, _, actor):
+            starting.put(("credit", connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]))
+            return PostgresCustomerPartialReturnsRepository(connection, runtime.tenant).post(reviewed["id"],
+                expected_plan_digest=reviewed["plan_digest"], command_id="race-owned-credit-post",
+                reason="Post the independently reviewed credit before waiting cash", actor=actor)
+
+    def prepare_cash() -> str:
+        with runtime.actor("maker") as (connection, _, actor):
+            starting.put(("cash", connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]))
+            args = CommercialCollectionPreparation(**SCOPE, organization_code="ORG", entity_code="ENTITY", source_id=invoice_id,
+                journal_code="CASH", period_id="period", posting_date="2026-10-14", debit_account_code="CASH", credit_account_code="AR",
+                reason="Recheck the original invoice after the actual customer wait", amount_minor=3500, receipt_number="RACE-CASH-3500")
+            with pytest.raises(FinancePostingError) as refused:
+                PostgresCommercialCollectionsRepository(connection, runtime.tenant).prepare(args, command_id="race-cash-prepare", actor=actor)
+            return refused.value.code
+
+    def wait_edge(waiter: int, predecessor: int) -> None:
+        with psycopg.connect(runtime.admin_dsn, autocommit=True) as observer:
+            deadline = time.monotonic() + 6
+            while True:
+                blockers = observer.execute("SELECT pg_blocking_pids(%s)", (waiter,)).fetchone()[0]
+                if predecessor in blockers:
+                    edges.append({"waiter_pid": waiter, "blocking_pids": sorted(blockers), "expected_predecessor_pid": predecessor})
+                    return
+                if time.monotonic() >= deadline:
+                    raise AssertionError("The actual customer wait queue was not observed.")
+                time.sleep(.02)
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        with runtime.actor("maker") as (holder, _, _actor):
+            customer_id = holder.execute("SELECT customer_id FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s",
+                                         (runtime.tenant, invoice_id)).fetchone()["customer_id"]
+            holder.execute("SELECT id FROM reconforge.ar_customers WHERE tenant_id=%s AND id=%s FOR UPDATE", (runtime.tenant, customer_id))
+            holder_pid = holder.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            credit = workers.submit(post_credit)
+            name, credit_pid = starting.get(timeout=6)
+            assert name == "credit"
+            wait_edge(credit_pid, holder_pid)
+            cash = workers.submit(prepare_cash)
+            name, cash_pid = starting.get(timeout=6)
+            assert name == "cash"
+            wait_edge(cash_pid, credit_pid)
+            assert not credit.done() and not cash.done()
+        assert credit.result(timeout=60)["phase"] == 2
+        assert cash.result(timeout=60) == "collection_source_changed"
+    settlement_originals(runtime, "race-after-refusal")
+    destination = settlement_private_directory()
+    if destination is not None:
+        with (destination / "native-partial-settlement-race-lock-graph-original-v1.json").open("x", encoding="utf-8", newline="\n") as stream:
+            json.dump({"schema_version": "native-partial-settlement-wait-graph-v1", "edges": edges}, stream, sort_keys=True)
+            stream.write("\n")
+    current = balance(runtime, source_id)
+    assert (current["outstanding_minor"], current["collected_minor"], current["history_version"], current["refund_due_minor"]) == (0, 10000, 2, 10000)
+    values = balances(runtime)
+    assert (values["INVENTORY"], values["CLEARING"], values["COGS"], values["AR"], values["CASH"], values["REVENUE"], values["REFUND"]) == (32000, -32000, 0, 0, 10000, 0, -10000)
+    # The last revenue credit has three real lines: DR revenue, CR remaining
+    # AR 3500, CR refund liability 10000. No synthetic two-line assumption.
+    settlement_totals(runtime, 9, 19, 221000)
+    with runtime.actor("maker") as (connection, _, _actor):
+        assert connection.execute("SELECT count(*) n FROM reconforge.commercial_collection_plans WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
+        assert connection.execute("SELECT count(*) n FROM reconforge.ar_receipts WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1

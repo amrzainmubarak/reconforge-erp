@@ -44,7 +44,8 @@ def native_plan(phase: int = 1, operation: str = "Return") -> dict[str, Any]:
             "original_id": None if operation == "Return" else ("CRF2-" if operation == "ReverseRefund" else "CR2-") + "a" * 32,
             "entries": [{"entry_id": "entry-" + str(index), "purpose": purpose, "validation_digest": "8" * 64,
                          "posting_effect_id": "effect-" + str(index) if phase == 2 else None}
-                        for index, purpose in enumerate(("original-revenue", "original-cost") if merchandise else ("customer-refund",))],
+                        for index, purpose in enumerate({"Return": ("RevenueCredit", "CostRestoration"), "Refund": ("Refund",),
+                                                         "ReverseReturn": ("ReverseRevenueCredit", "ReverseCostRestoration"), "ReverseRefund": ("ReverseRefund",)}[operation])],
             "audit_event_id": "audit", "outbox_event_id": "outbox"}
 
 
@@ -149,6 +150,32 @@ def test_public_balances_keep_legitimate_credit_liability_separate_from_real_cas
                   {"source_id": None}, {"active_plan_id": "CR1-" + "a" * 32}):
         with pytest.raises(CustomerPartialReturnResponseError):
             project_partial_balance({**raw, **patch}, SCOPE)
+
+
+@pytest.mark.parametrize("bad", ["2026-02-30", "2025-02-29", "1900-02-29", "2026-13-01", "0000-01-01", "20261015"])
+def test_native_ack_requires_actual_canonical_calendar_date(bad: str) -> None:
+    with pytest.raises(CustomerPartialReturnResponseError):
+        project_partial_plan({**native_plan(), "posting_date": bad}, SCOPE)
+
+
+def test_native_ack_accepts_leap_century_and_refuses_wrong_or_reordered_entry_purposes() -> None:
+    assert project_partial_plan({**native_plan(), "posting_date": "2000-02-29"}, SCOPE)["posting_date"] == "2000-02-29"
+    for operation in ("Return", "Refund", "ReverseReturn", "ReverseRefund"):
+        raw = native_plan(operation=operation)
+        raw["entries"][0]["purpose"] = "UnboundFinancialPurpose"
+        with pytest.raises(CustomerPartialReturnResponseError):
+            project_partial_plan(raw, SCOPE)
+    raw = native_plan()
+    raw["entries"].reverse()
+    with pytest.raises(CustomerPartialReturnResponseError):
+        project_partial_plan(raw, SCOPE)
+
+
+def test_balanced_equations_cannot_hide_impossible_collections_above_original_gross() -> None:
+    raw = {**native_balance(), "collected_minor": 67501, "outstanding_minor": 0,
+           "refund_entitlement_minor": 54001, "refunded_minor": 0, "refund_due_minor": 54001}
+    with pytest.raises(CustomerPartialReturnResponseError):
+        project_partial_balance(raw, SCOPE)
 
 
 def test_top_level_and_list_projection_do_not_publish_opaque_extra_data() -> None:

@@ -15,5 +15,5 @@ export function partialPlanFixture(phase: 0 | 1 | 2 | 3 = 1, operation: PartialR
     refund_entitlement_delta_minor: "0", amount_minor: merchandise ? "70000" : "10000", expected_history_version: 0, posting_date: "2026-10-15", period_id: "period",
     preparer_actor_id: "maker", reviewer_actor_id: phase ? "checker" : null, poster_actor_id: phase === 2 ? "poster" : null,
     original_id: operation === "Return" ? null : (operation === "ReverseRefund" ? "CRF2-" : "CR2-") + "a".repeat(32),
-    entries: (merchandise ? ["original-cost-correction", "original-revenue-correction"] : ["customer-refund"]).map((purpose, i) => ({ entry_id: "entry-" + i, purpose, validation_digest: "8".repeat(64), posting_effect_id: phase === 2 ? "effect-" + i : null })), audit_event_id: "audit-native", outbox_event_id: "outbox-native" };
+    entries: ({ Return: ["RevenueCredit", "CostRestoration"], Refund: ["Refund"], ReverseReturn: ["ReverseRevenueCredit", "ReverseCostRestoration"], ReverseRefund: ["ReverseRefund"] }[operation]).map((purpose, i) => ({ entry_id: "entry-" + i, purpose, validation_digest: "8".repeat(64), posting_effect_id: phase === 2 ? "effect-" + i : null })), audit_event_id: "audit-native", outbox_event_id: "outbox-native" };
 }

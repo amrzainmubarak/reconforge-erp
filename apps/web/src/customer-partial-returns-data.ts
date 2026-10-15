@@ -36,6 +36,7 @@ const scopeKeys = ["workspace_id", "organization_id", "legal_entity_id"];
 const planKeys = [...scopeKeys, ...policyKeys, "schema_version", "id", "operation", "phase", "status", "plan_digest", "source_id", "source_order_id", "invoice_id", "quantity_precision", "quantity_scaled", "credit_minor", "cogs_restored_minor", "receivable_released_minor", "refund_entitlement_delta_minor", "amount_minor", "expected_history_version", "posting_date", "period_id", "preparer_actor_id", "reviewer_actor_id", "poster_actor_id", "original_id", "entries", "audit_event_id", "outbox_event_id"];
 const balanceKeys = [...scopeKeys, ...policyKeys, "source_order_id", "source_id", "source_fingerprint", "history_fingerprint", "history_version", "gross_minor", "collected_minor", "credited_minor", "returned_quantity_scaled", "remaining_quantity_scaled", "quantity_precision", "refund_entitlement_minor", "refunded_minor", "refund_due_minor", "outstanding_minor", "active_plan_id"];
 const prefixes = { Return: "CR2", Refund: "CRF2", ReverseReturn: "CR2R", ReverseRefund: "CRF2R" } as const;
+const purposes = { Return: ["RevenueCredit", "CostRestoration"], Refund: ["Refund"], ReverseReturn: ["ReverseRevenueCredit", "ReverseCostRestoration"], ReverseRefund: ["ReverseRefund"] } as const;
 function invalid(): never { throw new Error("customer_partial_return_response_invalid"); }
 function object(value: unknown, keys: readonly string[]): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) invalid();
@@ -56,6 +57,13 @@ export function partialMinor(value: unknown, positive = false): string {
 }
 function digest(value: unknown): string { if (typeof value !== "string" || !/^[a-f0-9]{64}$/.test(value)) invalid(); return value; }
 function identity(value: unknown, prefix: string): string { const id = text(value); if (!new RegExp(`^${prefix}-[a-f0-9]{32}$`).test(id)) invalid(); return id; }
+function businessDate(value: unknown): void {
+  if (typeof value !== "string" || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value)) invalid();
+  const year = Number(value.slice(0, 4)), month = Number(value.slice(5, 7)), day = Number(value.slice(8, 10));
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > days[month - 1]) invalid();
+}
 function policy(row: Record<string, unknown>, scope: FinanceScope): void {
   for (const key of scopeKeys) if (text(row[key]) !== scope[key as keyof FinanceScope]) invalid();
   if (!/^[A-Z]{3}$/.test(text(row.currency_code)) || row.currency_rounding_policy !== "ROUND_HALF_UP") invalid();
@@ -68,7 +76,7 @@ export function parsePartialReturnPlan(value: unknown, scope: FinanceScope): Par
   identity(row.id, prefixes[operation]); identity(row.source_id, "CRS2"); text(row.source_order_id); text(row.invoice_id);
   digest(row.plan_digest); integer(row.expected_history_version, 255); integer(row.quantity_precision, 6);
   const phase = integer(row.phase, 3); if (["Prepared", "Reviewed", "Posted", "Cancelled"][phase] !== row.status) invalid();
-  text(row.period_id); if (typeof row.posting_date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(row.posting_date)) invalid();
+  text(row.period_id); businessDate(row.posting_date);
   text(row.preparer_actor_id); nullableText(row.reviewer_actor_id); nullableText(row.poster_actor_id);
   if (row.reviewer_actor_id !== null && row.reviewer_actor_id === row.preparer_actor_id || phase === 0 && row.reviewer_actor_id !== null) invalid();
   if ([1, 2].includes(phase) && (!row.reviewer_actor_id || row.reviewer_actor_id === row.preparer_actor_id)) invalid();
@@ -83,9 +91,9 @@ export function parsePartialReturnPlan(value: unknown, scope: FinanceScope): Par
   if (operation === "Return") { if (row.original_id !== null) invalid(); }
   else identity(row.original_id, operation === "ReverseRefund" ? "CRF2" : "CR2");
   if (!Array.isArray(row.entries) || row.entries.length !== (merchandise ? 2 : 1)) invalid();
-  const entries = row.entries.map(item => {
+  const entries = row.entries.map((item, index) => {
     const entry = object(item, ["entry_id", "purpose", "validation_digest", "posting_effect_id"]);
-    text(entry.entry_id); text(entry.purpose); digest(entry.validation_digest); nullableText(entry.posting_effect_id);
+    text(entry.entry_id); if (entry.purpose !== purposes[operation][index]) invalid(); digest(entry.validation_digest); nullableText(entry.posting_effect_id);
     if ((phase === 2) !== (entry.posting_effect_id !== null)) invalid(); return entry as unknown as PartialReturnEntry;
   });
   if (new Set(entries.map(entry => entry.entry_id)).size !== entries.length || (phase === 2 && new Set(entries.map(entry => entry.posting_effect_id)).size !== entries.length)) invalid();
@@ -102,7 +110,7 @@ export function parsePartialReturnBalance(value: unknown, scope: FinanceScope, s
   for (const key of ["gross_minor", "collected_minor", "credited_minor", "returned_quantity_scaled", "remaining_quantity_scaled", "refund_entitlement_minor", "refunded_minor", "refund_due_minor", "outstanding_minor"]) partialMinor(row[key], key === "gross_minor");
   const gross = BigInt(String(row.gross_minor)), collected = BigInt(String(row.collected_minor)), credited = BigInt(String(row.credited_minor));
   const residual = gross - collected - credited, entitlement = collected + credited - gross;
-  if (credited > gross || row.outstanding_minor !== (residual > 0n ? residual : 0n).toString() ||
+  if (collected > gross || credited > gross || row.outstanding_minor !== (residual > 0n ? residual : 0n).toString() ||
       row.refund_entitlement_minor !== (entitlement > 0n ? entitlement : 0n).toString() ||
       BigInt(String(row.refund_due_minor)) + BigInt(String(row.refunded_minor)) !== BigInt(String(row.refund_entitlement_minor))) invalid();
   return row as unknown as PartialReturnBalance;

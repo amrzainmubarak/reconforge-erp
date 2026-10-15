@@ -15,6 +15,21 @@ it("retains exact original amounts above JavaScript safe-integer limits", () => 
   const plan = { ...partialPlanFixture(), credit_minor: credit, receivable_released_minor: credit, amount_minor: (BigInt(credit) + 16000n).toString() };
   expect(parsePartialReturnPlan(plan, partialScope).credit_minor).toBe(credit);
 });
+it.each(["2026-02-30", "2025-02-29", "1900-02-29", "2026-13-01", "0000-01-01", "20261015"])("refuses an impossible or noncanonical native posting date %s", posting_date => {
+  expect(() => parsePartialReturnPlan({ ...partialPlanFixture(), posting_date }, partialScope)).toThrow();
+});
+it("admits a real leap century and refuses wrong or reordered financial purposes", () => {
+  expect(parsePartialReturnPlan({ ...partialPlanFixture(), posting_date: "2000-02-29" }, partialScope).posting_date).toBe("2000-02-29");
+  for (const operation of ["Return", "Refund", "ReverseReturn", "ReverseRefund"] as const) {
+    const plan = partialPlanFixture(1, operation);
+    expect(() => parsePartialReturnPlan({ ...plan, entries: plan.entries.map(entry => ({ ...entry, purpose: "UnboundFinancialPurpose" })) }, partialScope)).toThrow();
+  }
+  const plan = partialPlanFixture();
+  expect(() => parsePartialReturnPlan({ ...plan, entries: [...plan.entries].reverse() }, partialScope)).toThrow();
+});
+it("refuses impossible over-collection even when residual and refund equations balance", () => {
+  expect(() => parsePartialReturnBalance(partialBalanceFixture({ collected_minor: "67501", outstanding_minor: "0", refund_entitlement_minor: "54001", refund_due_minor: "54001" }), partialScope, "stock-original")).toThrow();
+});
 it.each([
   { legal_entity_id: "foreign" }, { source_id: "CRS2-bad" }, { status: "Posted" }, { reviewer_actor_id: "maker" }, { phase: true },
   { expected_history_version: 0.1 }, { quantity_precision: true }, { currency_precision: 9 }, { currency_registry_digest: "invalid" },

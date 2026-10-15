@@ -1,6 +1,7 @@
 """Closed, exact public DTO boundary; original financial bodies stay native."""
 
 from collections.abc import Mapping
+from datetime import date
 from typing import Any
 
 from reconforge.domain.customer_returns import MAX_MINOR
@@ -20,6 +21,8 @@ BALANCE_FIELDS = SCOPE_FIELDS | POLICY_FIELDS | frozenset({
 })
 ENTRY_FIELDS = frozenset({"entry_id", "purpose", "validation_digest", "posting_effect_id"})
 PREFIXES = {"Return": "CR2", "Refund": "CRF2", "ReverseReturn": "CR2R", "ReverseRefund": "CRF2R"}
+ENTRY_PURPOSES = {"Return": ("RevenueCredit", "CostRestoration"), "Refund": ("Refund",),
+                  "ReverseReturn": ("ReverseRevenueCredit", "ReverseCostRestoration"), "ReverseRefund": ("ReverseRefund",)}
 
 
 class CustomerPartialReturnResponseError(ValueError):
@@ -89,8 +92,11 @@ def project_partial_plan(value: Any, scope: Mapping[str, Any]) -> dict[str, Any]
     for key in ("source_order_id", "invoice_id", "period_id", "preparer_actor_id", "audit_event_id", "outbox_event_id"):
         _text(row[key])
     _text(row["posting_date"], maximum=10)
-    _require(len(row["posting_date"]) == 10 and row["posting_date"][4] == "-" and row["posting_date"][7] == "-"
-             and row["posting_date"].replace("-", "").isascii() and row["posting_date"].replace("-", "").isdigit())
+    try:
+        canonical_date = date.fromisoformat(row["posting_date"]).isoformat()
+    except ValueError as exc:
+        raise CustomerPartialReturnResponseError("The native partial-return business date is invalid.") from exc
+    _require(canonical_date == row["posting_date"])
     _digest(row["plan_digest"])
     _integer(row["phase"], maximum=3)
     _integer(row["expected_history_version"], maximum=255)
@@ -116,10 +122,10 @@ def project_partial_plan(value: Any, scope: Mapping[str, Any]) -> dict[str, Any]
         _identity(row["original_id"], "CRF2" if operation == "ReverseRefund" else "CR2")
     _require(type(row["entries"]) is list and len(row["entries"]) == (2 if merchandise else 1))
     entries = []
-    for value in row["entries"]:
+    for value, expected_purpose in zip(row["entries"], ENTRY_PURPOSES[operation], strict=True):
         entry = _object(value, ENTRY_FIELDS)
         _text(entry["entry_id"])
-        _text(entry["purpose"])
+        _require(entry["purpose"] == expected_purpose)
         _digest(entry["validation_digest"])
         _text(entry["posting_effect_id"], nullable=True)
         _require((phase == 2) == (entry["posting_effect_id"] is not None))
@@ -145,7 +151,7 @@ def project_partial_balance(value: Any, scope: Mapping[str, Any]) -> dict[str, A
     _require(row["source_id"] is not None or row["history_version"] == 0 and row["active_plan_id"] is None)
     _money(row, positive=frozenset({"gross_minor"}))
     gross, collected, credited = (int(row[key]) for key in ("gross_minor", "collected_minor", "credited_minor"))
-    _require(credited <= gross and row["outstanding_minor"] == str(max(gross - collected - credited, 0))
+    _require(collected <= gross and credited <= gross and row["outstanding_minor"] == str(max(gross - collected - credited, 0))
              and row["refund_entitlement_minor"] == str(max(collected + credited - gross, 0))
              and int(row["refunded_minor"]) + int(row["refund_due_minor"]) == int(row["refund_entitlement_minor"]))
     return row

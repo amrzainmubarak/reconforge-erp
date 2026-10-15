@@ -56,6 +56,25 @@ MAX_ROW_BYTES = 256 * 1024
 MAX_CAPTURE_ROWS = 20_000
 MAX_MINOR = 9_000_000_000_000_000_000
 MAX_CAPTURES = 257  # Original plus at most 256 ordered monetary events.
+_COMMON = "tenant_id workspace_id organization_id legal_entity_id "
+MONETARY_COLUMNS = {
+    "stock_sales_monetary_origins": frozenset((_COMMON + "id stock_order_id invoice_id fx_source_id recognition_plan_id payload source_digest ar_balance").split()),
+    "customer_partial_return_monetary_plans": frozenset((_COMMON + "id origin_id operation phase original_id expected_history_version payload plan_digest").split()),
+    "customer_partial_return_monetary_entries": frozenset((_COMMON + "plan_id purpose entry_id snapshot validation_digest original_effect_id posting_effect_id").split()),
+    "customer_partial_return_monetary_events": frozenset((_COMMON + "plan_id operation actor_id reason audit_event_id outbox_event_id").split()),
+    "customer_partial_return_monetary_history": frozenset((_COMMON + "origin_id sequence kind stock_fx_plan_id partial_plan_id original_sequence payload previous_digest event_digest").split()),
+    "customer_partial_return_monetary_restorations": frozenset((_COMMON + "origin_id plan_id position original_consumption_id original_valuation_line_id cost_layer_id before_quantity_scaled before_value_minor quantity_scaled value_minor direction physical_movement_id correction_effect_id original_restoration_plan_id consumption_count_at_restore").split()),
+    "customer_partial_return_monetary_commands": frozenset((_COMMON + "plan_id operation command_id actor_id request_digest request_json response_json").split()),
+}
+_PRIMARY = {
+    "stock_sales_monetary_origins": ("tenant_id", "id"),
+    "customer_partial_return_monetary_plans": ("tenant_id", "id"),
+    "customer_partial_return_monetary_entries": ("tenant_id", "plan_id", "purpose"),
+    "customer_partial_return_monetary_events": ("tenant_id", "plan_id", "operation"),
+    "customer_partial_return_monetary_history": ("tenant_id", "origin_id", "sequence"),
+    "customer_partial_return_monetary_restorations": ("tenant_id", "plan_id", "position"),
+    "customer_partial_return_monetary_commands": ("tenant_id", "workspace_id", "command_id"),
+}
 
 
 class MonetaryRawRefusal(ValueError):
@@ -117,6 +136,55 @@ def _raw_row(value: object, tenant_id: str) -> dict[str, Any]:
     return row
 
 
+def _new_row(table: str, row: dict[str, Any]) -> tuple[Any, ...] | None:
+    """Pin the seven new storage shapes, without claiming deferred SQL closure."""
+    if table not in MONETARY_COLUMNS:
+        return None
+    require(set(row) == MONETARY_COLUMNS[table])
+    nullable = {"original_id", "original_effect_id", "posting_effect_id", "stock_fx_plan_id", "partial_plan_id",
+                "original_sequence", "correction_effect_id", "original_restoration_plan_id"}
+    numbers = {"phase", "expected_history_version", "sequence", "original_sequence", "position", "before_quantity_scaled",
+               "before_value_minor", "quantity_scaled", "value_minor", "direction", "consumption_count_at_restore"}
+    objects = {"payload", "ar_balance", "snapshot", "request_json", "response_json"}
+    for field, value in row.items():
+        if value is None:
+            require(field in nullable)
+        elif field in numbers:
+            require(type(value) is int and -MAX_MINOR <= value <= MAX_MINOR)
+        elif field in objects:
+            require(type(value) is dict)
+        elif field.endswith("_digest"):
+            require(type(value) is str and re.fullmatch(r"[a-f0-9]{64}", value) is not None)
+        else:
+            require(type(value) is str and 0 < len(value) <= (500 if field == "reason" else 140 if field == "command_id" else 160))
+    if table.endswith("_plans"):
+        prefixes = {"Return": "CR3", "Refund": "CRF3", "ReverseReturn": "CR3R", "ReverseRefund": "CRF3R"}
+        require(row["operation"] in prefixes and 0 <= row["phase"] <= 3 and 0 <= row["expected_history_version"] <= 255)
+        require(re.fullmatch(prefixes[row["operation"]] + r"-[a-f0-9]{32}", row["id"]) is not None)
+        require((row["original_id"] is None) == (row["operation"] == "Return"))
+    elif table.endswith("_entries"):
+        purpose = row["purpose"]
+        require(purpose in {"MerchandiseCredit", "CostRestoration", "Refund", "ReverseMerchandiseCredit", "ReverseCostRestoration", "ReverseRefund"})
+        require(purpose.startswith("Reverse") == (row["original_effect_id"] is not None))
+    elif table.endswith("_events"):
+        require(row["operation"] in {"prepare", "review", "post", "cancel"})
+    elif table.endswith("_history"):
+        require(row["kind"] in {"Return", "Collection", "Refund", "ReverseReturn", "ReverseRefund"} and 1 <= row["sequence"] <= 256)
+        require((row["stock_fx_plan_id"] is not None and row["partial_plan_id"] is None) if row["kind"] == "Collection"
+                else (row["stock_fx_plan_id"] is None and row["partial_plan_id"] is not None))
+        require((row["original_sequence"] is not None and 0 < row["original_sequence"] < row["sequence"])
+                if row["kind"].startswith("Reverse") else row["original_sequence"] is None)
+    elif table.endswith("_restorations"):
+        require(1 <= row["position"] <= 32 and 1 <= row["quantity_scaled"] <= row["before_quantity_scaled"]
+                and 0 <= row["value_minor"] <= row["before_value_minor"] and row["consumption_count_at_restore"] > 0)
+        require(row["direction"] in {-1, 1} and (row["original_restoration_plan_id"] is None) == (row["direction"] == 1))
+        # Zero individual portions may share a real positive plan-total effect.
+        require(row["value_minor"] == 0 or row["correction_effect_id"] is not None)
+    elif table.endswith("_commands"):
+        require(row["operation"] in {"prepare", "prepare_refund", "prepare_reversal", "review", "post", "cancel"})
+    return tuple(row[field] for field in _PRIMARY[table])
+
+
 @dataclass(frozen=True)
 class Capture:
     index: int
@@ -153,8 +221,12 @@ def decode_capture(value: object, *, index: int, tenant_id: str) -> Capture:
         require(rows == sorted(rows) and len(rows) == len(set(rows)))
         row_count += len(rows)
         require(row_count <= MAX_CAPTURE_ROWS)
+        keys: set[tuple[Any, ...]] = set()
         for row in rows:
-            _raw_row(row, tenant_id)
+            key = _new_row(name, _raw_row(row, tenant_id))
+            if key is not None:
+                require(key not in keys)
+                keys.add(key)
             byte_size += len(row.encode("utf-8"))
             require(byte_size <= MAX_CAPTURE_BYTES)
         original.append((name, tuple(rows)))

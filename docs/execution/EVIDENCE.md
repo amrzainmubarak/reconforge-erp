@@ -1,5 +1,53 @@
 # ReconForge Execution Evidence Log
 
+Cancellation qualification `bf9c3e91183f9f4cfcd32d75b118cca0dcc8450dedffc5b50085024efe98e262`
+(7209 bytes) preserves official cdd job116479467387 metadata: Studio composite
+build active, HTTPS never started, total25 minutes. Direct logs return404;
+bounded full-run ZIP transfers remain incomplete. The exact npm/build/Playwright
+subcommand and cancellation cause are unknown. No timeout, assertion or scanner
+policy was relaxed, and no hosted product success is inferred.
+
+## M7 original AR reports, Studio aging and mixed-cost proof — 2026-10-15
+
+Actualc70bc2f4 affected settlement2 PASS122.828s/0 skips, source unchanged and
+owned DB cleanup. All79 raw tables remain in7 version2 captures; old5017/78-table
+files and reader stay unchanged. Fresh-I/-I-O v2 proof79b15c2c derives cash-split
+9/18/205000 and observed-wait race9/19/221000, full79 rollback and empty witness
+table. Two-mode closure813f8f563a18b7848be08f1b5adbb32b838d4c8b59c1de93ca6e8d8f3e31c7db.
+Native public invoice/exposure/aging assertions execute at all seven checkpoints.
+
+Actual713e1bf8 ordinary/refund with new AR aging pass156.250/217.406s, one browser
+case each, retry0/0 skipped/unexpected/flaky. Both source/build remain unchanged
+and owned runtimes are removed. Studio reads2000/0 minor units; bilingual/RTL,
+four-width Axe, return-to-English and unmount assertions pass. Independent raw
+and restore peers0368741c/01bcaabc derive6 NEW effects/12 lines/4001 and8 NEW/17/81000;
+79 financial tables restore660/1140 rows. All340 tables/catalog,81 tenant and77
+workspace probes, and three tamper refusals per run pass. Earlier5cdb selector
+failure is retained; only the exact current Arabic button selector changed.
+
+Actual5cdb89c1 mixed-stock original-capture case1 PASS153.907s retains four79-table
+captures unchanged. Frozen new reader48fd independent-I/-I-O proof
+90d1bd4b713479eaf4ac91dc5e1acd84c07707adb7a5a6a0fd26059a9dc12157 derives
+stages3→223→323→433, final9 TOTAL effects/18 lines/Dr=Cr433, real aggregateCOGS10
+with ordered0/10 consumptions and returns100/0 plus100/10. Original qualification
+984fc4059936c5c18dba05cb02029f7f08832ca79bef3b78b5dee6a287a1b05c retains early
+reader-shape refusals and later canonical Manual/entry-ID and aggregate-line
+corrections. No native input was altered and no current authority claim follows.
+Source qualification5b7ca82e and final peer9a4f6faa bind22 pure controls and
+unchanged five older readers.
+
+Corrected native backdate case cdd1 PASS39.250s proves Python and actual SQL
+refusal/full79 rollback; earlier373 cohort remains5 PASS/1 FAIL. Hosted cdd
+CI38751026869 terminal68 success/4 failure/1 cancelled/1 skipped remains retained;
+the fourth browser job reaches25 minutes during Studio build, before HTTPS; its original
+setup logs await root-cause review. Stat and exact79
+helper repairs have targeted successes. Package preflight713 refuses missing
+ADR0861; explicit MANIFEST fix ac5fec69 passes actual source/wheel archive gate,
+report5b19022a. Gitleaks8.30.1 tree/HEAD scans pass after exact protocol fixture
+reuse, without config/ignore changes; the unrelated local-all-refs synthetic
+fixture finding remains a negative outside candidate ancestry. New final-head
+CI/security, original tax/FX functionality and M7 closure remain open.
+
 ## M7 actual zero-resale HTTPS and hostile SQL cohort — 2026-10-15
 
 Frozen373362a6 actual zero-resale HTTPS and populated restore pass243.031s;

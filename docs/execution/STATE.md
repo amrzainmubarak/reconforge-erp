@@ -2,6 +2,34 @@
 
 ## Completion first — one domain at a time (2026-10-15)
 
+Latest integrated slice: actualc70 settlement/cash-race2 PASS, including native
+invoice/exposure/current and overdue aging at seven stages. New79-table originals
+independently derive9/18/205000 and9/19/221000 (I/IO closure813f8f56).
+Actual713 ordinary/refund Studio aging, bilingual HTTPS and populated restore
+pass on the new985c4a build; independent peers0368741c/01bcaabc bind6 NEW/12/4001
+and8 NEW/17/81000, with79-table restores660/1140 rows. Actual5cdb mixed0+10
+consumption passes; new frozen48fd reader independently derives9 TOTAL effects,
+18 lines/Dr=Cr433, equal-I/IO proof90d1bd4b and closure984fc405. Actual corrected
+backdate security passes1/1 atcdd. Component results retain their own heads.
+
+CI38751026869 on cdd is a preserved terminal failure: Python8385 PASS plus one
+bad lstat test double, and native8 PASS/2 FAIL on obsolete78-table capture.
+The aggregate fails closed. Terminal totals are68 success/4 failure/1 cancelled/
+1 skipped; the fourth HTTPS job reaches its25-minute limit during Studio build, before HTTPS,
+and bounded log retrieval retains404 and incomplete ZIP originals. The exact
+composite subcommand/cause remains unknown, receipt bf9c3e91. Both narrow fixes
+execute their targeted gates;
+Linux affected stat case also passes. Original Gitleaks protocol-fixture false
+positive is corrected without scanner exceptions; tree and HEAD-history scans
+pass. Local all-refs scan separately refuses an old synthetic fixture in a
+nonancestor local branch; it is not relabeled as a candidate-history success.
+Package preflight first refused missing ADR0861; the explicit manifest fix then
+passes source/wheel inspection at ac5fec69. Cohesive new-head CI and security
+qualification remain pending. M7 stays OPEN, including its original tax/FX gap;
+the team has not advanced to Manufacturing or another major domain.
+
+Earlier scoped checkpoints retain their exact heads and outcomes below.
+
 Frozen373362a6 actual zero-resale HTTPS/populated restore passes243.031s:
 4 checkpoints/79 tables/2 sources,5 actual effects/10 lines/Dr=Cr203,
 3 later observations/76 valid audit appends and79 restored tables/1518 rows.

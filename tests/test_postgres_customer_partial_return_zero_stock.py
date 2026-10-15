@@ -53,19 +53,19 @@ def create_restituted_resale(runtime: ReceiptRuntime, *, quantity: str = "0.1", 
 
 def test_actual_zero_cost_restituted_stock_resale_new_return_and_transfer_pool_keep_real_effects_only(receipt_database: tuple[str, str]) -> None:
     runtime, original = create_remainder_runtime(receipt_database, zero=True)
-    captures = [capture_rounding(runtime)]
+    captures = [{"checkpoint": "Original", "tables": capture_rounding(runtime)}]
     old_zero = post_v2(runtime, prepare_v2(runtime, original, 1, 0, "original-zero-return"))
-    captures.append(capture_rounding(runtime))
+    captures.append({"checkpoint": "ZeroReturn", "tables": capture_rounding(runtime)})
     assert old_zero["entries"] == [] and current_v2(runtime, original)["history_version"] == 1
     sale = create_restituted_resale(runtime)
-    captures.append(capture_rounding(runtime))
+    captures.append({"checkpoint": "ResaleInvoiced", "tables": capture_rounding(runtime)})
     assert sale["cogs_minor"] == "0" and sale["cogs_entry_id"] is sale["cogs_effect_id"] is None
     assert sale["movement_id"] is not None and sale["valuation_id"] is not None
     plan = prepare_v2(runtime, sale["id"], 1, 0, "resale-zero-cost-return")
     assert (plan["credit_minor"], plan["cogs_restored_minor"], plan["receivable_released_minor"]) == (100, 0, 100)
     assert [part["purpose"] for part in plan["entries"]] == ["RevenueCredit"]
     posted = post_v2(runtime, plan)
-    captures.append(capture_rounding(runtime))
+    captures.append({"checkpoint": "ResaleReturned", "tables": capture_rounding(runtime)})
     retained = retained_partial_state(runtime)
     assert phase_v2(runtime, plan, "post", "poster") == posted
     assert retained_partial_state(runtime) == retained

@@ -170,9 +170,9 @@ def _source_v2() -> str:
    CONTINUE;
   END IF;""")
     value = _replace(value, "fp->>'contract' IS DISTINCT FROM'customer-partial-return-domain-v1'",
-        "fp->>'contract' IS DISTINCT FROM CASE WHEN original ? 'cost_admission' THEN'customer-partial-return-original-v2' ELSE'customer-partial-return-domain-v1' END")
+        "fp->>'contract' IS DISTINCT FROM(CASE WHEN original ? 'cost_admission' THEN'customer-partial-return-original-v2' ELSE'customer-partial-return-domain-v1' END)")
     value = _replace(value, "fp->'original_cogs' IS DISTINCT FROM jsonb_build_array(s.original_cogs_effect_id,original->'cogs'->>'validation_digest')",
-        "fp->'original_cogs' IS DISTINCT FROM CASE WHEN original->'cogs'='null'::jsonb THEN'null'::jsonb ELSE jsonb_build_array(s.original_cogs_effect_id,original->'cogs'->>'validation_digest') END")
+        "fp->'original_cogs' IS DISTINCT FROM(CASE WHEN original->'cogs'='null'::jsonb THEN'null'::jsonb ELSE jsonb_build_array(s.original_cogs_effect_id,original->'cogs'->>'validation_digest') END)")
     value = _replace(value,
         "chain:=reconforge.irp_digest(jsonb_build_object('contract','customer-partial-return-domain-v1','source',s.source_fingerprint));cash:=s.initial_collected_minor;",
         "chain:=reconforge.irp_digest(jsonb_build_object('contract','customer-partial-return-domain-v2','source',s.source_fingerprint,'allocation_policy','remaining-original-v1'));cash:=s.initial_collected_minor;")

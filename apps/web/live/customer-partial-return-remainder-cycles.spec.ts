@@ -134,7 +134,7 @@ async function readCreditAdjustedAging(page: Page, plan: PartialReturnPlanV2, ex
       expect((await new AxeBuilder({ page }).analyze()).violations.map(value => value.id)).toEqual([]);
     }
   }
-  await page.getByRole("button", { name: "Switch language", exact: true }).click();
+  await page.getByRole("button", { name: "تبديل اللغة", exact: true }).click();
   await expect(page.locator("main#main-content")).toHaveAttribute("dir", "ltr");
   // Establish an unmount barrier before any next economic command/capture.
   // This prevents a still-mounted AR reader from appending later policy audit.

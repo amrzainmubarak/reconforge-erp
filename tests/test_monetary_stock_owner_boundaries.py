@@ -191,3 +191,20 @@ def test_retained_zero_ack_must_pin_its_native_history_member_and_can_survive_la
     owner.connection = SimpleNamespace(execute=lambda sql, args: SimpleNamespace(fetchone=lambda: None))
     with pytest.raises(FinancePostingError):
         owner._admit_journal_presence(source, plan)
+
+
+@pytest.mark.parametrize("field", ["equation", "monetary_event", "monetary"])
+@pytest.mark.parametrize("malformed", [None, [], "malformed", False])
+def test_malformed_zero_collection_objects_have_stable_native_refusal(
+    field: str, malformed: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    owner, source, plan, _ = zero_collection(monkeypatch)
+    if field == "equation":
+        plan[field] = malformed
+    elif field == "monetary_event":
+        plan["equation"][field] = malformed
+    else:
+        plan["equation"]["monetary_event"][field] = malformed
+    with pytest.raises(FinancePostingError) as caught:
+        owner._admit_journal_presence(source, plan)
+    assert caught.value.code == "stock_monetary_evidence_invalid"

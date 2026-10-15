@@ -333,7 +333,11 @@ class _StockFxOwner(PostgresOperationalFxTaxRepository):
             _fail("evidence_invalid", "Absent functional journals require the exact fixed monetary collection owner.")
         try:
             equation = plan["equation"]
+            if type(equation) is not dict:
+                _fail("evidence_invalid", "A closed native collection equation object is required.")
             retained = equation["monetary_event"]
+            if type(retained) is not dict or type(retained.get("monetary")) is not dict:
+                _fail("evidence_invalid", "A closed original collection event and monetary object are required.")
             if set(equation) != {"foreign_minor", "monetary_event", "lines"} or equation["lines"] != []:
                 _fail("evidence_invalid", "A zero-turnover collection cannot retain financial journal lines.")
             if (type(equation["foreign_minor"]) is not int or equation["foreign_minor"] <= 0

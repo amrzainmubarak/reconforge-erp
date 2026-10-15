@@ -1,5 +1,22 @@
 # ReconForge Execution Evidence Log
 
+## M7 native integration and actual observer root cause (2026-10-15)
+
+Original12a migration roundtrip closesca46ef2ff918f54939b1faf8e1a752611b8fbc473bbbaf119a029e02d40f4dd9.
+Actual7d transfer+scope-wait2 PASS close14c460fdc86e4eaa9bff41c3ce67c11d8cdf0d70b64c06255b0a1e739032a023;
+actual095 rounded-original+Consumable2 PASS closec8d0c2622c075db52dc72ca95681c399ddccc587c11bc89843b90999a7666fd0.
+Each is source-unchanged,0 skips and owned-fixture-clean; none is final CI.
+Whole18 security is running. HTTPS7d/8f original failures remain retained. The
+diagnostic8f observer preserves the complete refused78-table snapshot and still
+fails closed. Independent diffce14448ea5fce2ada305d125608ffd26e1ae2cf1137bd6fbccba3aee4df53517
+proves76 business tables byte-identical,18 new authorization.policy_decision
+events, immutable prior audit rows, contiguous valid SHA chain and correct head.
+This supports a supplemental observation contract; it does not accept HTTPS or
+restore. Full-repo095 Ruff/mypy802/Bandit pass after four closed-constant DDL
+false positives were independently reviewed and narrowly annotated. Emitted
+UPGRADE/DOWNGRADE/RECEIPT SQL hashes remain exactly unchanged; the original four
+Medium/Low-confidence findings remain in m7-7d3f88a1-static-v1/bandit-original.log.
+
 ## M7 actual posted proof and lifecycle gate (2026-10-15)
 
 Frozen025b09aa actual two-layer repeated return, later real collection and two

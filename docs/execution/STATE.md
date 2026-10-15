@@ -9,8 +9,12 @@ repeating their accepted tests. M5/M6 scoped acceptance remains retained.
 M7 partial customer returns are OPEN. Native025 now posts actual repeated returns,
 later collection and partial refunds; an isolated independent reader derives
 12 effects/24 lines/Dr=Cr238000 from original rows. Nativeea457 lifecycle5 passed;
-the scope-wait expected-code failure is retained. New transfer-v2, full security,
-HTTPS, populated restore and final-source acceptance remain required.
+the scope-wait expected-code failure is retained. Actual7d transfer/retry/scope
+withdrawal both pass; actual095 rounded original/Consumable both pass. Whole18
+SQL/security is running. Actual8f HTTPS first post/replay reaches a failed
+observer comparison; retained originals prove only valid authorization-audit
+growth, with all76 business tables unchanged. Supplemental full78 observations,
+eight-event HTTPS, populated restore and final-source acceptance remain required.
 Three agents now cooperate on this same domain: native owner/data, API/Studio,
 independent financial/security/recovery verification. Root owns shared migrations
 and integration. No new domain or small successor milestone is opened.

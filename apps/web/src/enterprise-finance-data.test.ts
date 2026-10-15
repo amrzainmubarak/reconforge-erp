@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { financeMoney, financeRequest, parseTrial, sourcePlan } from "./enterprise-finance-data";
 
 const scope = { workspace_id: "work", organization_id: "org", legal_entity_id: "entity" };
+const sourceProtocol = "operational-finance-api-v1" as const;
 
 it("shares the scoped CSRF transport with only the closed partial-return v2 surface", async () => {
   const session = { tenantId: "synthetic", csrfToken: "csrf", expiresAt: "2099-01-01T00:00:00Z" };
@@ -17,7 +18,7 @@ it("shares the scoped CSRF transport with only the closed partial-return v2 surf
     expect(fetcher).toHaveBeenCalledTimes(2);
   } finally { vi.unstubAllGlobals(); }
 });
-const plan = () => ({ api_contract_version: "operational-finance-api-v1", id: "OPS1-source", entry_id: "entry", source_kind: "ARInvoice", source_id: "invoice", status: "Draft", amount_minor: "9007199254740993", currency_code: "USD", currency_precision: 2, preparer_actor_id: "maker", reviewer_actor_id: null, review_digest: null, posting_effect_id: null, source_effect_id: null, plan_digest: "a".repeat(64), validation_digest: "b".repeat(64), ...scope, organization_code: "ORG", entity_code: "ENTITY", period_id: "period", posting_date: "2026-10-08", reason: "Actual source", lines: [{ account_id: "ar", debit_minor: "9007199254740993", credit_minor: "0" }, { account_id: "revenue", debit_minor: "0", credit_minor: "9007199254740993" }], source_json: "{}", snapshot_json: "{}" });
+const plan = () => ({ api_contract_version: sourceProtocol, id: "OPS1-source", entry_id: "entry", source_kind: "ARInvoice", source_id: "invoice", status: "Draft", amount_minor: "9007199254740993", currency_code: "USD", currency_precision: 2, preparer_actor_id: "maker", reviewer_actor_id: null, review_digest: null, posting_effect_id: null, source_effect_id: null, plan_digest: "a".repeat(64), validation_digest: "b".repeat(64), ...scope, organization_code: "ORG", entity_code: "ENTITY", period_id: "period", posting_date: "2026-10-08", reason: "Actual source", lines: [{ account_id: "ar", debit_minor: "9007199254740993", credit_minor: "0" }, { account_id: "revenue", debit_minor: "0", credit_minor: "9007199254740993" }], source_json: "{}", snapshot_json: "{}" });
 const trial = () => ({ api_contract_version: "finance-posting-api-v1", balance_scope: "selected-period-net-activity", accounts: [
   { account_id: "ar", debit_minor: "9007199254740993", credit_minor: "0", balance_minor: "9007199254740993", debit_balance_minor: "9007199254740993", credit_balance_minor: "0", postings: [{ effect_id: "effect", entry_id: "entry", line_number: 1, debit_minor: "9007199254740993", credit_minor: "0" }] },
   { account_id: "revenue", debit_minor: "0", credit_minor: "9007199254740993", balance_minor: "-9007199254740993", debit_balance_minor: "0", credit_balance_minor: "9007199254740993", postings: [{ effect_id: "effect", entry_id: "entry", line_number: 2, debit_minor: "0", credit_minor: "9007199254740993" }] },

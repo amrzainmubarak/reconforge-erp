@@ -24,7 +24,7 @@ from tests.customer_partial_return_posted_cycle_oracle import TABLES
 FAMILY = "native-customer-partial-return-originals"
 EXECUTIONS = "independent-customer-partial-return-row-verification"
 READER = Path(__file__).resolve().with_name("customer_partial_return_posted_cycle_oracle.py")
-READER_SHA256 = "695f8d4275759d92944ec3af42bde6c4ff7d707b5f8376d5a36c308b022accb3"
+READER_SHA256 = "be85ca58d3dec5873527ae9654f9208c87b6a61e171cd2215b9d2da97346544e"
 PACKET = "posted-cycle-input.json"
 RESTORE = "posted-cycle-restored-input.json"
 OBSERVATIONS = "native-customer-partial-return-observation-originals"

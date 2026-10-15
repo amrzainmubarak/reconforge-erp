@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import asdict, fields
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 from reconforge.domain.customer_partial_return_commands import (
@@ -22,6 +22,19 @@ from reconforge.domain.customer_partial_return_posting import (
     PartialReturnPostingIntent,
     build_partial_return_posting_contract,
 )
+from reconforge.domain.customer_partial_return_rounding import (
+    ALLOCATION_POLICY,
+    RemainingConsumptionPortion,
+    RemainingReturnEvent,
+    RemainingReturnHistory,
+    RemainingReturnValues,
+    apply_remaining_return,
+    prepare_remaining_return,
+    refund_remaining_return,
+    remaining_return_balance,
+    reverse_remaining_return,
+)
+from reconforge.domain.customer_partial_return_rounding_posting import build_remaining_posting_contract
 from reconforge.domain.customer_partial_returns import (
     ConsumptionPortion,
     OriginalConsumption,
@@ -96,12 +109,37 @@ def _hydrate_source(payload: Mapping[str, Any]) -> OriginalPartialReturnSource:
         raise FinancePostingError("customer_partial_return_source_invalid", "Retained original source refused.") from exc
 
 
-def _hydrate_event(row: dict[str, Any]) -> PartialReturnEvent:
+def _hydrate_event(row: dict[str, Any], *, protocol_version: int = 1) -> Any:
     values = row["return_values"]
+    if protocol_version == 2:
+        if values is not None:
+            values = RemainingReturnValues(**{**values, "portions": tuple(RemainingConsumptionPortion(**part) for part in values["portions"])})
+        return RemainingReturnEvent(row["kind"], row["sequence"], row["source_fingerprint"], row["previous_history_fingerprint"],
+                                   row["amount_minor"], values, row["original_sequence"])
     if values is not None:
         values = _ReturnValues(**{**values, "portions": tuple(ConsumptionPortion(**part) for part in values["portions"])})
     return PartialReturnEvent(row["kind"], row["sequence"], row["source_fingerprint"], row["previous_history_fingerprint"],
                               row["amount_minor"], values, row["original_sequence"])
+
+
+def _balance(history: Any) -> Any:
+    return remaining_return_balance(history) if type(history) is RemainingReturnHistory else partial_return_balance(history)
+
+
+def _prepare(history: Any, quantity: int) -> Any:
+    return prepare_remaining_return(history, quantity) if type(history) is RemainingReturnHistory else prepare_partial_return(history, quantity)
+
+
+def _refund(history: Any, amount: int) -> Any:
+    return refund_remaining_return(history, amount) if type(history) is RemainingReturnHistory else refund_partial_return(history, amount)
+
+
+def _reverse(history: Any, sequence: int) -> Any:
+    return reverse_remaining_return(history, sequence) if type(history) is RemainingReturnHistory else reverse_partial_return_event(history, sequence)
+
+
+def _apply(history: Any, plan: Any) -> Any:
+    return apply_remaining_return(history, plan) if type(history) is RemainingReturnHistory else apply_partial_return(history, plan)
 
 
 class _CustomerPartialReturnPostingParticipant:
@@ -117,12 +155,23 @@ class _CustomerPartialReturnPostingParticipant:
 
 
 class PostgresCustomerPartialReturnsRepository:
-    def __init__(self, connection: Any, tenant_id: str) -> None:
+    def __init__(self, connection: Any, tenant_id: str, *, protocol_version: Literal[1, 2] = 1) -> None:
+        if type(protocol_version) is not int or protocol_version not in {1, 2}:
+            _fail("protocol_conflict", "A server-fixed partial return protocol is required.")
+        self.protocol_version = protocol_version
         self.connection, self.tenant_id = connection, tenant_id
         self.legacy = PostgresCustomerReturnsRepository(connection, tenant_id)
         self.owner = self.legacy.owner
         self._participant: _CustomerPartialReturnPostingParticipant | None = None
         self._reversal_admission: tuple[str, str, str] | None = None
+
+    def _protocol(self, value: Mapping[str, Any], *, mutation: bool) -> None:
+        policy = value.get("allocation_policy")
+        if "source_payload" in value:
+            policy = value["source_payload"].get("allocation_policy")
+        version = 1 if policy is None else 2 if policy == ALLOCATION_POLICY else 0
+        if not version or (version != self.protocol_version and (mutation or self.protocol_version == 1)):
+            _fail("protocol_conflict", "Use the original native source and command protocol without upgrading it.")
 
     def _one(self, query: str, args: tuple[Any, ...]) -> dict[str, Any]:
         values = records(self.connection.execute(query, args))
@@ -134,7 +183,9 @@ class PostgresCustomerPartialReturnsRepository:
         sql = "SELECT payload,phase FROM reconforge.customer_partial_return_plans WHERE tenant_id=%s AND id=%s"
         sql += " FOR UPDATE" if lock else " FOR SHARE" if read_lock else ""
         row = self._one(sql, (self.tenant_id, text(identifier, "plan_id")))
-        return {**row["payload"], "phase": row["phase"]}
+        result = {**row["payload"], "phase": row["phase"]}
+        self._protocol(result, mutation=False)
+        return result
 
     def _source_row(self, source_id: str) -> dict[str, Any]:
         return self._one("SELECT * FROM reconforge.customer_partial_return_sources WHERE tenant_id=%s AND id=%s", (self.tenant_id, source_id))
@@ -153,18 +204,23 @@ class PostgresCustomerPartialReturnsRepository:
         return {**scope, "source_snapshot": source, "currency_code": source["invoice"]["currency_code"],
                 "currency_precision": source["invoice"]["currency_precision"], "amount_minor": source["stock"]["total_minor"]}
 
-    def _history(self, row: Mapping[str, Any]) -> PartialReturnHistory:
+    def _history(self, row: Mapping[str, Any]) -> Any:
         source = _hydrate_source(row["source_payload"])
         events = records(self.connection.execute("SELECT payload FROM reconforge.customer_partial_return_history WHERE tenant_id=%s AND source_id=%s ORDER BY sequence",
                                                 (self.tenant_id, row["id"])))
-        history = PartialReturnHistory(source, tuple(_hydrate_event(event["payload"]) for event in events))
-        partial_return_balance(history)
+        version = 2 if row["source_payload"].get("allocation_policy") == ALLOCATION_POLICY else 1
+        history_type = RemainingReturnHistory if version == 2 else PartialReturnHistory
+        history = history_type(source, tuple(_hydrate_event(event["payload"], protocol_version=version) for event in events))
+        _balance(history)
         return history
 
     def _command(self, context: Mapping[str, Any], operation: str, command_id: str, actor: PostingActor,
                  request: Mapping[str, Any]) -> tuple[str, dict[str, Any] | None]:
         text(command_id, "command_id", maximum=140)
-        digest = digest_payload({"operation": operation, "actor_id": actor.user_id, "request": dict(request)})
+        request_body: dict[str, Any] = {"operation": operation, "actor_id": actor.user_id, "request": dict(request)}
+        if self.protocol_version == 2:
+            request_body["protocol_version"] = 2
+        digest = digest_payload(request_body)
         self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
             (canonical_json([self.tenant_id, context["workspace_id"], "customer-partial-returns", command_id]),))
         rows = records(self.connection.execute("SELECT * FROM reconforge.customer_partial_return_commands WHERE tenant_id=%s AND workspace_id=%s AND command_id=%s",
@@ -174,6 +230,7 @@ class PostgresCustomerPartialReturnsRepository:
         row = rows[0]
         if (row["operation"], row["actor_id"], row["request_digest"]) != (operation, actor.user_id, digest):
             _fail("command_conflict", "Command identifies another exact request or actor.")
+        self._protocol(self._row(row["plan_id"]), mutation=True)
         phase = "prepare" if operation.startswith("prepare") else operation
         self._actor(actor, phase, self._row(row["plan_id"]))
         self._actor(actor, phase, self._row(row["plan_id"], read_lock=True))
@@ -186,10 +243,13 @@ class PostgresCustomerPartialReturnsRepository:
     def _remember(self, plan: Mapping[str, Any], operation: str, command_id: str, actor: PostingActor,
                   digest: str, request: Mapping[str, Any]) -> dict[str, Any]:
         result = self._view(plan["id"])
+        request_body: dict[str, Any] = {"operation": operation, "actor_id": actor.user_id, "request": dict(request)}
+        if self.protocol_version == 2:
+            request_body["protocol_version"] = 2
         self.connection.execute("""INSERT INTO reconforge.customer_partial_return_commands
             (tenant_id,workspace_id,plan_id,operation,command_id,actor_id,request_digest,request_json,response_json)
             VALUES(%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s::jsonb)""", (self.tenant_id, plan["workspace_id"], plan["id"], operation,
-            command_id, actor.user_id, digest, canonical_json({"operation": operation, "actor_id": actor.user_id, "request": dict(request)}), canonical_json(result)))
+            command_id, actor.user_id, digest, canonical_json(request_body), canonical_json(result)))
         return result
 
     def _native_source(self, source_order_id: str) -> dict[str, Any]:
@@ -255,6 +315,8 @@ class PostgresCustomerPartialReturnsRepository:
         payload.update(account_roles=roles.payload(), cash_dimensions=cash_dimensions, cash_journal_id=accounts["journal"],
                        journal_code=args["journal_code"], cash_account_code=args["cash_account_code"],
                        refund_liability_account_code=args["refund_liability_account_code"])
+        if self.protocol_version == 2:
+            payload["allocation_policy"] = ALLOCATION_POLICY
         identifier = "CRS2-" + uuid4().hex
         self.connection.execute("""INSERT INTO reconforge.customer_partial_return_sources
             (tenant_id,id,workspace_id,organization_id,legal_entity_id,source_order_id,invoice_id,customer_id,item_id,location_id,uom_id,
@@ -310,15 +372,17 @@ class PostgresCustomerPartialReturnsRepository:
 
     def _basis(self, row: Mapping[str, Any], args: Mapping[str, Any], operation: str, identifier: str) -> dict[str, Any]:
         original = row["source_payload"]["original_source"]
-        return {**args, "schema_version": "customer-partial-return-v1", "id": identifier, "operation": operation,
+        return {**args, **({"allocation_policy": ALLOCATION_POLICY} if self.protocol_version == 2 else {}),
+                "schema_version": "customer-partial-return-v2" if self.protocol_version == 2 else "customer-partial-return-v1", "id": identifier, "operation": operation,
                 "source_id": row["id"], "source_order_id": row["source_order_id"], "invoice_id": row["invoice_id"],
                 **{key: row[key] for key in ("workspace_id", "organization_id", "legal_entity_id", "currency_code", "currency_precision",
                     "currency_rounding_policy", "currency_registry_version", "currency_registry_digest", "quantity_precision")},
                 "source_snapshot": original, "original_id": None, "request": dict(args)}
 
-    def _available(self, row: Mapping[str, Any], expected: int) -> PartialReturnHistory:
+    def _available(self, row: Mapping[str, Any], expected: int) -> Any:
+        self._protocol(row, mutation=True)
         history = self._history(row)
-        if partial_return_balance(history).version != expected:
+        if _balance(history).version != expected:
             _fail("state_conflict", "Reload the exact current source history before preparing an effect.")
         if self.connection.execute("SELECT 1 FROM reconforge.customer_partial_return_plans WHERE tenant_id=%s AND source_id=%s AND phase IN(0,1)", (self.tenant_id, row["id"])).fetchone():
             _fail("state_conflict", "Complete or cancel the pending partial source operation first.")
@@ -348,8 +412,9 @@ class PostgresCustomerPartialReturnsRepository:
             roles, _accounts = self._roles(source, args)
             if roles.refund_liability_account_id != row["refund_liability_account_id"] or _accounts["cash"] != row["cash_account_id"]:
                 _fail("accounts_changed", "Use the retained source liability and original cash accounts.")
-            selected = prepare_partial_return(history, request.quantity_scaled)
-            contract = build_partial_return_posting_contract(selected, roles=roles,
+            selected = _prepare(history, request.quantity_scaled)
+            builder = build_remaining_posting_contract if self.protocol_version == 2 else build_partial_return_posting_contract
+            contract = builder(selected, roles=roles,
                 intent=PartialReturnPostingIntent(request.period_id, request.posting_date, request.reason))
             payload = self._basis(row, args, "Return", "CR2-" + uuid4().hex)
             payload.update(quantity_scaled=selected.quantity_scaled, credit_minor=selected.credit_minor, cogs_restored_minor=selected.cogs_restored_minor,
@@ -358,7 +423,8 @@ class PostgresCustomerPartialReturnsRepository:
                 movement_id=platform_id("MOV", request.workspace_id, payload["id"].upper()))
             self._actor(actor, "prepare", payload)
             payload["entries"] = [self._draft(payload["id"] + suffix, template["purpose"], payload, template["journal_id"], template["lines"], actor)
-                                  for suffix, template in zip(("-R", "-C"), contract.payload()["templates"], strict=True)]
+                                  for template in contract.payload()["templates"]
+                                  for suffix in ["-R" if template["purpose"] == "RevenueCredit" else "-C"]]
             self._save(payload, actor)
             return self._remember(payload, "prepare", command_id, actor, digest, args)
 
@@ -366,6 +432,7 @@ class PostgresCustomerPartialReturnsRepository:
         args = request.payload()
         with self.owner._transaction():
             parent = self._row(request.return_id)
+            self._protocol(parent, mutation=True)
             self._actor(actor, "prepare", parent)
             digest, replay = self._command(parent, "prepare_refund", command_id, actor, args)
             if replay is not None:
@@ -378,7 +445,7 @@ class PostgresCustomerPartialReturnsRepository:
                 _fail("refund_invalid", "Refund needs a posted source credit and a later or equal business date.")
             row = self._source_row(parent["source_id"])
             history = self._available(row, request.expected_history_version)
-            refund_partial_return(history, request.amount_minor)
+            _refund(history, request.amount_minor)
             payload = self._basis(row, {**{key: parent[key] for key in ("organization_code", "entity_code", "journal_code")}, **args}, "Refund", "CRF2-" + uuid4().hex)
             payload.update(request=args, original_id=parent["id"], amount_minor=request.amount_minor, quantity_scaled=0, credit_minor=0,
                 cogs_restored_minor=0, receivable_released_minor=0, refund_entitlement_delta_minor=0,
@@ -395,6 +462,7 @@ class PostgresCustomerPartialReturnsRepository:
         args = request.payload()
         with self.owner._transaction():
             parent = self._row(request.original_id)
+            self._protocol(parent, mutation=True)
             self._actor(actor, "prepare", parent)
             digest, replay = self._command(parent, "prepare_reversal", command_id, actor, args)
             if replay is not None:
@@ -408,7 +476,7 @@ class PostgresCustomerPartialReturnsRepository:
             row = self._source_row(parent["source_id"])
             history = self._available(row, request.expected_history_version)
             event = self._one("SELECT sequence FROM reconforge.customer_partial_return_history WHERE tenant_id=%s AND source_id=%s AND plan_id=%s", (self.tenant_id, row["id"], parent["id"]))
-            reverse_partial_return_event(history, event["sequence"])
+            _reverse(history, event["sequence"])
             payload = self._basis(row, {**{key: parent[key] for key in ("organization_code", "entity_code", "journal_code")}, **args}, "Reverse" + parent["operation"], ("CR2R-" if parent["operation"] == "Return" else "CRF2R-") + uuid4().hex)
             payload.update(request=args, original_id=parent["id"], original_sequence=event["sequence"],
                            **{key: parent[key] for key in ("amount_minor", "quantity_scaled", "credit_minor", "cogs_restored_minor", "receivable_released_minor", "refund_entitlement_delta_minor")})
@@ -418,7 +486,7 @@ class PostgresCustomerPartialReturnsRepository:
             entries = []
             for number, part in enumerate(parent["entries"]):
                 effect = self._one("SELECT id FROM reconforge.finance_posting_effects WHERE tenant_id=%s AND entry_id=%s", (self.tenant_id, part["entry_id"]))
-                new_number = payload["id"].upper() + ("-R" if number == 0 else "-C")
+                new_number = payload["id"].upper() + ("-C" if part["purpose"] == "CostRestoration" else "-R")
                 self._participant = _CustomerPartialReturnPostingParticipant(self, part["entry_id"])
                 self._reversal_admission = (part["entry_id"], effect["id"], new_number)
                 try:
@@ -449,20 +517,21 @@ class PostgresCustomerPartialReturnsRepository:
             if witness["consumption_count_at_restore"] != witness["current_count"]:
                 _fail("reversal_dependency", "A later native FIFO consumption follows the restored original layer.")
 
-    def _current(self, plan: Mapping[str, Any]) -> PartialReturnHistory:
+    def _current(self, plan: Mapping[str, Any]) -> Any:
+        self._protocol(plan, mutation=True)
         row = self._source_row(plan["source_id"])
         self.connection.execute("SELECT reconforge.customer_partial_return_source_close(%s,%s)", (self.tenant_id, row["id"]))
         history = self._history(row)
-        if partial_return_balance(history).version != plan["expected_history_version"]:
+        if _balance(history).version != plan["expected_history_version"]:
             _fail("state_conflict", "The governed source history changed after preparation.")
         if plan["operation"] == "Return":
-            selected = prepare_partial_return(history, plan["quantity_scaled"])
+            selected = _prepare(history, plan["quantity_scaled"])
             if canonical_json(selected.payload()) != canonical_json(plan["domain_plan"]):
                 _fail("source_changed", "The exact original FIFO or settlement basis changed.")
         elif plan["operation"] == "Refund":
-            refund_partial_return(history, plan["amount_minor"])
+            _refund(history, plan["amount_minor"])
         else:
-            reverse_partial_return_event(history, plan["original_sequence"])
+            _reverse(history, plan["original_sequence"])
             if plan["operation"] == "ReverseReturn":
                 self._reversal_layers(plan)
         return history
@@ -485,6 +554,7 @@ class PostgresCustomerPartialReturnsRepository:
         with self.owner._transaction():
             plan = self._row(plan_id)
             self._actor(actor, "review", plan)
+            self._protocol(plan, mutation=True)
             args = self._phase_args(plan, expected_plan_digest, reason)
             digest, replay = self._command(plan, "review", command_id, actor, args)
             if replay is not None:
@@ -500,20 +570,20 @@ class PostgresCustomerPartialReturnsRepository:
             self._lifecycle(plan, "review", actor, reason)
             return self._remember(plan, "review", command_id, actor, digest, args)
 
-    def _history_append(self, row: Mapping[str, Any], plan: Mapping[str, Any], history: PartialReturnHistory) -> None:
+    def _history_append(self, row: Mapping[str, Any], plan: Mapping[str, Any], history: Any) -> None:
         if plan["operation"] == "Return":
-            result = apply_partial_return(history, prepare_partial_return(history, plan["quantity_scaled"]))
+            result = _apply(history, _prepare(history, plan["quantity_scaled"]))
         elif plan["operation"] == "Refund":
-            result = refund_partial_return(history, plan["amount_minor"])
+            result = _refund(history, plan["amount_minor"])
         else:
-            result = reverse_partial_return_event(history, plan["original_sequence"])
+            result = _reverse(history, plan["original_sequence"])
         event = result.events[-1]
         wire = asdict(event)
         self.connection.execute("""INSERT INTO reconforge.customer_partial_return_history
             (tenant_id,source_id,sequence,kind,plan_id,amount_minor,quantity_scaled,credit_minor,cogs_minor,payload,previous_digest,event_digest)
             VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s)""",
             (self.tenant_id, row["id"], event.sequence, event.kind, plan["id"], event.amount_minor, plan["quantity_scaled"], plan["credit_minor"],
-             plan["cogs_restored_minor"], canonical_json(wire), event.previous_history_fingerprint, partial_return_balance(result).history_fingerprint))
+             plan["cogs_restored_minor"], canonical_json(wire), event.previous_history_fingerprint, _balance(result).history_fingerprint))
 
     def _physical(self, plan: Mapping[str, Any], actor: PostingActor, reason: str) -> None:
         row = self._source_row(plan["source_id"])
@@ -535,6 +605,9 @@ class PostgresCustomerPartialReturnsRepository:
     def _restorations(self, plan: Mapping[str, Any], effects: list[str]) -> None:
         row = self._source_row(plan["source_id"])
         direction = 1 if plan["operation"] == "Return" else -1
+        cost_effects = [effect for entry, effect in zip(plan["entries"], effects, strict=True)
+                        if entry["purpose"] in {"CostRestoration", "ReverseCostRestoration"}]
+        correction_effect = cost_effects[0] if cost_effects else None
         for part in plan["domain_plan"]["portions"]:
             self.connection.execute("""INSERT INTO reconforge.customer_partial_return_restorations
                 (tenant_id,source_id,plan_id,position,original_consumption_id,original_valuation_line_id,cost_layer_id,offset_quantity_scaled,
@@ -543,7 +616,11 @@ class PostgresCustomerPartialReturnsRepository:
                  (SELECT count(*) FROM reconforge.inventory_layer_consumptions WHERE tenant_id=%s AND cost_layer_id=%s))""",
                 (self.tenant_id, row["id"], plan["id"], part["position"], part["original_consumption_id"], part["original_valuation_line_id"],
                  part["cost_layer_id"], part["offset_quantity_scaled"], part["quantity_scaled"], part["value_minor"], direction,
-                 plan["movement_id"], row["original_cogs_effect_id"], effects[1], None if direction == 1 else plan["original_id"], self.tenant_id, part["cost_layer_id"]))
+                 plan["movement_id"], row["original_cogs_effect_id"], correction_effect, None if direction == 1 else plan["original_id"], self.tenant_id, part["cost_layer_id"]))
+            if plan.get("allocation_policy") == ALLOCATION_POLICY:
+                self.connection.execute("""INSERT INTO reconforge.customer_partial_return_allocation_witnesses
+                    (tenant_id,plan_id,position,before_quantity_scaled,before_value_minor) VALUES(%s,%s,%s,%s,%s)""",
+                    (self.tenant_id, plan["id"], part["position"], part["before_quantity_scaled"], part["before_value_minor"]))
             self.connection.execute("""UPDATE reconforge.inventory_cost_layers SET remaining_quantity_scaled=remaining_quantity_scaled+%s,
                 remaining_value_minor=remaining_value_minor+%s,row_version=row_version+1 WHERE tenant_id=%s AND id=%s""",
                 (direction*part["quantity_scaled"], direction*part["value_minor"], self.tenant_id, part["cost_layer_id"]))
@@ -552,6 +629,7 @@ class PostgresCustomerPartialReturnsRepository:
         with self.owner._transaction():
             plan = self._row(plan_id)
             self._actor(actor, "post", plan)
+            self._protocol(plan, mutation=True)
             args = self._phase_args(plan, expected_plan_digest, reason)
             digest, replay = self._command(plan, "post", command_id, actor, args)
             if replay is not None:
@@ -586,6 +664,7 @@ class PostgresCustomerPartialReturnsRepository:
         with self.owner._transaction():
             plan = self._row(plan_id)
             self._actor(actor, "cancel", plan)
+            self._protocol(plan, mutation=True)
             args = self._phase_args(plan, expected_plan_digest, reason)
             digest, replay = self._command(plan, "cancel", command_id, actor, args)
             if replay is not None:
@@ -616,8 +695,9 @@ class PostgresCustomerPartialReturnsRepository:
     def list_plans(self, scope: Mapping[str, Any], *, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():
             self._actor(actor, "read", scope)
-            rows = records(self.connection.execute("SELECT id FROM reconforge.customer_partial_return_plans WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s ORDER BY id COLLATE \"C\" LIMIT 200",
-                                                   (self.tenant_id, scope["workspace_id"], scope["organization_id"], scope["legal_entity_id"])))
+            rows = records(self.connection.execute("SELECT id FROM reconforge.customer_partial_return_plans WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s "
+                    "AND(%s=2 OR NOT(payload ? 'allocation_policy')) ORDER BY id COLLATE \"C\" LIMIT 200",
+                                                   (self.tenant_id, scope["workspace_id"], scope["organization_id"], scope["legal_entity_id"], self.protocol_version)))
             return {"plans": [self.get(row["id"], actor=actor) for row in rows]}
 
     def balance(self, source_order_id: str, scope: Mapping[str, Any], *, actor: PostingActor) -> dict[str, Any]:
@@ -633,11 +713,13 @@ class PostgresCustomerPartialReturnsRepository:
             self._actor(actor, "read", self._governed(original, scope))
             rows = records(self.connection.execute("SELECT * FROM reconforge.customer_partial_return_sources WHERE tenant_id=%s AND source_order_id=%s", (self.tenant_id, source_order_id)))
             if rows:
+                self._protocol(rows[0], mutation=False)
                 self.connection.execute("SELECT reconforge.customer_partial_return_source_close(%s,%s)", (self.tenant_id, rows[0]["id"]))
                 return self._one("SELECT reconforge.customer_partial_return_balance(%s,%s) value", (self.tenant_id, rows[0]["id"]))["value"]
             source = map_customer_partial_return_source(self.connection, self.tenant_id, original).source
-            balance = partial_return_balance(PartialReturnHistory(source))
-            return {"source_id": None, "source_order_id": source_order_id, **{key: getattr(source.scope, key) for key in ("workspace_id", "organization_id", "legal_entity_id")},
+            balance = _balance(RemainingReturnHistory(source) if self.protocol_version == 2 else PartialReturnHistory(source))
+            return {**({"schema_version": "customer-partial-return-balance-v2", "allocation_policy": ALLOCATION_POLICY}
+                      if self.protocol_version == 2 else {}), "source_id": None, "source_order_id": source_order_id, **{key: getattr(source.scope, key) for key in ("workspace_id", "organization_id", "legal_entity_id")},
                     "source_fingerprint": source.fingerprint, "history_fingerprint": balance.history_fingerprint, "history_version": 0,
                     "gross_minor": source.gross_minor, "collected_minor": source.collected_minor, "credited_minor": 0,
                     "returned_quantity_scaled": 0, "remaining_quantity_scaled": source.quantity_scaled, "quantity_precision": source.quantity_precision,

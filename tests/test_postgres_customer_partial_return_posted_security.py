@@ -530,7 +530,8 @@ def test_scope_withdrawal_commits_while_actual_partial_post_waits_then_denies_wi
         # No timeout or generic command mismatch counts as authorization proof.
         with pytest.raises(FinancePostingError) as denied:
             future.result(timeout=20)
-    require(denied.value.code == "operational_actor_denied")
+    if denied.value.code != "operational_scope_denied":
+        raise AssertionError(f"Expected operational_scope_denied, received {denied.value.code!r}")
     unchanged(before, capture(runtime))
     with runtime.actor("maker") as (connection, _, _actor):
         grant = connection.execute("SELECT revoked_at FROM reconforge.principal_scope_grants WHERE tenant_id=%s AND id='cr1-poster-workspace'",

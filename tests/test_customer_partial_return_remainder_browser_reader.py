@@ -192,9 +192,17 @@ def test_existing_execution_ancestor_reparse_point_is_refused_before_creating_ch
     original = Path.lstat
 
     def lstat(path: Path) -> Any:
-        return SimpleNamespace(st_file_attributes=gate.stat.FILE_ATTRIBUTE_REPARSE_POINT) if path == parent else original(path)
+        result = original(path)
+        if path != parent:
+            return result
+        # PosixPath.is_symlink reads st_mode before the Windows attribute
+        # guard. Preserve the real stat contract on both operating systems.
+        fields = {name: getattr(result, name) for name in dir(result) if name.startswith("st_")}
+        fields["st_file_attributes"] = getattr(result, "st_file_attributes", 0) | gate.stat.FILE_ATTRIBUTE_REPARSE_POINT
+        return SimpleNamespace(**fields)
 
     monkeypatch.setattr(Path, "lstat", lstat)
+    assert not gate.stat.S_ISLNK(lstat(parent).st_mode)
     with pytest.raises(gate.RemainderOriginalRefusal):
         gate.verify_remainder_original_rows(tmp_path, case="ordinary", require_restore=False)
     assert list(parent.iterdir()) == []

@@ -1,5 +1,30 @@
 # ReconForge Execution Evidence Log
 
+## M7 actual v2 HTTPS and independently read zero resale — 2026-10-15
+
+Frozen9af22802 ordinary HTTPS/populated restore report passes in139.953s with
+source/build unchanged and owned runtime removed. Three posted returns retain
+four economic captures and two later observations; the isolated original readers
+produce equal proof3d0c8bcf8c52820a41ad0afb4291eed3bfafc39a069a0090ab23ecadb3c61ae2:
+6 new effects/12 lines/Dr=Cr4001, all79 restored financial tables/646 rows equal.
+This is functional execution time, not a throughput benchmark. B product peer
+c1afe7d6 binds actual browser assertions and first-attempt success; C original
+custody peer is a separate receipt. Original report is retained externally in
+`m7-remainder-ordinary-https-9af22802-v1`.
+
+The same head's selected zero-cost resale/new-return native case passes; four
+original79-table captures total1,405,489 bytes. C fresh-I/-I-O verification derives
+5 actual effects/10 lines/Dr=Cr203 with no fake zero journal; proof63d87ce3 and
+source/raw qualification3d3bc3d35444d55397a2af9dabb50368ce1de23455f413f8d31dde31a130d240.
+The whole cohort remains2 PASS/1 FAIL/0 skips. Subsequent5f1ea229 executes the
+affected mixed case plus changed empty148 roundtrip:1 PASS/1 FAIL/0 skips,
+191.953s, source unchanged and owned-DB cleanup. Mixed posting now succeeds past
+chronology but its observation SQL has an ambiguous value_minor; the exact
+one-column qualification is pending acceptance. Native negative originals remain
+in `m7-mixed-zero-and-empty-5f1ea229-v2-private`; the earlier short-head preflight
+refusal remains separately retained. M7 remains OPEN, final CI and other v2
+HTTPS/restore cases unaccepted.
+
 ## M7 retained AR restore and zero-stock integration negatives — 2026-10-15
 
 Actual8e1dcfcd executes the unchanged populated0099 AR restore1 PASS/0 error,

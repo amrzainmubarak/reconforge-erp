@@ -51,6 +51,18 @@ row. `not proven` is an acceptance gap, not an invented execution failure.
 
 ## Capability closure matrix
 
+Latest M7 evidence changes no closure status. Frozen9af22802 ordinary-v2 HTTPS
+and populated restore pass:3 posted returns,4 economic captures,2 observations,
+79 tables/646 restored rows,6 new effects/12 lines/Dr=Cr4001 and byte-equal
+isolated proofs3d0c8bcf. Bilingual/RTL/accessibility and lost-response assertions
+pass; product peer c1afe7d6 binds the actual original. Frozen9af's zero-cost
+resale→new return also passes with independent four79-table evidence5/10/203,
+closure3d3bc3d3; its whole cohort remains2 PASS/1 FAIL. The reviewed SQL chronology
+fix at5f1ea229 passes empty148 roundtrip and allows mixed posting to progress,
+then the test observation fails on ambiguous value_minor. Remaining hostile
+cases, mixed final observations, zero/refund/restituted HTTPS/restore and cohesive
+final-head CI remain open. All original negative receipts are retained.
+
 Current source-specific gate: actual5017 local affected5 PASS/0 skips and hosted
 whole native18 PASS/0 skips. Separate original readers derive the new cash-split
 9 effects/18 lines/Dr=Cr205000 and actual credit-first wait-race9/19/221000.

@@ -2,6 +2,21 @@
 
 ## Completion first — one domain at a time (2026-10-15)
 
+Latest scoped evidence: ordinary-v2 HTTPS on frozen9af22802 passes3 posted
+returns, lost-response replay, bilingual/RTL/accessibility assertions and populated
+restore. Independent isolated readers agree on6 new effects/12 lines/Dr=Cr4001;
+all79 restored financial tables/646 rows match. Product peer c1afe7d6 verifies the
+actual browser original; independent custody review remains separate. The same
+head's zero-cost resale/new-return case passes and its four79-table raw captures
+independently yield5 effects/10 lines/Dr=Cr203, closure3d3bc3d3. Its whole native
+cohort remains2 PASS/1 FAIL. The SQL chronology fix then passes the empty148
+catalog/data/OID roundtrip at5f1ea229; mixed posting proceeds but its observation
+query fails on an ambiguous column. Original failures remain retained. The narrow
+query correction, new hostile SQL cases, remaining v2 HTTPS/restore cases and
+final unified CI are not accepted yet. M7 remains OPEN; no new major domain.
+
+The following paragraphs preserve earlier checkpoints and their original scope.
+
 The new restituted Stock cycle is still unaccepted. Actual3947 fails at148 SQL
 compilation (1 failure/2 setup errors); narrow CASE fix ac7 then passes the empty
 147↔148 catalog/data/OID roundtrip1/1 in47.578s. Its business2 first fail on

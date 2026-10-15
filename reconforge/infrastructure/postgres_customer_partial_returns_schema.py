@@ -366,7 +366,7 @@ BEGIN
     OR p.receivable_released_minor<>least(p.credit_minor,greatest(s.gross_minor-credit-cash,0))
     OR p.refund_entitlement_delta_minor<>p.credit_minor-p.receivable_released_minor
     OR(h.quantity_scaled,h.credit_minor,h.cogs_minor) IS DISTINCT FROM(p.quantity_scaled,p.credit_minor,p.cogs_restored_minor)
-    OR row->'return_values' IS DISTINCT FROM(p.payload->'domain_plan'-ARRAY['schema_version','source_fingerprint','history_fingerprint','expected_version']) THEN
+    OR row->'return_values' IS DISTINCT FROM((p.payload->'domain_plan')-ARRAY['schema_version','source_fingerprint','history_fingerprint','expected_version']) THEN
      RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Posted partial credit must conserve original quantity and prefix AR economics'; END IF;
     skip:=q;pending:=p.quantity_scaled;amount:=0;position:=0;
     FOR cons IN SELECT * FROM jsonb_array_elements(s.source_payload->'typed_source'->'consumptions') LOOP

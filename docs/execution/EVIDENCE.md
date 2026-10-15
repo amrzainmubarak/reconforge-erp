@@ -1,5 +1,22 @@
 # ReconForge Execution Evidence Log
 
+## M7 executed zero-leg negatives and source recovery — 2026-10-15
+
+Native12c314ee16 executes10PASS/6FAIL/0skip in889.172s; original11-member
+custody `5654c1aee90d96886e9a35ecbaa75f95190da0c5626add595990f02db6e2f910`
+retains the shared positive-amount authority failures and the successful actual
+split-refund seven raw captures. Affected f2052c2c6/6 fail in150.390s at the
+legacy retained-ACK projection's nonempty-entry assumption. Source and owned
+cleanup checks pass on both subjects. Failed SQL cases do not inherit acceptance.
+External originals are under `F:\ReconForge_Evidence\recovery-20261014` with
+prefixes `m7-frozen148-native-12c314ee-v1-private` and
+`m7-frozen148-affected-zero-f2052c2c-v1-private`.
+
+Active worktree inner directories unexpectedly disappeared after these runs.
+Fresh Root checkout f205 matches all4355 original tracked hashes; source recovery
+receipt is `m7-worktree-incident-20261015-v1-private/root-source-recovery.json`.
+No cause, uncommitted-agent recovery or further acceptance is inferred from it.
+
 ## M7 additive148 migration checkpoint — 2026-10-15
 
 Frozen8f163527d9c703d4f9bc5866dc7f513081dc2e90 executed3 native migration

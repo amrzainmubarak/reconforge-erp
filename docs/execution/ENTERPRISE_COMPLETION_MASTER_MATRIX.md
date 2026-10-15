@@ -72,6 +72,15 @@ unchanged, owned databases removed; original10-member custody `fc881481`.
 This does not close M7.6 or qualify populated-zero restore, stock reuse or v2
 Studio posting. Major-domain WIP remains M7 only.
 
+Native12c314ee executes16 cases:10 pass,6 fail, zero skips. The six zero-plan
+cases first meet a positive-only shared authority serializer. The explicit
+zero-amount fix f2052c2c then executes the affected6: all fail at retained-ACK
+money projection rejecting empty entries; first preparation now succeeds.
+Both negative subjects retain unchanged source and complete owned-DB cleanup.
+Neither result closes the zero-leg capability. The recovered Root checkout
+matches all4355 frozen f205 tracked file hashes after an unexplained loss of
+active worktree directories; agent uncommitted-source recovery remains open.
+
 Each row records existence, completeness, end-to-end operation, integration,
 independent financial/operational proof, security/concurrency/restore proof,
 source/evidence, missing cases, blocking dependencies and the final business

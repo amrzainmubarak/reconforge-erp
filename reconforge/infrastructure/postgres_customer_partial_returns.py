@@ -203,8 +203,11 @@ class PostgresCustomerPartialReturnsRepository:
             # empty entries. Persisted lifecycle commands retain that exact [] .
             and context.get("entries", []) == []
         ) else {}
-        money_options = {"allow_empty_entries": True} if zero_options else {}
-        governed = customer_return_money_context({**context, "operation": "Return"}, **money_options) if "source_snapshot" in context else dict(context)
+        governed = dict(context)
+        if "source_snapshot" in context:
+            money_context = {**context, "operation": "Return"}
+            governed = (customer_return_money_context(money_context, allow_empty_entries=True) if zero_options
+                        else customer_return_money_context(money_context))
         for permission in sorted(READ):
             self.owner._actor(actor, permission, governed, mutation=operation != "read", **zero_options)
         for permission in sorted(PERMISSIONS.get(operation, READ) - READ):

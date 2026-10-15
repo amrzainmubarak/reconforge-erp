@@ -2,6 +2,17 @@
 
 ## Completion first — one domain at a time (2026-10-15)
 
+Current M7 zero-leg checkpoint remains OPEN: native12c314ee16 cases execute
+10PASS/6FAIL/0skip (889.172s); the affected f2052c2c6 cases fail at a distinct
+retained-ACK empty-entry monetary projection (150.390s), after first preparation
+succeeds. Both runs have unchanged source and owned-DB cleanup. Original negative
+files are retained; the next fix preserves original monetary exposure while
+explicitly admitting only the v2 zero-leg shape. No zero journal is introduced.
+An unexpected disappearance of active worktree inner directories required fresh
+managed checkouts from retained refs. Root f205 source4355/4355 byte hashes match;
+main and both primary dirty-file hashes remain unchanged. Agent uncommitted
+drafts are being recovered separately and are not accepted functionality.
+
 Actual additive148 migration gates on frozen8f163527:3 PASS/0 failure/error/skip,
 516.031 seconds. Empty147→148→147 restores all rows/catalog/function identities;
 retained posted-v1 history and original ACK survive upgrade/downgrade; retained

@@ -27,6 +27,12 @@ it("admits a real leap century and refuses wrong or reordered financial purposes
   const plan = partialPlanFixture();
   expect(() => parsePartialReturnPlan({ ...plan, entries: [...plan.entries].reverse() }, partialScope)).toThrow();
 });
+it("refuses a coherent counterfeit operation array instead of coercing it into a string enum", () => {
+  const refund = partialPlanFixture(1, "Refund");
+  const counterfeit = { ...refund, id: "CR2-" + "a".repeat(32), operation: ["Return"],
+    entries: refund.entries.map(entry => ({ ...entry, purpose: "RevenueCredit" })) };
+  expect(() => parsePartialReturnPlan(counterfeit, partialScope)).toThrow();
+});
 it("refuses impossible over-collection even when residual and refund equations balance", () => {
   expect(() => parsePartialReturnBalance(partialBalanceFixture({ collected_minor: "67501", outstanding_minor: "0", refund_entitlement_minor: "54001", refund_due_minor: "54001" }), partialScope, "stock-original")).toThrow();
 });

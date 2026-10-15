@@ -71,7 +71,7 @@ function policy(row: Record<string, unknown>, scope: FinanceScope): void {
 }
 export function parsePartialReturnPlan(value: unknown, scope: FinanceScope): PartialReturnPlan {
   const row = object(value, planKeys); policy(row, scope);
-  if (row.schema_version !== "customer-partial-return-v1" || !Object.hasOwn(prefixes, String(row.operation))) invalid();
+  if (row.schema_version !== "customer-partial-return-v1" || typeof row.operation !== "string" || !Object.hasOwn(prefixes, row.operation)) invalid();
   const operation = row.operation as PartialReturnPlan["operation"];
   identity(row.id, prefixes[operation]); identity(row.source_id, "CRS2"); text(row.source_order_id); text(row.invoice_id);
   digest(row.plan_digest); integer(row.expected_history_version, 255); integer(row.quantity_precision, 6);

@@ -59,6 +59,9 @@ def _catalog(connection: Any) -> dict[str, Any]:
 def integration_database(baseline_receipt_database: tuple[str, str]) -> Iterator[tuple[str, str]]:
     import psycopg
 
+    # This cohort proves the historical145→146 contract itself. Start at that
+    # explicit empty revision; current-head tests separately exercise147.
+    _migrate(baseline_receipt_database, "downgrade", HEAD)
     with psycopg.connect(baseline_receipt_database[0]) as admin:
         assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == HEAD
     yield baseline_receipt_database

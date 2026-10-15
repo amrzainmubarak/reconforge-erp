@@ -47,7 +47,8 @@ PERMISSIONS = {
 }
 
 
-def customer_return_money_context(plan: Mapping[str, Any], *, parent: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def customer_return_money_context(plan: Mapping[str, Any], *, parent: Mapping[str, Any] | None = None,
+                                  allow_empty_entries: bool = False) -> dict[str, Any]:
     """Authorize every retained monetary field under its original captured policy.
 
     This projection is private authorization context only. It never changes a
@@ -62,13 +63,24 @@ def customer_return_money_context(plan: Mapping[str, Any], *, parent: Mapping[st
     def invalid() -> NoReturn:
         raise FinancePostingError("customer_return_source_invalid", "Retained monetary values or captured policies differ.")
 
+    if type(allow_empty_entries) is not bool or (allow_empty_entries and not (
+        parent is None and plan.get("schema_version") == "customer-partial-return-v2"
+        and plan.get("allocation_policy") == "remaining-original-v1"
+        and plan.get("operation") in {"Return", "ReverseReturn"}
+        and type(plan.get("quantity_scaled")) is int and plan["quantity_scaled"] > 0
+        and all(type(plan.get(key)) is int and plan[key] == 0
+                for key in ("amount_minor", "credit_minor", "cogs_restored_minor"))
+        and plan.get("entries", []) == []
+    )):
+        invalid()
+
     def object_value(value: object) -> Mapping[str, Any]:
         if not isinstance(value, Mapping):
             invalid()
         return value
 
-    def population(value: object, maximum: int = 1000) -> list[Any]:
-        if not isinstance(value, list) or not 1 <= len(value) <= maximum:
+    def population(value: object, maximum: int = 1000, *, minimum: int = 1) -> list[Any]:
+        if not isinstance(value, list) or not minimum <= len(value) <= maximum:
             invalid()
         return value
 
@@ -111,7 +123,7 @@ def customer_return_money_context(plan: Mapping[str, Any], *, parent: Mapping[st
             if field in retained:
                 money(retained, field)
         if "entries" in retained:
-            for entry in population(retained["entries"], 3):
+            for entry in population(retained["entries"], 3, minimum=0 if allow_empty_entries else 1):
                 snapshot(object_value(entry).get("snapshot"))
     money(invoice, "subtotal_minor", "tax_minor", "total_minor")
     money(source, "allocated_minor")

@@ -78,6 +78,39 @@ def test_fractional_original_unit_price_sets_amount_and_preserves_all_original_b
     assert scope["source_snapshot"] == plan["source_snapshot"] and scope["entries"] == plan["entries"]
 
 
+def zero_partial_plan() -> dict[str, Any]:
+    plan = original()
+    plan.update(schema_version="customer-partial-return-v2", allocation_policy="remaining-original-v1", quantity_scaled=1,
+                amount_minor=0, credit_minor=0, cogs_restored_minor=0, entries=[])
+    return plan
+
+
+def test_explicit_zero_partial_entries_keep_full_original_monetary_exposure_and_exact_bytes() -> None:
+    plan = zero_partial_plan()
+    before = canonical_json(plan)
+    scope = customer_return_money_context(plan, allow_empty_entries=True)
+    assert scope["amount_minor"] == 3000000 and plan["amount_minor"] == 0
+    assert scope["entries"] == [] and canonical_json(plan) == before
+    with pytest.raises(FinancePostingError):
+        customer_return_money_context(plan)
+
+
+@pytest.mark.parametrize("field,value", [("schema_version", "customer-partial-return-v1"), ("allocation_policy", None),
+    ("credit_minor", 1), ("quantity_scaled", True), ("entries", [{}])])
+def test_empty_entry_opt_in_cannot_relax_a_legacy_or_inconsistent_plan(field: str, value: Any) -> None:
+    plan = zero_partial_plan()
+    plan[field] = value
+    with pytest.raises(FinancePostingError):
+        customer_return_money_context(plan, allow_empty_entries=True)
+
+
+def test_zero_entries_still_reject_original_currency_policy_drift() -> None:
+    plan = zero_partial_plan()
+    plan["source_snapshot"]["cogs"]["currency_precision"] = 2
+    with pytest.raises(FinancePostingError):
+        customer_return_money_context(plan, allow_empty_entries=True)
+
+
 @pytest.mark.parametrize("path", MONEY_PATHS)
 def test_each_retained_money_path_independently_covers_a_larger_exposure(path: tuple[Any, ...]) -> None:
     plan = original()

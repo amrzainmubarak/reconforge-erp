@@ -617,14 +617,65 @@ class PostgresReceivablesRepository:
         ).fetchone()
         return int((row[0] if not isinstance(row, Mapping) else next(iter(row.values()))) or 0)
 
+    def _partial_return_schema(self) -> bool:
+        """Classify complete legacy/native schemas without cached absence.
+
+        A partially installed or damaged bridge cannot silently turn native
+        credit-aware economics into the legacy interpretation.
+        """
+        row = self.connection.execute("""WITH marker AS (
+            SELECT * FROM pg_catalog.pg_attribute WHERE attrelid=pg_catalog.to_regclass('reconforge.ar_invoices')
+             AND attname='customer_partial_return_source_id' AND NOT attisdropped
+        ), source AS (
+            SELECT * FROM pg_catalog.pg_class WHERE oid=pg_catalog.to_regclass('reconforge.customer_partial_return_sources')
+        ), helpers AS (
+            SELECT p.*,n.nspname FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+             WHERE n.nspname='reconforge' AND p.proname IN('customer_partial_return_credit','customer_partial_return_source_close','customer_partial_return_balance')
+        ) SELECT EXISTS(SELECT 1 FROM marker) AS marker_present,
+          EXISTS(SELECT 1 FROM source) AS source_present,
+          EXISTS(SELECT 1 FROM helpers WHERE proname='customer_partial_return_credit') AS credit_present,
+          EXISTS(SELECT 1 FROM helpers WHERE proname='customer_partial_return_source_close') AS close_present,
+          EXISTS(SELECT 1 FROM helpers WHERE proname='customer_partial_return_balance') AS balance_present,
+          EXISTS(SELECT 1 FROM marker WHERE atttypid='pg_catalog.text'::regtype AND NOT attnotnull) AS marker_valid,
+          EXISTS(SELECT 1 FROM source WHERE relkind='r' AND relrowsecurity AND relforcerowsecurity) AS source_valid,
+          EXISTS(SELECT 1 FROM helpers WHERE oid=pg_catalog.to_regprocedure('reconforge.customer_partial_return_credit(text,text)')
+           AND prorettype='pg_catalog.numeric'::regtype AND prokind='f' AND NOT proretset AND NOT prosecdef AND provolatile='v'
+           AND proconfig=ARRAY['search_path=pg_catalog']::text[]) AS credit_valid,
+          EXISTS(SELECT 1 FROM helpers WHERE oid=pg_catalog.to_regprocedure('reconforge.customer_partial_return_source_close(text,text)')
+           AND prorettype='pg_catalog.void'::regtype AND prokind='f' AND NOT proretset AND NOT prosecdef AND provolatile='v'
+           AND proconfig=ARRAY['search_path=pg_catalog']::text[]) AS close_valid,
+          EXISTS(SELECT 1 FROM helpers WHERE oid=pg_catalog.to_regprocedure('reconforge.customer_partial_return_balance(text,text)')
+           AND prorettype='pg_catalog.jsonb'::regtype AND prokind='f' AND NOT proretset AND NOT prosecdef AND provolatile='v'
+           AND proconfig=ARRAY['search_path=pg_catalog']::text[]) AS balance_valid""").fetchone()
+        if row is None:
+            raise PlatformError("Partial-return schema integration cannot be verified.")
+        try:
+            values = tuple(_row(row, ("marker_present", "source_present", "credit_present", "close_present", "balance_present",
+                                      "marker_valid", "source_valid", "credit_valid", "close_valid", "balance_valid")).values())
+        except (KeyError, TypeError, ValueError) as exc:
+            raise PlatformError("Partial-return schema integration is malformed.") from exc
+        if any(type(value) is not bool for value in values):
+            raise PlatformError("Partial-return schema integration is malformed.")
+        if not any(values):
+            return False
+        if all(values):
+            return True
+        raise PlatformError("Partial-return schema integration is incomplete or malformed; complete the native migration.")
+
     def _invoice(self, invoice_id: str) -> dict[str, Any]:
+        partial = self._partial_return_schema()
+        query = (
+            "SELECT id,workspace_id,organization_id,legal_entity_id,customer_id,invoice_number,invoice_date,due_date,currency_code,subtotal_minor,tax_minor,total_minor,status,created_by,approved_by,approved_at,credit_override_reason,cancelled_by,cancelled_at,cancel_reason,created_at,updated_at,row_version,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest,customer_partial_return_source_id FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s"
+            if partial else
+            "SELECT id,workspace_id,organization_id,legal_entity_id,customer_id,invoice_number,invoice_date,due_date,currency_code,subtotal_minor,tax_minor,total_minor,status,created_by,approved_by,approved_at,credit_override_reason,cancelled_by,cancelled_at,cancel_reason,created_at,updated_at,row_version,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s"
+        )
         row = self.connection.execute(
-            "SELECT id,workspace_id,organization_id,legal_entity_id,customer_id,invoice_number,invoice_date,due_date,currency_code,subtotal_minor,tax_minor,total_minor,status,created_by,approved_by,approved_at,credit_override_reason,cancelled_by,cancelled_at,cancel_reason,created_at,updated_at,row_version,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest,customer_partial_return_source_id FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s",
+            query,
             (self.tenant_id, invoice_id),
         ).fetchone()
         if row is None:
             raise PlatformError("Customer invoice not found.")
-        result = self._with_policy(_row(row, self._INVOICE + ("customer_partial_return_source_id",)))
+        result = self._with_policy(_row(row, self._INVOICE + (("customer_partial_return_source_id",) if partial else ())))
         partial_source_id = result.pop("customer_partial_return_source_id", None)
         lines = self.connection.execute(
             "SELECT id,invoice_id,line_number,description,quantity_text,unit_price_minor,tax_minor,line_total_minor,created_at FROM reconforge.ar_invoice_lines WHERE tenant_id=%s AND invoice_id=%s ORDER BY line_number,id",
@@ -927,8 +978,14 @@ class PostgresReceivablesRepository:
             return result
 
     def _exposure(self, customer_id: str, exclude_invoice_id: str = "") -> int:
+        partial = self._partial_return_schema()
+        query = (
+            "SELECT COALESCE(SUM(greatest(i.total_minor-COALESCE(a.allocated,0)-CASE WHEN i.customer_partial_return_source_id IS NULL THEN 0 ELSE reconforge.customer_partial_return_credit(i.tenant_id,i.id) END,0)),0) FROM reconforge.ar_invoices i LEFT JOIN (SELECT tenant_id,invoice_id,SUM(amount_minor) allocated FROM reconforge.ar_receipt_allocations GROUP BY tenant_id,invoice_id) a ON a.tenant_id=i.tenant_id AND a.invoice_id=i.id WHERE i.tenant_id=%s AND i.customer_id=%s AND i.status IN ('Approved','PartiallyPaid') AND i.id<>%s"
+            if partial else
+            "SELECT COALESCE(SUM(greatest(i.total_minor-COALESCE(a.allocated,0),0)),0) FROM reconforge.ar_invoices i LEFT JOIN (SELECT tenant_id,invoice_id,SUM(amount_minor) allocated FROM reconforge.ar_receipt_allocations GROUP BY tenant_id,invoice_id) a ON a.tenant_id=i.tenant_id AND a.invoice_id=i.id WHERE i.tenant_id=%s AND i.customer_id=%s AND i.status IN ('Approved','PartiallyPaid') AND i.id<>%s"
+        )
         row = self.connection.execute(
-            """SELECT COALESCE(SUM(greatest(i.total_minor-COALESCE(a.allocated,0)-CASE WHEN i.customer_partial_return_source_id IS NULL THEN 0 ELSE reconforge.customer_partial_return_credit(i.tenant_id,i.id) END,0)),0) FROM reconforge.ar_invoices i LEFT JOIN (SELECT tenant_id,invoice_id,SUM(amount_minor) allocated FROM reconforge.ar_receipt_allocations GROUP BY tenant_id,invoice_id) a ON a.tenant_id=i.tenant_id AND a.invoice_id=i.id WHERE i.tenant_id=%s AND i.customer_id=%s AND i.status IN ('Approved','PartiallyPaid') AND i.id<>%s""",
+            query,
             (self.tenant_id, customer_id, exclude_invoice_id),
         ).fetchone()
         value = row[0] if not isinstance(row, Mapping) else next(iter(row.values()))
@@ -1226,9 +1283,15 @@ class PostgresReceivablesRepository:
     def _aging_report(self, *, workspace: str, as_of_date: str, grouped: bool) -> dict[str, Any]:
         as_of = _iso_date(as_of_date, "Aging as-of date")
         with self._transaction():
+            partial = self._partial_return_schema()
             workspace_id = self._required_workspace_id(workspace)
+            query = (
+                "SELECT i.id,i.organization_id,i.legal_entity_id,i.invoice_number,c.customer_code,c.name,i.currency_code,i.invoice_date,i.due_date,i.total_minor,i.currency_precision,i.currency_rounding_policy,i.currency_registry_version,i.currency_registry_digest,COALESCE((SELECT SUM(a.amount_minor) FROM reconforge.ar_receipt_allocations a WHERE a.tenant_id=i.tenant_id AND a.invoice_id=i.id),0) AS allocated_minor,CASE WHEN i.customer_partial_return_source_id IS NULL THEN 0 ELSE reconforge.customer_partial_return_credit(i.tenant_id,i.id) END AS credited_minor FROM reconforge.ar_invoices i JOIN reconforge.ar_customers c ON c.tenant_id=i.tenant_id AND c.id=i.customer_id WHERE i.tenant_id=%s AND i.workspace_id=%s AND i.status IN ('Approved','PartiallyPaid') ORDER BY i.due_date,i.invoice_number,i.id"
+                if partial else
+                "SELECT i.id,i.organization_id,i.legal_entity_id,i.invoice_number,c.customer_code,c.name,i.currency_code,i.invoice_date,i.due_date,i.total_minor,i.currency_precision,i.currency_rounding_policy,i.currency_registry_version,i.currency_registry_digest,COALESCE((SELECT SUM(a.amount_minor) FROM reconforge.ar_receipt_allocations a WHERE a.tenant_id=i.tenant_id AND a.invoice_id=i.id),0) AS allocated_minor,0 AS credited_minor FROM reconforge.ar_invoices i JOIN reconforge.ar_customers c ON c.tenant_id=i.tenant_id AND c.id=i.customer_id WHERE i.tenant_id=%s AND i.workspace_id=%s AND i.status IN ('Approved','PartiallyPaid') ORDER BY i.due_date,i.invoice_number,i.id"
+            )
             rows = self.connection.execute(
-                """SELECT i.id,i.organization_id,i.legal_entity_id,i.invoice_number,c.customer_code,c.name,i.currency_code,i.invoice_date,i.due_date,i.total_minor,i.currency_precision,i.currency_rounding_policy,i.currency_registry_version,i.currency_registry_digest,COALESCE((SELECT SUM(a.amount_minor) FROM reconforge.ar_receipt_allocations a WHERE a.tenant_id=i.tenant_id AND a.invoice_id=i.id),0) AS allocated_minor,CASE WHEN i.customer_partial_return_source_id IS NULL THEN 0 ELSE reconforge.customer_partial_return_credit(i.tenant_id,i.id) END AS credited_minor FROM reconforge.ar_invoices i JOIN reconforge.ar_customers c ON c.tenant_id=i.tenant_id AND c.id=i.customer_id WHERE i.tenant_id=%s AND i.workspace_id=%s AND i.status IN ('Approved','PartiallyPaid') ORDER BY i.due_date,i.invoice_number,i.id""",
+                query,
                 (self.tenant_id, workspace_id),
             ).fetchall()
             columns = (

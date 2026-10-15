@@ -314,7 +314,8 @@ def seed_customer_partial_returns_browser(admin_dsn: str, app_dsn: str) -> Recei
     runtime, _source, _invoice = create_two_layer_source((admin_dsn, app_dsn))
     with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
         identity = PostgresIdentityRepository(connection)
-        for permission in ("audit.read", "users.manage", "roles.manage", "security.center.read", "security.integrations.manage", "security.retention.manage"):
+        for permission in ("audit.read", "audit.verify", "users.manage", "roles.manage", "security.center.read",
+                           "security.policy.manage", "security.integrations.manage", "security.retention.manage"):
             identity.create_permission(tenant_id=runtime.tenant, permission_name=permission)
             identity.grant_permission(tenant_id=runtime.tenant, role_name="receipt-operator", permission_name=permission)
     seed_erp_browser_principals(runtime)

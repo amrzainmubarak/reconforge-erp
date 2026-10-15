@@ -192,7 +192,6 @@ class PostgresCustomerPartialReturnsRepository:
 
     def _actor(self, actor: PostingActor, operation: str, context: Mapping[str, Any]) -> None:
         self.legacy._authority_locks(actor, operation, context)
-        governed = customer_return_money_context({**context, "operation": "Return"}) if "source_snapshot" in context else dict(context)
         zero_options = {"allow_zero_amount": True} if (
             self.protocol_version == 2 and context.get("schema_version") == "customer-partial-return-v2"
             and context.get("allocation_policy") == ALLOCATION_POLICY
@@ -204,6 +203,8 @@ class PostgresCustomerPartialReturnsRepository:
             # empty entries. Persisted lifecycle commands retain that exact [] .
             and context.get("entries", []) == []
         ) else {}
+        money_options = {"allow_empty_entries": True} if zero_options else {}
+        governed = customer_return_money_context({**context, "operation": "Return"}, **money_options) if "source_snapshot" in context else dict(context)
         for permission in sorted(READ):
             self.owner._actor(actor, permission, governed, mutation=operation != "read", **zero_options)
         for permission in sorted(PERMISSIONS.get(operation, READ) - READ):

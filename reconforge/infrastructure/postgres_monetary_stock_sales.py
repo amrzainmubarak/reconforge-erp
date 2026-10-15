@@ -27,10 +27,13 @@ from reconforge.domain.monetary_customer_returns import (
     prepare_monetary_event,
     replay_monetary_history,
 )
+from reconforge.domain.monetary_stock_revaluation import monetary_revaluation_equation
+from reconforge.domain.operational_fx_revaluation import reversal_equation
 from reconforge.domain.operational_fx_tax import (
     ForeignInvoicePreparation,
     HistoricalRate,
     TaxComponent,
+    exact_minor,
     invoice_equation,
 )
 from reconforge.domain.stock_sales import StockOrder
@@ -55,6 +58,13 @@ FX_SOURCE_SCHEMA = "operational-fx-stock-source-v2"
 OPERATION_PERMISSIONS = {key: frozenset(value) for key, value in LEGACY_PERMISSIONS.items()}
 OPERATION_PERMISSIONS["prepare-collection"] |= {"receivables.manage"}
 OPERATION_PERMISSIONS["review-collection"] |= {"receivables.approve"}
+VALUATION_PERMISSIONS = {
+    "read": READ,
+    "prepare": READ | {"finance_core.manage", "receivables.manage"},
+    "prepare_reversal": READ | {"finance_core.manage", "receivables.manage", "finance_core.reverse"},
+    "review": READ | {"finance_core.validate", "receivables.approve"},
+    "post": READ | {"finance_core.post", "receivables.manage"},
+}
 
 
 def _fail(code: str, message: str) -> NoReturn:
@@ -287,6 +297,100 @@ class PostgresMonetaryStockSalesRepository(PostgresStockSalesRepository):
         except (KeyError, TypeError, ValueError) as exc:
             raise FinancePostingError("stock_monetary_evidence_invalid", "The native ordered monetary source refused.") from exc
 
+    def _valuation_authority(self, identifier: str, actor: PostingActor, operation: str) -> dict[str, Any]:
+        self._authority_locks(actor, "read", permissions=frozenset(VALUATION_PERMISSIONS[operation]))
+        row = self._order(identifier)
+        self._actor(actor, "read", row)
+        if operation != "read":
+            self.connection.execute("SELECT set_config('app.stock_sales_actor_id',%s,true)", (actor.user_id,))
+        origin = self._origin(identifier)
+        if origin is None:
+            _fail("state_conflict", "A governed original foreign recognition is required before a closing valuation.")
+        return origin
+
+    def _valuation_public(self, identifier: str, plan_id: str) -> dict[str, Any]:
+        origin = self._origin(identifier)
+        if origin is None:
+            _fail("not_found", "The exact monetary Stock origin is absent.")
+        native = self._one("""SELECT plan.payload,plan.phase,review.reviewer_actor_id,link.posted_actor_id,link.posting_effect_id
+            FROM reconforge.operational_fx_plans plan LEFT JOIN reconforge.operational_fx_reviews review
+            ON(review.tenant_id,review.plan_id)=(plan.tenant_id,plan.id) LEFT JOIN reconforge.operational_fx_links link
+            ON(link.tenant_id,link.plan_id)=(plan.tenant_id,plan.id)
+            WHERE plan.tenant_id=%s AND plan.id=%s AND plan.source_id=%s AND plan.kind IN('revalue','reverse_revaluation')""",
+            (self.tenant_id, plan_id, origin["fx_source_id"]))
+        plan = native["payload"]
+        original = plan if plan["kind"] == "revalue" else self.fx._peek("plan", plan["equation"]["original_revaluation_id"])
+        equation = original["equation"]
+        delta = equation["unrealized_fx_minor"]
+        source = self.fx._peek("source", origin["fx_source_id"])
+        return {"schema_version": "stock-monetary-valuation-v1", "id": plan_id, "source_order_id": identifier,
+            "fx_source_id": source["id"], **{key: origin[key] for key in ("workspace_id", "organization_id", "legal_entity_id")},
+            "fx_source_digest": source["source_digest"], "origin_digest": origin["source_digest"], "kind": plan["kind"],
+            "status": ("Prepared", "Reviewed", "Posted")[native["phase"]], "phase": native["phase"], "plan_digest": plan["plan_digest"],
+            **{key: plan[key] for key in ("period_id", "posting_date", "reason")},
+            "transaction_policy": source["foreign_policy"], "functional_policy": source["functional_policy"],
+            "monetary": {"transaction_outstanding_minor": str(equation["foreign_outstanding_minor"]),
+                "functional_historical_outstanding_minor": str(equation["historical_outstanding_minor"]),
+                "functional_valued_outstanding_minor": str(equation["valued_outstanding_minor"]),
+                "functional_unrealized_gain_minor": str(max(delta, 0)), "functional_unrealized_loss_minor": str(max(-delta, 0)),
+                "functional_turnover_minor": str(equation["amount_minor"])},
+            "closing_rate": equation["closing_rate"], "unrealized_gain_account_code": equation["unrealized_gain_account_code"],
+            "unrealized_loss_account_code": equation["unrealized_loss_account_code"],
+            "original_id": original["id"] if plan["kind"] == "reverse_revaluation" else None,
+            "entry_id": plan["entry_id"], "validation_digest": plan["validation_digest"], "posting_effect_id": native["posting_effect_id"],
+            "preparer_actor_id": plan["preparer_actor_id"], "reviewer_actor_id": native["reviewer_actor_id"], "posted_actor_id": native["posted_actor_id"]}
+
+    def prepare_valuation(self, identifier: str, *, closing_rate: HistoricalRate, unrealized_gain_account_code: str,
+                          unrealized_loss_account_code: str, period_id: str, posting_date: str, reason: str,
+                          command_id: str, actor: PostingActor) -> dict[str, Any]:
+        with self.ops._transaction():
+            origin = self._valuation_authority(identifier, actor, "prepare")
+            result = self.fx.prepare_revaluation(origin["fx_source_id"], closing_rate=closing_rate,
+                unrealized_gain_account_code=unrealized_gain_account_code, unrealized_loss_account_code=unrealized_loss_account_code,
+                period_id=period_id, posting_date=posting_date, reason=reason, command_id=command_id, actor=actor)
+            return self._valuation_public(identifier, result["id"])
+
+    def prepare_valuation_reversal(self, identifier: str, *, original_revaluation_id: str, period_id: str,
+                                   posting_date: str, reason: str, command_id: str, actor: PostingActor) -> dict[str, Any]:
+        with self.ops._transaction():
+            origin = self._valuation_authority(identifier, actor, "prepare_reversal")
+            result = self.fx.prepare_revaluation_reversal(origin["fx_source_id"], original_revaluation_id=original_revaluation_id,
+                period_id=period_id, posting_date=posting_date, reason=reason, command_id=command_id, actor=actor)
+            return self._valuation_public(identifier, result["id"])
+
+    def get_valuation(self, identifier: str, plan_id: str, *, actor: PostingActor) -> dict[str, Any]:
+        with self.ops._transaction():
+            origin = self._valuation_authority(identifier, actor, "read")
+            self._parents(self._order(identifier), share=True)
+            self.connection.execute("SELECT id FROM reconforge.operational_fx_plans WHERE tenant_id=%s AND id=%s AND source_id=%s FOR SHARE",
+                                    (self.tenant_id, plan_id, origin["fx_source_id"]))
+            plan = self.fx._peek("plan", plan_id)
+            if plan["source_id"] != origin["fx_source_id"] or plan["kind"] not in {"revalue", "reverse_revaluation"}:
+                _fail("not_found", "The closing valuation belongs to another monetary source.")
+            self.fx._authorize(actor, "finance_core.read", self.fx._peek("source", origin["fx_source_id"]), plan, mutation=False)
+            self.connection.execute("SELECT reconforge.fx_close(%s,%s)", (self.tenant_id, plan_id))
+            return self._valuation_public(identifier, plan_id)
+
+    def _valuation_phase(self, identifier: str, plan_id: str, operation: str, *, expected_plan_digest: str,
+                         reason: str, command_id: str, actor: PostingActor) -> dict[str, Any]:
+        with self.ops._transaction():
+            origin = self._valuation_authority(identifier, actor, operation)
+            plan = self.fx._peek("plan", plan_id)
+            if plan["source_id"] != origin["fx_source_id"] or plan["kind"] not in {"revalue", "reverse_revaluation"}:
+                _fail("not_found", "The exact closing plan must belong to this fixed monetary source.")
+            if plan["kind"] == "reverse_revaluation":
+                self._authority_locks(actor, "read", permissions=frozenset(VALUATION_PERMISSIONS[operation] | {"finance_core.reverse"}))
+            getattr(self.fx, operation)(plan_id, expected_plan_digest=expected_plan_digest, reason=reason, command_id=command_id, actor=actor)
+            return self._valuation_public(identifier, plan_id)
+
+    def review_valuation(self, identifier: str, plan_id: str, *, expected_plan_digest: str, reason: str,
+                         command_id: str, actor: PostingActor) -> dict[str, Any]:
+        return self._valuation_phase(identifier, plan_id, "review", expected_plan_digest=expected_plan_digest, reason=reason, command_id=command_id, actor=actor)
+
+    def post_valuation(self, identifier: str, plan_id: str, *, expected_plan_digest: str, reason: str,
+                       command_id: str, actor: PostingActor) -> dict[str, Any]:
+        return self._valuation_phase(identifier, plan_id, "post", expected_plan_digest=expected_plan_digest, reason=reason, command_id=command_id, actor=actor)
+
 
 class _StockFxOwner(PostgresOperationalFxTaxRepository):
     """Reuse FX's native tables/FinancePosting under the fixed Stock parent."""
@@ -317,6 +421,25 @@ class _StockFxOwner(PostgresOperationalFxTaxRepository):
 
     def _authorize(self, actor: PostingActor, permission: str, source: Mapping[str, Any],
                    plan: Mapping[str, Any] | None = None, *, mutation: bool = True) -> None:
+        valuation = plan
+        if plan is not None and plan["kind"] == "reverse_revaluation":
+            valuation = self._peek("plan", plan["equation"]["original_revaluation_id"])
+            if valuation["kind"] != "revalue" or valuation["source_id"] != source["id"]:
+                _fail("evidence_invalid", "The inverse requires its exact original same-source monetary valuation.")
+        if valuation is not None and valuation["kind"] == "revalue" and valuation["equation"]["valued_outstanding_minor"] == 0:
+            if source.get("schema_version") != FX_SOURCE_SCHEMA or plan is None:
+                _fail("evidence_invalid", "Zero closing functional carrying requires the fixed monetary source.")
+            super()._authorize(actor, permission, source, mutation=mutation)
+            amount = max(exact_minor(plan["amount_minor"], "native valuation journal turnover"),
+                         exact_minor(valuation["amount_minor"], "original valuation turnover"),
+                         exact_minor(valuation["equation"]["historical_outstanding_minor"], "original monetary carrying", zero=True),
+                         exact_minor(valuation["equation"]["valued_outstanding_minor"], "closing monetary carrying", zero=True))
+            context = {**{key: source[key] for key in ("workspace_id", "organization_id", "legal_entity_id")},
+                       "amount_minor": amount, "currency_precision": source["functional_policy"]["currency_precision"]}
+            self.owner._actor(actor, permission, context, mutation=mutation)
+            if mutation and plan["kind"] == "reverse_revaluation":
+                self.owner._actor(actor, "finance_core.reverse", context, mutation=True)
+            return
         # The existing owner checks each F/L gross and AR context independently.
         # Its positive-plan path is reused verbatim whenever a real L journal exists.
         if plan is None or type(plan["amount_minor"]) is not int or plan["amount_minor"] != 0:
@@ -334,6 +457,43 @@ class _StockFxOwner(PostgresOperationalFxTaxRepository):
         state = self.stock._one("SELECT reconforge.monetary_stock_fx_state(%s,%s) value",
                                 (self.tenant_id, source["stock_order_id"]))["value"]
         return dict(state)
+
+    def _prepare_valuation(self, source_id: str, *, request: dict[str, Any], command_id: str, actor: PostingActor) -> dict[str, Any]:
+        with self.owner._transaction():
+            source = self._peek("source", source_id)
+            self._authorize(actor, "finance_core.manage", source)
+            digest, replay = self._command(source, "prepare", command_id, actor, request)
+            self._period(request["period_id"])
+            FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(source["workspace_id"])
+            source = self._source(source_id)
+            if replay is not None:
+                self._authorize(actor, "finance_core.manage", source, replay)
+                self.connection.execute("SELECT reconforge.fx_close(%s,%s)", (self.tenant_id, replay["id"]))
+                return replay
+            state = self._state(source)
+            if not state["recognized"] or state["sequence"] > 200 or request["posting_date"] < state["last_posting_date"]:
+                _fail("state_conflict", "A closing valuation requires posted recognition, bounded native history and monotonic accounting dates.")
+            origin = self.stock._origin(source["stock_order_id"])
+            if origin is None or self.connection.execute("""SELECT 1 FROM reconforge.customer_partial_return_monetary_plans
+                WHERE tenant_id=%s AND origin_id=%s AND phase IN(0,1)""", (self.tenant_id, origin["id"])).fetchone():
+                _fail("state_conflict", "Complete the pending merchandise correction before valuing its receivable.")
+            reversal = None
+            if request["kind"] == "revalue":
+                if state["active_revaluation_plan_id"] is not None:
+                    _fail("state_conflict", "Reverse the exact active native valuation before preparing another.")
+                equation = monetary_revaluation_equation(self.stock._history(source["stock_order_id"]), source,
+                    closing_rate=HistoricalRate(**request["closing_rate"]), posting_date=request["posting_date"],
+                    unrealized_gain_account_code=request["unrealized_gain_account_code"], unrealized_loss_account_code=request["unrealized_loss_account_code"])
+            else:
+                if request["kind"] != "reverse_revaluation" or state["active_revaluation_plan_id"] != request["original_revaluation_id"]:
+                    _fail("state_conflict", "The inverse must close the exact still-active original monetary valuation.")
+                original = self._view(request["original_revaluation_id"])
+                self._authorize(actor, "finance_core.reverse", source, original)
+                equation = reversal_equation(original)
+                reversal = original["posting_effect_id"]
+            return self._prepare(source, kind=request["kind"], equation=equation, period_id=request["period_id"],
+                posting_date=request["posting_date"], reason=request["reason"], sequence=state["sequence"], request=request,
+                command_id=command_id, digest=digest, actor=actor, reverses_posting_id=reversal)
 
     def _admit_journal_presence(self, source: Mapping[str, Any], plan: Mapping[str, Any]) -> None:
         if plan.get("entry_id") is not None:

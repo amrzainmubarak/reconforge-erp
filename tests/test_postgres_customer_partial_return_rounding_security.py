@@ -6,24 +6,33 @@ Assertions expose constant diagnostics instead of private PostgreSQL row text.
 """
 from __future__ import annotations
 
+import json
+import os
+from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
 import psycopg
 import pytest
 from psycopg import sql
 
+from reconforge.domain.customer_partial_return_commands import (
+    CustomerPartialRefundPreparation,
+    CustomerPartialReversePreparation,
+)
 from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_customer_partial_returns import PostgresCustomerPartialReturnsRepository
 from reconforge.platform.common import current_server_principal, server_principal_context
-from tests.customer_partial_return_posted_cycle_oracle import TABLES, require
+from tests.customer_partial_return_posted_cycle_oracle import TABLES, decode_row, require
 from tests.test_postgres_customer_partial_return_rounding import (
     create_remainder_runtime,
+    current_v2,
     phase_v2,
     post_v2,
     prepare_v2,
 )
-from tests.test_postgres_customer_partial_returns import phase, prepare_return, request
+from tests.test_postgres_customer_partial_returns import create_partial_runtime, phase, prepare_return, request
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, receipt_database
 
 _ = receipt_database
@@ -198,3 +207,103 @@ def test_zero_effect_cached_ack_rechecks_current_posting_authority(receipt_datab
             reason="Actual remaining-value post", actor=cached_actor)
     require(denied.value.code == "operational_actor_denied")
     require(capture_rounding(runtime) == before)
+
+
+def test_actual_v2_split_refunds_lost_ack_and_refund_inverse_match_independent_raw_gl(
+    receipt_database: tuple[str, str],
+) -> None:
+    runtime, source, _invoice = create_partial_runtime(receipt_database, paid=10000)
+    captures = [capture_rounding(runtime)]
+    stock = [row for row in map(decode_row, captures[0]["stock_sales_orders"]) if row["id"] == source]
+    invoices = [row for row in map(decode_row, captures[0]["ar_invoices"]) if row["id"] == _invoice]
+    require(len(stock) == len(invoices) == 1 and stock[0]["quantity_scaled"] == 10
+            and stock[0]["issue_plan"]["total_cost_minor"] == 12000 and invoices[0]["total_minor"] == 45000)
+    require(sum(row["amount_minor"] for row in map(decode_row, captures[0]["ar_receipt_allocations"])
+                if row["invoice_id"] == _invoice) == 10000)
+    # Hand-derived changes to debit-minus-credit balances, not production math.
+    vectors = (
+        {"INVENTORY": 9600, "COGS": -9600, "REVENUE": 36000, "AR": -35000, "REFUND": -1000},
+        {"INVENTORY": 2400, "COGS": -2400, "REVENUE": 9000, "REFUND": -9000},
+        {"REFUND": 3000, "CASH": -3000}, {"REFUND": 7000, "CASH": -7000},
+        {"REFUND": -7000, "CASH": 7000}, {"REFUND": 7000, "CASH": -7000},
+    )
+    expected_effects, expected_lines = (2, 2, 1, 1, 1, 1), (5, 4, 2, 2, 2, 2)
+    expected_turnover = (45600, 11400, 3000, 7000, 7000, 7000)
+    expected_due = (1000, 10000, 7000, 0, 7000, 0)
+    second_return = previous_refund = None
+    all_effects: set[str] = set()
+    all_entries: set[str] = set()
+    turnover = 0
+    for index in range(6):
+        if index < 2:
+            plan = prepare_v2(runtime, source, 8 if index == 0 else 2, index, "C-V2-SPLIT-RETURN-" + str(index))
+        else:
+            with runtime.actor("maker") as (connection, _, actor):
+                owner = PostgresCustomerPartialReturnsRepository(connection, runtime.tenant, protocol_version=2)
+                if index == 4:
+                    if previous_refund is None:
+                        raise AssertionError("The exact posted second refund is required.")
+                    plan = owner.prepare_reversal(CustomerPartialReversePreparation(previous_refund["id"], "period", "2026-10-14",
+                        "Reverse the exact second governed refund", index), command_id="C-V2-SPLIT-REFUND-INVERSE", actor=actor)
+                else:
+                    if second_return is None:
+                        raise AssertionError("The exact posted second return is required.")
+                    plan = owner.prepare_refund(CustomerPartialRefundPreparation(second_return["id"], 3000 if index == 2 else 7000,
+                        "period", "2026-10-14", "Actual split original cash refund", index),
+                        command_id="C-V2-SPLIT-REFUND-" + str(index), actor=actor)
+        posted = post_v2(runtime, plan)
+        if index == 1:
+            second_return = posted
+        if index == 3:
+            previous_refund = posted
+            # Simulate a lost response by discarding it, then resubmit exactly
+            # the retained reviewed command. Every original table stays exact.
+            retained = capture_rounding(runtime)
+            require(phase_v2(runtime, plan, "post", "poster") == posted)
+            require(capture_rounding(runtime) == retained)
+        after = capture_rounding(runtime)
+        before = captures[-1]
+        captures.append(after)
+        old_effects = {decode_row(raw)["id"] for raw in before["finance_posting_effects"]}
+        effects = [decode_row(raw) for raw in after["finance_posting_effects"] if decode_row(raw)["id"] not in old_effects]
+        require(len(effects) == expected_effects[index])
+        entry_ids = {effect["entry_id"] for effect in effects}
+        require(entry_ids == {part["entry_id"] for part in posted["entries"]})
+        entries = [decode_row(raw) for raw in after["finance_entries"] if decode_row(raw)["id"] in entry_ids]
+        require(len(entries) == len(entry_ids) and all(entry["status"] == "Validated" for entry in entries))
+        lines = [decode_row(raw) for raw in after["finance_entry_lines"] if decode_row(raw)["entry_id"] in entry_ids]
+        require(len(lines) == expected_lines[index])
+        accounts = {row["id"]: row["account_code"] for row in map(decode_row, after["finance_accounts"])}
+        delta: defaultdict[str, int] = defaultdict(int)
+        for entry_id in entry_ids:
+            linked = [line for line in lines if line["entry_id"] == entry_id]
+            require(sum(line["debit_minor"] for line in linked) == sum(line["credit_minor"] for line in linked) > 0)
+        for line in lines:
+            require(type(line["debit_minor"]) is int and type(line["credit_minor"]) is int
+                    and min(line["debit_minor"], line["credit_minor"]) == 0 < max(line["debit_minor"], line["credit_minor"]))
+            delta[accounts[line["account_id"]]] += line["debit_minor"] - line["credit_minor"]
+        require({key: value for key, value in delta.items() if value} == vectors[index])
+        debit, credit = sum(line["debit_minor"] for line in lines), sum(line["credit_minor"] for line in lines)
+        require(debit == credit == expected_turnover[index])
+        turnover += debit
+        all_effects.update(effect["id"] for effect in effects)
+        all_entries.update(entry_ids)
+        require(set(before["finance_posting_effects"]).issubset(after["finance_posting_effects"]))
+        require(after["inventory_layer_consumptions"] == captures[0]["inventory_layer_consumptions"])
+        history = sorted(map(decode_row, after["customer_partial_return_history"]), key=lambda row: row["sequence"])
+        require(len(history) == index + 1 and history[-1]["plan_id"] == posted["id"])
+        require(history[-1]["kind"] == ("Return" if index < 2 else "ReverseRefund" if index == 4 else "Refund"))
+        state = current_v2(runtime, source)
+        require(state["history_version"] == index + 1 and state["refund_due_minor"] == expected_due[index]
+                and state["outstanding_minor"] == 0)
+    require(len(all_effects) == len(all_entries) == 8 and turnover == 81000)
+    require(sum(1 for raw in captures[-1]["finance_entry_lines"] if decode_row(raw)["entry_id"] in all_entries) == 17)
+    destination = os.environ.get("RECONFORGE_PARTIAL_REMAINDER_PRIVATE_OUTPUT")
+    if destination:
+        root = Path(destination)
+        require(root.is_absolute() and root.is_dir() and not root.is_symlink())
+        packet = {"schema_version": "customer-partial-return-remainder-native-refunds-v1", "tenant_id": runtime.tenant,
+                  "source_order_id": source, "captures": captures}
+        with (root / "native-v2-refund-posted-cycle-original-v1.json").open("x", encoding="utf-8", newline="\n") as stream:
+            json.dump(packet, stream, sort_keys=True, separators=(",", ":"))
+            stream.write("\n")

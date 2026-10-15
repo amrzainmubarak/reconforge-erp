@@ -77,7 +77,8 @@ WORKSPACE_CASE_TITLES = {
         for locale in ("en", "ar")
     },
 }
-PRIVATE_PARTIAL_RETURN_FAMILIES = {"native-customer-partial-return-originals", "native-customer-partial-return-failed-observation-originals"}
+PRIVATE_PARTIAL_RETURN_FAMILIES = {"native-customer-partial-return-originals", "native-customer-partial-return-failed-observation-originals",
+                                  "native-customer-partial-return-observation-originals"}
 PRIVATE_RETURN_FAMILIES = {"native-customer-return-originals", *PRIVATE_PARTIAL_RETURN_FAMILIES}
 
 

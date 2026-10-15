@@ -638,12 +638,13 @@ class PostgresReceivablesRepository:
                                     (self.tenant_id, partial_source_id))
             balance = self.connection.execute("SELECT reconforge.customer_partial_return_balance(%s,%s) AS value",
                                               (self.tenant_id, partial_source_id)).fetchone()
-            if balance is None or not isinstance(balance, Mapping) or not isinstance(balance["value"], Mapping):
+            value = None if balance is None else _row(balance, ("value",))["value"]
+            if not isinstance(value, Mapping):
                 raise PlatformError("Original partial-return economic evidence is absent.")
             result.update(partial_return_source_id=partial_source_id,
-                          credited_minor=int(balance["value"]["credited_minor"]),
-                          refund_due_minor=int(balance["value"]["refund_due_minor"]),
-                          outstanding_minor=int(balance["value"]["outstanding_minor"]))
+                          credited_minor=int(value["credited_minor"]),
+                          refund_due_minor=int(value["refund_due_minor"]),
+                          outstanding_minor=int(value["outstanding_minor"]))
         # An ordinary legacy invoice never requires access to source-owner tables.
         # Native SQL closes this reserved marker against its full posted inverse.
         if result["status"] == "Cancelled" and str(result["cancel_reason"]).startswith("CR1-"):

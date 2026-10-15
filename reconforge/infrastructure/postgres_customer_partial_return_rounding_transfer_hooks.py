@@ -92,7 +92,7 @@ END $cr148it$;
 
 
 def _snapshot() -> str:
-    value = RETAINED_FUNCTIONS["it1_cost_snapshot"]
+    value = RETAINED_FUNCTIONS["it1_cost_snapshot"].replace("reconforge.it1_cost_snapshot(", "reconforge.customer_partial_return_it1_snapshot_v3(", 1)
     value = _replace(value, "has_restitution BOOLEAN:=FALSE;", "has_restitution BOOLEAN:=FALSE;has_rounding BOOLEAN:=FALSE;")
     value = _replace(value, "reconforge.customer_partial_return_transfer_correction(t,r.plan_id,r.position)",
                      "reconforge.customer_partial_return_transfer_correction_dispatch(t,r.plan_id,r.position)")
@@ -126,7 +126,28 @@ def _originals_v3() -> str:
     return _replace(value, "correction=reconforge.customer_partial_return_transfer_correction(", "correction=reconforge.customer_partial_return_transfer_correction_dispatch(")
 
 
-UPGRADED_FUNCTIONS = {"it1_cost_snapshot": _snapshot(), "it1_cost_originals": _reader()}
+def _snapshot_dispatch() -> str:
+    return _replace(RETAINED_FUNCTIONS["it1_cost_snapshot"], "BEGIN\n", r"""BEGIN
+ -- Ordinary147 capture does not require private partial-return ACLs when no
+ -- restitution changes its already-permitted original layer equations.
+ IF EXISTS(SELECT 1 FROM reconforge.inventory_cost_layers native_layer WHERE native_layer.tenant_id=t
+  AND native_layer.workspace_id=w AND native_layer.legal_entity_id=e AND native_layer.item_id=i
+  AND(native_layer.remaining_quantity_scaled<>native_layer.original_quantity_scaled-(SELECT COALESCE(sum(quantity_scaled),0)
+    FROM reconforge.inventory_layer_consumptions WHERE tenant_id=t AND cost_layer_id=native_layer.id)
+   OR native_layer.remaining_value_minor<>native_layer.original_value_minor-(SELECT COALESCE(sum(value_minor),0)
+    FROM reconforge.inventory_layer_consumptions WHERE tenant_id=t AND cost_layer_id=native_layer.id))) THEN
+  IF EXISTS(SELECT 1 FROM reconforge.customer_partial_return_restorations restoration
+   JOIN reconforge.customer_partial_return_plans owned ON(owned.tenant_id,owned.id)=(restoration.tenant_id,restoration.plan_id)
+   JOIN reconforge.inventory_cost_layers native_layer ON(native_layer.tenant_id,native_layer.id)=(restoration.tenant_id,restoration.cost_layer_id)
+   WHERE restoration.tenant_id=t AND native_layer.workspace_id=w AND native_layer.legal_entity_id=e AND native_layer.item_id=i
+   AND owned.payload ? 'allocation_policy') THEN
+   RETURN reconforge.customer_partial_return_it1_snapshot_v3(t,w,o,e,i);
+  END IF;
+ END IF;
+""")
+
+
+UPGRADED_FUNCTIONS = {"it1_cost_snapshot": _snapshot_dispatch(), "it1_cost_originals": _reader()}
 
 
 def _preflight(*, upgraded_only: bool = False) -> str:
@@ -145,7 +166,7 @@ def _preflight(*, upgraded_only: bool = False) -> str:
     return "DO $cr148it$ DECLARE native RECORD;BEGIN\n" + "\n".join(clauses) + "\nEND $cr148it$;"
 
 
-UPGRADE_SQL = _preflight() + CORRECTION_V3_SQL + _originals_v3() + "\n".join(UPGRADED_FUNCTIONS.values())
+UPGRADE_SQL = _preflight() + CORRECTION_V3_SQL + _originals_v3() + _snapshot() + "\n".join(UPGRADED_FUNCTIONS.values())
 DOWNGRADE_PREFLIGHT_SQL = r"""
 DO $cr148it$ BEGIN
  IF EXISTS(SELECT 1 FROM reconforge.inventory_transfer_sources WHERE payload#>>'{cost_snapshot,schema_version}'='inventory-transfer-cost-v3'
@@ -158,4 +179,5 @@ DOWNGRADE_SQL = DOWNGRADE_PREFLIGHT_SQL + _preflight(upgraded_only=True) + "\n".
 DROP FUNCTION reconforge.customer_partial_return_transfer_originals_v3(TEXT,JSONB);
 DROP FUNCTION reconforge.customer_partial_return_transfer_correction_dispatch(TEXT,TEXT,INTEGER);
 DROP FUNCTION reconforge.customer_partial_return_transfer_correction_v3(TEXT,TEXT,INTEGER);
+DROP FUNCTION reconforge.customer_partial_return_it1_snapshot_v3(TEXT,TEXT,TEXT,TEXT,TEXT);
 """

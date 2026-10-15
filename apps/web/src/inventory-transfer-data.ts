@@ -46,13 +46,127 @@ export interface TransferSource extends Record<string, unknown> {
   review_cost_digest: string | null; native_response: Record<string, unknown>; original: Record<string, unknown> | null;
   command_request: Record<string, unknown>;
 }
-function cost(value: unknown, scope: FinanceScope, tenantId: string): TransferCost {
-  if (!transferObject(value) || value.schema_version !== "inventory-transfer-cost-v1" || !transferObject(value.monetary_policy)
+const policyFields = ["currency_code", "currency_precision", "currency_rounding_policy", "currency_registry_version", "currency_registry_digest"];
+function fields(value: unknown, keys: readonly string[]): Record<string, unknown> {
+  if (!transferObject(value) || Object.keys(value).length !== keys.length || keys.some(key => !Object.hasOwn(value, key))) invalid(); return value;
+}
+function boundedCorrection(value: unknown, maximumBytes = 262144, maximumNodes = 32768): void {
+  const pending: Array<[unknown, number]> = [[value, 0]]; let nodes = 0;
+  while (pending.length) {
+    const [part, depth] = pending.pop()!;
+    if (++nodes > maximumNodes || depth > 32) invalid();
+    if (Array.isArray(part)) { if (part.length > 1024) invalid(); for (const child of part) pending.push([child, depth + 1]); }
+    else if (transferObject(part)) { if (Object.keys(part).length > 1024) invalid(); for (const [key, child] of Object.entries(part)) { if (key.length > 160) invalid(); pending.push([child, depth + 1]); } }
+    else if (!(part === null || typeof part === "boolean" || typeof part === "string" && part.length <= 262144 || typeof part === "number" && Number.isSafeInteger(part))) invalid();
+  }
+  if (new TextEncoder().encode(transferCanonical(value, true)).length > maximumBytes) invalid();
+}
+async function corrections(source: Record<string, unknown>, scope: FinanceScope, tenantId: string, policy: Record<string, unknown>, seen: Set<string>): Promise<[bigint, bigint]> {
+  fields(source, ["layer", "valuation_document", "valuation_line", "receipt_plan", "receipt_link", "receipt_review", "finance_entry", "finance_lines", "posting_effect", "receipt_native", "valuation_input", "consumptions", "exposed_amounts_minor", "partial_return_corrections"]);
+  const layer = source.layer as Record<string, unknown>, valuation = source.valuation_line as Record<string, unknown>;
+  if (!Array.isArray(source.partial_return_corrections) || source.partial_return_corrections.length > 200 || !Array.isArray(source.consumptions) || source.consumptions.length > 200
+      || !exact(layer.original_quantity_scaled) || layer.original_quantity_scaled === "0" || !exact(layer.original_value_minor) || layer.original_value_minor === "0") invalid();
+  let quantity = 0n, value = 0n, consumedQuantity = 0n, consumedValue = 0n;
+  const consumptions = new Map<string, Record<string, unknown>>(), net = new Map<string, [bigint, bigint]>();
+  for (const consumed of source.consumptions) {
+    if (!transferObject(consumed) || !text(consumed.id) || consumptions.has(consumed.id) || consumed.tenant_id !== tenantId || consumed.cost_layer_id !== layer.id
+        || !exact(consumed.quantity_scaled) || consumed.quantity_scaled === "0" || !exact(consumed.value_minor) || consumed.value_minor === "0") invalid();
+    consumptions.set(consumed.id, consumed); consumedQuantity += BigInt(consumed.quantity_scaled); consumedValue += BigInt(consumed.value_minor);
+  }
+  const debitExposures: string[] = [], creditExposures: string[] = [];
+  for (const raw of source.partial_return_corrections) {
+    boundedCorrection(raw);
+    const correction = fields(raw, ["restoration", "source", "plan", "entry", "effect", "lines", "dimensions", "physical"]);
+    const restored = fields(correction.restoration, ["tenant_id", "source_id", "plan_id", "position", "original_consumption_id", "original_valuation_line_id", "cost_layer_id", "offset_quantity_scaled", "quantity_scaled", "value_minor", "direction", "physical_movement_id", "original_cogs_effect_id", "correction_effect_id", "original_restoration_plan_id", "consumption_count_at_restore"]);
+    const original = fields(correction.source, ["id", "source_fingerprint", ...Object.keys(scope), "item_id", "uom_id", "quantity_precision", "location_id", "original_cogs_effect_id"]);
+    const plan = fields(correction.plan, ["id", "source_id", "operation", "phase", "plan_digest"]);
+    if (!Number.isSafeInteger(restored.position) || Number(restored.position) < 1 || Number(restored.position) > 32 || ![1, -1].includes(Number(restored.direction)) || typeof restored.direction !== "number"
+        || !Number.isSafeInteger(restored.consumption_count_at_restore) || Number(restored.consumption_count_at_restore) < 1 || Number(restored.consumption_count_at_restore) > 200
+        || restored.tenant_id !== tenantId || restored.cost_layer_id !== layer.id || restored.source_id !== original.id || restored.plan_id !== plan.id || plan.source_id !== original.id
+        || !text(plan.id) || !new RegExp(`^${restored.direction === 1 ? "CR2" : "CR2R"}-[a-f0-9]{32}$`).test(plan.id) || plan.phase !== 2
+        || plan.operation !== (restored.direction === 1 ? "Return" : "ReverseReturn") || !digest(plan.plan_digest) || !digest(original.source_fingerprint)
+        || !text(original.id) || !/^CRS2-[a-f0-9]{32}$/.test(original.id) || Object.entries(scope).some(([key, expected]) => original[key] !== expected)
+        || original.item_id !== layer.item_id || original.uom_id !== layer.uom_id || original.quantity_precision !== layer.quantity_precision || !text(original.location_id)
+        || restored.original_cogs_effect_id !== original.original_cogs_effect_id || !text(original.original_cogs_effect_id)
+        || !exact(restored.offset_quantity_scaled) || !exact(restored.quantity_scaled) || restored.quantity_scaled === "0" || !exact(restored.value_minor) || restored.value_minor === "0") invalid();
+    const key = `${plan.id}:${restored.position}`;
+    if (seen.has(key) || seen.size >= 200) invalid(); seen.add(key);
+    const consumed = consumptions.get(String(restored.original_consumption_id));
+    if (!consumed || consumed.valuation_line_id !== restored.original_valuation_line_id || BigInt(restored.offset_quantity_scaled) + BigInt(restored.quantity_scaled) > BigInt(String(consumed.quantity_scaled)) || BigInt(restored.value_minor) > BigInt(String(consumed.value_minor))
+        || BigInt(restored.value_minor) * BigInt(String(consumed.quantity_scaled)) !== BigInt(String(consumed.value_minor)) * BigInt(restored.quantity_scaled)) invalid();
+    const delta: [bigint, bigint] = [BigInt(restored.direction) * BigInt(restored.quantity_scaled), BigInt(restored.direction) * BigInt(restored.value_minor)];
+    quantity += delta[0]; value += delta[1]; const previous = net.get(String(consumed.id)) ?? [0n, 0n]; net.set(String(consumed.id), [previous[0] + delta[0], previous[1] + delta[1]]);
+    if (restored.direction === 1 ? restored.original_restoration_plan_id !== null : !text(restored.original_restoration_plan_id) || !/^CR2-[a-f0-9]{32}$/.test(restored.original_restoration_plan_id)) invalid();
+    if (!transferObject(correction.entry) || !transferObject(correction.effect) || !Array.isArray(correction.lines) || correction.lines.length !== 2 || !Array.isArray(correction.dimensions) || correction.dimensions.length > 200) invalid();
+    const entry = correction.entry, effect = correction.effect;
+    if (entry.tenant_id !== tenantId || entry.workspace_id !== scope.workspace_id || entry.status !== "Validated" || !text(entry.id) || entry.id !== effect.entry_id || restored.correction_effect_id !== effect.id
+        || !text(effect.id) || effect.tenant_id !== tenantId || Object.entries(scope).some(([key, expected]) => effect[key] !== expected)
+        || policyFields.some(key => entry[key] !== policy[key] || effect[key] !== policy[key]) || entry.entry_number !== `${plan.id.toUpperCase()}-C`
+        || entry.source_type !== (restored.direction === 1 ? "Manual" : "Generated") || effect.source_kind !== (restored.direction === 1 ? "Manual" : "Reversal")
+        || effect.source_id !== (restored.direction === 1 ? entry.id : effect.reverses_effect_id) || effect.purpose !== "operational_posting"
+        || (restored.direction === 1 ? entry.external_reference !== plan.id || effect.reverses_effect_id !== null || entry.reverses_posting_id !== null : !text(effect.reverses_effect_id) || entry.external_reference !== effect.reverses_effect_id || entry.reverses_posting_id !== effect.reverses_effect_id)
+        || !digest(entry.validation_digest) || entry.validation_digest !== effect.validation_digest || entry.validation_contract_version !== "finance-entry-review-v1" || effect.validation_contract_version !== entry.validation_contract_version
+        || !text(entry.preparer_actor_id) || !text(entry.validator_actor_id) || !text(effect.posted_actor_id) || new Set([entry.preparer_actor_id, entry.validator_actor_id, effect.posted_actor_id]).size !== 3
+        || !exact(entry.total_debit_minor) || entry.total_debit_minor === "0" || entry.total_debit_minor !== entry.total_credit_minor || BigInt(entry.total_debit_minor) < BigInt(restored.value_minor)) invalid();
+    const lineIds = new Set<string>(), dimensions = new Map<string, Record<string, string>>(); let debit = 0n, credit = 0n;
+    for (const [index, line] of correction.lines.entries()) {
+      if (!transferObject(line) || line.tenant_id !== tenantId || line.entry_id !== entry.id || !text(line.id) || lineIds.has(line.id) || line.line_number !== index + 1 || !text(line.account_id) || line.currency_code !== policy.currency_code
+          || !exact(line.debit_minor) || !exact(line.credit_minor) || (line.debit_minor === "0") === (line.credit_minor === "0")) invalid();
+      lineIds.add(line.id); debit += BigInt(line.debit_minor); credit += BigInt(line.credit_minor); dimensions.set(line.id, Object.create(null) as Record<string, string>);
+    }
+    if (debit !== BigInt(entry.total_debit_minor) || credit !== debit || !text(valuation.inventory_account_id)) invalid();
+    const inventory = correction.lines.filter(line => (line as Record<string, unknown>).account_id === valuation.inventory_account_id);
+    if (inventory.length !== 1 || inventory[0][restored.direction === 1 ? "debit_minor" : "credit_minor"] !== entry.total_debit_minor) invalid();
+    for (const rawDimension of correction.dimensions) {
+      const dimension = fields(rawDimension, ["tenant_id", "entry_line_id", "dimension_id", "dimension_value_id"]);
+      if (dimension.tenant_id !== tenantId || !text(dimension.entry_line_id) || !dimensions.has(dimension.entry_line_id) || !text(dimension.dimension_id) || !text(dimension.dimension_value_id)) invalid();
+      const bag = dimensions.get(dimension.entry_line_id)!; if (Object.hasOwn(bag, dimension.dimension_id)) invalid(); bag[dimension.dimension_id] = dimension.dimension_value_id;
+    }
+    const snapshot = fields(effect.snapshot_json, ["schema_version", "entry", "lines"]);
+    const expectedHeader = Object.fromEntries(["id", "workspace_id", "journal_id", "period_id", "entry_number", "posting_date", "description", "external_reference", "source_type", ...policyFields, "preparer_actor_id", "reverses_posting_id"].map(key => [key, entry[key]]));
+    Object.assign(expectedHeader, { organization_id: scope.organization_id, legal_entity_id: scope.legal_entity_id });
+    const expectedLines = correction.lines.map(line => ({ line_number: line.line_number, account_id: line.account_id, description: line.description, debit_minor: line.debit_minor, credit_minor: line.credit_minor, dimensions: dimensions.get(line.id) }));
+    if (snapshot.schema_version !== "finance-entry-review-v1") invalid();
+    if (transferCanonical(snapshot.entry, true) !== transferCanonical(expectedHeader, true)) invalid();
+    if (transferCanonical(snapshot.lines, true) !== transferCanonical(expectedLines, true)) invalid();
+    await seal(snapshot, entry.validation_digest);
+    const physical = fields(correction.physical, ["head", "lines", "audit", "outbox"]);
+    if (!transferObject(physical.head) || !Array.isArray(physical.lines) || physical.lines.length !== 1 || !Array.isArray(physical.audit) || physical.audit.length < 1 || physical.audit.length > 8 || !Array.isArray(physical.outbox) || physical.outbox.length < 1 || physical.outbox.length > 8) invalid();
+    const movement = physical.head, detail = physical.lines[0];
+    if (!transferObject(detail) || movement.tenant_id !== tenantId || movement.id !== restored.physical_movement_id || movement.source_reference !== plan.id || movement.movement_number !== plan.id.toUpperCase() || movement.status !== "Posted" || movement.source_type !== "Generated"
+        || movement.movement_type !== (restored.direction === 1 ? "Receipt" : "Delivery") || Object.entries(scope).some(([key, expected]) => movement[key] !== expected)
+        || detail.tenant_id !== tenantId || detail.movement_id !== movement.id || detail.line_number !== 1 || detail.item_id !== original.item_id || detail.uom_id !== original.uom_id || detail.quantity_precision !== original.quantity_precision || detail.inventory_lot_id !== null
+        || !exact(detail.quantity_scaled) || BigInt(detail.quantity_scaled) < BigInt(restored.quantity_scaled) || detail.from_location_id !== (restored.direction === -1 ? original.location_id : null) || detail.to_location_id !== (restored.direction === 1 ? original.location_id : null)) invalid();
+    debitExposures.push(entry.total_debit_minor); creditExposures.push(entry.total_credit_minor);
+  }
+  for (const [id, [netQuantity, netValue]] of net) {
+    const original = consumptions.get(id)!;
+    if (netQuantity < 0n || netValue < 0n || netQuantity > BigInt(String(original.quantity_scaled)) || netValue > BigInt(String(original.value_minor))) invalid();
+  }
+  const originals = new Map(source.partial_return_corrections.map(raw => { const row = raw as Record<string, Record<string, unknown>>; return [`${row.restoration.plan_id}:${row.restoration.position}`, row]; }));
+  const reversed = new Set<string>();
+  for (const raw of source.partial_return_corrections) {
+    const row = raw as Record<string, Record<string, unknown>>, restored = row.restoration;
+    if (restored.direction === -1) {
+      const key = `${restored.original_restoration_plan_id}:${restored.position}`, previous = originals.get(key);
+      if (!previous || previous.restoration.direction !== 1 || reversed.has(key) || row.effect.reverses_effect_id !== previous.effect.id
+          || ["source_id", "cost_layer_id", "original_consumption_id", "original_valuation_line_id", "offset_quantity_scaled", "quantity_scaled", "value_minor", "original_cogs_effect_id"].some(name => restored[name] !== previous.restoration[name])) invalid();
+      reversed.add(key);
+    }
+  }
+  if (BigInt(layer.original_quantity_scaled) - consumedQuantity + quantity !== BigInt(String(layer.remaining_quantity_scaled)) || BigInt(layer.original_value_minor) - consumedValue + value !== BigInt(String(layer.remaining_value_minor))) invalid();
+  if (!Array.isArray(source.exposed_amounts_minor) || source.exposed_amounts_minor.length !== 11 + debitExposures.length * 2 || transferCanonical(source.exposed_amounts_minor.slice(11)) !== transferCanonical([...debitExposures, ...creditExposures])) invalid();
+  return [quantity, value];
+}
+async function cost(value: unknown, scope: FinanceScope, tenantId: string): Promise<TransferCost> {
+  const v2 = transferObject(value) && value.schema_version === "inventory-transfer-cost-v2";
+  if (!transferObject(value) || value.schema_version !== "inventory-transfer-cost-v1" && !v2 || !transferObject(value.monetary_policy)
       || !/^[A-Z]{3}$/.test(String(value.monetary_policy.currency_code)) || !Number.isInteger(value.monetary_policy.currency_precision)
       || Number(value.monetary_policy.currency_precision) < 0 || Number(value.monetary_policy.currency_precision) > 8
       || !exact(value.remaining_quantity_scaled) || !exact(value.remaining_value_minor) || !Array.isArray(value.sources)
       || value.sources.length < 1 || value.sources.length > 32) invalid();
-  const ids = new Set<string>(); let quantity = 0n, minor = 0n;
+  if (v2) { fields(value, ["schema_version", "monetary_policy", "remaining_quantity_scaled", "remaining_value_minor", "sources"]); const captured = fields(value.monetary_policy, policyFields); if (typeof captured.currency_code !== "string" || captured.currency_rounding_policy !== "ROUND_HALF_UP" || !text(captured.currency_registry_version) || !digest(captured.currency_registry_digest)) invalid(); }
+  const ids = new Set<string>(), seenCorrections = new Set<string>(); let quantity = 0n, minor = 0n;
   for (const source of value.sources) {
     if (!transferObject(source) || !transferObject(source.layer) || source.layer.tenant_id !== tenantId || !text(source.layer.id) || ids.has(source.layer.id)
         || !transferObject(source.receipt_plan) || source.receipt_plan.operation !== "Receipt" || !transferObject(source.receipt_plan.scope)
@@ -66,9 +180,10 @@ function cost(value: unknown, scope: FinanceScope, tenantId: string): TransferCo
         || !Array.isArray(source.finance_lines) || source.finance_lines.length !== 2 || !Array.isArray(source.exposed_amounts_minor)
         || !source.exposed_amounts_minor.every(exact) || !exact(source.layer.remaining_quantity_scaled) || !exact(source.layer.remaining_value_minor)) invalid();
     if (transferCanonical(source.receipt_plan.currency_policy) !== transferCanonical(value.monetary_policy)) invalid();
+    if (v2) await corrections(source, scope, tenantId, value.monetary_policy, seenCorrections);
     ids.add(source.layer.id); quantity += BigInt(source.layer.remaining_quantity_scaled); minor += BigInt(source.layer.remaining_value_minor);
   }
-  if (quantity !== BigInt(value.remaining_quantity_scaled) || minor !== BigInt(value.remaining_value_minor)) invalid();
+  if (quantity !== BigInt(value.remaining_quantity_scaled) || minor !== BigInt(value.remaining_value_minor) || v2 && !seenCorrections.size) invalid();
   return value as TransferCost;
 }
 export async function parseTransfer(value: unknown, scope: FinanceScope, tenantId: string): Promise<TransferSource> {
@@ -82,15 +197,16 @@ export async function parseTransfer(value: unknown, scope: FinanceScope, tenantI
       || !transferObject(value.native_response) || !transferObject(value.native_response.head) || !Array.isArray(value.native_response.lines)
       || value.native_response.lines.length !== 1) invalid();
   const dynamic = ["source_digest", "phase", "row_version", "reviewer_actor_id", "poster_actor_id", "review_cost_snapshot", "review_cost_digest", "claim", "release", "native_response"];
+  for (const candidate of [value.cost_snapshot, value.review_cost_snapshot]) if (transferObject(candidate) && candidate.schema_version === "inventory-transfer-cost-v2") boundedCorrection(candidate, 4194304, 100000);
   await seal(Object.fromEntries(Object.entries(value).filter(([key]) => !dynamic.includes(key))), value.source_digest);
-  const originalCost = cost(value.cost_snapshot, scope, tenantId);
+  const originalCost = await cost(value.cost_snapshot, scope, tenantId);
   if (value.phase === 0 && value.row_version !== 1 || value.phase === 1 && value.row_version !== 2
       || value.phase === 2 && value.row_version !== 3 || value.phase === 3 && value.row_version !== (value.reviewer_actor_id === null ? 2 : 3)) invalid();
   if (value.reviewer_actor_id === null) {
     if (![0, 3].includes(Number(value.phase)) || value.review_cost_snapshot !== null || value.review_cost_digest !== null || value.claim !== null || value.release !== null) invalid();
   } else {
     if (value.phase === 0 || !text(value.reviewer_actor_id) || value.reviewer_actor_id === value.creator_actor_id || !digest(value.review_cost_digest)) invalid();
-    const reviewed = cost(value.review_cost_snapshot, scope, tenantId);
+    const reviewed = await cost(value.review_cost_snapshot, scope, tenantId);
     if (transferCanonical(reviewed.monetary_policy) !== transferCanonical(originalCost.monetary_policy)) invalid();
     await seal(reviewed, value.review_cost_digest);
     if (!transferObject(value.claim) || !/^IT1-K-[A-F0-9]{32}$/.test(String(value.claim.id)) || value.claim.tenant_id !== tenantId

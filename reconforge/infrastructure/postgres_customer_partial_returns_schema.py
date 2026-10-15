@@ -468,7 +468,7 @@ BEGIN
   OR(p.phase=2) IS DISTINCT FROM(f.id IS NOT NULL)
   OR(f.id IS NOT NULL AND(f.id IS DISTINCT FROM l.effects->>ordinal OR f.posted_actor_id IS DISTINCT FROM l.actor_id OR f.snapshot_json IS DISTINCT FROM part->'snapshot')) THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Partial effect must preserve its exact reviewed entry and posting actor'; END IF;
-  IF f IS NOT NULL AND EXISTS(SELECT 1 FROM reconforge.finance_entries inverse WHERE inverse.tenant_id=t AND inverse.reverses_posting_id=f.id
+  IF f.id IS NOT NULL AND EXISTS(SELECT 1 FROM reconforge.finance_entries inverse WHERE inverse.tenant_id=t AND inverse.reverses_posting_id=f.id
    AND NOT EXISTS(SELECT 1 FROM reconforge.customer_partial_return_plans owned WHERE owned.tenant_id=t AND owned.source_id=s.id
     AND owned.original_id=p.id AND owned.operation='Reverse'||p.operation
     AND EXISTS(SELECT 1 FROM jsonb_array_elements(owned.payload->'entries') pin WHERE pin->>'entry_id'=inverse.id

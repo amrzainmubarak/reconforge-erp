@@ -213,8 +213,8 @@ class OriginalPartialReturnSource:
             raise FinancePostingError("partial_return_source_mismatch", "Distinct original cost and revenue evidence is required.")
 
     @property
-    def fingerprint(self) -> str:
-        return digest_payload({
+    def fingerprint_payload(self) -> dict[str, Any]:
+        return {
             "contract": CONTRACT_VERSION, "scope": asdict(self.scope),
             "source_order_id": self.source_order_id, "invoice_id": self.invoice_id,
             "valuation_document_id": self.valuation_document_id, "quantity_precision": self.quantity_precision,
@@ -227,7 +227,11 @@ class OriginalPartialReturnSource:
             "consumptions": [asdict(row) for row in self.consumptions],
             "original_cogs": [self.original_cogs.posting_effect_id, self.original_cogs.validation_digest],
             "original_revenue": [self.original_revenue.posting_effect_id, self.original_revenue.validation_digest],
-        })
+        }
+
+    @property
+    def fingerprint(self) -> str:
+        return digest_payload(self.fingerprint_payload)
 
 
 @dataclass(frozen=True, slots=True)
@@ -278,26 +282,31 @@ class _ReturnValues:
 
 @dataclass(frozen=True, slots=True)
 class PartialReturnEvent:
-    kind: Literal["Return", "Collection", "Refund"]
+    kind: Literal["Return", "Collection", "Refund", "ReverseReturn", "ReverseRefund"]
     sequence: int
     source_fingerprint: str
     previous_history_fingerprint: str
     amount_minor: int = 0
     return_values: _ReturnValues | None = None
+    original_sequence: int | None = None
 
     def __post_init__(self) -> None:
-        if type(self.kind) is not str or self.kind not in {"Return", "Collection", "Refund"}:
+        if type(self.kind) is not str or self.kind not in {"Return", "Collection", "Refund", "ReverseReturn", "ReverseRefund"}:
             raise FinancePostingError("partial_return_history_invalid", "Unsupported partial-return history event.")
         _integer(self.sequence, "event sequence", maximum=MAX_HISTORY_EVENTS)
         _digest(self.source_fingerprint, "event source")
         _digest(self.previous_history_fingerprint, "previous history")
-        _integer(self.amount_minor, "event amount", zero=self.kind == "Return")
-        if self.kind == "Return":
+        _integer(self.amount_minor, "event amount", zero=self.kind in {"Return", "ReverseReturn"})
+        if self.kind in {"Return", "ReverseReturn"}:
             if self.amount_minor != 0 or type(self.return_values) is not _ReturnValues:
                 raise FinancePostingError("partial_return_history_invalid", "Return history requires exact original portions.")
             self.return_values.__post_init__()
         elif self.return_values is not None:
             raise FinancePostingError("partial_return_history_invalid", "Settlement history cannot carry return portions.")
+        if self.kind.startswith("Reverse"):
+            _integer(self.original_sequence, "reversed sequence", maximum=MAX_HISTORY_EVENTS)
+        elif self.original_sequence is not None:
+            raise FinancePostingError("partial_return_history_invalid", "Only a governed reversal may name an original event.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -406,6 +415,7 @@ def partial_return_balance(history: PartialReturnHistory) -> PartialReturnBalanc
     chain = digest_payload({"contract": CONTRACT_VERSION, "source": source_digest})
     returned = credited = cost = released = liability = refunded = 0
     collected = source.collected_minor
+    active: list[PartialReturnEvent] = []
     for sequence, event in enumerate(history.events, 1):
         event.__post_init__()
         if event.sequence != sequence or event.source_fingerprint != source_digest or event.previous_history_fingerprint != chain:
@@ -422,14 +432,34 @@ def partial_return_balance(history: PartialReturnHistory) -> PartialReturnBalanc
             cost += values.cogs_restored_minor
             released += values.receivable_released_minor
             liability += values.refund_entitlement_delta_minor
+            active.append(event)
         elif event.kind == "Collection":
             if event.amount_minor > max(source.gross_minor - credited - collected, 0):
                 raise FinancePostingError("partial_return_collection_exceeded", "Collection exceeds current credit-adjusted invoice AR.")
             collected += event.amount_minor
-        else:
+            active.append(event)
+        elif event.kind == "Refund":
             if event.amount_minor > liability - refunded:
                 raise FinancePostingError("partial_return_refund_exceeded", "Refund exceeds the remaining retained entitlement.")
             refunded += event.amount_minor
+            active.append(event)
+        else:
+            if not active or active[-1].sequence != event.original_sequence or event.kind != "Reverse" + active[-1].kind:
+                raise FinancePostingError("partial_return_reversal_invalid", "Only the latest unreversed owned economic event may be reversed.")
+            original = active.pop()
+            if event.amount_minor != original.amount_minor or event.return_values != original.return_values:
+                raise FinancePostingError("partial_return_reversal_invalid", "Reversal must preserve the exact original event magnitudes.")
+            if event.kind == "ReverseRefund":
+                refunded -= event.amount_minor
+            else:
+                reversed_values = event.return_values
+                if reversed_values is None or liability - reversed_values.refund_entitlement_delta_minor < refunded:
+                    raise FinancePostingError("partial_return_reversal_invalid", "A refunded credit cannot be reversed before its refund.")
+                returned -= reversed_values.quantity_scaled
+                credited -= reversed_values.credit_minor
+                cost -= reversed_values.cogs_restored_minor
+                released -= reversed_values.receivable_released_minor
+                liability -= reversed_values.refund_entitlement_delta_minor
         chain = digest_payload({"previous": chain, "event": asdict(event)})
     return PartialReturnBalance(
         returned, credited, cost, collected, released, liability, refunded,
@@ -488,3 +518,19 @@ def collect_partial_return(history: PartialReturnHistory, amount_minor: int) -> 
 
 def refund_partial_return(history: PartialReturnHistory, amount_minor: int) -> PartialReturnHistory:
     return _settle(history, amount_minor, "Refund")
+
+
+def reverse_partial_return_event(history: PartialReturnHistory, original_sequence: int) -> PartialReturnHistory:
+    """Preserve the old event and append its exact, last-in-order correction.
+
+    Native ownership must additionally prove that physical restored units and
+    the owned correction effects have no downstream consumption/dependency.
+    """
+    balance = partial_return_balance(history)
+    _integer(original_sequence, "original sequence", maximum=balance.version)
+    original = history.events[original_sequence - 1]
+    if original.kind not in {"Return", "Refund"}:
+        raise FinancePostingError("partial_return_reversal_invalid", "Only an owned credit or refund can be reversed.")
+    kind: Literal["ReverseReturn", "ReverseRefund"] = "ReverseReturn" if original.kind == "Return" else "ReverseRefund"
+    return _append(history, PartialReturnEvent(kind, balance.version + 1, history.source.fingerprint,
+        balance.history_fingerprint, original.amount_minor, original.return_values, original_sequence))

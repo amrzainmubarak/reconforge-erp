@@ -113,7 +113,8 @@ BEGIN
  IF TG_OP='DELETE' OR(TG_OP='UPDATE' AND TG_TABLE_NAME<>'customer_partial_return_plans') THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Partial credit history is immutable'; END IF;
  IF TG_TABLE_NAME='customer_partial_return_sources' THEN
-  IF NEW.created_actor_id IS DISTINCT FROM a OR NOT reconforge.customer_return_authority(NEW.tenant_id,a,'prepare') THEN
+  IF NEW.created_actor_id IS DISTINCT FROM a OR NOT reconforge.customer_return_authority(NEW.tenant_id,a,'prepare')
+  OR NEW.source_payload->'original_source' IS DISTINCT FROM reconforge.customer_partial_return_native_source(NEW.tenant_id,NEW.source_order_id) THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Partial source requires current scoped human preparation'; END IF;
  ELSIF TG_TABLE_NAME='customer_partial_return_plans' THEN
   SELECT * INTO s FROM reconforge.customer_partial_return_sources WHERE tenant_id=NEW.tenant_id AND id=NEW.source_id;
@@ -130,9 +131,13 @@ BEGIN
   op:=CASE WHEN NEW.operation IN('prepare_refund','prepare_reversal') THEN'prepare' ELSE NEW.operation END;
   IF p IS NULL OR NEW.actor_id IS DISTINCT FROM a OR NOT reconforge.customer_return_authority(NEW.tenant_id,a,op) THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Partial lifecycle requires current human authority'; END IF;
- ELSIF TG_TABLE_NAME='customer_partial_return_history' AND NEW.kind='Collection' THEN
-  IF NOT reconforge.customer_partial_return_collection_admitted(NEW.tenant_id,NEW.source_id,NEW.receipt_id,NEW.allocation_id) THEN
-   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Collection history requires the current native cash poster'; END IF;
+ ELSIF TG_TABLE_NAME='customer_partial_return_history' THEN
+  IF NEW.kind='Collection' THEN
+   IF NOT reconforge.customer_partial_return_collection_admitted(NEW.tenant_id,NEW.source_id,NEW.receipt_id,NEW.allocation_id) THEN
+    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Collection history requires the current native cash poster'; END IF;
+  ELSIF NOT reconforge.customer_return_authority(NEW.tenant_id,a,'post') THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Partial history requires current post authority';
+  END IF;
  ELSE
   SELECT * INTO s FROM reconforge.customer_partial_return_sources WHERE tenant_id=NEW.tenant_id AND id=NEW.source_id;
   IF s IS NULL OR NOT reconforge.customer_return_authority(NEW.tenant_id,a,'post') THEN
@@ -159,7 +164,7 @@ END $cr2$;
 
 CLOSURE_SQL = r"""
 CREATE FUNCTION reconforge.customer_partial_return_balance(t TEXT,i TEXT) RETURNS JSONB LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $cr2$
-DECLARE s RECORD;h RECORD;c BIGINT;p BIGINT;f BIGINT;q BIGINT;v INTEGER;chain TEXT;
+DECLARE s RECORD;h RECORD;c NUMERIC;p NUMERIC;f NUMERIC;q NUMERIC;v INTEGER;chain TEXT;
 BEGIN
  SELECT * INTO s FROM reconforge.customer_partial_return_sources WHERE tenant_id=t AND id=i;
  IF s IS NULL THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Partial source directory is absent or hidden'; END IF;
@@ -204,7 +209,7 @@ END $cr2$;
 CREATE FUNCTION reconforge.customer_partial_return_source_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $cr2$
 DECLARE s RECORD;h RECORD;p RECORD;a RECORD;e RECORD;c RECORD;row JSONB;original JSONB;current_source JSONB;chain TEXT;
  stack INTEGER[]:='{}';q NUMERIC:=0;credit NUMERIC:=0;cash NUMERIC;refund NUMERIC:=0;cost NUMERIC:=0;liability NUMERIC:=0;
- ordinal INTEGER:=0;take NUMERIC;skip NUMERIC;pending NUMERIC;amount NUMERIC;portion JSONB;cons JSONB;position INTEGER;
+ ordinal INTEGER:=0;take NUMERIC;skip NUMERIC;pending NUMERIC;amount NUMERIC;portion JSONB;cons JSONB;position INTEGER;allocation JSONB;native RECORD;fp JSONB;
 BEGIN
  SELECT * INTO s FROM reconforge.customer_partial_return_sources WHERE tenant_id=t AND id=i;
  IF s IS NULL THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Partial source owner is absent or hidden'; END IF;
@@ -222,11 +227,104 @@ BEGIN
  OR(s.currency_code,s.currency_precision,s.currency_rounding_policy,s.currency_registry_version,s.currency_registry_digest) IS DISTINCT FROM
  (original->'invoice'->>'currency_code',(original->'invoice'->>'currency_precision')::integer,original->'invoice'->>'currency_rounding_policy',
  original->'invoice'->>'currency_registry_version',original->'invoice'->>'currency_registry_digest')
- OR(original->'invoice'->>'tax_minor')::bigint<>0
+ OR(original->'invoice'->>'tax_minor')::bigint<>0 OR original->'stock'->>'status' NOT IN('Invoiced','Paid')
+ OR original->>'invoice_status' NOT IN('Approved','PartiallyPaid','Paid')
  OR EXISTS(SELECT 1 FROM reconforge.customer_return_plans WHERE tenant_id=t AND source_order_id=s.source_order_id AND operation='Return' AND phase<>3)
  OR NOT EXISTS(SELECT 1 FROM reconforge.customer_partial_return_plans WHERE tenant_id=t AND source_id=i)
  OR NOT EXISTS(SELECT 1 FROM reconforge.ar_invoices WHERE tenant_id=t AND id=s.invoice_id AND customer_partial_return_source_id=i) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Partial source must conserve original native document and monetary evidence'; END IF;
+ fp:=s.source_payload->'fingerprint_payload';
+ FOREACH chain IN ARRAY ARRAY['quantity_precision','quantity_scaled','gross_minor','collected_minor','net_unit_price_minor','tax_minor'] LOOP
+  IF jsonb_typeof(fp->chain) IS DISTINCT FROM'number' OR(fp->>chain)!~'^(0|[1-9][0-9]*)$'
+  OR fp->chain IS DISTINCT FROM s.source_payload->'typed_source'->chain THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Original financial and quantity facts require exact integer metadata'; END IF;
+ END LOOP;
+ IF s.source_payload->'typed_source'->'scope' IS DISTINCT FROM fp->'scope'
+ OR(s.source_payload->'typed_source'->>'source_order_id',s.source_payload->'typed_source'->>'invoice_id',s.source_payload->'typed_source'->>'valuation_document_id',
+ s.source_payload->'typed_source'->>'original_revenue_plan_id',s.source_payload->'typed_source'->>'functional_currency',s.source_payload->'typed_source'->>'base_uom_id')
+ IS DISTINCT FROM(s.source_order_id,s.invoice_id,s.original_valuation_document_id,original->'stock'->>'invoice_plan_id',s.currency_code,s.uom_id)
+ OR s.source_payload->'typed_source'->'currency_policy' IS DISTINCT FROM jsonb_build_object('currency_code',s.currency_code,'precision',s.currency_precision,
+ 'rounding_policy',s.currency_rounding_policy,'registry_version',s.currency_registry_version,'registry_digest',s.currency_registry_digest)
+ OR s.source_payload->'typed_source'->'inventory_lot_id' IS DISTINCT FROM'null'::jsonb
+ OR s.source_payload->'typed_source'->'serial_tracked' IS DISTINCT FROM'false'::jsonb
+ OR NOT EXISTS(SELECT 1 FROM reconforge.currency_registry_snapshots WHERE tenant_id=t AND registry_digest=s.currency_registry_digest
+  AND registry_version=s.currency_registry_version AND snapshot_json::jsonb=s.source_payload->'registry_snapshot') THEN
+  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Typed original source requires its exact retained native registry and hierarchy'; END IF;
+ FOREACH chain IN ARRAY ARRAY['cogs','revenue'] LOOP
+  IF s.source_payload->'typed_source'->('original_'||chain) IS DISTINCT FROM jsonb_build_object(
+   'posting_effect_id',original->chain->>'id','scope',fp->'scope','snapshot_json',reconforge.irp_canonical(original->chain->'snapshot_json'),
+   'validation_digest',original->chain->>'validation_digest') THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Original typed finance evidence must match its native immutable effect'; END IF;
+ END LOOP;
+ IF NOT EXISTS(SELECT 1 FROM reconforge.legal_entities e JOIN reconforge.organizations o ON(o.tenant_id,o.id)=(e.tenant_id,e.organization_id)
+  WHERE e.tenant_id=t AND e.id=s.legal_entity_id AND e.organization_id=s.organization_id AND o.application_workspace_id=s.workspace_id AND e.currency_code=s.currency_code)
+ OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_items WHERE tenant_id=t AND id=s.item_id AND workspace_id=s.workspace_id
+  AND(organization_id IS NULL OR organization_id=s.organization_id) AND item_type='Stock' AND tracking_mode='None' AND uom_id=s.uom_id) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='First partial scope requires functional currency untracked original base UOM'; END IF;
+ IF fp->>'contract' IS DISTINCT FROM'customer-partial-return-domain-v1'
+ OR fp->'scope' IS DISTINCT FROM jsonb_build_object('tenant_id',t,'workspace_id',s.workspace_id,'organization_id',s.organization_id,
+ 'legal_entity_id',s.legal_entity_id,'item_id',s.item_id,'location_id',s.location_id,'uom_id',s.uom_id)
+ OR(fp->>'source_order_id',fp->>'invoice_id',fp->>'valuation_document_id',fp->>'original_revenue_plan_id',fp->>'currency',fp->>'functional_currency',fp->>'base_uom_id')
+ IS DISTINCT FROM(s.source_order_id,s.invoice_id,s.original_valuation_document_id,original->'stock'->>'invoice_plan_id',s.currency_code,s.currency_code,s.uom_id)
+ OR(fp->'quantity_precision',fp->'quantity_scaled',fp->'gross_minor',fp->'collected_minor',fp->'net_unit_price_minor') IS DISTINCT FROM
+ (to_jsonb(s.quantity_precision),to_jsonb(s.original_quantity_scaled),to_jsonb(s.gross_minor),to_jsonb(s.initial_collected_minor),original->'stock'->'source'->'net_unit_price_minor')
+ OR fp->'tax_minor' IS DISTINCT FROM'0'::jsonb OR fp->'inventory_lot_id' IS DISTINCT FROM'null'::jsonb OR fp->'serial_tracked' IS DISTINCT FROM'false'::jsonb
+ OR fp->'original_cogs' IS DISTINCT FROM jsonb_build_array(s.original_cogs_effect_id,original->'cogs'->>'validation_digest')
+ OR fp->'original_revenue' IS DISTINCT FROM jsonb_build_array(s.original_revenue_effect_id,original->'revenue'->>'validation_digest')
+ OR fp->'policy' IS DISTINCT FROM jsonb_build_object('currency_precision',s.currency_precision,'currency_rounding_policy',s.currency_rounding_policy,
+ 'currency_registry_version',s.currency_registry_version,'currency_registry_digest',s.currency_registry_digest)
+ OR fp->'consumptions' IS DISTINCT FROM s.source_payload->'typed_source'->'consumptions'
+ OR jsonb_typeof(fp->'consumptions') IS DISTINCT FROM'array' OR jsonb_array_length(fp->'consumptions') NOT BETWEEN 1 AND 32
+ OR jsonb_array_length(fp->'consumptions')<>jsonb_array_length(original->'stock'->'issue_plan'->'allocations')
+ OR jsonb_array_length(fp->'consumptions')<>jsonb_array_length(original->'consumptions') THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Typed original source must bind exact native monetary and FIFO identities'; END IF;
+ position:=0;
+ FOR cons IN SELECT * FROM jsonb_array_elements(fp->'consumptions') LOOP
+  allocation:=original->'stock'->'issue_plan'->'allocations'->position;position:=position+1;
+  SELECT c.*,v.valuation_document_id,l.item_id,l.uom_id,l.legal_entity_id,l.inventory_lot_id,l.quantity_precision INTO native
+  FROM reconforge.inventory_layer_consumptions c JOIN reconforge.inventory_valuation_lines v ON(v.tenant_id,v.id)=(c.tenant_id,c.valuation_line_id)
+  JOIN reconforge.inventory_cost_layers l ON(l.tenant_id,l.id)=(c.tenant_id,c.cost_layer_id)
+  WHERE c.tenant_id=t AND c.id=cons->>'consumption_id';
+  IF native IS NULL OR cons->'scope' IS DISTINCT FROM fp->'scope' OR cons->'position' IS DISTINCT FROM to_jsonb(position)
+  OR cons->>'currency_code' IS DISTINCT FROM s.currency_code OR cons->'quantity_precision' IS DISTINCT FROM to_jsonb(s.quantity_precision)
+  OR(native.workspace_id,native.legal_entity_id,native.item_id,native.uom_id,native.valuation_document_id)
+   IS DISTINCT FROM(s.workspace_id,s.legal_entity_id,s.item_id,s.uom_id,s.original_valuation_document_id)
+  OR native.inventory_lot_id IS NOT NULL OR native.quantity_precision<>s.quantity_precision
+  OR cons->>'valuation_line_id' IS DISTINCT FROM native.valuation_line_id OR cons->>'cost_layer_id' IS DISTINCT FROM native.cost_layer_id
+  OR cons->'quantity_scaled' IS DISTINCT FROM to_jsonb(native.quantity_scaled) OR cons->'value_minor' IS DISTINCT FROM to_jsonb(native.value_minor)
+  OR allocation->>'cost_layer_id' IS DISTINCT FROM native.cost_layer_id OR allocation->'quantity_scaled' IS DISTINCT FROM to_jsonb(native.quantity_scaled)
+  OR allocation->'value_minor' IS DISTINCT FROM to_jsonb(native.value_minor) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Original consumption order must match reviewed issue and native source membership'; END IF;
+  FOREACH chain IN ARRAY ARRAY['position','quantity_precision','quantity_scaled','value_minor'] LOOP
+   IF jsonb_typeof(cons->chain) IS DISTINCT FROM'number' OR(cons->>chain)!~'^(0|[1-9][0-9]*)$' THEN
+    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Original FIFO facts require integer metadata'; END IF;
+  END LOOP;
+ END LOOP;
+ FOR a IN SELECT x.*,to_jsonb(r) receipt FROM reconforge.ar_receipt_allocations x JOIN reconforge.ar_receipts r
+ ON(r.tenant_id,r.id)=(x.tenant_id,x.receipt_id) WHERE x.tenant_id=t AND x.invoice_id=s.invoice_id LOOP
+  SELECT count(*) INTO position FROM(
+   SELECT p.entry_id,l.posting_effect_id,l.posted_actor_id,p.payload->'snapshot' snapshot,p.payload->>'validation_digest' seal
+   FROM reconforge.commercial_collection_plans p JOIN reconforge.commercial_collection_links l ON(l.tenant_id,l.plan_id)=(p.tenant_id,p.id)
+   WHERE p.tenant_id=t AND p.source_id=s.invoice_id AND p.phase=2 AND l.receipt_id=a.receipt_id
+   UNION ALL SELECT p.entry_id,l.posting_effect_id,l.posted_actor_id,p.payload->'snapshot',p.validation_digest
+   FROM reconforge.operational_finance_plans p JOIN reconforge.operational_finance_links l ON(l.tenant_id,l.plan_id)=(p.tenant_id,p.id)
+   WHERE p.tenant_id=t AND p.id=original->'stock'->>'collection_plan_id' AND p.source_kind='ARReceipt' AND p.source_id=s.invoice_id
+   AND l.source_effect_id=a.receipt_id) owner JOIN reconforge.finance_posting_effects f
+   ON(f.tenant_id,f.id,f.entry_id)=(t,owner.posting_effect_id,owner.entry_id)
+   WHERE f.snapshot_json=owner.snapshot AND f.validation_digest=owner.seal AND f.posted_actor_id=owner.posted_actor_id
+   AND f.snapshot_json->'lines'->0->>'account_id'=s.cash_account_id
+   AND f.snapshot_json->'lines'->0->'dimensions'=s.source_payload->'cash_dimensions'
+   AND f.snapshot_json->'lines'->1->>'account_id'=original->'revenue'->'snapshot_json'->'lines'->0->>'account_id'
+   AND f.snapshot_json->'lines'->1->'dimensions'=original->'revenue'->'snapshot_json'->'lines'->0->'dimensions'
+   AND(f.snapshot_json->'lines'->0->>'debit_minor')::bigint=(a.receipt->>'amount_minor')::bigint
+   AND(f.snapshot_json->'lines'->1->>'credit_minor')::bigint=(a.receipt->>'amount_minor')::bigint
+   AND jsonb_array_length(f.snapshot_json->'lines')=2;
+  IF position<>1 OR a.receipt->>'status'<>'Posted' OR a.receipt->>'customer_id' IS DISTINCT FROM s.customer_id
+  OR(a.receipt->>'workspace_id',a.receipt->>'organization_id',a.receipt->>'legal_entity_id',a.receipt->>'currency_code',
+  (a.receipt->>'currency_precision')::integer,a.receipt->>'currency_rounding_policy',a.receipt->>'currency_registry_version',a.receipt->>'currency_registry_digest')
+  IS DISTINCT FROM(s.workspace_id,s.organization_id,s.legal_entity_id,s.currency_code,s.currency_precision,s.currency_rounding_policy,s.currency_registry_version,s.currency_registry_digest) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Every collected amount requires exact native receipt cash effect and retained source account membership'; END IF;
+ END LOOP;
  chain:=reconforge.irp_digest(jsonb_build_object('contract','customer-partial-return-domain-v1','source',s.source_fingerprint));cash:=s.initial_collected_minor;
  FOR h IN SELECT * FROM reconforge.customer_partial_return_history WHERE tenant_id=t AND source_id=i ORDER BY sequence LOOP
   ordinal:=ordinal+1;row:=h.payload;
@@ -247,7 +345,7 @@ BEGIN
    IF p IS NULL OR p.source_id<>i OR p.phase<>2 OR p.operation<>h.kind OR p.expected_history_version<>ordinal-1 THEN
     RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Economic history requires its exact posted source plan'; END IF;
    IF h.kind='Return' THEN
-    IF p.quantity_scaled>s.original_quantity_scaled-q OR p.credit_minor*s.original_quantity_scaled<>s.gross_minor*p.quantity_scaled
+    IF p.quantity_scaled>s.original_quantity_scaled-q OR p.credit_minor::numeric*s.original_quantity_scaled<>s.gross_minor::numeric*p.quantity_scaled
     OR p.receivable_released_minor<>least(p.credit_minor,greatest(s.gross_minor-credit-cash,0))
     OR p.refund_entitlement_delta_minor<>p.credit_minor-p.receivable_released_minor
     OR(h.quantity_scaled,h.credit_minor,h.cogs_minor) IS DISTINCT FROM(p.quantity_scaled,p.credit_minor,p.cogs_restored_minor)
@@ -292,6 +390,9 @@ BEGIN
  IF cash<>(SELECT COALESCE(sum(amount_minor),0) FROM reconforge.ar_receipt_allocations WHERE tenant_id=t AND invoice_id=s.invoice_id)
  OR q<0 OR q>s.original_quantity_scaled OR credit<0 OR credit>s.gross_minor OR refund<0 OR refund>liability THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Partial history and actual allocation membership must agree'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM reconforge.ar_invoices WHERE tenant_id=t AND id=s.invoice_id
+ AND status=CASE WHEN cash+credit>=s.gross_minor THEN'Paid' WHEN cash+credit>0 THEN'PartiallyPaid' ELSE'Approved' END) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Actual invoice status must agree with net credits and native collections'; END IF;
 END $cr2$;
 """
 
@@ -299,7 +400,7 @@ PLAN_SQL = r"""
 CREATE FUNCTION reconforge.customer_partial_return_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $cr2$
 DECLARE p RECORD;s RECORD;r RECORD;l RECORD;c RECORD;e RECORD;f RECORD;v RECORD;o RECORD;command RECORD;
  part JSONB;oldpart JSONB;original JSONB;line JSONB;expected JSONB;metadata JSONB;maker TEXT;ordinal INTEGER:=0;stage INTEGER;
- ar JSONB;revenue JSONB;inventory JSONB;cogs JSONB;debit NUMERIC;credit NUMERIC;restoration_count INTEGER;
+ ar JSONB;revenue JSONB;inventory JSONB;cogs JSONB;debit NUMERIC;credit NUMERIC;restoration_count INTEGER;entry_number TEXT;entry_identity TEXT;
 BEGIN
  SELECT * INTO p FROM reconforge.customer_partial_return_plans WHERE tenant_id=t AND id=i;
  IF p IS NULL THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Partial plan owner is absent or hidden'; END IF;
@@ -336,18 +437,28 @@ BEGIN
  OR jsonb_typeof(p.payload->'entries') IS DISTINCT FROM'array' OR jsonb_array_length(p.payload->'entries')<>(CASE WHEN p.operation IN('Return','ReverseReturn') THEN 2 ELSE 1 END) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Partial correction requires exact native directional account roles'; END IF;
  FOR part IN SELECT * FROM jsonb_array_elements(p.payload->'entries') LOOP
+  entry_number:=upper(p.id)||CASE WHEN p.operation='Refund' THEN'' WHEN ordinal=0 THEN'-R' ELSE'-C' END;
+  entry_identity:='GLE-'||substr(encode(sha256(convert_to(btrim(s.workspace_id)||'|'||entry_number,'UTF8')),'hex'),1,16);
   SELECT * INTO e FROM reconforge.finance_entries WHERE tenant_id=t AND id=part->>'entry_id';
   SELECT * INTO f FROM reconforge.finance_posting_effects WHERE tenant_id=t AND entry_id=e.id;
-  IF e IS NULL OR part->'snapshot' IS DISTINCT FROM reconforge.fr_snapshot(t,e.id,s.organization_id,s.legal_entity_id)
+  IF e IS NULL OR e.id IS DISTINCT FROM entry_identity OR e.entry_number IS DISTINCT FROM entry_number
+  OR part->'snapshot' IS DISTINCT FROM reconforge.fr_snapshot(t,e.id,s.organization_id,s.legal_entity_id)
   OR part->>'validation_digest' IS DISTINCT FROM reconforge.irp_digest(part->'snapshot') OR e.preparer_actor_id IS DISTINCT FROM maker
   OR e.period_id IS DISTINCT FROM p.payload->>'period_id' OR e.posting_date IS DISTINCT FROM p.payload->>'posting_date'
   OR(e.currency_code,e.currency_precision,e.currency_rounding_policy,e.currency_registry_version,e.currency_registry_digest) IS DISTINCT FROM
    (s.currency_code,s.currency_precision,s.currency_rounding_policy,s.currency_registry_version,s.currency_registry_digest)
-  OR e.status IS DISTINCT FROM(CASE WHEN r IS NOT NULL THEN'Validated' ELSE'Draft' END)
+  OR e.status IS DISTINCT FROM(CASE WHEN p.phase=3 THEN'Voided' WHEN r IS NOT NULL THEN'Validated' ELSE'Draft' END)
   OR(r IS NOT NULL AND(e.validator_actor_id IS DISTINCT FROM r.actor_id OR e.validation_digest IS DISTINCT FROM part->>'validation_digest'))
+  OR(p.phase=3 AND r IS NULL AND(e.validator_actor_id IS DISTINCT FROM c.actor_id OR e.validation_digest IS DISTINCT FROM part->>'validation_digest'))
   OR(p.phase=2) IS DISTINCT FROM(f.id IS NOT NULL)
   OR(f.id IS NOT NULL AND(f.id IS DISTINCT FROM l.effects->>ordinal OR f.posted_actor_id IS DISTINCT FROM l.actor_id OR f.snapshot_json IS DISTINCT FROM part->'snapshot')) THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Partial effect must preserve its exact reviewed entry and posting actor'; END IF;
+  IF f IS NOT NULL AND EXISTS(SELECT 1 FROM reconforge.finance_entries inverse WHERE inverse.tenant_id=t AND inverse.reverses_posting_id=f.id
+   AND NOT EXISTS(SELECT 1 FROM reconforge.customer_partial_return_plans owned WHERE owned.tenant_id=t AND owned.source_id=s.id
+    AND owned.original_id=p.id AND owned.operation='Reverse'||p.operation
+    AND EXISTS(SELECT 1 FROM jsonb_array_elements(owned.payload->'entries') pin WHERE pin->>'entry_id'=inverse.id
+     AND pin->>'original_effect_id'=f.id AND pin->'snapshot'=reconforge.fr_snapshot(t,inverse.id,s.organization_id,s.legal_entity_id)))) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='A partial effect inverse requires its exact new native correction owner'; END IF;
   IF p.operation LIKE'Reverse%' THEN
    SELECT * INTO o FROM reconforge.customer_partial_return_plans WHERE tenant_id=t AND id=p.original_id;
    oldpart:=o.payload->'entries'->ordinal;
@@ -385,6 +496,10 @@ BEGIN
   END IF;
   ordinal:=ordinal+1;
  END LOOP;
+ IF EXISTS(SELECT 1 FROM reconforge.finance_entries extra WHERE extra.tenant_id=t
+  AND(extra.external_reference=i OR upper(extra.entry_number) LIKE upper(i)||'%')
+  AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(p.payload->'entries') pin WHERE pin->>'entry_id'=extra.id)) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='A native partial namespace permits only its exact reserved entries'; END IF;
  FOR v IN SELECT * FROM reconforge.customer_partial_return_events WHERE tenant_id=t AND plan_id=i LOOP
   metadata:=jsonb_build_object('plan_digest',p.plan_digest,'reason',v.reason,'effects',v.effects);
   IF v.actor_id=maker OR(v.operation IN('post','cancel') AND r IS NOT NULL AND v.actor_id=r.actor_id)

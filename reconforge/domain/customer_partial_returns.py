@@ -21,7 +21,9 @@ from reconforge.domain.finance_posting import (
     text,
     validation_digest,
 )
+from reconforge.domain.quantities import ExactQuantity
 from reconforge.domain.receivables_policy import verify_receivables_policy
+from reconforge.domain.sales_revenue import SalesLine
 from reconforge.io.structured import StructuredDocumentPolicy, parse_json_document
 from reconforge.utils.money import CurrencyRegistryContext, MinorMoney
 
@@ -176,7 +178,12 @@ class OriginalPartialReturnSource:
             type(self.serial_tracked) is not bool or self.serial_tracked):
             raise FinancePostingError("partial_return_scope_unsupported", "Only zero-tax functional-currency untracked base UOM is supported.")
         MinorMoney(self.gross_minor, policy.currency_code, registry_context=self.registry_context)
-        if self.collected_minor > self.gross_minor or self.net_unit_price_minor * self.quantity_scaled != self.gross_minor * 10**self.quantity_precision:
+        # Original Stock/Sales already admits the shared per-line HALF_UP
+        # quotation. Keep its posted gross; later return portions must still
+        # be exact integral proportions of that original gross and FIFO cost.
+        original_quote = SalesLine("Original retained merchandise", ExactQuantity(
+            self.quantity_scaled, self.quantity_precision).text, self.net_unit_price_minor).priced()
+        if self.collected_minor > self.gross_minor or original_quote["line_total_minor"] != self.gross_minor:
             raise FinancePostingError("partial_return_source_mismatch", "Original revenue or retained collection totals differ.")
         if type(self.consumptions) is not tuple or not 1 <= len(self.consumptions) <= MAX_CONSUMPTIONS:
             raise FinancePostingError("partial_return_invalid", "Original consumption order must be a bounded immutable tuple.")

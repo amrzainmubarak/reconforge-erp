@@ -243,7 +243,7 @@ def map_customer_partial_return_source(connection: Any, tenant_id: str,
                      and "inventory_lot_id" in row and row["inventory_lot_id"] is None)
         _require(movement_line["from_location_id"] == scope.location_id and movement_line["to_location_id"] is None
                  and native["item"]["uom_id"] == scope.uom_id and native["item"]["tracking_mode"] == "None"
-                 and native["item"]["item_type"] == "Stock" and native["item"]["workspace_id"] == scope.workspace_id
+                 and native["item"]["item_type"] in ("Stock", "Consumable") and native["item"]["workspace_id"] == scope.workspace_id
                  and native["item"]["organization_id"] in (None, scope.organization_id)
                  and native["entity"]["organization_id"] == scope.organization_id
                  and native["entity"]["currency_code"] == policy.currency_code

@@ -272,7 +272,7 @@ BEGIN
   WHERE entity_record.tenant_id=t AND entity_record.id=s.legal_entity_id AND entity_record.organization_id=s.organization_id
   AND organization_record.application_workspace_id=s.workspace_id AND entity_record.currency_code=s.currency_code)
  OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_items WHERE tenant_id=t AND id=s.item_id AND workspace_id=s.workspace_id
-  AND(organization_id IS NULL OR organization_id=s.organization_id) AND item_type='Stock' AND tracking_mode='None' AND uom_id=s.uom_id) THEN
+  AND(organization_id IS NULL OR organization_id=s.organization_id) AND item_type IN('Stock','Consumable') AND tracking_mode='None' AND uom_id=s.uom_id) THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='First partial scope requires functional currency untracked original base UOM'; END IF;
  IF fp->>'contract' IS DISTINCT FROM'customer-partial-return-domain-v1'
  OR fp->'scope' IS DISTINCT FROM jsonb_build_object('tenant_id',t,'workspace_id',s.workspace_id,'organization_id',s.organization_id,

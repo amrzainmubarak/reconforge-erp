@@ -17,6 +17,7 @@ from reconforge.domain.customer_partial_return_commands import (
 )
 from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.sales_revenue import SalesInvoicePreparation
+from reconforge.domain.stock_sales import StockOrder
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_customer_partial_returns import PostgresCustomerPartialReturnsRepository
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
@@ -25,6 +26,7 @@ from tests.test_postgres_customer_partial_return_source import two_layer_source
 from tests.test_postgres_customer_returns import balances, configure_runtime, create_runtime, retained_state
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, create_receipt_runtime, receipt_database
 from tests.test_postgres_stock_sales import create_reserved_order, create_stock_runtime, execute
+from tests.test_postgres_stock_sales import repository as stock_repository
 
 _ = receipt_database, two_layer_source
 SCOPE = {"workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity"}
@@ -46,7 +48,8 @@ def retained_partial_state(runtime: ReceiptRuntime) -> dict[str, Any]:
     return state
 
 
-def create_fractional_partial_runtime(database: tuple[str, str]) -> tuple[ReceiptRuntime, str, str]:
+def create_fractional_partial_runtime(database: tuple[str, str], *, unit_price_minor: int | None = None,
+                                      item_type: str = "Stock", quantity: str = "2.5") -> tuple[ReceiptRuntime, str, str]:
     base = create_receipt_runtime(database)
     with PostgresTenantBoundary(base.factory).transaction(base.tenant) as connection:
         inventory = PostgresInventoryCoreRepository(connection, base.tenant)
@@ -54,10 +57,20 @@ def create_fractional_partial_runtime(database: tuple[str, str]) -> tuple[Receip
         # ITEM has no movement/reference history yet. Configure its base unit
         # through the supported API; the already-referenced EA is unchanged.
         inventory.upsert_item(item_code="ITEM", name="Fractional synthetic item", organization_code="ORG",
-                              uom_code="FRACTIONAL", inventory_account_code="INVENTORY", workspace="work")
+                              uom_code="FRACTIONAL", inventory_account_code="INVENTORY", workspace="work", item_type=item_type)
     runtime = create_stock_runtime(database, base_runtime=base)
     configure_runtime(runtime)
-    sale = create_reserved_order(runtime, "FRACTIONAL-ORIGINAL", "2.5")
+    if unit_price_minor is None:
+        sale = create_reserved_order(runtime, "FRACTIONAL-ORIGINAL", quantity)
+    else:
+        with runtime.actor("maker") as (connection, _, actor):
+            owner = stock_repository(connection, runtime)
+            sale = owner.create(StockOrder("FRACTIONAL-ORIGINAL", "CUSTOMER", "CUSTOMER-PO-1", "ITEM", "MAIN", "STOCK",
+                quantity, unit_price_minor, "USD", "2026-10-09", "Existing rounded original merchandise"),
+                command_id="rounded-original:create", actor=actor)
+        sale = execute(runtime, sale, "submit", "maker")
+        sale = execute(runtime, sale, "approve", "checker")
+        sale = execute(runtime, sale, "reserve", "maker")
     sale = execute(runtime, sale, "prepare-issue", "maker", {"posting_date": "2026-10-09", "period_id": "period", "policy_code": "FIFO"})
     sale = execute(runtime, sale, "review-issue", "checker")
     sale = execute(runtime, sale, "deliver", "poster")
@@ -232,3 +245,36 @@ def test_fractional_original_and_partial_return_preserve_scale_and_refuse_nonint
     assert (result["quantity_precision"], result["quantity_scaled"], result["credit_minor"], result["cogs_restored_minor"]) == (3, 1250, 5625, 1500)
     state = balance(runtime, source_id)
     assert state["quantity_precision"] == 3 and state["remaining_quantity_scaled"] == 1250 and state["outstanding_minor"] == 5625
+
+
+def test_existing_rounded_fractional_original_posts_exact_half_of_retained_revenue_and_cost(receipt_database: tuple[str, str]) -> None:
+    runtime, source_id, invoice_id = create_fractional_partial_runtime(receipt_database, unit_price_minor=951)
+    with runtime.actor("maker") as (connection, _, _actor):
+        original = connection.execute("SELECT total_minor FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s",
+                                      (runtime.tenant, invoice_id)).fetchone()
+        assert original["total_minor"] == 2378
+    before = retained_partial_state(runtime)
+    with pytest.raises(FinancePostingError, match="integral"):
+        prepare_return(runtime, source_id, 1, 0, "refuse-unrepresentable-rounded-portion")
+    assert retained_partial_state(runtime) == before
+    returned = posted(runtime, prepare_return(runtime, source_id, 1250, 0, "rounded-original-half-return"))
+    assert (returned["quantity_precision"], returned["credit_minor"], returned["cogs_restored_minor"],
+            returned["receivable_released_minor"], returned["refund_entitlement_delta_minor"]) == (3, 1189, 1500, 1189, 0)
+    state = balance(runtime, source_id)
+    assert (state["gross_minor"], state["remaining_quantity_scaled"], state["outstanding_minor"]) == (2378, 1250, 1189)
+    values = balances(runtime)
+    assert (values["INVENTORY"], values["CLEARING"], values["COGS"], values["AR"], values["REVENUE"]) == (10500, -12000, 1500, 1189, -1189)
+
+
+def test_existing_consumable_stock_source_posts_partial_credit_and_original_fifo_restoration(receipt_database: tuple[str, str]) -> None:
+    runtime, source_id, _invoice_id = create_fractional_partial_runtime(receipt_database, item_type="Consumable", quantity="2")
+    with runtime.actor("maker") as (connection, _, _actor):
+        assert connection.execute("SELECT item_type FROM reconforge.inventory_items WHERE tenant_id=%s AND item_code='ITEM'",
+                                  (runtime.tenant,)).fetchone()["item_type"] == "Consumable"
+    returned = posted(runtime, prepare_return(runtime, source_id, 1000, 0, "consumable-original-half-return"))
+    assert (returned["quantity_precision"], returned["quantity_scaled"], returned["credit_minor"],
+            returned["cogs_restored_minor"], returned["receivable_released_minor"]) == (3, 1000, 4500, 1200, 4500)
+    state = balance(runtime, source_id)
+    assert (state["gross_minor"], state["remaining_quantity_scaled"], state["outstanding_minor"]) == (9000, 1000, 4500)
+    values = balances(runtime)
+    assert (values["INVENTORY"], values["CLEARING"], values["COGS"], values["AR"], values["REVENUE"]) == (10800, -12000, 1200, 4500, -4500)

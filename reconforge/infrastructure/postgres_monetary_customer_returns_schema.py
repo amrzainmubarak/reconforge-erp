@@ -561,3 +561,151 @@ BEGIN
  END IF;
 END $mr149$;
 """
+
+ORIGIN_SQL = r"""
+CREATE FUNCTION reconforge.monetary_stock_origin_birth(t TEXT,stock_id TEXT,fx_id TEXT,recognition_id TEXT,declared JSONB) RETURNS VOID
+ LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
+DECLARE stock_owner RECORD;fx_source RECORD;recognition RECORD;invoice_owner RECORD;journal_owner RECORD;account_owner RECORD;
+ allocation JSONB;consumed RECORD;line_owner RECORD;cost_snapshot JSONB;recognition_snapshot JSONB;registry JSONB;equation JSONB;
+ roles JSONB:='{}';dimensions JSONB:='{}';components JSONB:='[]';consumptions JSONB:='[]';evidence JSONB;source JSONB;payload JSONB;
+ policy JSONB;part JSONB;code TEXT;kind TEXT;field TEXT;account_id TEXT;origin_id TEXT;position INTEGER:=0;total_q NUMERIC:=0;total_v NUMERIC:=0;
+ fg NUMERIC;lg NUMERIC;balance JSONB;cost_admission TEXT;actor TEXT:=current_setting('app.stock_sales_actor_id',true);
+BEGIN
+ SELECT * INTO stock_owner FROM reconforge.stock_sales_orders WHERE tenant_id=t AND id=stock_id;
+ SELECT * INTO fx_source FROM reconforge.operational_fx_sources WHERE tenant_id=t AND id=fx_id;
+ SELECT * INTO recognition FROM reconforge.operational_fx_plans WHERE tenant_id=t AND id=recognition_id;
+ SELECT * INTO invoice_owner FROM reconforge.ar_invoices WHERE tenant_id=t AND id=fx_source.invoice_id;
+ PERFORM reconforge.monetary_return_assert(stock_owner.id IS NOT NULL AND fx_source.id IS NOT NULL AND recognition.id IS NOT NULL
+  AND reconforge.fx_object(declared,ARRAY['refund_liability_account_code']) AND stock_owner.status='Delivered'
+  AND stock_owner.invoice_id IS NULL AND stock_owner.invoice_plan_id IS NULL
+  AND recognition.source_id=fx_id AND recognition.kind='recognize' AND recognition.sequence=0 AND recognition.phase=0
+  AND actor IS NOT NULL AND actor=fx_source.payload->>'preparer_actor_id'
+  AND actor=recognition.payload->>'preparer_actor_id'
+  AND reconforge.sales_revenue_actor(t,actor,'sales.manage') AND reconforge.sales_revenue_actor(t,actor,'receivables.manage')
+  AND reconforge.sales_revenue_actor(t,actor,'finance_core.manage')
+  AND NOT EXISTS(SELECT 1 FROM reconforge.stock_sales_monetary_origins WHERE tenant_id=t
+   AND(stock_order_id=stock_id OR invoice_id=fx_source.invoice_id OR fx_source_id=fx_id OR recognition_plan_id=recognition_id))
+  AND invoice_owner.customer_partial_return_source_id IS NULL,
+  'Monetary origin birth must atomically own a new fixed Stock invoice before review without retrofit or competing ownership');
+ equation:=reconforge.monetary_fx_original_equation(t,fx_id);
+ recognition_snapshot:=recognition.payload->'snapshot';
+ PERFORM reconforge.monetary_return_assert(recognition.entry_id IS NOT NULL
+  AND recognition_snapshot=reconforge.fr_snapshot(t,recognition.entry_id,stock_owner.organization_id,stock_owner.legal_entity_id)
+  AND recognition.payload->>'validation_digest'=reconforge.irp_digest(recognition_snapshot)
+  AND recognition.payload->>'plan_digest'=reconforge.irp_digest(recognition.payload-ARRAY['plan_digest','validation_digest'])
+  AND recognition.payload->>'source_digest'=fx_source.payload->>'source_digest'
+  AND recognition.payload->'equation'=jsonb_build_object('lines',equation->'lines'),
+  'Original monetary recognition must retain the actual native reviewed snapshot and exact existing FX invoice equation');
+ SELECT * INTO journal_owner FROM reconforge.finance_journals WHERE tenant_id=t AND id=recognition_snapshot#>>'{entry,journal_id}';
+ PERFORM reconforge.monetary_return_assert(journal_owner.id IS NOT NULL AND journal_owner.workspace_id=stock_owner.workspace_id,
+  'The original recognition journal must belong to the exact native source workspace');
+ FOREACH field IN ARRAY ARRAY['receivable','revenue','cash','gain','loss','refund_liability'] LOOP
+  code:=CASE WHEN field='refund_liability' THEN declared->>'refund_liability_account_code'
+   ELSE equation->'request'->>(field||'_account_code') END;
+  kind:=CASE WHEN field IN('receivable','cash') THEN'Asset' WHEN field IN('revenue','gain') THEN'Income'
+   WHEN field='loss' THEN'Expense' ELSE'Liability' END;
+  SELECT * INTO account_owner FROM reconforge.finance_accounts WHERE tenant_id=t AND workspace_id=stock_owner.workspace_id
+   AND chart_id=journal_owner.chart_id AND account_code=code AND account_type=kind AND active AND allow_posting AND allow_manual_posting;
+  PERFORM reconforge.monetary_return_assert(account_owner.id IS NOT NULL,'Every declared original monetary account role requires its current native classification');
+  roles:=roles||jsonb_build_object(field||'_account_id',account_owner.id);
+  dimensions:=dimensions||jsonb_build_object(account_owner.id,'{}'::jsonb);
+ END LOOP;
+ PERFORM reconforge.monetary_return_assert((SELECT count(DISTINCT value) FROM jsonb_each_text(roles))=6,
+  'Original monetary roles must be distinct and cannot be caller-forged account substitutions');
+ FOREACH field IN ARRAY ARRAY['inventory','cogs'] LOOP
+  account_id:=stock_owner.issue_plan->>(field||'_account_id');
+  SELECT * INTO account_owner FROM reconforge.finance_accounts WHERE tenant_id=t AND id=account_id AND workspace_id=stock_owner.workspace_id
+   AND account_type=(CASE WHEN field='inventory' THEN'Asset' ELSE'Expense' END);
+  PERFORM reconforge.monetary_return_assert(account_owner.id IS NOT NULL,'Original FIFO accounting roles must bind the actual reviewed Stock issue');
+  roles:=roles||jsonb_build_object(field||'_account_id',account_id);
+  dimensions:=dimensions||jsonb_build_object(account_id,'{}'::jsonb);
+ END LOOP;
+ PERFORM reconforge.monetary_return_assert((SELECT count(DISTINCT value) FROM jsonb_each_text(roles))=8,
+  'The new monetary origin keeps FIFO, cash, receivable, revenue, refund and FX roles distinct without merging their original dimensions');
+ IF stock_owner.cogs_entry_id IS NOT NULL THEN
+  cost_snapshot:=reconforge.fr_snapshot(t,stock_owner.cogs_entry_id,stock_owner.organization_id,stock_owner.legal_entity_id);
+  FOR part IN SELECT value FROM jsonb_array_elements(cost_snapshot->'lines') LOOP
+   dimensions:=dimensions||jsonb_build_object(part->>'account_id',part->'dimensions');
+  END LOOP;
+ ELSE
+  PERFORM reconforge.monetary_return_assert(stock_owner.cogs_effect_id IS NULL
+   AND stock_owner.issue_plan->>'cost_admission_policy'='partial-return-restituted-v1'
+   AND stock_owner.issue_plan->'total_cost_minor'='0'::jsonb,'Absent original COGS requires explicit native restituted-cost admission');
+ END IF;
+ components:=jsonb_build_array(jsonb_build_object('position',0,'kind','Net','account_id',roles->>'revenue_account_id',
+  'transaction_minor',equation->'foreign_net_minor','functional_minor',equation->'functional_net_minor',
+  'policy_digest',reconforge.irp_digest(jsonb_build_object('stock_source_digest',stock_owner.source_digest,'discount_policy',stock_owner.source->'discount_policy'))));
+ FOR part IN SELECT value FROM jsonb_array_elements(equation->'tax_components') LOOP
+  position:=position+1;
+  SELECT id INTO account_id FROM reconforge.finance_accounts WHERE tenant_id=t AND workspace_id=stock_owner.workspace_id
+   AND chart_id=journal_owner.chart_id AND account_code=part->>'account_code' AND account_type='Liability';
+  PERFORM reconforge.monetary_return_assert(account_id IS NOT NULL
+   AND NOT EXISTS(SELECT 1 FROM jsonb_each_text(roles) role WHERE role.value=account_id),
+   'Original tax components require their exact native liability account, distinct from economic roles');
+  components:=components||jsonb_build_array(jsonb_build_object('position',position,'kind','Tax','account_id',account_id,
+   'transaction_minor',part->'foreign_tax_minor','functional_minor',part->'functional_tax_minor','policy_digest',part->>'policy_digest'));
+  dimensions:=dimensions||jsonb_build_object(account_id,'{}'::jsonb);
+ END LOOP;
+ position:=0;
+ FOR allocation IN SELECT selected.value FROM jsonb_array_elements(stock_owner.issue_plan->'allocations') WITH ORDINALITY selected(value,ordinal) ORDER BY selected.ordinal LOOP
+  position:=position+1;
+  SELECT consumed_row.* INTO consumed FROM reconforge.inventory_layer_consumptions consumed_row
+   JOIN reconforge.inventory_valuation_lines valuation_line ON(valuation_line.tenant_id,valuation_line.id)=(consumed_row.tenant_id,consumed_row.valuation_line_id)
+   WHERE consumed_row.tenant_id=t AND valuation_line.valuation_document_id=stock_owner.valuation_id
+   AND consumed_row.cost_layer_id=allocation->>'cost_layer_id'
+   AND consumed_row.quantity_scaled=(allocation->>'quantity_scaled')::bigint AND consumed_row.value_minor=(allocation->>'value_minor')::bigint;
+  PERFORM reconforge.monetary_return_assert(position<=32 AND consumed.id IS NOT NULL,
+   'Every immutable original FIFO slice must bind its actual native consumption in reviewed issue order');
+  consumptions:=consumptions||jsonb_build_array(jsonb_build_object('position',position,'original_consumption_id',consumed.id,
+   'original_valuation_line_id',consumed.valuation_line_id,'cost_layer_id',consumed.cost_layer_id,
+   'quantity_scaled',consumed.quantity_scaled,'value_minor',consumed.value_minor));
+  total_q:=total_q+consumed.quantity_scaled;total_v:=total_v+consumed.value_minor;
+ END LOOP;
+ PERFORM reconforge.monetary_return_assert(position>0 AND total_q=stock_owner.quantity_scaled
+  AND total_v=(stock_owner.issue_plan->>'total_cost_minor')::numeric
+  AND(SELECT count(*) FROM reconforge.inventory_layer_consumptions consumed_row JOIN reconforge.inventory_valuation_lines valuation_line
+    ON(valuation_line.tenant_id,valuation_line.id)=(consumed_row.tenant_id,consumed_row.valuation_line_id)
+    WHERE consumed_row.tenant_id=t AND valuation_line.valuation_document_id=stock_owner.valuation_id)=position,
+  'Original quantity, COGS and exact native consumption membership must be conserved');
+ SELECT snapshot_json::jsonb INTO registry FROM reconforge.currency_registry_snapshots WHERE tenant_id=t
+  AND registry_digest=equation#>>'{foreign_policy,currency_registry_digest}';
+ PERFORM reconforge.monetary_return_assert(registry IS NOT NULL AND registry->>'digest'=equation#>>'{functional_policy,currency_registry_digest}',
+  'Both original currencies require the same preserved verified registry context');
+ SELECT * INTO line_owner FROM reconforge.ar_invoice_lines WHERE tenant_id=t AND invoice_id=invoice_owner.id;
+ evidence:=jsonb_build_object('stock_order_id',stock_owner.id,'stock_source',stock_owner.source,'stock_source_digest',stock_owner.source_digest,
+  'issue_plan',stock_owner.issue_plan,'movement_id',stock_owner.movement_id,'valuation_id',stock_owner.valuation_id,
+  'cogs_entry_id',stock_owner.cogs_entry_id,'cogs_effect_id',stock_owner.cogs_effect_id,'cogs_snapshot',cost_snapshot,
+  'fx_source',fx_source.payload,'recognition_plan_id',recognition.id,'recognition_snapshot',recognition_snapshot,
+  'invoice_id',invoice_owner.id,'invoice_original',jsonb_build_object('customer_id',invoice_owner.customer_id,
+   'currency_code',invoice_owner.currency_code,'invoice_number',invoice_owner.invoice_number,
+   'invoice_date',invoice_owner.invoice_date::text,'due_date',invoice_owner.due_date::text,
+   'subtotal_minor',invoice_owner.subtotal_minor,'tax_minor',invoice_owner.tax_minor,'total_minor',invoice_owner.total_minor),
+  'invoice_line',jsonb_build_object('id',line_owner.id,'invoice_id',line_owner.invoice_id,'line_number',line_owner.line_number,
+   'quantity_text',line_owner.quantity_text,'quantity_native_text',line_owner.quantity::text,'unit_price_minor',line_owner.unit_price_minor,
+   'line_total_minor',line_owner.line_total_minor,'tax_minor',line_owner.tax_minor,'description',line_owner.description),
+  'consumptions',consumptions,'roles',roles,'dimensions',dimensions);
+ origin_id:='MSO-'||left(reconforge.irp_digest(jsonb_build_array(stock_owner.workspace_id,stock_id)),32);
+ cost_admission:=CASE WHEN stock_owner.issue_plan ?'cost_admission_policy' THEN reconforge.irp_digest(stock_owner.issue_plan) ELSE NULL END;
+ source:=jsonb_build_object('source_id',origin_id,'source_order_id',stock_id,'invoice_id',invoice_owner.id,
+  'posting_date',equation#>>'{request,posting_date}','native_origin_digest',reconforge.irp_digest(evidence),
+  'quantity_scaled',stock_owner.quantity_scaled,'quantity_precision',stock_owner.quantity_precision,
+  'transaction_policy',stock_owner.source->'monetary_policy','functional_policy',stock_owner.source->'functional_policy',
+  'registry_snapshot',registry,'components',components,'consumptions',consumptions,'original_cost_admission_digest',cost_admission,
+  'allocation_policy','remaining-dual-currency-v1','alignment_policy','historical-carrying-component-alignment-v1');
+ payload:=jsonb_build_object('evidence',evidence,'source',source,'equation',equation,'roles',roles,'dimensions',dimensions,
+  'journal_id',journal_owner.id,'functional_policy',equation->'functional_policy','refund_liability_account_code',declared->>'refund_liability_account_code');
+ fg:=(equation->>'foreign_gross_minor')::numeric;lg:=(equation->>'functional_gross_minor')::numeric;
+ balance:=jsonb_build_object('schema_version','stock-monetary-balance-v1','history_version',0,
+  'history_fingerprint',reconforge.irp_digest(jsonb_build_object('contract','customer-partial-return-monetary-original-v3',
+   'source_fingerprint',reconforge.monetary_return_source_fingerprint(source),'allocation_policy','remaining-dual-currency-v1',
+   'alignment_policy','historical-carrying-component-alignment-v1')),
+  'transaction_original_gross_minor',fg::text,'functional_original_gross_minor',lg::text,'transaction_collected_minor','0','transaction_credited_minor','0',
+  'transaction_outstanding_minor',fg::text,'functional_outstanding_minor',lg::text,'transaction_refund_entitlement_minor','0',
+  'functional_refund_entitlement_minor','0','transaction_refunded_minor','0','functional_refund_released_minor','0',
+  'transaction_refund_due_minor','0','functional_refund_due_minor','0','active_plan_id',recognition_id,'active_revaluation_plan_id',NULL);
+ INSERT INTO reconforge.stock_sales_monetary_origins(tenant_id,id,workspace_id,organization_id,legal_entity_id,stock_order_id,invoice_id,
+  fx_source_id,recognition_plan_id,payload,source_digest,ar_balance)
+  VALUES(t,origin_id,stock_owner.workspace_id,stock_owner.organization_id,stock_owner.legal_entity_id,stock_id,invoice_owner.id,fx_id,
+   recognition_id,payload,reconforge.irp_digest(payload),balance);
+END $mr149$;
+"""

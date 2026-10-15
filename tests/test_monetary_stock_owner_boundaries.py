@@ -208,3 +208,34 @@ def test_malformed_zero_collection_objects_have_stable_native_refusal(
     with pytest.raises(FinancePostingError) as caught:
         owner._admit_journal_presence(source, plan)
     assert caught.value.code == "stock_monetary_evidence_invalid"
+
+
+@pytest.mark.parametrize("kind", ["recognize", "settle", "revalue", "reverse_revaluation"])
+def test_every_posted_fx_phase_refreshes_the_owned_projection_without_reapplying_cash(kind: str) -> None:
+    owner = object.__new__(_StockFxOwner)
+    owner.tenant_id = "tenant"
+    calls = []
+    owner.connection = SimpleNamespace(execute=lambda query, args: calls.append((query, args)))
+    owner._after_posted({"stock_order_id": "stock"}, {"id": "FX1-plan", "kind": kind, "equation": {"monetary_event": {"sequence": 1}}})
+    assert len(calls) == (2 if kind == "settle" else 1)
+    assert "monetary_stock_refresh_balance" in calls[-1][0] and calls[-1][1] == ("tenant", "stock")
+    if kind == "settle":
+        assert "monetary_stock_append_collection" in calls[0][0]
+        assert calls[0][1] == ("tenant", "stock", "FX1-plan", '{"sequence":1}')
+
+
+@pytest.mark.parametrize("origin_exists", [False, True])
+def test_pending_native_fx_plan_publishes_only_existing_origin_pending_identity(origin_exists: bool, monkeypatch: pytest.MonkeyPatch) -> None:
+    owner = object.__new__(_StockFxOwner)
+    owner.tenant_id = "tenant"
+    calls = []
+    owner.connection = SimpleNamespace(execute=lambda query, args: calls.append((query, args)))
+    owner.stock = SimpleNamespace(_origin=lambda identifier: {"id": "origin"} if origin_exists else None)  # type: ignore[assignment]
+    expected = {"id": "new-plan"}
+    monkeypatch.setattr(PostgresOperationalFxTaxRepository, "_prepare", lambda *args, **kwargs: expected)
+    assert owner._prepare({"stock_order_id": "stock"}, kind="recognize", equation={"lines": [{"debit_minor": 1}]},
+        period_id="period", posting_date=DAY, reason="New native phase", sequence=0, request={}, command_id="command", digest="a" * 64,
+        actor=PostingActor("actor", "human", frozenset())) is expected
+    assert len(calls) == int(origin_exists)
+    if origin_exists:
+        assert "monetary_stock_refresh_balance" in calls[0][0] and calls[0][1] == ("tenant", "stock")

@@ -374,9 +374,12 @@ class _StockFxOwner(PostgresOperationalFxTaxRepository):
                  posting_date: str, reason: str, sequence: int, request: Mapping[str, Any],
                  command_id: str, digest: str, actor: PostingActor, reverses_posting_id: str | None = None) -> dict[str, Any]:
         if equation["lines"]:
-            return super()._prepare(source, kind=kind, equation=equation, period_id=period_id, posting_date=posting_date,
+            result = super()._prepare(source, kind=kind, equation=equation, period_id=period_id, posting_date=posting_date,
                 reason=reason, sequence=sequence, request=request, command_id=command_id, digest=digest, actor=actor,
                 reverses_posting_id=reverses_posting_id)
+            if self.stock._origin(source["stock_order_id"]) is not None:
+                self.connection.execute("SELECT reconforge.monetary_stock_refresh_balance(%s,%s)", (self.tenant_id, source["stock_order_id"]))
+            return result
         scope = {key: source[key] for key in ("workspace_id", "organization_id", "legal_entity_id")}
         if (kind != "settle" or reverses_posting_id is not None
                 or self.connection.execute("SELECT 1 FROM reconforge.operational_fx_plans WHERE tenant_id=%s AND source_id=%s AND phase<2",
@@ -395,7 +398,9 @@ class _StockFxOwner(PostgresOperationalFxTaxRepository):
             (tenant_id,id,workspace_id,organization_id,legal_entity_id,source_id,entry_id,sequence,kind,phase,payload,audit_event_id,outbox_event_id)
             VALUES(%s,%s,%s,%s,%s,%s,NULL,%s,%s,0,%s::jsonb,%s,%s)""", (self.tenant_id, plan["id"], *scope.values(),
             source["id"], sequence, kind, canonical_json(plan), audit, outbox))
-        return self._remember(plan, "prepare", command_id, actor, digest, request)
+        result = self._remember(plan, "prepare", command_id, actor, digest, request)
+        self.connection.execute("SELECT reconforge.monetary_stock_refresh_balance(%s,%s)", (self.tenant_id, source["stock_order_id"]))
+        return result
 
     def _receipt_number(self, plan: Mapping[str, Any]) -> str:
         return "FX1-" + str(plan["command_request"]["receipt_number"])
@@ -404,6 +409,7 @@ class _StockFxOwner(PostgresOperationalFxTaxRepository):
         if plan["kind"] == "settle":
             self.connection.execute("SELECT reconforge.monetary_stock_append_collection(%s,%s,%s,%s::jsonb)",
                 (self.tenant_id, source["stock_order_id"], plan["id"], canonical_json(plan["equation"]["monetary_event"])))
+        self.connection.execute("SELECT reconforge.monetary_stock_refresh_balance(%s,%s)", (self.tenant_id, source["stock_order_id"]))
 
     def prepare_stock_collection(self, row: Mapping[str, Any], parameters: Mapping[str, Any], command: str,
                                  reason: str, actor: PostingActor) -> dict[str, Any]:

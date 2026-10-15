@@ -109,6 +109,59 @@ def inputs(tmp_path: Path, *, unexpected: int = 0) -> tuple[Path, Path, dict[str
     return output, private, raw, stats
 
 
+@pytest.mark.parametrize("directory", ["native-customer-partial-return-originals", "Native-Customer-Partial-Return-Originals"])
+def test_partial_return_raw_family_in_reused_public_output_is_retained_privately(tmp_path: Path, directory: str) -> None:
+    output, private, _, _ = inputs(tmp_path)
+    family = output / directory
+    family.mkdir()
+    raw = b'{"private_original_minor":9000000000000000000,"source":"retain-exact-private"}\n'
+    (family / "committed-capture-0.json").write_bytes(raw)
+    result = writer.publish_browser_diagnostics(output, private, [TOKEN, CSRF, PASSWORD])
+    assert result["status"] == "published"
+    assert not (family / "committed-capture-0.json").exists()
+    assert (private / "public-originals" / directory / "committed-capture-0.json").read_bytes() == raw
+    assert all(path.read_bytes() != raw for path in output.rglob("*") if path.is_file())
+
+
+@pytest.mark.parametrize("directory", ["native-customer-partial-return-originals", "Native-Customer-Partial-Return-Originals"])
+@pytest.mark.parametrize("basename", ["native-financial-snapshot-oracle-1.json", "original.sql", "original.png"])
+@pytest.mark.parametrize("location", ["reused-public", "private-attachment"])
+def test_mislocated_partial_return_raw_attachment_cannot_use_generic_original_allowlist(
+    tmp_path: Path, directory: str, basename: str, location: str,
+) -> None:
+    output, private, _, _ = inputs(tmp_path)
+    base = output if location == "reused-public" else private
+    original = base / "playwright-artifacts" / directory / basename
+    original.parent.mkdir(parents=True)
+    raw = PRIVATE_MONEY.encode() + b" " + PRIVATE_SOURCE.encode()
+    original.write_bytes(raw)
+    assert writer._unchanged_original_artifact_name(original) is True
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD])
+    assert result["status"] == "quarantined" and writer._public_diagnostic_paths(output) == []
+    retained = private / "public-originals" / original.relative_to(output) if location == "reused-public" else original
+    assert retained.read_bytes() == raw
+    assert not (output / "playwright-artifacts" / directory / basename).exists()
+
+
+@pytest.mark.parametrize("failure_call", [1, 2])
+def test_partial_return_publication_requires_binding_before_and_after_staging(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_call: int,
+) -> None:
+    from tests import customer_partial_return_browser_reader as reader
+    output, private, _, _ = inputs(tmp_path)
+    calls = []
+    def refuse(selected: Path, proof: dict[str, Any]) -> None:
+        assert selected == private and proof == {"test_only_binding": True}
+        calls.append(selected)
+        if len(calls) == failure_call:
+            raise ValueError("Deliberate publication binding refusal, not native proof.")
+    monkeypatch.setattr(reader, "require_customer_partial_return_original_binding", refuse)
+    result = writer.publish_browser_diagnostics(output, private, [PASSWORD],
+        partial_financial_verification={"test_only_binding": True})
+    assert result["status"] == "quarantined" and len(calls) == failure_call
+    assert writer._public_diagnostic_paths(output) == []
+
+
 def outside_artifacts(output: Path) -> dict[str, bytes]:
     untouched = {"financial-original.json": b'{"minor":9000000000000000000,"currency":"KWD"}\n',
         "independent-oracle.json": b'{"passed":true,"source_sha256":"trusted"}',

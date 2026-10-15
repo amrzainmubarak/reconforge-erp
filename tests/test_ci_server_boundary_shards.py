@@ -41,6 +41,7 @@ INTEGRITY_FILES = {
         "tests/test_postgres_customer_returns.py", "tests/test_postgres_customer_return_read_authority.py",
         "tests/test_postgres_customer_partial_return_source.py", "tests/test_postgres_customer_partial_returns.py",
         "tests/test_postgres_customer_partial_return_posted_security.py",
+        "tests/test_postgres_customer_partial_return_transfer.py",
     ),
     "supply-integrity": (
         "tests/test_postgres_landed_cost.py", "tests/test_postgres_landed_cost_api.py",
@@ -158,7 +159,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 68  # Retain each partial-return source, cycle and independent abuse owner once.
+    assert len(commands) == 69  # Retain source, cycle, independent abuse and transfer-origin files once.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -259,7 +260,7 @@ def test_enterprise_browser_matrix_requires_every_real_https_and_populated_resto
     job = _workflow()["jobs"]["enterprise-browser-recovery"]
     assert job["strategy"]["matrix"]["scenario"] == [
         "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets",
-        "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax",
+        "procurement-commitments", "customer-returns", "customer-partial-returns", "supplier-returns", "operational-fx-tax",
         "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing",
         "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer",
     ]

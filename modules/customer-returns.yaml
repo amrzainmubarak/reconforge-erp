@@ -1,6 +1,6 @@
 id: customer-returns
-name: Original customer source credits and partial refunds
-version: 1.2.0
+name: Original customer source credits, partial merchandise returns and refunds
+version: 1.3.0
 maturity: experimental
 owner: commercial
 dependencies: [stock-sales, commercial-collections, finance-posting, inventory-valuation, receivables, identity, audit, outbox]
@@ -9,16 +9,28 @@ data_classification: confidential-financial
 retention_policy: immutable-source-and-command-history
 permissions: [sales.read, sales.manage, sales.approve, receivables.read, receivables.manage, inventory.read, inventory.post, inventory.valuation.manage, inventory.valuation.approve, finance_core.read, finance_core.manage, finance_core.validate, finance_core.post, finance_core.reverse]
 default_roles: []
-migrations: [0126_pg_customer_returns]
+migrations: [0126_pg_customer_returns, 0147_pg_customer_partial_returns]
 domain_invariants: [original-fifo-restitution, exact-original-revenue-cogs-inverse, ar-credit-refund-liability-conservation, partial-refund-cumulative-ceiling, current-authority-on-retry, three-distinct-humans, atomic-native-effects, force-rls, customer-before-invoice-collection-source-locks, nonpostable-partial-original-consumption-contract, explicit-zero-tax-untracked-functional-currency-scope, cumulative-partial-credit-collection-refund-conservation, original-native-source-membership, reviewed-fifo-order-preservation, exact-text-native-quantity, native-collection-owner-evidence]
-domain_events: [customer_return_prepared, customer_return_review, customer_return_post, customer_return_cancel]
-api_routes: [/api/v1/customer-returns/plans]
+domain_events: [customer_return_prepared, customer_return_review, customer_return_post, customer_return_cancel, customer_partial_return_prepared, customer_partial_return_review, customer_partial_return_post, customer_partial_return_cancel]
+api_routes: [/api/v1/customer-returns/plans, /api/v1/customer-partial-returns/plans, "/api/v1/customer-partial-returns/sources/{source_order_id}/balance"]
 cli_commands: []
 ui_routes: [/customer-returns]
 import_schemas: []
-export_schemas: [customer-return-v1]
-synthetic_fixtures: [tests/test_postgres_customer_returns.py]
-threat_model: docs/adr/0847-original-customer-source-credits-and-partial-refunds.md
+export_schemas: [customer-return-v1, customer-partial-return-v1]
+synthetic_fixtures: [tests/test_postgres_customer_returns.py, tests/test_postgres_customer_partial_returns.py]
+threat_model: docs/adr/0860-native-partial-corrections-and-economic-history.md
 benchmarks: []
 rollback_plan: docs/operator/customer-returns.md
-test_matrix: [tests/test_customer_returns.py, tests/test_customer_returns_api.py, tests/test_customer_return_money_context.py, tests/test_postgres_customer_returns.py, tests/test_postgres_commercial_collections.py, tests/test_postgres_customer_return_read_authority.py, tests/test_customer_partial_return_design.py, tests/test_customer_partial_returns_domain.py, tests/test_customer_partial_return_posting.py, tests/test_postgres_customer_partial_return_source.py, tests/test_customer_partial_return_source_oracle.py, tests/customer_returns_browser.py, apps/web/src/customer-returns-data.test.ts, apps/web/src/components/CustomerReturnsPage.test.tsx, apps/web/live/customer-returns-cycles.spec.ts]
+partial_return_contract:
+  original_scope: native-single-stock-tranche-zero-tax-functional-currency-untracked-base-uom
+  quantity_policy: exact-scaled-units
+  portion_policy: exact-proportional-integral-minor-units-or-refusal
+  correction_owner: customer-partial-returns
+  financial_engine: existing-finance-posting
+  immutable_originals: [sale, invoice-lines, fifo-consumptions, posted-effects]
+  lifecycle: [prepare, review, post, cancel, prepare-refund, prepare-reversal]
+  journal_effects: additive-owned-corrections
+  restoration_dependency: any-later-immutable-layer-consumption-refuses-return-reversal
+  transfer_compatibility: versioned-current-capture-with-original-v1-historical-reader
+  final_acceptance: docs/execution/ENTERPRISE_COMPLETION_MASTER_MATRIX.md
+test_matrix: [tests/test_customer_returns.py, tests/test_customer_returns_api.py, tests/test_customer_return_money_context.py, tests/test_postgres_customer_returns.py, tests/test_postgres_commercial_collections.py, tests/test_postgres_customer_return_read_authority.py, tests/test_customer_partial_return_design.py, tests/test_customer_partial_returns_domain.py, tests/test_customer_partial_return_posting.py, tests/test_postgres_customer_partial_return_source.py, tests/test_customer_partial_return_source_oracle.py, tests/test_customer_partial_return_commands.py, tests/test_postgres_customer_partial_returns.py, tests/test_postgres_customer_partial_return_transfer.py, tests/test_postgres_customer_partial_return_posted_security.py, tests/test_customer_partial_return_posted_cycle_oracle.py, tests/test_customer_partial_returns_api.py, tests/test_customer_partial_returns_browser.py, tests/test_customer_partial_return_browser_reader.py, tests/customer_returns_browser.py, tests/customer_partial_returns_browser.py, apps/web/src/customer-returns-data.test.ts, apps/web/src/customer-partial-returns-data.test.ts, apps/web/src/components/CustomerReturnsPage.test.tsx, apps/web/src/components/CustomerPartialReturns.test.tsx, apps/web/live/customer-returns-cycles.spec.ts, apps/web/live/customer-partial-returns-cycles.spec.ts]

@@ -13,6 +13,12 @@ credit may create a refund obligation without invalidating earlier collections.
 An unfinished source adapter, API or screen is never a completed business cycle.
 Heavy comparative performance and production qualification follow functional
 closure; they are not inferred from development gates or local restore.
+ADR0860 records the implemented native correction and economic-history contract.
+Returned-stock transfers retain signed versioned correction capture while old
+IT1-v1 evidence keeps its original reader. All CR2 raw browser observations stay
+in a distinct private custody tree, independently verified under -I/-I-O and
+rebound before/after public diagnostic publication. Misplaced raw attachment
+families are refused before any generic original-file basename exemption.
 
 ## Current money authority and private browser custody (2026-10-14)
 

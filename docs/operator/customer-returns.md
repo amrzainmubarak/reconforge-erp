@@ -1,4 +1,4 @@
-# Whole customer returns and partial cash refunds
+# Customer returns and governed cash refunds
 
 CR1 supports the complete delivered tranche of an original zero-tax,
 functional-currency native stock invoice. Original quantities, FIFO cost,
@@ -87,3 +87,47 @@ any retained plan, including cancelled drafts, refuses history-discarding
 downgrade. Preserve failed upgrade/restore diagnostics. Populated rollback
 requires the verified pre-upgrade database backup; validate source/effect,
 nonowner FORCE RLS, head, row/function fingerprints and SQL tamper refusal.
+
+## Native partial merchandise corrections (CR2, experimental)
+
+Revision0147 adds a separate correction owner over the same original stock,
+FIFO, AR, cash and Finance Posting engines. Its final acceptance is tracked in
+`docs/execution/ENTERPRISE_COMPLETION_MASTER_MATRIX.md`; the presence of these
+controls does not declare the complete M7 scope accepted.
+
+Select the **Partial** tab in Customer returns. Supply an original native stock
+order, exact quantity string, fiscal period/date, original cash account and
+refund-liability account. The current source balance shows delivered quantity,
+prior net returns, actual collected cash, net credits, outstanding AR and refund
+liability. Prepare, review and post with three distinct authorized humans. A
+later partial return uses the newly retained source history. Prepare a refund
+against a posted return only for the current refundable liability; collection
+and credit locks serialize competing commands against the same customer and
+invoice. No collected cash is inferred from a credit.
+
+This contract accepts one delivered stock tranche, zero tax, functional currency
+and untracked base units. Scaled quantities and proportional original cost/value
+must resolve to integral minor units exactly. Unsupported tax, FX, tracked units
+and nonintegral portions refuse explicitly. Do not change original sale or FIFO
+evidence to force admission. Retained source histories are bounded at256 events,
+with at most32 original FIFO consumptions and one pending phase per source.
+
+Cancel an unposted correction through its retained command. Reverse a posted
+return or refund by preparing a new governed reversal against that exact posted
+operation; only the latest unreversed economic operation qualifies. A return
+reversal also requires no later immutable consumption of any restored layer.
+Even a subsequently reversed resale remains a conservative dependency. The
+original approved sale, invoice and FIFO consumption history remain immutable.
+
+After a lost response, preserve the same actor, command ID, body and digest and
+retry that exact retained command. Refresh the plan after a successful replay
+to learn its later phase. Current identity, scope, permissions, period and money
+policies are checked on every action and retry; a revoked grant can deny replay.
+
+Transferring restored stock captures signed correction evidence in the versioned
+IT1 cost-v2 contract. Historical cost-v1 transfer evidence keeps its original
+verification path. Both paths remain subject to current transfer authorization.
+Revision0147 preflights existing function bodies and execution metadata before
+shared changes. Empty downgrade restores original functions exactly. Any retained
+CR2 owner/history or v2 transfer evidence refuses destructive downgrade; populated
+rollback requires the verified pre-upgrade backup and restore procedure.

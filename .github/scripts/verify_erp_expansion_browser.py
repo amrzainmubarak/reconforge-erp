@@ -77,6 +77,7 @@ WORKSPACE_CASE_TITLES = {
         for locale in ("en", "ar")
     },
 }
+PRIVATE_RETURN_FAMILIES = {"native-customer-return-originals", "native-customer-partial-return-originals"}
 
 
 def private_diagnostics_directory(output: Path) -> Path:
@@ -100,13 +101,22 @@ def _public_diagnostic_paths(output: Path) -> list[Path]:
         # upload directory merely because the current child writes privately.
         paths.extend(path for path in sorted(artifacts.rglob("*"))
             if path.is_symlink() or path.is_file() and (path.name == "error-context.md"
-                or path.relative_to(artifacts).parts[0].casefold() == "native-customer-return-originals"
+                or path.relative_to(artifacts).parts[0].casefold() in PRIVATE_RETURN_FAMILIES
                 or not _unchanged_original_artifact_name(path)))
     projections = output / "workspace-recovery"
     if projections.is_symlink():
         raise ValueError("Public workspace recovery storage cannot be a symlink.")
     if projections.is_dir():
         paths.extend(path for path in sorted(projections.rglob("*")) if path.is_symlink() or path.is_file())
+    for partial_originals in sorted(output.iterdir()):
+        if partial_originals.name.casefold() != "native-customer-partial-return-originals":
+            continue
+        if partial_originals.is_symlink():
+            raise ValueError("Public partial-return raw custody cannot be a symlink.")
+        if partial_originals.is_dir():
+            paths.extend(path for path in sorted(partial_originals.rglob("*")) if path.is_symlink() or path.is_file())
+        elif partial_originals.is_file():
+            paths.append(partial_originals)
     return [path for path in paths if path.exists() or path.is_symlink()]
 
 
@@ -283,6 +293,10 @@ def _stage_original_browser_artifacts(output: Path, private: Path, known_private
         if not source.is_file() or source.name == "error-context.md":
             continue
         name = source.relative_to(private).as_posix()
+        if source.relative_to(artifacts).parts[0].casefold() == "native-customer-partial-return-originals":
+            # CR2 raw captures have a separate owned private root. No producer
+            # attaches them here, regardless of an otherwise public basename.
+            raise ValueError("Partial-return originals cannot enter browser attachment publication.")
         if name.casefold().startswith("playwright-artifacts/native-customer-return-originals/"):
             if CUSTOMER_RETURN_PRIVATE_ORIGINAL.fullmatch(name) is None:
                 raise ValueError("Customer return financial custody is outside its finite private family.")
@@ -355,7 +369,8 @@ def _stage_original_browser_artifacts(output: Path, private: Path, known_private
 
 def publish_browser_diagnostics(output: Path, private: Path, known_private_values: list[str], *,
         workspace_verification: dict[str, Any] | None = None,
-        financial_verification: dict[str, Any] | None = None) -> dict[str, Any]:
+        financial_verification: dict[str, Any] | None = None,
+        partial_financial_verification: dict[str, Any] | None = None) -> dict[str, Any]:
     """Publish only complete derived diagnostics; financial bytes are excluded."""
     helper_source = Path(diagnostic_redaction.__file__).read_bytes()
     helper_sha = hashlib.sha256(helper_source).hexdigest()
@@ -370,6 +385,9 @@ def publish_browser_diagnostics(output: Path, private: Path, known_private_value
         quarantined = _quarantine_public_diagnostics(output, private)
         if financial_verification is not None:
             require_financial_original_binding(private, financial_verification)
+        if partial_financial_verification is not None:
+            from tests.customer_partial_return_browser_reader import require_customer_partial_return_original_binding
+            require_customer_partial_return_original_binding(private, partial_financial_verification)
         inputs = {name: private / name for name in ("browser.log", "playwright.json") if (private / name).exists()}
         inputs.update({name: path for name, path in quarantined.items() if name.startswith("playwright-artifacts/")})
         if (private / "playwright-artifacts").is_symlink():
@@ -415,6 +433,8 @@ def publish_browser_diagnostics(output: Path, private: Path, known_private_value
         _require_private_financial_originals_unchanged(private, private_receipts)
         if financial_verification is not None:
             require_financial_original_binding(private, financial_verification)
+        if partial_financial_verification is not None:
+            require_customer_partial_return_original_binding(private, partial_financial_verification)
         if workspace_verification is not None and require_workspace_recovery_acceptance(
                 private, known_private_values=known_private_values) != workspace_verification:
             raise ValueError("Workspace originals changed during completed publication.")
@@ -716,13 +736,15 @@ def publish_original_oracle_custody(private: Path, output: Path, verified: dict[
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-native-restore", action="store_true")
-    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax", "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer"), default="expansion")
+    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "customer-partial-returns", "supplier-returns", "operational-fx-tax", "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer"), default="expansion")
     parser.add_argument("--runtime-root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "output/erp-expansion-20261009/browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
     args = parser.parse_args()
     seed: Callable[[str, str], Any] = seed_expansion_browser
-    verify_cycles: Callable[[Any], dict[str, Any]] = verify_expansion_cycles
+    # Scenario verifiers may require private custody before binding their
+    # ordinary one-runtime original/restore callback with functools.partial.
+    verify_cycles: Callable[..., dict[str, Any]] = verify_expansion_cycles
     configuration = "apps/web/live/erp-expansion.playwright.config.ts"
     extension_tables: tuple[str, ...] = EXPANSION_TABLES
     tamper_actor: Callable[..., Any] | None = None
@@ -972,6 +994,19 @@ def main() -> int:
             "DELETE FROM reconforge.supplier_return_commands WHERE tenant_id=%s",
             "DELETE FROM reconforge.ap_supplier_invoice_credits WHERE tenant_id=%s",
         )
+    elif args.scenario == "customer-partial-returns":
+        from tests.customer_partial_returns_browser import (
+            CUSTOMER_PARTIAL_RETURN_TABLES,
+            CUSTOMER_PARTIAL_RETURN_TAMPER,
+            CUSTOMER_PARTIAL_RETURN_WORKSPACE_TABLES,
+            seed_customer_partial_returns_browser,
+            verify_customer_partial_returns_browser,
+        )
+        seed, verify_cycles = seed_customer_partial_returns_browser, verify_customer_partial_returns_browser
+        configuration = "apps/web/live/customer-partial-returns.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + CUSTOMER_PARTIAL_RETURN_TABLES))
+        workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + CUSTOMER_PARTIAL_RETURN_WORKSPACE_TABLES))
+        tamper_statements = CUSTOMER_PARTIAL_RETURN_TAMPER
     elif args.scenario == "customer-returns":
         from tests.customer_returns_browser import (
             CUSTOMER_RETURN_TABLES,
@@ -1105,7 +1140,7 @@ def main() -> int:
         if not origin.is_relative_to(runtime_root):
             raise ValueError("Expansion module origin is outside the integrated runtime checkout.")
         module_origins[module_name] = {"path": str(origin), "sha256": hashlib.sha256(origin.read_bytes()).hexdigest()}
-    if args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer"}:
+    if args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer", "customer-partial-returns"}:
         owner_module = "reconforge.infrastructure.postgres_intercompany_cashflow" if args.scenario == "intercompany-source-cashflow" else "reconforge.infrastructure.postgres_" + args.scenario.replace("-", "_")
         verification_module = (verify_cycles.func.__module__ if isinstance(verify_cycles, partial)
                                else verify_cycles.__module__)
@@ -1168,6 +1203,19 @@ def main() -> int:
             report["role_privileges"] = role_flags
         runtime = seed(admin_dsn, app_dsn)
         secret_values.append(runtime.password)
+        if args.scenario == "customer-partial-returns":
+            from tests.customer_partial_returns_browser import (
+                capture_customer_partial_returns,
+                customer_partial_returns_browser_source,
+            )
+            partial_source = customer_partial_returns_browser_source(runtime)
+            partial_custody = private_diagnostics / "native-customer-partial-return-originals"
+            capture_customer_partial_returns(runtime, partial_source, partial_custody)
+            verify_cycles = partial(verify_cycles, custody_root=partial_custody, original_app_dsn=app_dsn)
+            environment.update(RECONFORGE_PARTIAL_PYTHON=sys.executable,
+                RECONFORGE_PARTIAL_RUNTIME_ROOT=str(runtime_root),
+                RECONFORGE_PARTIAL_CUSTODY_ROOT=str(partial_custody),
+                RECONFORGE_CUSTOMER_PARTIAL_RETURN_SOURCE=partial_source)
         # Chromium blocks several OS-assigned low ephemeral ports. Bind an
         # available dynamic/private port without relaxing browser port policy.
         for _ in range(64):
@@ -1261,6 +1309,10 @@ def main() -> int:
             if args.scenario == "customer-returns":
                 report["independent_financial_original_verification"] = verify_customer_return_original_rows(
                     private_diagnostics, required_captures=3 if args.verify_native_restore else 1)
+            if args.scenario == "customer-partial-returns":
+                from tests.customer_partial_return_browser_reader import verify_customer_partial_return_original_rows
+                report["independent_partial_return_verification"] = verify_customer_partial_return_original_rows(
+                    private_diagnostics, require_restore=args.verify_native_restore)
             if args.scenario == "inventory-transfer":
                 # Fresh restore captures must still equal the first trusted
                 # packet before any of its original bytes become public.
@@ -1300,9 +1352,11 @@ def main() -> int:
         report["wall_seconds"] = round(time.monotonic() - started, 3)
         verification = report.get("workspace_recovery_verification")
         financial_verification = report.get("independent_financial_original_verification")
+        partial_verification = report.get("independent_partial_return_verification")
         publication = publish_browser_diagnostics(output, private_diagnostics, secret_values,
             workspace_verification=verification if isinstance(verification, dict) else None,
-            financial_verification=financial_verification if isinstance(financial_verification, dict) else None)
+            financial_verification=financial_verification if isinstance(financial_verification, dict) else None,
+            partial_financial_verification=partial_verification if isinstance(partial_verification, dict) else None)
         report["browser_diagnostics"] = publication
         if publication["status"] != "published":
             report["status"] = "failed"

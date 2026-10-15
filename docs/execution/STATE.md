@@ -6,8 +6,11 @@ The authoritative remaining-work inventory is
 [ENTERPRISE_COMPLETION_MASTER_MATRIX.md](ENTERPRISE_COMPLETION_MASTER_MATRIX.md).
 M3/M4 original closure bytes and fresh official Draft heads were verified without
 repeating their accepted tests. M5/M6 scoped acceptance remains retained.
-M7 partial customer returns are OPEN: the original-source adapter, pure plans
-and unposted templates do not close native inventory/AR/GL effects or Studio.
+M7 partial customer returns are OPEN. Native025 now posts actual repeated returns,
+later collection and partial refunds; an isolated independent reader derives
+12 effects/24 lines/Dr=Cr238000 from original rows. Nativeea457 lifecycle5 passed;
+the scope-wait expected-code failure is retained. New transfer-v2, full security,
+HTTPS, populated restore and final-source acceptance remain required.
 Three agents now cooperate on this same domain: native owner/data, API/Studio,
 independent financial/security/recovery verification. Root owns shared migrations
 and integration. No new domain or small successor milestone is opened.

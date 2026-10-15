@@ -1,5 +1,23 @@
 # ReconForge Execution Evidence Log
 
+## M7 actual posted proof and lifecycle gate (2026-10-15)
+
+Frozen025b09aa actual two-layer repeated return, later real collection and two
+refunds passed with unchanged source. Original raw packet is2503235 bytes,
+SHA851cf8190b31a986848e28a7e9e0c03c1f818ef13883c9651768e449ed6fb2f7.
+Separate stdlib readers under -I/-I-O produce byte-equal proofs. The current
+reader independently derives12 effects,24 lines andDr=Cr238000; proof
+SHA25771af99a4ad960f0083049dd26d88cdae755f3b298e42ee4cc30531a105a22,
+closureb441421812bb269d9044d0d8b851b063a6512be9be62bd8e671fcc36196ffcc7.
+These original subjects remain under the external recovery evidence root in
+independent-025b09aa-posted-reader-v1; they do not qualify later source changes.
+Frozenea457 actual cancellation, reversal, caps/replay, three-human SoD and
+fractional cases5 passed. Scope withdrawal reached the intended refusal after
+a proven wait edge; its wrong expected denial code failed the test before the
+78-table unchanged assertion. Correction08e98a57 still requires native rerun.
+The transfer case did not execute after that maxfail stop. New shared transfer
+hooks, HTTPS/restore and cohesive final CI are not accepted by these receipts.
+
 ## M7 native development failures retained (2026-10-15)
 
 The master matrix records implemented versus accepted scope. Frozen95c4ec2e

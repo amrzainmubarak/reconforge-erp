@@ -79,9 +79,13 @@ def _prepend(name: str, addition: str) -> str:
 
 def _cost() -> str:
     value = ORIGINAL_FUNCTIONS["inventory_cost_layer_guard"]
-    for column in ("quantity_scaled", "value_minor"):
-        anchor = "(SELECT COALESCE(SUM(direction::numeric*@@COLUMN@@),0) FROM reconforge.customer_partial_return_restorations WHERE tenant_id=OLD.tenant_id AND cost_layer_id=OLD.id)".replace("@@COLUMN@@", column)
-        addition = "+(SELECT COALESCE(SUM(direction::numeric*@@COLUMN@@),0) FROM reconforge.customer_partial_return_monetary_restorations WHERE tenant_id=OLD.tenant_id AND cost_layer_id=OLD.id)".replace("@@COLUMN@@", column)
+    corrections = (
+        ("(SELECT COALESCE(SUM(direction::numeric*quantity_scaled),0) FROM reconforge.customer_partial_return_restorations WHERE tenant_id=OLD.tenant_id AND cost_layer_id=OLD.id)",
+         "+(SELECT COALESCE(SUM(direction::numeric*quantity_scaled),0) FROM reconforge.customer_partial_return_monetary_restorations WHERE tenant_id=OLD.tenant_id AND cost_layer_id=OLD.id)"),
+        ("(SELECT COALESCE(SUM(direction::numeric*value_minor),0) FROM reconforge.customer_partial_return_restorations WHERE tenant_id=OLD.tenant_id AND cost_layer_id=OLD.id)",
+         "+(SELECT COALESCE(SUM(direction::numeric*value_minor),0) FROM reconforge.customer_partial_return_monetary_restorations WHERE tenant_id=OLD.tenant_id AND cost_layer_id=OLD.id)"),
+    )
+    for anchor, addition in corrections:
         value = _replace(value, anchor, anchor + addition)
     return value
 

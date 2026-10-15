@@ -529,6 +529,22 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "reconforge/infrastructure/postgres_customer_partial_return_transfer_hooks.py",
         "docs/adr/0860-native-partial-corrections-and-economic-history.md",
         "alembic/versions/0147_postgres_customer_partial_returns.py",
+        "alembic/versions/0148_postgres_customer_partial_return_rounding.py",
+        "reconforge/infrastructure/postgres_customer_partial_return_rounding_schema.py",
+        "reconforge/infrastructure/postgres_customer_partial_return_rounding_transfer_hooks.py",
+        "reconforge/domain/customer_partial_return_rounding.py",
+        "reconforge/domain/customer_partial_return_rounding_posting.py",
+        "reconforge/api/routes/customer_partial_returns_v2.py",
+        "tests/test_customer_partial_returns_v2_api.py",
+        "tests/test_customer_partial_return_rounding.py",
+        "tests/customer_partial_return_remainder_oracle.py",
+        "tests/test_customer_partial_return_remainder_oracle.py",
+        "tests/test_postgres_customer_partial_return_rounding.py",
+        "tests/test_postgres_customer_partial_return_rounding_migration.py",
+        "docs/adr/0861-versioned-original-remainder-allocation.md",
+        "apps/web/src/components/CustomerPartialReturnsV2.test.tsx",
+        "apps/web/src/customer-partial-returns-v2-data.test.ts",
+        "apps/web/src/customer-partial-returns-v2-test-fixtures.ts",
         "tests/test_customer_partial_return_commands.py",
         "tests/test_postgres_customer_partial_returns.py",
         "reconforge/api/customer_partial_return_contract.py",
@@ -787,8 +803,8 @@ def main() -> int:
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--index-count", type=int, default=22)
-    parser.add_argument("--migration-count", type=int, default=146)
-    parser.add_argument("--migration-head", default="0147_pg_customer_partial_returns")
+    parser.add_argument("--migration-count", type=int, default=147)
+    parser.add_argument("--migration-head", default="0148_pg_partial_return_rounding")
     parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
     parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
     parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")

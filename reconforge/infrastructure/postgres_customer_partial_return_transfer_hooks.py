@@ -260,4 +260,17 @@ def install_postgres_customer_partial_return_transfer_hooks(connection: Any) -> 
     owner_relation = row["owner_relation"] if isinstance(row, Mapping) else row[0]
     if owner_relation is None:
         return
+    marker = connection.execute(
+        "SELECT to_regprocedure('reconforge.customer_partial_return_rounding_version()') rounding_owner"
+    ).fetchone()
+    if marker is None:
+        raise RuntimeError("Native partial-return version lookup failed")
+    rounding_owner = marker["rounding_owner"] if isinstance(marker, Mapping) else marker[0]
+    if rounding_owner is not None:
+        from reconforge.infrastructure.postgres_customer_partial_return_rounding_schema import (
+            install_customer_partial_return_rounding,
+        )
+
+        install_customer_partial_return_rounding(connection)
+        return
     connection.execute(UPGRADE_SQL)

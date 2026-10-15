@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SHARDS = {
     "writeback", "native", "parity", "durable-scale", "matching-runtime",
     "industry-close", "receivables", "finance-posting", "inventory-payables", "erp-expansion", "finance-reporting",
-    "commercial-integrity", "customer-partial-cycle", "customer-partial-security", "supply-integrity", "finance-integrity",
+    "commercial-integrity", "customer-partial-cycle", "customer-partial-security", "customer-partial-rounding", "supply-integrity", "finance-integrity",
     "supplier-returns", "fx-revaluation",
     "manufacturing-execution", "intercompany-operations", "intercompany-cashflow", "intercompany-group-reporting", "procurement-sourcing", "procurement-sourcing-api", "manufacturing-sourcing",
     "people-project-payroll", "accrual-deferral", "manufacturing-supply-plan", "project-time-billing", "project-source-reconciliation", "inventory-transfer",
@@ -45,6 +45,10 @@ INTEGRITY_FILES = {
         "tests/test_postgres_customer_partial_return_transfer.py",
     ),
     "customer-partial-security": ("tests/test_postgres_customer_partial_return_posted_security.py",),
+    "customer-partial-rounding": (
+        "tests/test_postgres_customer_partial_return_rounding_migration.py",
+        "tests/test_postgres_customer_partial_return_rounding.py",
+    ),
     "supply-integrity": (
         "tests/test_postgres_landed_cost.py", "tests/test_postgres_landed_cost_api.py",
         "tests/test_postgres_landed_cost_cancellation.py",
@@ -161,7 +165,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 69  # Retain source, cycle, independent abuse and transfer-origin files once.
+    assert len(commands) == 71  # Retain complete old contracts and new148 native files exactly once.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)

@@ -1,5 +1,26 @@
 # ReconForge Execution Evidence Log
 
+## M7 actual5017 integration and preserved CI metadata failure (2026-10-15)
+
+Actual local affected5/0 skips closesa302dfc73bc078461aa9bbdbd8a87a66be1184bcd92c334d2cffdd50574e3be9.
+Independent cash-split/race derivation9a8de59403c4c46e12cbe88da343866f1acad8bb30e2350dfbba9f65b68fa7a2
+checks7×78 original captures and two actual wait edges; its39-file byte mirror
+closeseaa5ff0567b7bda2a67d6e8d9ef1af67160d9ed32f59f211743ca4ea6e2f2126.
+Actual eight-event HTTPS,339-table populated restore and three tamper refusals
+pass on unchanged5017 source/build. Fresh isolated-I/-I-O proofs match the original
+driver proof622900550a368d82e2b0cf6aec9a1a96dcef15d70cc52aad2157ad0c8ad526e5;
+independent closured33dd4d6cadf763e0042cddd00ad00365fc192bdea558757e9739c5d376724d8,
+178-file byte-mirrore29f216e405a6a1b0c523fd376faaf103a9ab2ab4767917a7cf3683f925d98ec.
+Official hosted native6+10+1 and whole security18 also pass without skips.
+Official image-security38686174692 passes5/5; raw artifact closurefa66c859c195d038eeee676714a01b4504d78b4acbabc6efe7ebd642a67a230f
+retains0 Critical/High,9 Medium,1 Negligible,65/68 license metadata and no legal
+assessment. CI38685992235 is not accepted: both Python jobs fail only the obsolete
+phase-name test. Original logs a7ae180b1f1724b9559c6c3d2b3f5532ca46e1f92253064d2658e281c4c6cb57
+and9f93d6a2807c17fa8b7e353d406e8c075a4e3a7b1ddc9f3ddb5c648691e2b108
+remain outside the repository. Test-only80cb9ba2 retains the historical workstreams
+and strictly verifies the new completion-first contract;11 targeted tests pass.
+No original failure is relabeled; additive148/v2 work is not accepted by5017 proof.
+
 ## M7 native integration and actual observer root cause (2026-10-15)
 
 Original12a migration roundtrip closesca46ef2ff918f54939b1faf8e1a752611b8fbc473bbbaf119a029e02d40f4dd9.

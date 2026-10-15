@@ -2,6 +2,18 @@
 
 ## Completion first — one domain at a time (2026-10-15)
 
+Current5017 actual affected5 and hosted native18 pass with zero critical skips.
+Its full eight-event Studio HTTPS cycle and populated339-table restore pass;
+independent raw-row proofs derive17 effects/35 lines/Dr=Cr385000. Separate new
+cash-split/wait-race raw proofs derive9/18/205000 and9/19/221000. Manual image
+security5/5 passes with0 Critical/High and retained Medium/license gaps.
+Full CI is not accepted: both Python versions failed one stale phase-name
+assertion. Strict current-governance correction80cb9ba2 passes11 targeted cases;
+the original hosted failures remain retained. The same three agents now close
+M7.6's remaining-value and zero-leg paths under additive148/ADR0861, with preserved
+legacy versions and no new major domain. New v2 functionality is unaccepted.
+The earlier component subjects below retain their original outcomes.
+
 The authoritative remaining-work inventory is
 [ENTERPRISE_COMPLETION_MASTER_MATRIX.md](ENTERPRISE_COMPLETION_MASTER_MATRIX.md).
 M3/M4 original closure bytes and fresh official Draft heads were verified without

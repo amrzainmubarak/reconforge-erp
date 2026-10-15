@@ -252,6 +252,11 @@ _HISTORY_ADDITION = r"""
 
 
 def _literal(value: str) -> str:
+    """Quote reviewed module constants only, never caller/configuration input.
+
+    These literals are embedded inside fixed dollar-quoted migration bodies;
+    apostrophe escaping is not a general untrusted-input SQL API.
+    """
     return "'" + value.replace("'", "''") + "'"
 
 
@@ -283,7 +288,9 @@ def _original_function_preflight() -> str:
         definer = signature == "reconforge.inventory_cost_layer_guard()"
         stable = signature in {"reconforge.customer_return_source(text,text)", "reconforge.customer_return_projection(text,text)"}
         configuration = "search_path=pg_catalog, reconforge" if definer else "search_path=pg_catalog"
-        clauses.append("SELECT * INTO f FROM pg_proc WHERE oid=to_regprocedure(" + _literal(signature) + ");\n"
+        # Only the seven reviewed module-owned signature/body pins and their
+        # fixed execution metadata enter this DDL; no runtime input is accepted.
+        clauses.append("SELECT * INTO f FROM pg_proc WHERE oid=to_regprocedure(" + _literal(signature) + ");\n"  # nosec B608
                        + "IF f.oid IS NULL OR f.prosecdef IS DISTINCT FROM " + ("TRUE" if definer else "FALSE")
                        + " OR f.provolatile<>" + _literal("s" if stable else "v")
                        + " OR f.proconfig IS DISTINCT FROM ARRAY[" + _literal(configuration) + "]::text[]"
@@ -321,8 +328,13 @@ UPGRADE_SQL = _original_function_preflight() + HEADER_SQL + NATIVE_SOURCE_SQL + 
 # Existing receipt bootstrap is also used after a completed migration. Preserve
 # the additive history equation when that original installer recreates its own
 # function; never accept duplicate additions or an unknown invoker contract.
-RECEIPT_REINSTALL_SQL = r"""DO $cr2receipt$ DECLARE definition TEXT;f RECORD;
- anchor TEXT:=""" + _literal(_PATCHES[2][1]) + ";addition TEXT:=" + _literal(_HISTORY_ADDITION) + r""";
+# The following DDL interpolates only reviewed literal module anchors. Original
+# compiled bodies, metadata and exact single-anchor membership are checked below.
+RECEIPT_REINSTALL_SQL = (
+    r"""DO $cr2receipt$ DECLARE definition TEXT;f RECORD;
+ anchor TEXT:="""  # nosec B608
+    + _literal(_PATCHES[2][1]) + ";addition TEXT:=" + _literal(_HISTORY_ADDITION)  # nosec B608
+    + r""";
 BEGIN
  IF to_regclass('reconforge.customer_partial_return_restorations') IS NULL THEN RETURN; END IF;
  SELECT * INTO f FROM pg_proc WHERE oid='reconforge.guard_inventory_receipt_layer_history_complete()'::regprocedure;
@@ -342,7 +354,8 @@ BEGIN
   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Original receipt layer closure drifted during reinstallation'; END IF;
  EXECUTE replace(definition,anchor,addition||anchor);
 END $cr2receipt$;
-"""
+"""  # nosec B608
+)
 
 DOWNGRADE_PREFLIGHT_SQL = r"""
 DO $cr2shared$ BEGIN

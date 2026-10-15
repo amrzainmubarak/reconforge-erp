@@ -28,7 +28,7 @@ CHECKPOINTS = ("Original", "ZeroReturn", "ResaleInvoiced", "ResaleReturned")
 KINDS = ("RetainedReplay", "DependencyRefusal", "FinalRead")
 READER = Path(__file__).resolve().with_name("customer_partial_return_restituted_cycle_oracle.py")
 SOURCE_HASHES = {
-    "customer_partial_return_restituted_cycle_oracle.py": "fd7b000e5bb48d62ee3566f300822eaca5b6ab3ddcf097c540f0c5c168e6d605",
+    "customer_partial_return_restituted_cycle_oracle.py": "fe2ede4c586014f1d63fc4ae639ea28c19740bdf21139f33ee7a7d7402459c35",
     "customer_partial_return_restituted_source_oracle.py": "52be442493481b5e2b1ff2721a085ba4fd5efa263c4d371ae0fb560a7d4dd675",
     "customer_partial_return_remainder_posted_oracle.py": "833b37ff15666b53504aea41c244d55ada3169df97f7f72bf7783d224b6e9c8d",
     "customer_partial_return_remainder_oracle.py": "e47d3900bb50e77bc4186eb91a5556fa495fdbb4c07cb408f5e89ac20f545510",

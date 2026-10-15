@@ -24,11 +24,16 @@ from tests.customer_partial_return_posted_cycle_oracle import TABLES
 FAMILY = "native-customer-partial-return-originals"
 EXECUTIONS = "independent-customer-partial-return-row-verification"
 READER = Path(__file__).resolve().with_name("customer_partial_return_posted_cycle_oracle.py")
-READER_SHA256 = "a255156f51f0030331f1fb9709445a6c234b9af342ea2d10ae5ebe9ab3d811ab"
+READER_SHA256 = "43ac3775bb25043c487fe9fe358747a5a4b0bdce4be4e43ac6d3b116afd9c392"
 PACKET = "posted-cycle-input.json"
 RESTORE = "posted-cycle-restored-input.json"
+OBSERVATIONS = "native-customer-partial-return-observation-originals"
+OBSERVATIONS_PACKET = "posted-cycle-observations-input.json"
+OBSERVATION_FILES = (("retained-replay-1.json", "RetainedReplay", 1),
+                     ("retained-replay-6.json", "RetainedReplay", 6), ("final-observation.json", "FinalRead", 8))
 CAPTURES = tuple(f"committed-capture-{number}.json" for number in range(9))
 MAX_CAPTURE_BYTES = 4 * 1024 * 1024
+MAX_OBSERVATION_BYTES = MAX_CAPTURE_BYTES + 4096
 MAX_PACKET_BYTES = 32 * 1024 * 1024
 MAX_TOTAL_BYTES = 72 * 1024 * 1024
 MAX_PROOF_BYTES = 128 * 1024
@@ -45,6 +50,11 @@ EXPECTED_PROOF = {
     "final_actual_posted_entries": 17, "final_actual_posted_lines": 35, "final_total_debit_minor": 385000,
     "final_total_credit_minor": 385000, "final_account_minor_balances": EXPECTED_ACCOUNTS,
     "unposted_or_void_entries_excluded": True, "scope": READER_SCOPE,
+    "observations": 3, "retained_replay_observations": 2, "final_read_observations": 1,
+    "observation_tables": 78, "observation_business_tables": 76,
+    "observation_business_original_rows_equal": True, "observation_audit_prefix_original_bytes_equal": True,
+    "observation_audit_chain_valid": True, "observation_audit_actions_bound": True,
+    "observation_audit_chronology_valid": True,
 }
 EXECUTION_NAMES = frozenset({"I.json", "IO.json", "I.stdout", "I.stderr", "IO.stdout", "IO.stderr", "I.result.json", "IO.result.json", "reader-custody.json"})
 
@@ -142,26 +152,54 @@ def _family(private: Path, *, require_restore: bool) -> dict[str, Any]:
             _text(capture["posted_plan_id"])
             _require(type(capture["plan_digest"]) is str and re.fullmatch(r"[a-f0-9]{64}", capture["plan_digest"]) is not None)
         _require(_same_typed(_tables(packet["captures"][number]), _tables(capture["tables"])))
+    observation_root = private / OBSERVATIONS
+    _regular(observation_root, directory=True)
+    _require({path.name for path in observation_root.iterdir()} == {item[0] for item in OBSERVATION_FILES} | {OBSERVATIONS_PACKET})
+    for name in sorted({item[0] for item in OBSERVATION_FILES} | {OBSERVATIONS_PACKET}):
+        original, identity = _file(observation_root / name, MAX_PACKET_BYTES if name == OBSERVATIONS_PACKET else MAX_OBSERVATION_BYTES)
+        originals[name] = original
+        identities.append(identity)
+    _require(sum(len(original) for original in originals.values()) <= MAX_TOTAL_BYTES)
+    observations = _decode(originals[OBSERVATIONS_PACKET])
+    _require(set(observations) == {"schema_version", "tenant_id", "source_order_id", "observations"}
+             and observations["schema_version"] == "customer-partial-return-posted-observations-input-v1"
+             and observations["tenant_id"] == packet["tenant_id"] and observations["source_order_id"] == packet["source_order_id"]
+             and type(observations["observations"]) is list and len(observations["observations"]) == 3)
+    for index, (name, kind, version) in enumerate(OBSERVATION_FILES):
+        value = _decode(originals[name])
+        _require(set(value) == {"schema_version", "kind", "tenant_id", "source_order_id", "history_version", "posted_plan_id", "plan_digest", "tables"}
+                 and value["schema_version"] == "customer-partial-return-browser-observation-v1" and value["kind"] == kind
+                 and value["tenant_id"] == packet["tenant_id"] and value["source_order_id"] == packet["source_order_id"]
+                 and type(value["history_version"]) is int and value["history_version"] == version
+                 and _same_typed(value, observations["observations"][index]))
+        baseline = _decode(originals[CAPTURES[version]])
+        _require(value["posted_plan_id"] == baseline["posted_plan_id"] and value["plan_digest"] == baseline["plan_digest"])
+        _tables(value["tables"])
+    final_tables = observations["observations"][-1]["tables"]
     if require_restore:
         restored = _decode(originals[RESTORE])
         _require(set(restored) == {"schema_version", "tenant_id", "source_order_id", "capture"}
                  and restored["schema_version"] == "customer-partial-return-posted-restore-input-v1"
                  and restored["tenant_id"] == packet["tenant_id"] and restored["source_order_id"] == packet["source_order_id"])
-        _require(_same_typed(_tables(restored["capture"]), _tables(packet["captures"][-1])))
+        _require(_same_typed(_tables(restored["capture"]), _tables(final_tables)))
     source, source_identity = _file(READER, MAX_PROOF_BYTES)
     _require(hashlib.sha256(source).hexdigest() == READER_SHA256)
     return {"input_files": identities, "source": source_identity, "input_set_sha256": hashlib.sha256(_encode(identities)).hexdigest(),
             "input_sha256": hashlib.sha256(originals[PACKET]).hexdigest(),
+            "observations_input_sha256": hashlib.sha256(originals[OBSERVATIONS_PACKET]).hexdigest(),
             "restore_input_sha256": hashlib.sha256(originals[RESTORE]).hexdigest() if require_restore else None,
-            "final_rows": sum(len(rows) for rows in packet["captures"][-1].values()), "require_restore": require_restore}
+            "final_rows": sum(len(rows) for rows in final_tables.values()), "require_restore": require_restore}
 
 
 def _proof(original: bytes, inputs: dict[str, Any]) -> dict[str, Any]:
     proof = _decode(original)
-    expected = {**EXPECTED_PROOF, "input_sha256": inputs["input_sha256"], "oracle_source_sha256": READER_SHA256}
+    appended = proof.get("observation_audit_appended_events")
+    _require(type(appended) is int and 1 <= appended <= 12288)
+    expected = {**EXPECTED_PROOF, "input_sha256": inputs["input_sha256"], "oracle_source_sha256": READER_SHA256,
+                "observation_audit_appended_events": appended, "observations_input_sha256": inputs["observations_input_sha256"]}
     if inputs["require_restore"]:
         expected.update(populated_restore_original_rows_equal=True, restored_tables=78, restored_rows=inputs["final_rows"],
-                        restore_input_sha256=inputs["restore_input_sha256"])
+                        restore_input_sha256=inputs["restore_input_sha256"], restore_uses_final_observation=True)
     _require(_same_typed(proof, expected))
     return proof
 
@@ -171,7 +209,7 @@ def _write(path: Path, value: Any) -> None:
         stream.write(_encode(value))
 
 
-def _public(inputs: dict[str, Any], proof_identity: dict[str, Any]) -> dict[str, Any]:
+def _public(inputs: dict[str, Any], proof_identity: dict[str, Any], *, appended_events: int) -> dict[str, Any]:
     # Every financial value below is a literal admitted only after _proof's
     # exact typed comparison with the actual independently derived result.
     return {"schema_version": "customer-partial-return-browser-original-proof-v1", "status": "passed", "captures": 9,
@@ -183,6 +221,13 @@ def _public(inputs: dict[str, Any], proof_identity: dict[str, Any]) -> dict[str,
             "restored_tables": 78 if inputs["require_restore"] else 0,
             "restored_rows": inputs["final_rows"] if inputs["require_restore"] else 0,
             "input_sha256": inputs["input_sha256"], "restore_input_sha256": inputs["restore_input_sha256"],
+            "observations_input_sha256": inputs["observations_input_sha256"], "observations": 3,
+            "retained_replay_observations": 2, "final_read_observations": 1,
+            "observation_tables": 78, "observation_business_tables": 76,
+            "observation_business_original_rows_equal": True, "observation_audit_prefix_original_bytes_equal": True,
+            "observation_audit_chain_valid": True, "observation_audit_actions_bound": True,
+            "observation_audit_chronology_valid": True,
+            "observation_audit_appended_events": appended_events, "restore_uses_final_observation": inputs["require_restore"],
             "input_set_sha256": inputs["input_set_sha256"], "oracle_source_sha256": READER_SHA256,
             "I_proof_sha256": proof_identity["sha256"], "IO_proof_sha256": proof_identity["sha256"],
             "isolated_modes_byte_equal": True, "raw_financial_rows_published": False}
@@ -201,6 +246,7 @@ def verify_customer_partial_return_original_rows(private: Path, *, require_resto
     proofs: list[bytes] = []
     for mode, flags in (("I", ["-I"]), ("IO", ["-I", "-O"])):
         argv = [sys.executable, *flags, str(READER), "--input", str(private / FAMILY / PACKET), "--output", str(execution / (mode + ".json"))]
+        argv.extend(("--observations-input", str(private / OBSERVATIONS / OBSERVATIONS_PACKET)))
         if require_restore:
             argv.extend(("--restore-input", str(private / FAMILY / RESTORE)))
         with (execution / (mode + ".stdout")).open("xb") as stdout, (execution / (mode + ".stderr")).open("xb") as stderr:
@@ -215,7 +261,7 @@ def verify_customer_partial_return_original_rows(private: Path, *, require_resto
         _write(execution / (mode + ".result.json"), outcome)
         _require(type(result.returncode) is int and result.returncode == 0)
         original, proof_identity = _file(execution / (mode + ".json"), MAX_PROOF_BYTES)
-        _proof(original, inputs)
+        qualified_proof = _proof(original, inputs)
         stream_identities = []
         for suffix in ("stdout", "stderr"):
             stream, identity = _file(execution / (mode + "." + suffix), MAX_STREAM_BYTES)
@@ -226,7 +272,7 @@ def verify_customer_partial_return_original_rows(private: Path, *, require_resto
         results.append({"mode": mode, "proof": proof_identity, "streams": stream_identities, "result": result_identity})
         _require(_same_typed(_family(private, require_restore=require_restore), inputs))
     _require(proofs[0] == proofs[1])
-    core = _public(inputs, results[0]["proof"])
+    core = _public(inputs, results[0]["proof"], appended_events=qualified_proof["observation_audit_appended_events"])
     receipt = {"schema_version": "customer-partial-return-browser-reader-custody-v1", "inputs": inputs,
                "executions": results, "public_core": core}
     _write(execution / "reader-custody.json", receipt)
@@ -258,7 +304,7 @@ def require_customer_partial_return_original_binding(private: Path, verified: di
         _require(type(row) is dict and set(row) == {"mode", "proof", "streams", "result"} and row["mode"] == mode)
         proof, identity = _file(execution / (mode + ".json"), MAX_PROOF_BYTES)
         _require(_same_typed(identity, row["proof"]))
-        _proof(proof, inputs)
+        qualified_proof = _proof(proof, inputs)
         proof_originals.append(proof)
         streams = []
         for suffix in ("stdout", "stderr"):
@@ -271,7 +317,7 @@ def require_customer_partial_return_original_binding(private: Path, verified: di
         _require(_same_typed(_decode(original), {"schema_version": "customer-partial-return-reader-execution-v1", "mode": mode,
                     "exit_code": 0, "isolated": True, "optimized": mode == "IO"}))
     _require(proof_originals[0] == proof_originals[1])
-    core = _public(inputs, receipt["executions"][0]["proof"])
+    core = _public(inputs, receipt["executions"][0]["proof"], appended_events=qualified_proof["observation_audit_appended_events"])
     _require(_same_typed(receipt["public_core"], core)
              and _same_typed(verified, {**core, "execution_receipt_sha256": receipt_identity["sha256"]}))
     _require(_same_typed(_family(private, require_restore=verified["restored"]), inputs))

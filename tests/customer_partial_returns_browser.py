@@ -35,7 +35,12 @@ CAPTURE_NAME = re.compile(r"committed-capture-([0-8])\.json")
 PACKET_NAME = "posted-cycle-input.json"
 RESTORE_NAME = "posted-cycle-restored-input.json"
 REFUSED_OBSERVATIONS = "native-customer-partial-return-failed-observation-originals"
+OBSERVATIONS = "native-customer-partial-return-observation-originals"
+OBSERVATION_PACKET_NAME = "posted-cycle-observations-input.json"
+OBSERVATION_FILES = (("retained-replay-1.json", "RetainedReplay", 1),
+                     ("retained-replay-6.json", "RetainedReplay", 6), ("final-observation.json", "FinalRead", 8))
 MAX_CAPTURE_BYTES = 4 * 1024 * 1024
+MAX_OBSERVATION_BYTES = MAX_CAPTURE_BYTES + 4096
 MAX_PACKET_BYTES = 32 * 1024 * 1024
 MAX_ROWS = 4096
 LOAD_POLICY = StructuredDocumentPolicy(max_file_bytes=MAX_PACKET_BYTES, max_nodes=100_000, max_depth=8,
@@ -172,6 +177,12 @@ def _snapshot(runtime: ReceiptRuntime, source_order_id: str) -> tuple[int, dict[
               AND c.relowner<>current_user::regrole""", (list(TABLES),)).fetchone()
         require(secured is not None and secured["n"] == len(TABLES))
         _original_locks(connection, runtime.tenant, source_order_id)
+        # Policy decisions append independently from the business transaction.
+        # Freeze the audit head after the existing parent locks so all78 row
+        # reads retain one coherent immutable audit prefix and matching head.
+        audit = connection.execute("SELECT tenant_id FROM reconforge.domain_audit_ledger_state WHERE tenant_id=%s FOR SHARE",
+                                   (runtime.tenant,)).fetchall()
+        require(len(audit) == 1 and audit[0]["tenant_id"] == runtime.tenant)
         history = connection.execute("""SELECT h.sequence,h.plan_id,p.plan_digest,p.phase FROM reconforge.customer_partial_return_history h
             JOIN reconforge.customer_partial_return_sources s ON(s.tenant_id,s.id)=(h.tenant_id,h.source_id)
             LEFT JOIN reconforge.customer_partial_return_plans p ON(p.tenant_id,p.id)=(h.tenant_id,h.plan_id)
@@ -184,6 +195,79 @@ def _snapshot(runtime: ReceiptRuntime, source_order_id: str) -> tuple[int, dict[
             tables[name] = sorted(row["original"] for row in rows)
         current = {key: history[-1][key] for key in ("sequence", "plan_id", "plan_digest", "phase")} if history else None
         return len(history), _validate_tables(tables), current
+
+
+def _refused_observation(root: Path, candidate: dict[str, Any], retained: bytes, reason: str) -> None:
+    refused = _storage(root.parent / REFUSED_OBSERVATIONS)
+    previous_attempts = list(refused.iterdir())
+    require(len(previous_attempts) < 16)
+    for prior in previous_attempts:
+        _regular_path(prior)
+        require(re.fullmatch(r"refused-observation-[a-f0-9]{32}\.json", prior.name) is not None)
+    attempt = {"schema_version": "customer-partial-return-refused-observation-v1",
+               "reason_code": reason, "candidate": candidate,
+               "retained_original_bytes": len(retained), "retained_original_sha256": hashlib.sha256(retained).hexdigest()}
+    _retain(refused / ("refused-observation-" + uuid4().hex + ".json"), _bytes(attempt, MAX_OBSERVATION_BYTES))
+
+
+def _audit_transition(before: dict[str, list[str]], after: dict[str, list[str]], *, tenant_id: str) -> None:
+    # A separate stdlib-only reader validates the complete78-table transition,
+    # immutable audit bytes, chain, allowed actions and exact business rows.
+    from tests.customer_partial_return_posted_cycle_oracle import verify_audit_only_transition
+    verify_audit_only_transition(before, after, tenant_id=tenant_id)
+
+
+def _load_observation(path: Path, *, kind: str, version: int) -> dict[str, Any]:
+    decoded = parse_json_document(_read(path, MAX_OBSERVATION_BYTES).decode("utf-8"), policy=LOAD_POLICY, reject_fractional_numbers=True)
+    require(type(decoded) is dict)
+    value = cast(dict[str, Any], decoded)
+    require(set(value) == {"schema_version", "kind", "tenant_id", "source_order_id", "history_version", "posted_plan_id", "plan_digest", "tables"})
+    require(value["schema_version"] == "customer-partial-return-browser-observation-v1" and value["kind"] == kind
+            and type(value["history_version"]) is int and value["history_version"] == version)
+    for name in ("tenant_id", "source_order_id", "posted_plan_id"):
+        _text(value[name])
+    require(type(value["plan_digest"]) is str and re.fullmatch(r"[a-f0-9]{64}", value["plan_digest"]) is not None)
+    value["tables"] = _validate_tables(value["tables"])
+    return value
+
+
+def _observe(root: Path, candidate: dict[str, Any], *, kind: str) -> dict[str, Any]:
+    version = candidate["history_version"]
+    names = [(name, item_kind, number) for name, item_kind, number in OBSERVATION_FILES if item_kind == kind and number == version]
+    require(len(names) == 1)
+    retained_path = root / f"committed-capture-{version}.json"
+    retained = _load_capture(retained_path)
+    require(all(retained[key] == candidate[key] for key in ("tenant_id", "source_order_id", "posted_plan_id", "plan_digest")))
+    value = {**candidate, "schema_version": "customer-partial-return-browser-observation-v1", "kind": kind}
+    try:
+        _audit_transition(retained["tables"], candidate["tables"], tenant_id=candidate["tenant_id"])
+        folder = _storage(root.parent / OBSERVATIONS)
+        for path in folder.iterdir():
+            _regular_path(path)
+            require(path.name in {item[0] for item in OBSERVATION_FILES} | {OBSERVATION_PACKET_NAME})
+        _retain(folder / names[0][0], _bytes(value, MAX_OBSERVATION_BYTES), same_allowed=True)
+    except (ValueError, TypeError, KeyError):
+        _refused_observation(root, candidate, _read(retained_path, MAX_CAPTURE_BYTES), "audit_only_transition_refused")
+        raise PartialBrowserCustodyError("Partial-return committed browser observation refused.") from None
+    return value
+
+
+def assemble_customer_partial_return_observations(root: Path, *, tenant: str, source_order_id: str) -> dict[str, Any]:
+    folder = _storage(root.parent / OBSERVATIONS)
+    require({path.name for path in folder.iterdir()} in ({item[0] for item in OBSERVATION_FILES},
+            {item[0] for item in OBSERVATION_FILES} | {OBSERVATION_PACKET_NAME}))
+    observations = []
+    for name, kind, version in OBSERVATION_FILES:
+        value = _load_observation(folder / name, kind=kind, version=version)
+        require(value["tenant_id"] == tenant and value["source_order_id"] == source_order_id)
+        baseline = _load_capture(root / f"committed-capture-{version}.json")
+        require(all(value[key] == baseline[key] for key in ("posted_plan_id", "plan_digest")))
+        _audit_transition(baseline["tables"], value["tables"], tenant_id=tenant)
+        observations.append(value)
+    packet = {"schema_version": "customer-partial-return-posted-observations-input-v1", "tenant_id": tenant,
+              "source_order_id": source_order_id, "observations": observations}
+    _retain(folder / OBSERVATION_PACKET_NAME, _bytes(packet, MAX_PACKET_BYTES), same_allowed=True)
+    return packet
 
 
 def capture_customer_partial_returns(runtime: ReceiptRuntime, source_order_id: str, root: Path, *,
@@ -203,22 +287,9 @@ def capture_customer_partial_returns(runtime: ReceiptRuntime, source_order_id: s
               "plan_digest": plan_digest, "tables": tables}
     original = _bytes(packet, MAX_CAPTURE_BYTES)
     if version == len(files) - 1:
-        retained = _read(root / f"committed-capture-{version}.json", MAX_CAPTURE_BYTES)
-        if retained != original:
-            # Preserve the entire refused observation for diagnosis. It is not
-            # an accepted economic capture and never replaces the first one.
-            refused = _storage(root.parent / REFUSED_OBSERVATIONS)
-            previous_attempts = list(refused.iterdir())
-            require(len(previous_attempts) < 16)
-            for prior in previous_attempts:
-                _regular_path(prior)
-                require(re.fullmatch(r"refused-observation-[a-f0-9]{32}\.json", prior.name) is not None)
-            attempt = {"schema_version": "customer-partial-return-refused-observation-v1",
-                       "reason_code": "retained_capture_changed", "candidate": packet,
-                       "retained_original_bytes": len(retained), "retained_original_sha256": hashlib.sha256(retained).hexdigest()}
-            _retain(refused / ("refused-observation-" + uuid4().hex + ".json"), _bytes(attempt, MAX_CAPTURE_BYTES))
-            require(False)
-    _retain(root / f"committed-capture-{version}.json", original, same_allowed=version == len(files) - 1)
+        _observe(root, packet, kind="RetainedReplay")
+    else:
+        _retain(root / f"committed-capture-{version}.json", original)
     return {"history_version": version, "tables": len(TABLES), "original_bytes": len(original),
             "original_sha256": hashlib.sha256(original).hexdigest(), "raw_rows_published": False}
 
@@ -259,9 +330,17 @@ def customer_partial_returns_browser_source(runtime: ReceiptRuntime) -> str:
 
 def verify_customer_partial_returns_browser(runtime: ReceiptRuntime, *, custody_root: Path, original_app_dsn: str) -> dict[str, Any]:
     source = customer_partial_returns_browser_source(runtime)
-    packet = assemble_customer_partial_return_inputs(custody_root, tenant=runtime.tenant, source_order_id=source)
+    assemble_customer_partial_return_inputs(custody_root, tenant=runtime.tenant, source_order_id=source)
     version, tables, _last = _snapshot(runtime, source)
-    require(version == 8 and tables == packet["captures"][-1])
+    if _last is None:
+        raise PartialBrowserCustodyError("Final partial-return committed history is required.")
+    require(version == 8 and _last["phase"] == 2)
+    if runtime.factory.settings.dsn == original_app_dsn:
+        _observe(custody_root, {"schema_version": "customer-partial-return-browser-capture-v1", "tenant_id": runtime.tenant,
+                 "source_order_id": source, "history_version": version, "posted_plan_id": _last["plan_id"],
+                 "plan_digest": _last["plan_digest"], "tables": tables}, kind="FinalRead")
+    observations = assemble_customer_partial_return_observations(custody_root, tenant=runtime.tenant, source_order_id=source)
+    require(tables == observations["observations"][-1]["tables"])
     if runtime.factory.settings.dsn != original_app_dsn:
         restored = {"schema_version": "customer-partial-return-posted-restore-input-v1", "tenant_id": runtime.tenant,
                     "source_order_id": source, "capture": tables}

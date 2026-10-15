@@ -26,6 +26,9 @@ def last(version: int) -> dict[str, Any] | None:
 
 
 def capture(root: Path, monkeypatch: pytest.MonkeyPatch, version: int, *, tables: dict[str, list[str]] | None = None) -> dict[str, Any]:
+    def identical_only(before: Any, after: Any, *, tenant_id: str) -> None:
+        observer.require(before == after and tenant_id == "synthetic-tenant")
+    monkeypatch.setattr(observer, "_audit_transition", identical_only)
     monkeypatch.setattr(observer, "_snapshot", lambda *_: (version, tables if tables is not None else empty_tables(), last(version)))
     return observer.capture_customer_partial_returns(runtime(), "original-stock", root,
         posted_plan_id="plan-" + str(version) if version else None, plan_digest="d" * 64 if version else None)
@@ -46,11 +49,14 @@ def test_complete_atomic_originals_bind_all_versions_and_typed_original_rows(tmp
 
 
 def test_exact_committed_retry_does_not_append_or_rewrite_original(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    capture(tmp_path, monkeypatch, 0)
-    first = capture(tmp_path, monkeypatch, 1)
-    original = {path.name: (path.read_bytes(), path.stat().st_mtime_ns) for path in tmp_path.iterdir()}
-    assert capture(tmp_path, monkeypatch, 1) == first
-    assert {path.name: (path.read_bytes(), path.stat().st_mtime_ns) for path in tmp_path.iterdir()} == original
+    root = tmp_path / "economic"
+    capture(root, monkeypatch, 0)
+    first = capture(root, monkeypatch, 1)
+    original = {path.name: (path.read_bytes(), path.stat().st_mtime_ns) for path in root.iterdir()}
+    assert capture(root, monkeypatch, 1) == first
+    assert {path.name: (path.read_bytes(), path.stat().st_mtime_ns) for path in root.iterdir()} == original
+    observation = observer._load_observation(tmp_path / observer.OBSERVATIONS / "retained-replay-1.json", kind="RetainedReplay", version=1)
+    assert observation["tables"] == empty_tables()
 
 
 def test_retry_original_drift_is_refused_without_replacement(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -163,29 +169,33 @@ def test_atomic_destination_race_cannot_replace_an_existing_original(tmp_path: P
 
 
 def test_restore_verifier_preserves_stable_proof_and_exact_final_rows(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root = tmp_path / "economic"
     for version in range(9):
-        capture(tmp_path, monkeypatch, version)
+        capture(root, monkeypatch, version)
+        if version in {1, 6}:
+            capture(root, monkeypatch, version)
     monkeypatch.setattr(observer, "customer_partial_returns_browser_source", lambda _: "original-stock")
     main = runtime()
     restored = deepcopy(main)
     restored.factory.settings.dsn = "synthetic-restored-dsn"
-    first = observer.verify_customer_partial_returns_browser(main, custody_root=tmp_path, original_app_dsn="synthetic-dsn")
-    assert not (tmp_path / observer.RESTORE_NAME).exists()
-    second = observer.verify_customer_partial_returns_browser(restored, custody_root=tmp_path, original_app_dsn="synthetic-dsn")
-    assert first == second and (tmp_path / observer.RESTORE_NAME).is_file()
-    original = (tmp_path / observer.RESTORE_NAME).read_bytes()
-    observer.verify_customer_partial_returns_browser(restored, custody_root=tmp_path, original_app_dsn="synthetic-dsn")
-    assert (tmp_path / observer.RESTORE_NAME).read_bytes() == original
+    first = observer.verify_customer_partial_returns_browser(main, custody_root=root, original_app_dsn="synthetic-dsn")
+    assert not (root / observer.RESTORE_NAME).exists()
+    second = observer.verify_customer_partial_returns_browser(restored, custody_root=root, original_app_dsn="synthetic-dsn")
+    assert first == second and (root / observer.RESTORE_NAME).is_file()
+    original = (root / observer.RESTORE_NAME).read_bytes()
+    observer.verify_customer_partial_returns_browser(restored, custody_root=root, original_app_dsn="synthetic-dsn")
+    assert (root / observer.RESTORE_NAME).read_bytes() == original
     drift = empty_tables()
     drift[observer.TABLES[0]] = ['{"changed":1}']
     monkeypatch.setattr(observer, "_snapshot", lambda *_: (8, drift, last(8)))
     with pytest.raises(observer.PartialBrowserCustodyError):
-        observer.verify_customer_partial_returns_browser(restored, custody_root=tmp_path, original_app_dsn="synthetic-dsn")
-    assert (tmp_path / observer.RESTORE_NAME).read_bytes() == original
+        observer.verify_customer_partial_returns_browser(restored, custody_root=root, original_app_dsn="synthetic-dsn")
+    assert (root / observer.RESTORE_NAME).read_bytes() == original
 
 
 @pytest.mark.parametrize("history_version", [0, 1])
-def test_real_driver_row_contract_supports_normal_flags_and_source_locks_without_dict_methods(history_version: int) -> None:
+@pytest.mark.parametrize("audit_case", ["proper", "missing", "foreign"])
+def test_real_driver_row_contract_supports_normal_flags_and_source_locks_without_dict_methods(history_version: int, audit_case: str) -> None:
     statements: list[str] = []
     class Cursor:
         def __init__(self, rows: list[Any]) -> None:
@@ -204,6 +214,8 @@ def test_real_driver_row_contract_supports_normal_flags_and_source_locks_without
                 return Cursor([_HybridPostgresRow(("n",), (len(observer.TABLES),))])
             if query.startswith("SELECT customer_id,invoice_id"):
                 return Cursor([_HybridPostgresRow(("customer_id", "invoice_id"), ("customer", "invoice"))])
+            if query.startswith("SELECT tenant_id FROM reconforge.domain_audit_ledger_state"):
+                return Cursor([] if audit_case == "missing" else [_HybridPostgresRow(("tenant_id",), ("foreign" if audit_case == "foreign" else "synthetic-tenant",))])
             if query.startswith("SELECT h.sequence") and history_version:
                 return Cursor([_HybridPostgresRow(("sequence", "plan_id", "plan_digest", "phase"), (1, "plan-1", "d" * 64, 2))])
             if "FOR SHARE" in query:
@@ -214,8 +226,92 @@ def test_real_driver_row_contract_supports_normal_flags_and_source_locks_without
         yield Connection(), None, None
     fixture = runtime()
     fixture.actor = actor
+    if audit_case != "proper":
+        with pytest.raises(observer.PartialBrowserCustodyError):
+            observer._snapshot(fixture, "original-stock")
+        assert not any(query.startswith("SELECT h.sequence") or query.startswith("SELECT to_jsonb") for query in statements)
+        return
     version, tables, current = observer._snapshot(fixture, "original-stock")
     assert version == history_version and tables == empty_tables()
     assert current == ({"sequence": 1, "plan_id": "plan-1", "plan_digest": "d" * 64, "phase": 2} if history_version else None)
-    assert len([query for query in statements if "FOR SHARE" in query]) == 3
+    locked = [query for query in statements if "FOR SHARE" in query]
+    assert len(locked) == 4
+    assert [query.split('reconforge.')[1].split()[0].strip('"') for query in locked] == ["ar_customers", "ar_invoices", "stock_sales_orders", "domain_audit_ledger_state"]
+    assert statements.index(locked[-1]) < next(index for index, query in enumerate(statements) if query.startswith("SELECT h.sequence"))
     assert len([query for query in statements if query.startswith("SELECT to_jsonb")]) == 78
+
+
+def complete_mock_observations(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    for version in range(9):
+        capture(root, monkeypatch, version)
+        if version in {1, 6}:
+            capture(root, monkeypatch, version)
+    observer._observe(root, observer._load_capture(root / "committed-capture-8.json"), kind="FinalRead")
+
+
+def test_complete_observation_packet_keeps_all_economic_originals_and_full_audit_bytes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root = tmp_path / "economic"
+    complete_mock_observations(root, monkeypatch)
+    originals = {path.name: path.read_bytes() for path in root.iterdir()}
+    packet = observer.assemble_customer_partial_return_observations(root, tenant="synthetic-tenant", source_order_id="original-stock")
+    assert [value["history_version"] for value in packet["observations"]] == [1, 6, 8]
+    assert [value["kind"] for value in packet["observations"]] == ["RetainedReplay", "RetainedReplay", "FinalRead"]
+    assert all(set(value["tables"]) == set(observer.TABLES) for value in packet["observations"])
+    assert {path.name: path.read_bytes() for path in root.iterdir()} == originals
+    assert len(list((tmp_path / observer.OBSERVATIONS).iterdir())) == 4
+
+
+def test_mocked_valid_audit_growth_is_retained_separately_and_never_replaces_economic_capture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root = tmp_path / "economic"
+    capture(root, monkeypatch, 0)
+    capture(root, monkeypatch, 1)
+    original = (root / "committed-capture-1.json").read_bytes()
+    after = empty_tables()
+    after["domain_audit_events"] = ['{"opaque_mocked_audit":"retained_private"}']
+    after["domain_audit_ledger_state"] = ['{"opaque_mocked_head":"retained_private"}']
+    inspected = []
+    def approved_transition(before: Any, current: Any, *, tenant_id: str) -> None:
+        inspected.append((deepcopy(before), deepcopy(current), tenant_id))
+    monkeypatch.setattr(observer, "_audit_transition", approved_transition)
+    candidate = observer._load_capture(root / "committed-capture-1.json")
+    candidate["tables"] = after
+    observer._observe(root, candidate, kind="RetainedReplay")
+    stored = observer._load_observation(tmp_path / observer.OBSERVATIONS / "retained-replay-1.json", kind="RetainedReplay", version=1)
+    assert stored["tables"] == after and len(inspected) == 1
+    assert set(inspected[0][0]) == set(inspected[0][1]) == set(observer.TABLES)
+    assert (root / "committed-capture-1.json").read_bytes() == original
+
+
+@pytest.mark.parametrize("change", ["unknown", "missing", "tenant", "source", "version", "kind", "plan", "tables", "extra", "duplicate"])
+def test_observation_membership_schema_and_source_affinity_refuse_drift(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, change: str) -> None:
+    root = tmp_path / "economic"
+    complete_mock_observations(root, monkeypatch)
+    folder = tmp_path / observer.OBSERVATIONS
+    path = folder / "retained-replay-1.json"
+    if change == "unknown":
+        (folder / "unknown.json").write_bytes(b"private")
+    elif change == "missing":
+        path.unlink()
+    else:
+        value = observer._load_observation(path, kind="RetainedReplay", version=1)
+        if change == "tenant":
+            value["tenant_id"] = "foreign"
+        elif change == "source":
+            value["source_order_id"] = "foreign"
+        elif change == "version":
+            value["history_version"] = True
+        elif change == "kind":
+            value["kind"] = "FinalRead"
+        elif change == "plan":
+            value["posted_plan_id"] = "foreign"
+        elif change == "tables":
+            value["tables"].pop(observer.TABLES[0])
+        elif change == "extra":
+            value["secret"] = "not_publishable"
+        raw = observer._bytes(value, observer.MAX_CAPTURE_BYTES)
+        if change == "duplicate":
+            raw = raw.replace(b'"history_version":1', b'"history_version":1,"history_version":1')
+        path.write_bytes(raw)
+    with pytest.raises((ValueError, FileNotFoundError)):
+        observer.assemble_customer_partial_return_observations(root, tenant="synthetic-tenant", source_order_id="original-stock")
+    assert not (folder / observer.OBSERVATION_PACKET_NAME).exists()

@@ -29,6 +29,18 @@ def family(private: Path, *, restore: bool = False) -> Path:
     packet = {"schema_version": "customer-partial-return-posted-cycle-input-v1", "tenant_id": "private-tenant",
               "source_order_id": "private-stock", "captures": captures}
     (root / gate.PACKET).write_bytes(gate._encode(packet))
+    folder = private / gate.OBSERVATIONS
+    folder.mkdir()
+    observations = []
+    for name, kind, version in gate.OBSERVATION_FILES:
+        observation = {"schema_version": "customer-partial-return-browser-observation-v1", "kind": kind,
+                       "tenant_id": "private-tenant", "source_order_id": "private-stock", "history_version": version,
+                       "posted_plan_id": "plan-" + str(version), "plan_digest": "d" * 64, "tables": tables}
+        observations.append(observation)
+        (folder / name).write_bytes(gate._encode(observation))
+    (folder / gate.OBSERVATIONS_PACKET).write_bytes(gate._encode({
+        "schema_version": "customer-partial-return-posted-observations-input-v1", "tenant_id": "private-tenant",
+        "source_order_id": "private-stock", "observations": observations}))
     if restore:
         restored = {"schema_version": "customer-partial-return-posted-restore-input-v1", "tenant_id": "private-tenant",
                     "source_order_id": "private-stock", "capture": tables}
@@ -45,10 +57,11 @@ def simulated_reader(monkeypatch: pytest.MonkeyPatch, *, patch: dict[str, Any] |
         assert "RECONFORGE_ERP_PASSWORD" not in options["env"] and "RECONFORGE_GFO_APP_DSN" not in options["env"]
         private = Path(argv[argv.index("--input") + 1]).parents[1]
         inputs = gate._family(private, require_restore="--restore-input" in argv)
-        proof = {**deepcopy(gate.EXPECTED_PROOF), "input_sha256": inputs["input_sha256"], "oracle_source_sha256": gate.READER_SHA256}
+        proof = {**deepcopy(gate.EXPECTED_PROOF), "input_sha256": inputs["input_sha256"], "oracle_source_sha256": gate.READER_SHA256,
+                 "observations_input_sha256": inputs["observations_input_sha256"], "observation_audit_appended_events": 17}
         if inputs["require_restore"]:
             proof.update(populated_restore_original_rows_equal=True, restored_tables=78, restored_rows=inputs["final_rows"],
-                         restore_input_sha256=inputs["restore_input_sha256"])
+                         restore_input_sha256=inputs["restore_input_sha256"], restore_uses_final_observation=True)
         if patch:
             proof.update(deepcopy(patch))
         output = Path(argv[argv.index("--output") + 1])
@@ -89,6 +102,12 @@ def test_simulated_complete_i_io_binding_exposes_only_closed_verified_counts_and
     {"incremental_gl_fifo_layer_history_equal": False}, {"raw_financial_rows": "SECRET_PASSWORD"},
     {"final_account_minor_balances": {**gate.EXPECTED_ACCOUNTS, "INVENTORY": 31999}},
     {"oracle_source_sha256": "f" * 64}, {"input_sha256": "e" * 64},
+    {"observations": True}, {"retained_replay_observations": 1}, {"final_read_observations": 0},
+    {"observation_business_original_rows_equal": False}, {"observation_audit_prefix_original_bytes_equal": False},
+    {"observation_audit_chain_valid": False}, {"observation_audit_actions_bound": False},
+    {"observation_audit_chronology_valid": False},
+    {"observation_audit_appended_events": True}, {"observation_audit_appended_events": 0},
+    {"observation_audit_appended_events": 12289}, {"observations_input_sha256": "f" * 64},
 ])
 def test_wrong_cohort_typed_totals_or_extra_data_never_becomes_a_published_proof(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, patch: dict[str, Any]) -> None:
     family(tmp_path)
@@ -240,3 +259,69 @@ def test_actual_isolated_reader_refuses_unposted_opaque_packet_and_retains_origi
     assert (execution / "I.stdout").read_bytes().splitlines() == [b"Independent posted-cycle qualification refused."]
     assert not (execution / "IO.result.json").exists()
     assert {path.name: path.read_bytes() for path in root.iterdir()} == before
+
+
+@pytest.mark.parametrize("change", ["missing_folder", "extra", "missing", "schema", "kind", "version", "source", "plan", "unjoined", "tables"])
+def test_observation_original_family_and_exact_sidecar_join_refuse_before_child(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, change: str) -> None:
+    family(tmp_path)
+    folder = tmp_path / gate.OBSERVATIONS
+    path = folder / gate.OBSERVATION_FILES[0][0]
+    if change == "missing_folder":
+        folder.rename(tmp_path / "different-observation-root")
+    elif change == "extra":
+        (folder / "unknown.json").write_bytes(b"private")
+    elif change == "missing":
+        path.unlink()
+    else:
+        value = gate._decode(path.read_bytes())
+        if change == "schema":
+            value["secret"] = "private-extra"
+        elif change == "kind":
+            value["kind"] = "FinalRead"
+        elif change == "version":
+            value["history_version"] = True
+        elif change == "source":
+            value["source_order_id"] = "foreign"
+        elif change == "plan":
+            value["posted_plan_id"] = "foreign"
+        elif change == "tables":
+            value["tables"].pop(gate.TABLES[0])
+        else:
+            value["tables"]["finance_entry_lines"] = ["unjoined-original"]
+        path.write_bytes(gate._encode(value))
+    monkeypatch.setattr(gate.subprocess, "run", lambda *_args, **_kwargs: pytest.fail("No reader after malformed original join"))
+    with pytest.raises((ValueError, FileNotFoundError)):
+        gate.verify_customer_partial_return_original_rows(tmp_path, require_restore=False)
+    assert not (tmp_path / gate.EXECUTIONS).exists()
+
+
+@pytest.mark.parametrize("name", [item[0] for item in gate.OBSERVATION_FILES] + [gate.OBSERVATIONS_PACKET])
+def test_late_observation_bytes_drift_blocks_publication(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str) -> None:
+    verified = execute(tmp_path, monkeypatch)
+    path = tmp_path / gate.OBSERVATIONS / name
+    path.write_bytes(path.read_bytes() + b"\n")
+    with pytest.raises(ValueError):
+        gate.require_customer_partial_return_original_binding(tmp_path, verified)
+
+
+def test_restore_is_bound_to_full_final_observation_including_new_audit_originals(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    family(tmp_path, restore=True)
+    folder = tmp_path / gate.OBSERVATIONS
+    final_path = folder / "final-observation.json"
+    final = gate._decode(final_path.read_bytes())
+    final["tables"]["domain_audit_events"].append('{"later_private_audit":"preserved"}')
+    final["tables"]["domain_audit_events"].sort()
+    final_path.write_bytes(gate._encode(final))
+    packet_path = folder / gate.OBSERVATIONS_PACKET
+    packet = gate._decode(packet_path.read_bytes())
+    packet["observations"][-1] = final
+    packet_path.write_bytes(gate._encode(packet))
+    restored_path = tmp_path / gate.FAMILY / gate.RESTORE
+    restored = gate._decode(restored_path.read_bytes())
+    with pytest.raises(ValueError):
+        gate._family(tmp_path, require_restore=True)
+    restored["capture"] = final["tables"]
+    restored_path.write_bytes(gate._encode(restored))
+    simulated_reader(monkeypatch)
+    verified = gate.verify_customer_partial_return_original_rows(tmp_path, require_restore=True)
+    assert verified["restore_uses_final_observation"] is True and verified["restored_rows"] == 2

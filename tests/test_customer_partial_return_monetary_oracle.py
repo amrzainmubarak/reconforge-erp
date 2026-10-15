@@ -63,6 +63,55 @@ def test_each_tax_component_and_both_currencies_uses_its_actual_remaining_value(
     assert (af, al, components, fifo) == (0, 0, ((0, 0), (0, 0), (0, 0)), ((0, 0),))
 
 
+def test_finite_active_prefix_bounds_preserve_refundable_overcollection_of_credit() -> None:
+    # C <= G is required. C + credited <= G is deliberately NOT required:
+    # cash collected before a later credit creates a genuine refund entitlement.
+    for originals, chunks, initial_cash, scales in itertools.product(
+        [((1, 2),), ((2, 1),), ((5, 7), (1, 2), (2, 1))],
+        [(1, 1, 1), (2, 1), (1, 2)], range(3), [(0, 3), (2, 2), (3, 0)],
+    ):
+        gross_f, gross_l = sum(f for f, _ in originals), sum(v for _, v in originals)
+        if initial_cash > gross_f:
+            continue
+        remaining, components, fifo = 3, originals, ((3, 5),)
+        af, al, collected, credited, ef, el, refunded, released = gross_f, gross_l, 0, 0, 0, 0, 0, 0
+
+        def cash(amount: int, selected_scales: tuple[int, int] = scales) -> int:
+            return converted_cash(amount, foreign_scale=selected_scales[0], functional_scale=selected_scales[1],
+                                  quote_per_foreign="1.234567")
+
+        if initial_cash:
+            receipt = reference_cash(carrying_foreign=af, carrying_functional=al,
+                selected_foreign=initial_cash, functional_cash=cash(initial_cash), refund=False)
+            af, al, collected = receipt.remaining_foreign, receipt.remaining_functional, initial_cash
+        for quantity in chunks:
+            cut = reference_credit(remaining_quantity=remaining, selected_quantity=quantity,
+                components=components, fifo=fifo, ar_foreign=af, ar_functional=al)
+            remaining -= quantity
+            components, fifo = cut.remaining_components, cut.remaining_fifo
+            af, al = af - cut.foreign_ar_release, al - cut.functional_ar_release
+            credited += cut.foreign_credit
+            ef, el = ef + cut.foreign_liability, el + cut.functional_liability
+            assert 0 <= collected <= gross_f and 0 <= el <= gross_l
+            assert ef != 0 or el == 0
+            if ef > refunded:
+                payout = reference_cash(carrying_foreign=ef - refunded, carrying_functional=el - released,
+                    selected_foreign=1, functional_cash=cash(1), refund=True)
+                refunded, released = refunded + 1, released + payout.functional_released
+            if af:
+                receipt = reference_cash(carrying_foreign=af, carrying_functional=al,
+                    selected_foreign=1, functional_cash=cash(1), refund=False)
+                af, al, collected = receipt.remaining_foreign, receipt.remaining_functional, collected + 1
+            assert collected <= gross_f and el <= gross_l
+            assert refunded != 0 or released == 0
+            assert af == max(gross_f - collected - credited, 0)
+            assert ef == max(collected + credited - gross_f, 0)
+            assert ef - refunded != 0 or el - released == 0
+        assert credited == gross_f and remaining == af == al == 0
+        if initial_cash:
+            assert collected + credited > gross_f and ef == collected
+
+
 def test_zero_foreign_credit_never_creates_hidden_functional_liability() -> None:
     cut = reference_credit(remaining_quantity=3, selected_quantity=1,
         components=((1, 2),), fifo=((3, 0),), ar_foreign=1, ar_functional=2)

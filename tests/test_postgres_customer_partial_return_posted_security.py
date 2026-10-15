@@ -488,3 +488,51 @@ def test_sql_close_rejects_forged_refund_parent_after_repository_checks(receipt_
             prepare_refund(runtime, returned, 1000, version, "C-FORGED-REFUND-PARENT")
     require(denied.value.diag.constraint_name == "customer_partial_return_owner")
     unchanged(before, retained(runtime))
+
+
+def test_scope_withdrawal_commits_while_actual_partial_post_waits_then_denies_without_effect(receipt_database: tuple[str, str]) -> None:
+    from reconforge.infrastructure.postgres import PostgresTenantBoundary
+    from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
+    from reconforge.platform.common import current_server_principal, server_principal_context
+
+    runtime, source_id, _invoice_id = create_partial_runtime(receipt_database)
+    reviewed = phase(runtime, prepare_return(runtime, source_id, 4), "review", "checker")
+    with runtime.actor("poster") as (_connection, _, cached_actor):
+        cached_principal = current_server_principal()
+    require(cached_principal is not None)
+    before = capture(runtime)
+    starting: Queue[int] = Queue()
+
+    def waiting_post() -> dict[str, Any]:
+        with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, workspace_id="work", organization_id="org",
+                legal_entity_id="entity") as connection, server_principal_context(cached_principal):
+            connection.execute("SET LOCAL lock_timeout='8s'")
+            connection.execute("SET LOCAL statement_timeout='15s'")
+            starting.put(connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"])
+            return PostgresCustomerPartialReturnsRepository(connection, runtime.tenant).post(reviewed["id"],
+                expected_plan_digest=reviewed["plan_digest"], command_id="C-POST-WAITS-ON-WITHDRAWAL",
+                reason="Actual new financial command with a formerly authorized principal", actor=cached_actor)
+
+    with ThreadPoolExecutor(max_workers=1) as workers:
+        with runtime.actor("maker") as (revoker, _, revoking_actor):
+            PostgresScopeAuthorityRepository(revoker).revoke(tenant_id=runtime.tenant, grant_id="cr1-poster-workspace",
+                actor_id=revoking_actor.user_id, reason="Independent live scope withdrawal before financial admission")
+            holder = revoker.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            future = workers.submit(waiting_post)
+            waiter = starting.get(timeout=6)
+            with psycopg.connect(runtime.admin_dsn, autocommit=True, connect_timeout=5) as observer:
+                deadline = time.monotonic() + 6
+                while holder not in observer.execute("SELECT pg_blocking_pids(%s)", (waiter,)).fetchone()[0]:
+                    require(time.monotonic() < deadline and not future.done())
+                    time.sleep(.025)
+            require(not future.done())
+        # Only after the durable grant update commits may the waiter continue.
+        # No timeout or generic command mismatch counts as authorization proof.
+        with pytest.raises(FinancePostingError) as denied:
+            future.result(timeout=20)
+    require(denied.value.code == "operational_actor_denied")
+    unchanged(before, capture(runtime))
+    with runtime.actor("maker") as (connection, _, _actor):
+        grant = connection.execute("SELECT revoked_at FROM reconforge.principal_scope_grants WHERE tenant_id=%s AND id='cr1-poster-workspace'",
+                                   (runtime.tenant,)).fetchone()
+        require(grant is not None and grant["revoked_at"] is not None)

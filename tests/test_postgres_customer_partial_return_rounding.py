@@ -13,7 +13,15 @@ from reconforge.domain.stock_sales import StockOrder
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_customer_partial_returns import PostgresCustomerPartialReturnsRepository
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
-from tests.test_postgres_customer_partial_returns import SCOPE, request, retained_partial_state
+from tests.test_postgres_customer_partial_returns import (
+    SCOPE,
+    create_partial_runtime,
+    posted,
+    prepare_return,
+    prepare_reversal,
+    request,
+    retained_partial_state,
+)
 from tests.test_postgres_customer_returns import balances, configure_runtime
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, create_receipt_runtime, receipt_database
 from tests.test_postgres_inventory_receipt_posting import request as receipt_request
@@ -199,3 +207,35 @@ def test_native_reverse_plan_cannot_change_original_magnitudes_or_allocation_wit
         connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
     assert refused.value.diag.constraint_name == "customer_partial_return_owner"
     assert retained_partial_state(runtime) == before
+
+
+def test_148_keeps_genuine_legacy_inverse_and_refuses_legacy_scalar_drift(
+    receipt_database: tuple[str, str], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import psycopg
+
+    runtime, source, _invoice = create_partial_runtime(receipt_database, paid=0)
+    parent = posted(runtime, prepare_return(runtime, source, 1))
+    original_save = PostgresCustomerPartialReturnsRepository._save
+    before = retained_partial_state(runtime)
+
+    def forged_save(owner: Any, supplied: dict[str, Any], actor: Any) -> None:
+        payload = deepcopy(supplied)
+        if payload["operation"] == "ReverseReturn":
+            payload["cogs_restored_minor"] += 1
+            payload["amount_minor"] += 1
+        original_save(owner, payload, actor)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(PostgresCustomerPartialReturnsRepository, "_save", forged_save)
+        with pytest.raises(psycopg.errors.CheckViolation) as denied, runtime.actor("maker") as (connection, _, actor):
+            owner = PostgresCustomerPartialReturnsRepository(connection, runtime.tenant)
+            owner.prepare_reversal(CustomerPartialReversePreparation(parent["id"], "period", "2026-10-14",
+                "Reject changed legacy inverse magnitudes", 1), command_id="legacy-forged-inverse", actor=actor)
+            connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+        assert denied.value.diag.constraint_name == "customer_partial_return_owner"
+    assert retained_partial_state(runtime) == before
+    inverse = posted(runtime, prepare_reversal(runtime, parent, 1, "legacy-genuine-inverse"))
+    assert inverse["operation"] == "ReverseReturn" and inverse["schema_version"] == "customer-partial-return-v1"
+    assert (inverse["quantity_scaled"], inverse["credit_minor"], inverse["cogs_restored_minor"]) == (
+        parent["quantity_scaled"], parent["credit_minor"], parent["cogs_restored_minor"])

@@ -116,6 +116,20 @@ BEGIN
  'allocation_policy','remaining-original-v1','revenue_before_quantity_scaled',source_owner.original_quantity_scaled-returned,
  'revenue_before_value_minor',source_owner.gross_minor-credited);
 END $cr148$;
+CREATE FUNCTION reconforge.customer_partial_return_reverse_pin(t TEXT,i TEXT) RETURNS VOID
+ LANGUAGE plpgsql SET search_path=pg_catalog AS $cr148$
+DECLARE owned RECORD;original RECORD;
+BEGIN
+ SELECT * INTO owned FROM reconforge.customer_partial_return_plans WHERE tenant_id=t AND id=i;
+ IF owned IS NULL OR owned.operation NOT IN('ReverseReturn','ReverseRefund') THEN RETURN;END IF;
+ SELECT * INTO original FROM reconforge.customer_partial_return_plans WHERE tenant_id=t AND id=owned.original_id;
+ IF original IS NULL OR(owned.amount_minor,owned.quantity_scaled,owned.credit_minor,owned.cogs_restored_minor,
+  owned.receivable_released_minor,owned.refund_entitlement_delta_minor) IS DISTINCT FROM
+ (original.amount_minor,original.quantity_scaled,original.credit_minor,original.cogs_restored_minor,
+  original.receivable_released_minor,original.refund_entitlement_delta_minor)
+ OR owned.payload->'domain_plan' IS DISTINCT FROM original.payload->'domain_plan' THEN
+  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='An owned inverse must retain exact original plan magnitudes and allocation evidence'; END IF;
+END $cr148$;
 """
 
 
@@ -189,7 +203,8 @@ def _plan_v2() -> str:
 
 def _dispatch(name: str, target: str, selector: str) -> str:
     value = ORIGINAL_FUNCTIONS[name].replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1)
-    return _replace(value, "BEGIN\n", "BEGIN\n IF " + selector + " THEN PERFORM reconforge." + target + "(t,i);RETURN;END IF;\n")
+    pin = " PERFORM reconforge.customer_partial_return_reverse_pin(t,i);\n" if name == "customer_partial_return_close" else ""
+    return _replace(value, "BEGIN\n", "BEGIN\n" + pin + " IF " + selector + " THEN PERFORM reconforge." + target + "(t,i);RETURN;END IF;\n")
 
 
 def _balance() -> str:
@@ -342,6 +357,7 @@ DROP FUNCTION reconforge.customer_partial_return_close_v2(TEXT,TEXT);
 DROP FUNCTION reconforge.customer_partial_return_source_close_v2(TEXT,TEXT);
 DROP FUNCTION reconforge.customer_partial_return_v2_values(TEXT,TEXT,BIGINT,INTEGER);
 DROP FUNCTION reconforge.customer_partial_return_v2_fifo(BIGINT,BIGINT,BIGINT);
+DROP FUNCTION reconforge.customer_partial_return_reverse_pin(TEXT,TEXT);
 DROP FUNCTION reconforge.customer_partial_return_rounding_version();
 """
 

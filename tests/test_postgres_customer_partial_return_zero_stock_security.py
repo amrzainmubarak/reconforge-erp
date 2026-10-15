@@ -234,14 +234,14 @@ def test_native_receipt_backdate_guard_closes_later_partial_correction_without_p
             WHERE physical.tenant_id=%s AND physical.workspace_id='work' AND physical.organization_id='org' AND physical.legal_entity_id='entity'
             AND valued.status='Approved' AND(physical.movement_date,physical.movement_number)>(%s::date,%s)""",
             (runtime.tenant, earlier.posting_date, prepared["artifacts"]["movement_number"])).fetchone()
-        correction = connection.execute("""SELECT physical.id,physical.status,physical.movement_date::text day,
+        correction = connection.execute("""SELECT physical.id,physical.status,physical.movement_date::text movement_day,
             reconforge.customer_partial_return_valued_movement(physical.tenant_id,physical.id) closed,
             EXISTS(SELECT 1 FROM reconforge.inventory_valuation_documents valued WHERE valued.tenant_id=physical.tenant_id
                 AND valued.movement_id=physical.id AND valued.status='Approved') generic_valuation
             FROM reconforge.inventory_movements physical WHERE physical.tenant_id=%s AND physical.source_reference=%s""",
             (runtime.tenant, returned["id"])).fetchone()
         assert later_generic is not None and later_generic["n"] == 0
-        assert correction is not None and correction["status"] == "Posted" and correction["day"] == "2026-10-14"
+        assert correction is not None and correction["status"] == "Posted" and correction["movement_day"] == "2026-10-14"
         assert correction["closed"] is True and correction["generic_valuation"] is False
     before = capture_rounding(runtime)
     commit_args = {"command_id": "security-backdate-commit", "expected_review_digest": reviewed["review_digest"],

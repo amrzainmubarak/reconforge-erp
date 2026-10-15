@@ -20,6 +20,7 @@ import psycopg
 import pytest
 from psycopg import sql
 
+from reconforge.domain.customer_partial_return_commands import CustomerPartialRefundPreparation
 from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.sales_revenue import SalesInvoicePreparation
 from reconforge.infrastructure.postgres_customer_partial_returns import PostgresCustomerPartialReturnsRepository
@@ -428,7 +429,10 @@ def test_transaction_started_before_return_but_consuming_after_layer_wait_blocks
             # frozen-cost version guard and would not test later consumption.
             resale = reviewed_resale(runtime, "C-OLD-TRANSACTION-LATER-CONSUMPTION", "1")
             prepared_sale.put(resale)
-            target_layer = resale["issue_plan"]["allocations"][0]["cost_layer_id"]
+            # The public Stock DTO intentionally omits the retained issue plan.
+            # Read its real owner row under the ordinary scoped app role.
+            sale_owner = next(row for row in rows(runtime, "stock_sales_orders") if row["id"] == resale["id"])
+            target_layer = sale_owner["issue_plan"]["allocations"][0]["cost_layer_id"]
             with runtime.actor("maker") as (holder, _, _actor):
                 holder.execute("SELECT id FROM reconforge.inventory_cost_layers WHERE tenant_id=%s AND id=%s FOR UPDATE", (runtime.tenant, target_layer))
                 holder_pid = holder.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
@@ -444,8 +448,9 @@ def test_transaction_started_before_return_but_consuming_after_layer_wait_blocks
             continue_delivery.set()
     require(delivered["status"] == "Delivered")
     before = retained(runtime)
-    with pytest.raises(FinancePostingError):
+    with pytest.raises(FinancePostingError) as denied:
         prepare_reversal(runtime, returned, 1, "C-DENY-POST-RESTORE-CONSUMPTION")
+    require(denied.value.code == "customer_partial_return_reversal_dependency")
     unchanged(before, retained(runtime))
 
 
@@ -484,8 +489,15 @@ def test_sql_close_rejects_forged_refund_parent_after_repository_checks(receipt_
 
     with monkeypatch.context() as adversary:
         adversary.setattr(PostgresCustomerPartialReturnsRepository, "_save", forged_persist)
-        with pytest.raises(psycopg.errors.CheckViolation) as denied:
-            prepare_refund(runtime, returned, 1000, version, "C-FORGED-REFUND-PARENT")
+        with pytest.raises(psycopg.errors.CheckViolation) as denied, runtime.actor("maker") as (connection, _, actor):
+            owner = PostgresCustomerPartialReturnsRepository(connection, runtime.tenant)
+            refund = CustomerPartialRefundPreparation(returned["id"], 1000, "period", "2026-10-14",
+                                                      "Exact forged-parent SQL close counterexample", version)
+            # Invoke once so the helper's retained-replay check cannot close it
+            # inside the owner's error translator. Force the real deferred SQL
+            # guard directly, outside that wrapper, and verify its constraint.
+            owner.prepare_refund(refund, command_id="C-FORGED-REFUND-PARENT", actor=actor)
+            connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
     require(denied.value.diag.constraint_name == "customer_partial_return_owner")
     unchanged(before, retained(runtime))
 

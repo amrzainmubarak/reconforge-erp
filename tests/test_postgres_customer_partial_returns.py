@@ -16,11 +16,15 @@ from reconforge.domain.customer_partial_return_commands import (
     CustomerPartialReversePreparation,
 )
 from reconforge.domain.finance_posting import FinancePostingError
+from reconforge.domain.sales_revenue import SalesInvoicePreparation
+from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_customer_partial_returns import PostgresCustomerPartialReturnsRepository
+from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
 from tests.test_postgres_commercial_collections import complete, prepare
 from tests.test_postgres_customer_partial_return_source import two_layer_source
-from tests.test_postgres_customer_returns import balances, create_runtime, retained_state
-from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, receipt_database
+from tests.test_postgres_customer_returns import balances, configure_runtime, create_runtime, retained_state
+from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, create_receipt_runtime, receipt_database
+from tests.test_postgres_stock_sales import create_reserved_order, create_stock_runtime, execute
 
 _ = receipt_database, two_layer_source
 SCOPE = {"workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity"}
@@ -28,6 +32,36 @@ SCOPE = {"workspace_id": "work", "organization_id": "org", "legal_entity_id": "e
 
 def create_partial_runtime(database: tuple[str, str], paid: int = 10000, *, quantity: str | None = None) -> tuple[ReceiptRuntime, str, str]:
     return create_runtime(database, paid=paid, quantity=quantity)
+
+
+def retained_partial_state(runtime: ReceiptRuntime) -> dict[str, Any]:
+    from psycopg import sql
+    state = retained_state(runtime)
+    with runtime.actor("maker") as (connection, _, _actor):
+        names = connection.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='reconforge' AND table_name LIKE 'customer_partial_return_%' ORDER BY table_name").fetchall()
+        for row in names:
+            state[row["table_name"]] = tuple(item["original"] for item in connection.execute(
+                sql.SQL("SELECT to_jsonb(r)::text original FROM reconforge.{} r WHERE tenant_id=%s ORDER BY to_jsonb(r)::text").format(sql.Identifier(row["table_name"])),
+                (runtime.tenant,)).fetchall())
+    return state
+
+
+def create_fractional_partial_runtime(database: tuple[str, str]) -> tuple[ReceiptRuntime, str, str]:
+    base = create_receipt_runtime(database)
+    with PostgresTenantBoundary(base.factory).transaction(base.tenant) as connection:
+        PostgresInventoryCoreRepository(connection, base.tenant).upsert_uom(uom_code="EA", name="Each", decimal_places=3, workspace="work")
+    runtime = create_stock_runtime(database, base_runtime=base)
+    configure_runtime(runtime)
+    sale = create_reserved_order(runtime, "FRACTIONAL-ORIGINAL", "2.5")
+    sale = execute(runtime, sale, "prepare-issue", "maker", {"posting_date": "2026-10-09", "period_id": "period", "policy_code": "FIFO"})
+    sale = execute(runtime, sale, "review-issue", "checker")
+    sale = execute(runtime, sale, "deliver", "poster")
+    args = SalesInvoicePreparation("FRACTIONAL-INVOICE", "2026-10-09", "2026-10-31", "SALES", "period", "AR", "REVENUE", "Exact original fractional merchandise").payload()
+    args.pop("reason")
+    sale = execute(runtime, sale, "prepare-invoice", "maker", args)
+    sale = execute(runtime, sale, "review-invoice", "checker")
+    sale = execute(runtime, sale, "invoice", "poster")
+    return runtime, sale["id"], sale["invoice_id"]
 
 
 def request(source_id: str, quantity_scaled: int, version: int = 0) -> CustomerPartialReturnPreparation:
@@ -135,10 +169,10 @@ def test_latest_refund_and_return_reversals_preserve_originals_and_reopen_exact_
     runtime, source_id, _invoice = create_partial_runtime(receipt_database)
     returned = posted(runtime, prepare_return(runtime, source_id, 10))
     refunded = posted(runtime, prepare_refund(runtime, returned, 3000, 1, "original-refund"))
-    before = retained_state(runtime)
+    before = retained_partial_state(runtime)
     with pytest.raises(FinancePostingError, match="latest"):
         prepare_reversal(runtime, returned, 2, "cannot-invert-refunded-credit")
-    assert retained_state(runtime) == before
+    assert retained_partial_state(runtime) == before
     inverse_refund = posted(runtime, prepare_reversal(runtime, refunded, 2, "inverse-owned-refund"))
     assert inverse_refund["operation"] == "ReverseRefund"
     assert balance(runtime, source_id)["refund_due_minor"] == 10000
@@ -153,35 +187,43 @@ def test_latest_refund_and_return_reversals_preserve_originals_and_reopen_exact_
 def test_stale_history_oversize_return_and_refund_cannot_create_an_extra_business_effect(receipt_database: tuple[str, str]) -> None:
     runtime, source_id, _invoice = create_partial_runtime(receipt_database)
     returned = posted(runtime, prepare_return(runtime, source_id, 4))
-    before = retained_state(runtime)
+    before = retained_partial_state(runtime)
     with pytest.raises(FinancePostingError):
         prepare_return(runtime, source_id, 7, 1, "oversized-original-quantity")
     with pytest.raises(FinancePostingError):
         prepare_return(runtime, source_id, 1, 0, "stale-history")
     with pytest.raises(FinancePostingError):
         prepare_refund(runtime, returned, 1, 1, "no-refund-liability-yet")
-    assert retained_state(runtime) == before
+    assert retained_partial_state(runtime) == before
 
 
 def test_preparer_cannot_review_or_post_own_partial_source(receipt_database: tuple[str, str]) -> None:
     runtime, source_id, _invoice = create_partial_runtime(receipt_database)
     prepared = prepare_return(runtime, source_id, 4)
-    before = retained_state(runtime)
+    before = retained_partial_state(runtime)
     with pytest.raises(FinancePostingError):
         phase(runtime, prepared, "review", "maker")
-    assert retained_state(runtime) == before
+    assert retained_partial_state(runtime) == before
     reviewed = phase(runtime, prepared, "review", "checker")
     for who in ("maker", "checker"):
         with pytest.raises(FinancePostingError):
             phase(runtime, reviewed, "post", who)
 
 
-def test_new_owner_commands_keep_exact_original_quantity_precision(receipt_database: tuple[str, str]) -> None:
+def test_fractional_original_and_partial_return_preserve_scale_and_refuse_nonintegral_minor_cost(receipt_database: tuple[str, str]) -> None:
     # A non-integral requested money portion must refuse; no quantity or cost
     # value is rounded to fit a financial posting contract.
-    runtime, source_id, _invoice = create_partial_runtime(receipt_database)
-    args = request(source_id, 1)
+    runtime, source_id, _invoice = create_fractional_partial_runtime(receipt_database)
+    before = retained_partial_state(runtime)
+    with pytest.raises(FinancePostingError, match="integral"):
+        prepare_return(runtime, source_id, 2, 0, "unrepresentable-original-cost")
+    assert retained_partial_state(runtime) == before
+    args = request(source_id, 1250)
     with runtime.actor("maker") as (connection, _, actor):
         owner = PostgresCustomerPartialReturnsRepository(connection, runtime.tenant)
         with pytest.raises(FinancePostingError):
             owner.prepare(replace(args, quantity_scaled=True), command_id="boolean-quantity", actor=actor)
+    result = posted(runtime, prepare_return(runtime, source_id, 1250, 0, "fractional-source-return"))
+    assert (result["quantity_precision"], result["quantity_scaled"], result["credit_minor"], result["cogs_restored_minor"]) == (3, 1250, 5625, 1500)
+    state = balance(runtime, source_id)
+    assert state["quantity_precision"] == 3 and state["remaining_quantity_scaled"] == 1250 and state["outstanding_minor"] == 5625

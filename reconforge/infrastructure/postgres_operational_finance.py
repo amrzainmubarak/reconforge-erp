@@ -97,6 +97,7 @@ class PostgresOperationalFinanceRepository:
         *,
         mutation: bool = True,
         source: bool = False,
+        allow_zero_amount: bool = False,
     ) -> None:
         principal = current_server_principal()
         permissions = {permission}
@@ -112,7 +113,7 @@ class PostgresOperationalFinanceRepository:
         for required in permissions:
             actor.require(required, mutation=mutation)
             amount = (
-                Decimal(exact_minor_text(scope["amount_minor"], scope["currency_precision"]))
+                Decimal(exact_minor_text(scope["amount_minor"], scope["currency_precision"], allow_zero=allow_zero_amount))
                 if "amount_minor" in scope and "currency_precision" in scope
                 else None
             )

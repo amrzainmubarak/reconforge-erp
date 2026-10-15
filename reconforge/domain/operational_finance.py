@@ -58,11 +58,16 @@ class OperationalFinancePreparation:
         return result
 
 
-def exact_minor_text(value: int, precision: int) -> str:
-    """Serialize captured minor units to the existing exact FinanceCore port."""
+def exact_minor_text(value: int, precision: int, *, allow_zero: bool = False) -> str:
+    """Serialize exact captured money; zero is opt-in for nonposting authority.
+
+    Financial draft callers retain the positive default. An explicitly versioned
+    owner can authorize a physical operation whose monetary effect is zero.
+    """
     if (
-        type(value) is not int
-        or not 0 < value <= 9_000_000_000_000_000_000
+        type(allow_zero) is not bool
+        or type(value) is not int
+        or not (0 if allow_zero else 1) <= value <= 9_000_000_000_000_000_000
         or type(precision) is not int
         or not 0 <= precision <= 8
     ):

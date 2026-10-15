@@ -192,11 +192,10 @@ def test_native_reverse_plan_cannot_change_original_magnitudes_or_allocation_wit
         original_save(owner, payload, actor)
 
     monkeypatch.setattr(PostgresCustomerPartialReturnsRepository, "_save", forged_save)
-    with pytest.raises(psycopg.errors.CheckViolation) as refused:
-        with runtime.actor("maker") as (connection, _, actor):
-            owner = PostgresCustomerPartialReturnsRepository(connection, runtime.tenant, protocol_version=2)
-            owner.prepare_reversal(CustomerPartialReversePreparation(parent["id"], "period", "2026-10-14",
-                "Attempt to alter an original inverse magnitude", 1), command_id="forged-reverse-pin", actor=actor)
-            connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    with pytest.raises(psycopg.errors.CheckViolation) as refused, runtime.actor("maker") as (connection, _, actor):
+        owner = PostgresCustomerPartialReturnsRepository(connection, runtime.tenant, protocol_version=2)
+        owner.prepare_reversal(CustomerPartialReversePreparation(parent["id"], "period", "2026-10-14",
+            "Attempt to alter an original inverse magnitude", 1), command_id="forged-reverse-pin", actor=actor)
+        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
     assert refused.value.diag.constraint_name == "customer_partial_return_owner"
     assert retained_partial_state(runtime) == before

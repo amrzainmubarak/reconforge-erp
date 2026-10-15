@@ -53,7 +53,7 @@ def test_transferred_original_sale_partial_return_preserves_historical_transfer_
 ) -> None:
     base = transfer_runtime(receipt_database)
     runtime = create_stock_runtime(receipt_database, base_runtime=base, seed_stock=False)
-    configure_runtime(runtime)
+    configure_runtime(runtime, seed_scope_grants=False)
     with runtime.actor("maker") as (connection, _, actor):
         created = PostgresInventoryTransferRepository(connection, runtime.tenant).create(
             TransferPreparation("CR2-ORIGINAL-RELOCATION", "ITEM", "2", "MAIN/STOCK", "SECOND/STOCK", "period", "2026-10-14",

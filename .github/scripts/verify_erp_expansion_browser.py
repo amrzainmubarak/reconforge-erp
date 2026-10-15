@@ -78,7 +78,10 @@ WORKSPACE_CASE_TITLES = {
     },
 }
 PRIVATE_PARTIAL_RETURN_FAMILIES = {"native-customer-partial-return-originals", "native-customer-partial-return-failed-observation-originals",
-                                  "native-customer-partial-return-observation-originals"}
+                                  "native-customer-partial-return-observation-originals",
+                                  "native-customer-partial-return-remainder-originals",
+                                  "native-customer-partial-return-remainder-observation-originals",
+                                  "native-customer-partial-return-remainder-failed-observation-originals"}
 PRIVATE_RETURN_FAMILIES = {"native-customer-return-originals", *PRIVATE_PARTIAL_RETURN_FAMILIES}
 
 
@@ -103,7 +106,7 @@ def _public_diagnostic_paths(output: Path) -> list[Path]:
         # upload directory merely because the current child writes privately.
         paths.extend(path for path in sorted(artifacts.rglob("*"))
             if path.is_symlink() or path.is_file() and (path.name == "error-context.md"
-                or path.relative_to(artifacts).parts[0].casefold() in PRIVATE_RETURN_FAMILIES
+                or any(part.casefold() in PRIVATE_RETURN_FAMILIES for part in path.relative_to(artifacts).parts[:-1])
                 or not _unchanged_original_artifact_name(path)))
     projections = output / "workspace-recovery"
     if projections.is_symlink():
@@ -295,11 +298,11 @@ def _stage_original_browser_artifacts(output: Path, private: Path, known_private
         if not source.is_file() or source.name == "error-context.md":
             continue
         name = source.relative_to(private).as_posix()
-        if source.relative_to(artifacts).parts[0].casefold() in PRIVATE_PARTIAL_RETURN_FAMILIES:
+        if any(part.casefold() in PRIVATE_PARTIAL_RETURN_FAMILIES for part in source.relative_to(artifacts).parts[:-1]):
             # CR2 raw captures have a separate owned private root. No producer
             # attaches them here, regardless of an otherwise public basename.
             raise ValueError("Partial-return originals cannot enter browser attachment publication.")
-        if name.casefold().startswith("playwright-artifacts/native-customer-return-originals/"):
+        if any(part.casefold() == "native-customer-return-originals" for part in source.relative_to(artifacts).parts[:-1]):
             if CUSTOMER_RETURN_PRIVATE_ORIGINAL.fullmatch(name) is None:
                 raise ValueError("Customer return financial custody is outside its finite private family.")
             raw = _read_private_original(private, source, limit=diagnostic_redaction.MAX_WORKSPACE_RECOVERY_BYTES)

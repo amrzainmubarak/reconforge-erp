@@ -64,7 +64,13 @@ unaccepted: both Python jobs failed the same obsolete phase-name assertion.
 Test-only80cb9ba2 corrects that assertion under the human's completion-first
 instruction; its11 targeted tests pass, without reclassifying the original run.
 The team now implements the already-recorded M7.6 remainder gap under ADR0861;
-new148/v2 code has no acceptance yet. Major-domain WIP remains M7 only.
+new148/v2 operational code has no acceptance yet. The migration-specific
+checkpoint8f163527 executes3 cases without skips: empty147↔148 full catalog,
+data and function-identity roundtrip, retained posted-v1 ACK/history compatibility,
+installer replay and retained-v2 refusal before destructive downgrade. Source
+unchanged, owned databases removed; original10-member custody `fc881481`.
+This does not close M7.6 or qualify populated-zero restore, stock reuse or v2
+Studio posting. Major-domain WIP remains M7 only.
 
 Each row records existence, completeness, end-to-end operation, integration,
 independent financial/operational proof, security/concurrency/restore proof,

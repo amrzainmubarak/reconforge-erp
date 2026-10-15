@@ -1,5 +1,18 @@
 # ReconForge Execution Evidence Log
 
+## M7 additive148 migration checkpoint — 2026-10-15
+
+Frozen8f163527d9c703d4f9bc5866dc7f513081dc2e90 executed3 native migration
+cases, all passed without skips in516.031 seconds. Full catalog/data/function-OID
+roundtrip, retained posted-v1 history/ACK compatibility, tuple/mapping installer
+replay and retained-v2 non-destructive downgrade refusal are executed. Source
+before/after hashes match; all owned fixture databases were removed. Original
+external packet `F:\ReconForge_Evidence\recovery-20261014\m7-frozen148-migration-8f163527-v1-private`
+has10 members; closure SHA256
+`fc8814818856bc517866c2417f3e2b9ad2fc589f998fe99168288e937eab1e3c`.
+This is migration-specific evidence; it does not accept v2 operational posting,
+zero-cost stock reuse, HTTPS, populated-zero restore or the whole M7 domain.
+
 ## M7 actual5017 integration and preserved CI metadata failure (2026-10-15)
 
 Actual local affected5/0 skips closesa302dfc73bc078461aa9bbdbd8a87a66be1184bcd92c334d2cffdd50574e3be9.

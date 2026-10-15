@@ -2,6 +2,15 @@
 
 ## Completion first — one domain at a time (2026-10-15)
 
+Actual additive148 migration gates on frozen8f163527:3 PASS/0 failure/error/skip,
+516.031 seconds. Empty147→148→147 restores all rows/catalog/function identities;
+retained posted-v1 history and original ACK survive upgrade/downgrade; retained
+v2 source refuses downgrade before any catalog/data mutation. Tuple/dict installer
+replay retains the full upgraded snapshot. Source unchanged and owned databases
+removed. Original10-member custody fc881481 is retained externally. This closes
+that migration checkpoint only. New v2 operations/security/HTTPS/zero-stock reuse
+and final cohesive acceptance remain open.
+
 Current5017 actual affected5 and hosted native18 pass with zero critical skips.
 Its full eight-event Studio HTTPS cycle and populated339-table restore pass;
 independent raw-row proofs derive17 effects/35 lines/Dr=Cr385000. Separate new
@@ -18,6 +27,8 @@ The authoritative remaining-work inventory is
 [ENTERPRISE_COMPLETION_MASTER_MATRIX.md](ENTERPRISE_COMPLETION_MASTER_MATRIX.md).
 M3/M4 original closure bytes and fresh official Draft heads were verified without
 repeating their accepted tests. M5/M6 scoped acceptance remains retained.
+The following paragraph is the preserved earlier checkpoint, superseded by the
+executed5017 outcomes above; its original negative receipts remain immutable.
 M7 partial customer returns are OPEN. Native025 now posts actual repeated returns,
 later collection and partial refunds; an isolated independent reader derives
 12 effects/24 lines/Dr=Cr238000 from original rows. Nativeea457 lifecycle5 passed;

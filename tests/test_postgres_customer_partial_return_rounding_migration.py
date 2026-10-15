@@ -110,6 +110,17 @@ def test_empty147_148_147_roundtrip_restores_all_catalog_rows_and_function_ident
             install_customer_partial_return_rounding(connection)
             install_postgres_customer_partial_return_transfer_hooks(connection)
     assert database_snapshot(admin) == retained
+    for signature, volatility in (
+        ("customer_partial_return_balance(text,text)", "STABLE"),
+        ("customer_partial_return_v2_fifo(bigint,bigint,bigint)", "VOLATILE"),
+    ):
+        # Retain both bodies. Drift only executable metadata and require refusal
+        # before changing any object; the owned probe transaction rolls back.
+        with psycopg.connect(admin) as connection, pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+            connection.execute(sql.SQL("ALTER FUNCTION reconforge.{}({}) {}").format(
+                sql.Identifier(signature.split("(")[0]), sql.SQL(signature.split("(")[1][:-1]), sql.SQL(volatility)))
+            install_customer_partial_return_rounding(connection)
+        assert database_snapshot(admin) == retained
 
 
 def test_retained_posted_v1_history_survives148_upgrade_and_safe147_downgrade(

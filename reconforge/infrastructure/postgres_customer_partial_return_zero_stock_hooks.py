@@ -234,10 +234,28 @@ CREATE TRIGGER customer_partial_return_null_origin BEFORE INSERT ON reconforge.c
 
 def _stock_close() -> str:
     value = ORIGINAL_FUNCTIONS["stock_sales_close"].replace("stock_sales_close(", "customer_partial_return_zero_stock_close(", 1)
+    # RECORD IS NOT NULL means every field is non-null. A genuine zero claim
+    # deliberately has no entry_id, so row presence must use its native key.
+    value = value.replace("claim IS NOT NULL", "claim.order_id IS NOT NULL").replace("claim IS NULL", "claim.order_id IS NULL")
+    entry_query = """  SELECT f.*,o.id organization_id,le.id legal_entity_id INTO entry FROM reconforge.finance_entries f
+   JOIN reconforge.organizations o ON o.tenant_id=f.tenant_id AND o.organization_code=f.organization_code AND o.application_workspace_id=f.workspace_id
+   JOIN reconforge.legal_entities le ON le.tenant_id=o.tenant_id AND le.organization_id=o.id AND le.entity_code=f.entity_code
+   WHERE f.tenant_id=t AND f.id=d.cogs_entry_id;
+"""
+    # Always assign the enriched native descriptor, including when the SELECT
+    # finds no COGS row. This creates no financial record or zero entry.
+    value = _replace(value, entry_query, "")
+    entry_insert = """ SELECT * INTO claim FROM reconforge.stock_sales_issue_claims WHERE tenant_id=t AND order_id=target;
+  SELECT f.*,o.id organization_id,le.id legal_entity_id INTO entry FROM reconforge.finance_entries f
+   JOIN reconforge.organizations o ON o.tenant_id=f.tenant_id AND o.organization_code=f.organization_code AND o.application_workspace_id=f.workspace_id
+   JOIN reconforge.legal_entities le ON le.tenant_id=o.tenant_id AND le.organization_id=o.id AND le.entity_code=f.entity_code
+   WHERE f.tenant_id=t AND f.id=d.cogs_entry_id;
+"""
+    value = _replace(value, " SELECT * INTO claim FROM reconforge.stock_sales_issue_claims WHERE tenant_id=t AND order_id=target;", entry_insert)
     value = _replace(value, " s:=reconforge.stock_sales_stage(d.status);", " s:=reconforge.stock_sales_stage(d.status);\n PERFORM reconforge.customer_partial_return_zero_stock_plan(t,target);")
-    value = _replace(value, " IF claim IS NOT NULL THEN", r""" IF s>=5 AND d.issue_reviewer_id=d.issue_plan->>'preparer_actor_id' THEN
+    value = _replace(value, " IF claim.order_id IS NOT NULL THEN", r""" IF s>=5 AND d.issue_reviewer_id=d.issue_plan->>'preparer_actor_id' THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Restituted Stock issue requires its independent second human';END IF;
- IF claim IS NOT NULL THEN""")
+ IF claim.order_id IS NOT NULL THEN""")
     value = _replace(value, "d.issue_plan IS NOT NULL AND d.cogs_entry_id IS NOT NULL", "d.issue_plan IS NOT NULL AND((d.issue_plan->>'total_cost_minor'='0' AND d.cogs_entry_id IS NULL) OR((d.issue_plan->>'total_cost_minor')::bigint>0 AND d.cogs_entry_id IS NOT NULL))")
     value = _replace(value, "d.movement_id IS NOT NULL AND d.valuation_id IS NOT NULL AND d.cogs_effect_id IS NOT NULL", "d.movement_id IS NOT NULL AND d.valuation_id IS NOT NULL AND((d.issue_plan->>'total_cost_minor'='0' AND d.cogs_effect_id IS NULL) OR((d.issue_plan->>'total_cost_minor')::bigint>0 AND d.cogs_effect_id IS NOT NULL))")
     value = _replace(value, "  IF entry IS NULL OR entry.id IS DISTINCT FROM claim.entry_id", "  IF(d.issue_plan->>'total_cost_minor')::bigint>0 THEN\n  IF entry IS NULL OR entry.id IS DISTINCT FROM claim.entry_id")
@@ -393,6 +411,28 @@ BEGIN
  PERFORM reconforge.it1_assert(octet_length(result::text)<=262144,'A zero-consumption admission exceeds its finite native evidence bound');
  RETURN result;
 END $cr148zs$;
+CREATE FUNCTION reconforge.customer_partial_return_valued_movement(t TEXT,i TEXT) RETURNS BOOLEAN
+ LANGUAGE plpgsql STABLE SET search_path=pg_catalog AS $cr148zs$
+DECLARE physical RECORD;owned RECORD;source_owner RECORD;
+BEGIN
+ SELECT * INTO physical FROM reconforge.inventory_movements WHERE tenant_id=t AND id=i;
+ IF physical.id IS NULL OR physical.movement_number!~'^(CR2|CR2R)-[A-F0-9]{32}$' THEN RETURN FALSE;END IF;
+ SELECT * INTO owned FROM reconforge.customer_partial_return_plans WHERE tenant_id=t AND id=physical.source_reference;
+ SELECT * INTO source_owner FROM reconforge.customer_partial_return_sources WHERE tenant_id=t AND id=owned.source_id;
+ PERFORM reconforge.it1_assert(owned.id IS NOT NULL AND source_owner.id IS NOT NULL AND owned.phase=2
+  AND owned.operation IN('Return','ReverseReturn') AND owned.payload->>'movement_id'=physical.id
+  AND physical.status='Posted' AND physical.source_type='Generated' AND physical.movement_number=upper(owned.id)
+  AND physical.movement_type=(CASE owned.operation WHEN'Return' THEN'Receipt' ELSE'Delivery' END)
+  AND(physical.workspace_id,physical.organization_id,physical.legal_entity_id,physical.period_id,physical.movement_date::text)
+   =(source_owner.workspace_id,source_owner.organization_id,source_owner.legal_entity_id,owned.payload->>'period_id',owned.payload->>'posting_date')
+  AND EXISTS(SELECT 1 FROM reconforge.customer_partial_return_history history_owner WHERE history_owner.tenant_id=t
+   AND history_owner.source_id=source_owner.id AND history_owner.plan_id=owned.id AND history_owner.kind=owned.operation),
+  'A valued partial correction requires its exact visible posted source history and physical ownership');
+ -- The existing owner closes exact portions, source FIFO, actual-or-absent GL,
+ -- physical line quantities, monetary scope, three humans and immutable ACKs.
+ PERFORM reconforge.customer_partial_return_close(t,owned.id);
+ RETURN TRUE;
+END $cr148zs$;
 """
 
 
@@ -443,6 +483,7 @@ DROP TRIGGER customer_partial_return_zero_stock ON reconforge.inventory_layer_co
 DROP TRIGGER customer_partial_return_null_origin ON reconforge.customer_partial_return_restorations;
 DROP FUNCTION reconforge.customer_partial_return_null_origin_guard();
 DROP FUNCTION reconforge.customer_partial_return_zero_stock_child();
+DROP FUNCTION reconforge.customer_partial_return_valued_movement(TEXT,TEXT);
 DROP FUNCTION reconforge.customer_partial_return_source_dispatch(TEXT,TEXT);
 DROP FUNCTION reconforge.customer_partial_return_zero_consumption(TEXT,TEXT);
 DROP FUNCTION reconforge.customer_partial_return_zero_stock_source(TEXT,TEXT);
@@ -477,7 +518,7 @@ def _helpers_preflight() -> str:
                               ("HASH", hashlib.sha256(body.encode()).hexdigest())):
             template = template.replace("@@" + key + "@@", selected)
         clauses.append(template)
-    if len(clauses) != 10:
+    if len(clauses) != 11:
         raise ValueError("The finite zero-stock native helper membership differs.")
     return "DO $cr148zs$ DECLARE native RECORD;BEGIN\n" + "\n".join(clauses) + "\nEND $cr148zs$;"
 

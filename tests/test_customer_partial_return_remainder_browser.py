@@ -54,7 +54,9 @@ def test_private_economic_capture_replay_final_observation_and_restore_contract(
     packet = observer.assemble_remainder_browser(root, case=case, tenant="synthetic", source="stock-original")
     assert set(packet) == {"schema_version", "case", "tenant_id", "source_order_id", "captures"}
     assert packet["case"] == case and len(packet["captures"]) == observer.EVENTS[case] + 1
-    assert all(set(value) == set(observer.TABLES) for value in packet["captures"])
+    assert all(set(value) == observer.CAPTURE_FIELDS and set(value["tables"]) == set(observer.TABLES) for value in packet["captures"])
+    assert packet["captures"] == [observer._load(root / f"committed-capture-{n}.json", case=case)
+                                  for n in range(observer.EVENTS[case] + 1)]
     state["audit"] = 3
     original_proof = observer.verify_remainder_browser(runtime(), custody_root=root, source="stock-original", case=case, original_app_dsn="original")
     repeated = observer.verify_remainder_browser(runtime(), custody_root=root, source="stock-original", case=case, original_app_dsn="original")

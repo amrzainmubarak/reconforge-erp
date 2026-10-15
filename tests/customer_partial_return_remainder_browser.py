@@ -1,4 +1,4 @@
-"""PRIVATE committed originals for two finite governed remainder HTTPS cycles.
+"""PRIVATE committed originals for three finite governed remainder HTTPS cycles.
 
 Only native fixtures create business effects. This observer reads committed
 ordinary-role PostgreSQL rows and retains opaque original row text. The separate
@@ -209,7 +209,7 @@ def assemble_remainder_browser(root: Path, *, case: str, tenant: str, source: st
     require(all((value["tenant_id"], value["source_order_id"], value["history_version"]) == (tenant, source, index)
                 for index, value in enumerate(values)))
     packet = {"schema_version": "customer-partial-return-remainder-posted-cycle-input-v1", "case": case,
-              "tenant_id": tenant, "source_order_id": source, "captures": [value["tables"] for value in values]}
+              "tenant_id": tenant, "source_order_id": source, "captures": values}
     _retain(root / PACKET, _bytes(packet, MAX_PACKET_BYTES), same_allowed=True)
     return packet
 

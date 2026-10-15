@@ -1,24 +1,26 @@
 """Actual partial return after governed original-stock warehouse relocation.
 
 This case exercises the historical IT1 owner, the original stock-sale owner and
-the new partial-return owner. It does not qualify a new transfer prepared after
-CR2 restitution; that current-pool capture has a separate versioned dependency.
+the new partial-return owner, then adopts the restored pool through a new v2
+transfer. A later real consumption must preserve both historical versions.
 """
 
 from fractions import Fraction
 
+import pytest
 from psycopg import sql
 
+from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.inventory_transfer import TransferPreparation
 from reconforge.domain.sales_revenue import SalesInvoicePreparation
 from reconforge.domain.stock_sales import StockOrder
 from reconforge.infrastructure.postgres_inventory_transfer import PostgresInventoryTransferRepository
-from tests.test_postgres_customer_partial_returns import SCOPE, balance, posted, prepare_return
+from tests.test_postgres_customer_partial_returns import SCOPE, balance, posted, prepare_return, prepare_reversal
 from tests.test_postgres_customer_returns import balances, configure_runtime
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, receipt_database
 from tests.test_postgres_inventory_transfer import TABLES, physical, transfer_runtime
 from tests.test_postgres_inventory_transfer import phase as transfer_phase
-from tests.test_postgres_stock_sales import create_stock_runtime, execute, repository
+from tests.test_postgres_stock_sales import create_reserved_order, create_stock_runtime, execute, repository
 
 _ = receipt_database
 
@@ -119,3 +121,54 @@ def test_transferred_original_sale_partial_return_preserves_historical_transfer_
         "INVENTORY": 2400, "CLEARING": -3600, "COGS": 1200, "AR": 4500, "REVENUE": -4500}
     assert values.get("CASH", 0) == values.get("REFUND", 0) == 0
     assert original_rows(runtime, entry_ids) == before
+
+    # A new forward relocation adopts the actual restored current pool rather
+    # than relabeling the old receipt, consumption, or historical v1 evidence.
+    with runtime.actor("maker") as (connection, _, actor):
+        all_entries = [row["entry_id"] for row in connection.execute(
+            "SELECT entry_id FROM reconforge.finance_posting_effects WHERE tenant_id=%s ORDER BY entry_id", (runtime.tenant,))]
+        retained_layer = connection.execute("SELECT to_jsonb(l)::text original FROM reconforge.inventory_cost_layers l WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["original"]
+        next_transfer = PostgresInventoryTransferRepository(connection, runtime.tenant).create(
+            TransferPreparation("CR2-RESTORED-POOL-RELOCATION", "ITEM", "1", "SECOND/STOCK", "MAIN/STOCK", "period", "2026-10-14",
+                                "New governed relocation of the restored original pool", SCOPE),
+            command_id="restored-pool-transfer-create", actor=actor)
+    financial_before_transfer = original_rows(runtime, all_entries)
+    next_transfer = transfer_phase(runtime, transfer_phase(runtime, next_transfer, "review", "checker"), "post", "poster")
+    next_source = next_transfer["source"]
+    with runtime.actor("maker") as (connection, _, actor):
+        retained_v2 = connection.execute("SELECT payload->'cost_snapshot' captured,review_cost_json reviewed FROM reconforge.inventory_transfer_sources WHERE tenant_id=%s AND id=%s",
+                                         (runtime.tenant, next_source["id"])).fetchone()
+        assert retained_v2["captured"]["schema_version"] == retained_v2["reviewed"]["schema_version"] == "inventory-transfer-cost-v2"
+        corrections = retained_v2["captured"]["sources"][0]["partial_return_corrections"]
+        assert len(corrections) == 1 and corrections[0]["restoration"]["plan_id"] == returned["id"]
+        assert corrections[0]["restoration"]["correction_effect_id"] == returned["entries"][1]["posting_effect_id"]
+        assert connection.execute("SELECT to_jsonb(l)::text original FROM reconforge.inventory_cost_layers l WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["original"] == retained_layer
+        assert physical(connection, runtime) == {"MAIN/STOCK": 2, "SECOND/STOCK": 0}
+        historical_v2 = PostgresInventoryTransferRepository(connection, runtime.tenant).get(next_source["id"], actor=actor)
+    financial_after_transfer = original_rows(runtime, all_entries)
+    for table in ("finance_entries", "finance_entry_lines", "finance_posting_effects", "finance_entry_line_dimensions"):
+        assert financial_after_transfer[table] == financial_before_transfer[table]
+    for table in TABLES:
+        assert set(before[table]) <= set(financial_after_transfer[table])
+
+    resale = create_reserved_order(runtime, "CR2-LATER-CONSUMPTION", "1")
+    resale = execute(runtime, resale, "prepare-issue", "maker", {"posting_date": "2026-10-14", "period_id": "period", "policy_code": "FIFO"})
+    resale = execute(runtime, resale, "review-issue", "checker")
+    execute(runtime, resale, "deliver", "poster")
+    with runtime.actor("poster") as (connection, _, actor):
+        owner = PostgresInventoryTransferRepository(connection, runtime.tenant)
+        assert owner.get(transfer["id"], actor=actor) == original_transfer
+        assert owner.get(next_source["id"], actor=actor) == historical_v2
+        assert owner.act(next_source["id"], "post", expected_digest=next_source["source_digest"], expected_version=2,
+            command_id=next_source["id"] + "-post", reason="Independent actual post", actor=actor) == next_transfer
+        assert physical(connection, runtime) == {"MAIN/STOCK": 1, "SECOND/STOCK": 0}
+        layer = connection.execute("SELECT id,remaining_quantity_scaled,remaining_value_minor FROM reconforge.inventory_cost_layers WHERE tenant_id=%s", (runtime.tenant,)).fetchone()
+        assert (layer["id"], layer["remaining_quantity_scaled"], layer["remaining_value_minor"]) == (layer_id, 1, 1200)
+    after_resale = original_rows(runtime, all_entries)
+    for table in ("finance_entries", "finance_entry_lines", "finance_posting_effects", "finance_entry_line_dimensions"):
+        assert after_resale[table] == financial_after_transfer[table]
+    for table in TABLES:
+        assert after_resale[table] == financial_after_transfer[table]
+    with pytest.raises(FinancePostingError) as refused:
+        prepare_reversal(runtime, returned, 1, "cannot-invert-restored-layer-after-real-resale")
+    assert refused.value.code == "customer_partial_return_reversal_dependency"

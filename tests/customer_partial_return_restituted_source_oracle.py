@@ -116,6 +116,14 @@ def verify_restituted_original(
     require(all(row.get("external_reference") != resale_source_order_id for row in issued["finance_entries"]))
     require(all(row.get("source_id") != resale_source_order_id for row in issued["finance_posting_effects"]))
     snapshot = issue["restitution_cost_snapshot"]
+    policy = issue["currency_policy"]
+    captured_policy = {
+        "currency_code": policy["currency_code"],
+        "currency_precision": policy["precision"],
+        "currency_rounding_policy": policy["rounding_policy"],
+        "currency_registry_version": policy["registry_version"],
+        "currency_registry_digest": policy["registry_digest"],
+    }
     require(
         type(snapshot) is dict
         and set(snapshot)
@@ -125,6 +133,7 @@ def verify_restituted_original(
         and snapshot["remaining_value_minor"] == 0
         and type(snapshot["sources"]) is list
         and len(snapshot["sources"]) == 1
+        and snapshot["monetary_policy"] == captured_policy
     )
     captured = snapshot["sources"][0]
     layer = one(prior["inventory_cost_layers"], id=consumed[0]["cost_layer_id"])
@@ -237,6 +246,10 @@ def verify_restituted_original(
         and source["original_cogs_effect_id"] is None
     )
     fingerprint = payload["fingerprint_payload"]
+    require(
+        fingerprint["currency"] == captured_policy["currency_code"]
+        and fingerprint["policy"] == {key: value for key, value in captured_policy.items() if key != "currency_code"}
+    )
     require(
         fingerprint["contract"] == "customer-partial-return-original-v2"
         and fingerprint["original_cogs"] is None

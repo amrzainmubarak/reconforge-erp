@@ -105,6 +105,7 @@ def test_actual_zero_cost_restituted_stock_resale_new_return_and_transfer_pool_k
 
 def test_actual_mixed_zero_original_consumption_keeps_one_real_total_cogs_effect(receipt_database: tuple[str, str]) -> None:
     runtime, original = create_remainder_runtime(receipt_database, zero=True)
+    captures = [{"checkpoint": "Original", "tables": capture_rounding(runtime)}]
     post_v2(runtime, prepare_v2(runtime, original, 1, 0, "mixed-original-zero-return"))
     request = replace(receipt_request("MIXED-EXTRA"), quantity="0.1", total_value_minor=10, posting_date="2026-10-14")
     with runtime.actor("maker") as (_, owner, actor):
@@ -114,9 +115,12 @@ def test_actual_mixed_zero_original_consumption_keeps_one_real_total_cogs_effect
     with runtime.actor("poster") as (_, owner, actor):
         owner.commit(prepared["plan_id"], command_id="mixed-extra-post", expected_review_digest=review["review_digest"], reason="Actual extra original receipt", actor=actor)
     sale = create_restituted_resale(runtime, quantity="0.2", number="MIXED-RESALE")
+    captures.append({"checkpoint": "MixedResaleInvoiced", "tables": capture_rounding(runtime)})
     assert sale["cogs_minor"] == "10" and sale["cogs_entry_id"] is not None and sale["cogs_effect_id"] is not None
     first = post_v2(runtime, prepare_v2(runtime, sale["id"], 1, 0, "mixed-first"))
+    captures.append({"checkpoint": "MixedZeroCostReturned", "tables": capture_rounding(runtime)})
     second = post_v2(runtime, prepare_v2(runtime, sale["id"], 1, 1, "mixed-second"))
+    captures.append({"checkpoint": "MixedPositiveCostReturned", "tables": capture_rounding(runtime)})
     assert (first["credit_minor"], first["cogs_restored_minor"], second["credit_minor"], second["cogs_restored_minor"]) == (100, 0, 100, 10)
     assert [part["purpose"] for part in first["entries"]] == ["RevenueCredit"]
     assert [part["purpose"] for part in second["entries"]] == ["RevenueCredit", "CostRestoration"]
@@ -124,3 +128,16 @@ def test_actual_mixed_zero_original_consumption_keeps_one_real_total_cogs_effect
         assert PostgresCustomerPartialReturnsRepository(connection, runtime.tenant, protocol_version=2).balance(sale["id"], SCOPE, actor=actor)["remaining_quantity_scaled"] == 0
         originals = connection.execute("SELECT consumed.value_minor FROM reconforge.inventory_layer_consumptions consumed JOIN reconforge.inventory_valuation_lines detail ON(detail.tenant_id,detail.id)=(consumed.tenant_id,consumed.valuation_line_id) WHERE consumed.tenant_id=%s AND detail.valuation_document_id=%s ORDER BY consumed.value_minor", (runtime.tenant, sale["valuation_id"])).fetchall()
         assert [row["value_minor"] for row in originals] == [0, 10]
+    destination = os.environ.get("RECONFORGE_PARTIAL_REMAINDER_PRIVATE_OUTPUT")
+    if destination:
+        private = Path(destination)
+        if not private.is_absolute() or not private.is_dir():
+            raise AssertionError("An explicit existing private custody directory is required.")
+        for candidate in (private, *private.parents):
+            if candidate.is_symlink() or getattr(candidate.lstat(), "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                raise AssertionError("Private custody ancestry must remain owned and unlinked.")
+        packet = {"schema_version": "customer-partial-return-mixed-restituted-cycle-input-v1", "tenant_id": runtime.tenant,
+                  "original_source_order_id": original, "resale_source_order_id": sale["id"], "captures": captures}
+        with (private / "native-mixed-restituted-cycle-original-v1.json").open("x", encoding="utf-8", newline="\n") as stream:
+            json.dump(packet, stream, sort_keys=True, separators=(",", ":"))
+            stream.write("\n")

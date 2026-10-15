@@ -30,6 +30,7 @@ from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_commercial_collections import PostgresCommercialCollectionsRepository
 from reconforge.infrastructure.postgres_customer_partial_returns import PostgresCustomerPartialReturnsRepository
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
+from tests.customer_partial_return_posted_cycle_oracle import TABLES
 from tests.test_postgres_commercial_collections import complete, prepare
 from tests.test_postgres_customer_partial_return_source import create_two_layer_source, two_layer_source
 from tests.test_postgres_customer_returns import balances, configure_runtime, create_runtime, retained_state
@@ -39,6 +40,7 @@ from tests.test_postgres_stock_sales import repository as stock_repository
 
 _ = receipt_database, two_layer_source
 SCOPE = {"workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity"}
+SETTLEMENT_TABLES = tuple(sorted((*TABLES, "customer_partial_return_allocation_witnesses")))
 
 
 def create_partial_runtime(database: tuple[str, str], paid: int = 10000, *, quantity: str | None = None) -> tuple[ReceiptRuntime, str, str]:
@@ -315,7 +317,9 @@ def settlement_originals(runtime: ReceiptRuntime, checkpoint: str) -> dict[str, 
             WHERE table_schema='reconforge' AND table_type='BASE TABLE'
             AND table_name ~ '^(customer_return_|customer_partial_return_|commercial_collection_|stock_|finance_|ar_|inventory_|operational_finance_|domain_audit_|outbox_)'
             ORDER BY table_name""").fetchall()
-        assert len(tables) == 78
+        assert len(SETTLEMENT_TABLES) == len(set(SETTLEMENT_TABLES)) == 79
+        if tuple(row["table_name"] for row in tables) != SETTLEMENT_TABLES:
+            raise AssertionError("Native settlement originals require the exact 79-table family.")
         for row in tables:
             state[row["table_name"]] = tuple(value["original"] for value in connection.execute(sql.SQL(
                 "SELECT to_jsonb(r)::text original FROM reconforge.{} r WHERE tenant_id=%s ORDER BY to_jsonb(r)::text"
@@ -324,8 +328,8 @@ def settlement_originals(runtime: ReceiptRuntime, checkpoint: str) -> dict[str, 
     if destination is not None:
         assert checkpoint in {"split-before-credit", "split-after-credit", "split-after-2000", "split-after-refusal",
                               "split-after-1500", "race-before-credit", "race-after-refusal"}
-        with (destination / ("native-partial-settlement-" + checkpoint + "-original-v1.json")).open("x", encoding="utf-8", newline="\n") as stream:
-            json.dump({"schema_version": "native-partial-settlement-row-text-v1", "checkpoint": checkpoint,
+        with (destination / ("native-partial-settlement-" + checkpoint + "-original-v2.json")).open("x", encoding="utf-8", newline="\n") as stream:
+            json.dump({"schema_version": "native-partial-settlement-row-text-v2", "checkpoint": checkpoint,
                        "tenant_id": runtime.tenant, "tables": state}, stream, sort_keys=True, separators=(",", ":"))
             stream.write("\n")
     return state

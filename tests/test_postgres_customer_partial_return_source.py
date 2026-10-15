@@ -53,8 +53,8 @@ def authorized(connection: Any, runtime: ReceiptRuntime, source_id: str, actor: 
     return owner._source(source_id)  # Existing owner supplies its normal customer/invoice/stock locks.
 
 
-@pytest.fixture(scope="module")
-def two_layer_source(receipt_database: tuple[str, str]) -> tuple[ReceiptRuntime, str, str]:
+def create_two_layer_source(receipt_database: tuple[str, str]) -> tuple[ReceiptRuntime, str, str]:
+    """Create the genuine reviewed two-layer sale for native and HTTPS callers."""
     runtime = create_stock_runtime(receipt_database)
     configure_runtime(runtime)
     with runtime.actor("maker") as (connection, _, _actor):
@@ -84,6 +84,11 @@ def two_layer_source(receipt_database: tuple[str, str]) -> tuple[ReceiptRuntime,
     sale = execute(runtime, sale, "invoice", "poster")
     complete(runtime, prepare(runtime, sale["invoice_id"], 10000, "TWO-LAYER"), "TWO-LAYER")
     return runtime, sale["id"], sale["invoice_id"]
+
+
+@pytest.fixture(scope="module")
+def two_layer_source(receipt_database: tuple[str, str]) -> tuple[ReceiptRuntime, str, str]:
+    return create_two_layer_source(receipt_database)
 
 
 def test_real_two_layer_issue_order_becomes_typed_source_and_exact_unposted_corrections_without_any_row_change(

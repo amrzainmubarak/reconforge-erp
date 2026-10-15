@@ -14,6 +14,11 @@ NEW = "CR2-" + "b" * 32
 DIGEST = "c" * 64
 
 
+def test_runner_restore_exports_exact_independent_seventy_nine_table_scope() -> None:
+    from tests.customer_partial_return_restituted_cycle_oracle import TABLES as INDEPENDENT_TABLES
+    assert observer.TABLES == INDEPENDENT_TABLES and len(set(observer.TABLES)) == 79
+
+
 def runtime(dsn: str = "original") -> Any:
     return SimpleNamespace(tenant="synthetic", factory=SimpleNamespace(settings=SimpleNamespace(dsn=dsn)))
 

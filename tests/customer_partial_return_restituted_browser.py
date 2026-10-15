@@ -32,6 +32,7 @@ from tests.customer_partial_return_remainder_browser import (
     require,
     seed_remainder_browser,
 )
+from tests.customer_partial_return_remainder_browser import TABLES as TABLES
 
 FAMILY = "native-customer-partial-return-restituted-originals"
 OBSERVATIONS = "native-customer-partial-return-restituted-observation-originals"

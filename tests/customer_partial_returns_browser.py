@@ -34,6 +34,7 @@ CUSTOMER_PARTIAL_RETURN_TAMPER = (
 CAPTURE_NAME = re.compile(r"committed-capture-([0-8])\.json")
 PACKET_NAME = "posted-cycle-input.json"
 RESTORE_NAME = "posted-cycle-restored-input.json"
+REFUSED_OBSERVATIONS = "native-customer-partial-return-failed-observation-originals"
 MAX_CAPTURE_BYTES = 4 * 1024 * 1024
 MAX_PACKET_BYTES = 32 * 1024 * 1024
 MAX_ROWS = 4096
@@ -201,6 +202,22 @@ def capture_customer_partial_returns(runtime: ReceiptRuntime, source_order_id: s
               "source_order_id": source_order_id, "history_version": version, "posted_plan_id": posted_plan_id,
               "plan_digest": plan_digest, "tables": tables}
     original = _bytes(packet, MAX_CAPTURE_BYTES)
+    if version == len(files) - 1:
+        retained = _read(root / f"committed-capture-{version}.json", MAX_CAPTURE_BYTES)
+        if retained != original:
+            # Preserve the entire refused observation for diagnosis. It is not
+            # an accepted economic capture and never replaces the first one.
+            refused = _storage(root.parent / REFUSED_OBSERVATIONS)
+            previous_attempts = list(refused.iterdir())
+            require(len(previous_attempts) < 16)
+            for prior in previous_attempts:
+                _regular_path(prior)
+                require(re.fullmatch(r"refused-observation-[a-f0-9]{32}\.json", prior.name) is not None)
+            attempt = {"schema_version": "customer-partial-return-refused-observation-v1",
+                       "reason_code": "retained_capture_changed", "candidate": packet,
+                       "retained_original_bytes": len(retained), "retained_original_sha256": hashlib.sha256(retained).hexdigest()}
+            _retain(refused / ("refused-observation-" + uuid4().hex + ".json"), _bytes(attempt, MAX_CAPTURE_BYTES))
+            require(False)
     _retain(root / f"committed-capture-{version}.json", original, same_allowed=version == len(files) - 1)
     return {"history_version": version, "tables": len(TABLES), "original_bytes": len(original),
             "original_sha256": hashlib.sha256(original).hexdigest(), "raw_rows_published": False}

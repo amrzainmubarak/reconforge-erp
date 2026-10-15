@@ -54,14 +54,24 @@ def test_exact_committed_retry_does_not_append_or_rewrite_original(tmp_path: Pat
 
 
 def test_retry_original_drift_is_refused_without_replacement(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    capture(tmp_path, monkeypatch, 0)
-    capture(tmp_path, monkeypatch, 1)
-    before = (tmp_path / "committed-capture-1.json").read_bytes()
+    root = tmp_path / "accepted-originals"
+    capture(root, monkeypatch, 0)
+    capture(root, monkeypatch, 1)
+    before = (root / "committed-capture-1.json").read_bytes()
     drift = empty_tables()
     drift["finance_entry_lines"] = ['{"changed": true}']
     with pytest.raises(observer.PartialBrowserCustodyError):
-        capture(tmp_path, monkeypatch, 1, tables=drift)
-    assert (tmp_path / "committed-capture-1.json").read_bytes() == before
+        capture(root, monkeypatch, 1, tables=drift)
+    assert (root / "committed-capture-1.json").read_bytes() == before
+    files = list((tmp_path / observer.REFUSED_OBSERVATIONS).iterdir())
+    assert len(files) == 1 and files[0].name.startswith("refused-observation-")
+    diagnostic = observer.parse_json_document(files[0].read_text(), reject_fractional_numbers=True)
+    assert isinstance(diagnostic, dict)
+    assert diagnostic["schema_version"] == "customer-partial-return-refused-observation-v1"
+    assert diagnostic["candidate"]["tables"] == drift and len(diagnostic["candidate"]["tables"]) == 78
+    assert diagnostic["retained_original_sha256"] == observer.hashlib.sha256(before).hexdigest()
+    assert diagnostic["retained_original_bytes"] == len(before)
+    assert [path.name for path in observer._capture_files(root)] == ["committed-capture-0.json", "committed-capture-1.json"]
 
 
 @pytest.mark.parametrize("version", [1, 2, 8])

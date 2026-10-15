@@ -73,6 +73,8 @@ def legacy_database() -> Iterator[tuple[str, str]]:
             install_postgres_inventory_receipt_posting_schema(connection)
             install_postgres_receipt_admission(connection)
             app_user = psycopg.conninfo.conninfo_to_dict(app)["user"]
+            if not isinstance(app_user, str):
+                raise RuntimeError("The owned synthetic fixture requires a named runtime role")
             for statement in (
                 "GRANT USAGE ON SCHEMA reconforge TO {}",
                 "GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {}",
@@ -106,9 +108,9 @@ def test_empty147_148_147_roundtrip_restores_all_catalog_rows_and_function_ident
     accepted_migration(admin, "upgrade", HEAD)
     retained = database_snapshot(admin)
     for row_factory in (None, dict_row):
-        with psycopg.connect(admin, row_factory=row_factory) as connection:
-            install_customer_partial_return_rounding(connection)
-            install_postgres_customer_partial_return_transfer_hooks(connection)
+        with psycopg.connect(admin, row_factory=row_factory) as replay_connection:
+            install_customer_partial_return_rounding(replay_connection)
+            install_postgres_customer_partial_return_transfer_hooks(replay_connection)
     assert database_snapshot(admin) == retained
     for signature, volatility in (
         ("customer_partial_return_balance(text,text)", "STABLE"),

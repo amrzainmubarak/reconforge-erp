@@ -2,6 +2,26 @@
 
 ## Completion first — one domain at a time (2026-10-15)
 
+Accepted bounded M7 source: `37518287126e0f630e726592dda8cc981faa2a96`.
+CI38771788999 passes74/74 at attempt1, zero failed/cancelled/skipped jobs.
+M7 native60 PASS/7 commands/0 critical skips; five partial-browser jobs execute5
+first-attempt cases plus CR1 executes3. All six use real HTTPS, populated340-table
+restore and three tampers each. Python3.11/3.12 each pass8408 with663 inherited generic skips; Docker and
+CodeQL pass. Manual exact-image Security38771976983 passes5/5:0 Critical/High,
+9 Medium,1 Negligible,3/68 SBOM records missing license metadata. No legal
+compatibility or production assurance is inferred. Joined closure08b2463a binds
+171 required original files/14458907 bytes on immutable375.
+
+The master marks M7.1–6 and M7.8 VERIFIED COMPLETE only for the unchanged
+zero-tax/functional-currency/untracked v1/v2 contract. Mandatory M7.7 and dependent
+M7.9 remain INCOMPLETE; whole M7 is OPEN. A/B/C continue the SAME M7 tax/FX
+original-source and return dependency in unpublished worktrees. No new major
+domain or milestone has started. Accepted375 stays fixed in its original branch
+and Draft139 while the next coherent source is built separately.
+
+The following component notes record earlier checkpoints, including their old
+pending statements and negative originals; they do not supersede current status.
+
 Latest integrated slice: actualc70 settlement/cash-race2 PASS, including native
 invoice/exposure/current and overdue aging at seven stages. New79-table originals
 independently derive9/18/205000 and9/19/221000 (I/IO closure813f8f56).
@@ -15,9 +35,12 @@ backdate security passes1/1 atcdd. Component results retain their own heads.
 CI38751026869 on cdd is a preserved terminal failure: Python8385 PASS plus one
 bad lstat test double, and native8 PASS/2 FAIL on obsolete78-table capture.
 The aggregate fails closed. Terminal totals are68 success/4 failure/1 cancelled/
-1 skipped; the fourth HTTPS job reaches its25-minute limit during Studio build, before HTTPS,
-and bounded log retrieval retains404 and incomplete ZIP originals. The exact
-composite subcommand/cause remains unknown, receipt bf9c3e91. Both narrow fixes
+1 skipped; the fourth browser job records25 minutes of total job metadata while
+the official Check Run annotation proves its20-minute execution ceiling was
+exceeded during Studio build, before HTTPS. Direct log retrieval retains404 and
+bounded run-ZIP downloads remain incomplete. The exact npm/build/Playwright
+subcommand and underlying stall cause remain unknown; supplemental receipt
+216a1222 preserves the earlier bf9c3e91 qualification. Both narrow fixes
 execute their targeted gates;
 Linux affected stat case also passes. Original Gitleaks protocol-fixture false
 positive is corrected without scanner exceptions; tree and HEAD-history scans

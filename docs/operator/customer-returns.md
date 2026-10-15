@@ -92,9 +92,11 @@ nonowner FORCE RLS, head, row/function fingerprints and SQL tamper refusal.
 
 Revision0147 adds a correction owner over the existing Stock/FIFO, AR, cash and
 Finance Posting engines. Revision0148 adds the separately versioned remaining-value
-policy and its immutable allocation witnesses. The module remains experimental;
-source-qualified native and HTTPS/restore receipts do not replace the final
-cohesive CI gate. Track acceptance and the open tax/FX dependency in
+policy and its immutable allocation witnesses. The module remains experimental.
+The fixed zero-tax/functional-currency v1/v2 scope passed final cohesive CI74/74
+on `37518287126e0f630e726592dda8cc981faa2a96`, with native60/0 critical skips and
+actual HTTPS/populated restore. The mandatory tax/FX dependency keeps the full
+M7 domain open. Track exact scope and evidence in
 `docs/execution/ENTERPRISE_COMPLETION_MASTER_MATRIX.md`.
 
 ### Choose the retained source protocol

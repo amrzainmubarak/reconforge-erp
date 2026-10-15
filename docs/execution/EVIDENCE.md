@@ -1,11 +1,73 @@
 # ReconForge Execution Evidence Log
 
-Cancellation qualification `bf9c3e91183f9f4cfcd32d75b118cca0dcc8450dedffc5b50085024efe98e262`
-(7209 bytes) preserves official cdd job116479467387 metadata: Studio composite
-build active, HTTPS never started, total25 minutes. Direct logs return404;
-bounded full-run ZIP transfers remain incomplete. The exact npm/build/Playwright
-subcommand and cancellation cause are unknown. No timeout, assertion or scanner
-policy was relaxed, and no hosted product success is inferred.
+## Accepted M7 v1/v2 supported scope on frozen375 — 2026-10-15
+
+Source `37518287126e0f630e726592dda8cc981faa2a96` passes CI38771788999, attempt1,
+74/74 jobs with0 failure/cancel/skip. Official run/job response originals remain
+in `final375-global-watch-v3-private/read-08`; actual runtime merge tree matches
+immutable Git375. This does not erase cdd or any earlier negative execution.
+
+Independent native closure `e9a7aacb5139a182c7c093f3a8543d28688aa2ceb82c11f2071f5cdefa06303e`
+(8118 bytes) binds all five M7 jobs:60 PASS/7 pytest commands,0 critical skips,
+mandatory plugin statistics present. JUnit XML was not configured; none is
+invented. Independent browser closure
+`4177b945d511599190fc49d36cf468a6f0804b02532207f4d0dabc91ffe9a066`
+(32350 bytes) verifies five actual partial-return ZIPs plus retained CR1 evidence,
+5 partial cases plus3 CR1 cases, all first-attempt/0 skipped/retry/flaky,
+source/oracle pins, isolated-mode
+producer proofs, actual HTTPS/populated340-table restore and three tampers per
+run. Hosted private raw rows are intentionally not published; fresh C raw
+reexecution is not claimed. Separate private native/oracle originals retain
+their actual heads and direct independent raw derivations.
+
+Python/package closure
+`32b3c894c4f6157e074df3a2cb951ef8548d09b7c91757b4f4b48c5137f59c8e`
+(6135 bytes) binds both8408 PASS/663 inherited generic skips, successful source
+archive steps,3463 sdist files/1476 required files,3455 tracked hash matches and
+960 wheel source matches per Python job. The new22-case mixed oracle also has
+actual targeted execution; no per-node hosted XML was present in quiet logs.
+The first external comparator's nonexistent-filename refusal is retained as a
+reader mistake, not a hosted package failure. Root's source/wheel archive report
+`feb9e3efe0151165aa169dacf513a3f3ac0009d3786945314147d47e9f245ec8`
+separately passes on the same clean source.
+
+Exact-image closure
+`68ef10fb74c6a82ad856d9150e3db66cbd48131e91a073fbcd0a58d013a67268`
+(22645 bytes) binds manualSecurity38771976983,5/5 success, actual image config/
+manifest digests, Syft/Grype subjects and exact375 checkout. Findings:0 Critical,
+0 High,9 Medium,1 Negligible,0 unknown/ignored/active exceptions. DBv6.1.10 age
+37169s is inside the120h gate. License metadata65/68;3 missing, no legal
+compatibility conclusion. Automatic PR image skip remains separately classified;
+manual image success is the actual image proof. Docker/CodeQL also pass.
+
+Joined closure
+`08b2463ac062502131d626afefb3be6a560f1d4ebcd8bb04beb3d1a3d91f178d`
+(5668 bytes) binds171 required originals/14458907 bytes. External byte-exact
+mirror closure `b2343977effb2e9acb87609d045666cadfca6dca461c36501cba48611cdaad78`
+retains173 files/14559130 bytes. All41 artifact IDs/digests are recorded, without
+a claim that every unchanged legacy ZIP/full-run log ZIP was downloaded.
+
+No scanner/timeout/financial policy was weakened. Local tree/HEAD Gitleaks pass;
+a distinct all-local-refs synthetic-fixture finding in a nonancestor branch is
+still retained. Bounded v1/v2 completion does not close mandatory M7.7 tax/FX,
+M7.9, the whole domain, any country pack or Production Qualification. Heavy
+comparative benchmarks remain deferred. Current status is solely in the master.
+
+Earlier source-specific sequences and pending statements below remain historical.
+
+Initial cancellation qualification `bf9c3e91183f9f4cfcd32d75b118cca0dcc8450dedffc5b50085024efe98e262`
+(7209 bytes) remains unchanged. Supplemental qualification
+`216a122254f2fce5d7573bcb434b4c9cbf46d9b2a1da5adce095a1be8f39378f`
+(8527 bytes) binds the official Check Run annotation for cdd job116479467387:
+"The job has exceeded the maximum execution time of 20m0s". Original annotations
+SHA256 `46fc327b03725995dd5850853932e11254e86280cf4588614ef57049d7dc5a9e`
+are retained beside the original metadata and failed retrievals. Total job
+start/completion metadata spans25 minutes; this is distinct from the official
+20-minute execution ceiling. Studio composite build remained active and HTTPS
+never started. Direct logs return404; bounded full-run ZIP transfers remain
+incomplete. The exact npm/build/Playwright subcommand and underlying stall cause
+remain unknown. No timeout, assertion or scanner policy was relaxed, and no
+hosted product success is inferred.
 
 ## M7 original AR reports, Studio aging and mixed-cost proof — 2026-10-15
 
@@ -39,8 +101,10 @@ unchanged five older readers.
 Corrected native backdate case cdd1 PASS39.250s proves Python and actual SQL
 refusal/full79 rollback; earlier373 cohort remains5 PASS/1 FAIL. Hosted cdd
 CI38751026869 terminal68 success/4 failure/1 cancelled/1 skipped remains retained;
-the fourth browser job reaches25 minutes during Studio build, before HTTPS; its original
-setup logs await root-cause review. Stat and exact79
+the fourth browser job has25-minute total metadata and an official20-minute
+execution-ceiling annotation during Studio build, before HTTPS. The underlying
+composite subcommand/stall cause remains unknown; supplemental qualification
+216a1222 preserves original metadata and unsuccessful log retrievals. Stat and exact79
 helper repairs have targeted successes. Package preflight713 refuses missing
 ADR0861; explicit MANIFEST fix ac5fec69 passes actual source/wheel archive gate,
 report5b19022a. Gitleaks8.30.1 tree/HEAD scans pass after exact protocol fixture

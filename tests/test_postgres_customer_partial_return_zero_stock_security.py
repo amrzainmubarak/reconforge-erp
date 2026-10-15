@@ -31,7 +31,7 @@ ACTIVE_MESSAGE = "Zero-valued native stock requires its current exact third-huma
 NULL_MESSAGE = "Absent original COGS restitution requires the exact visible zero-cost factual source and current third-human owner"
 
 
-def _cause(error: BaseException, constraint: str, message: str | None = None) -> None:
+def _cause(error: BaseException, constraint: str | None, message: str | None = None) -> None:
     native = check_cause(error)
     assert native.sqlstate == "23514" and native.diag.constraint_name == constraint
     if message is not None:
@@ -168,7 +168,14 @@ def test_closed_zero_stock_claim_cannot_admit_fresh_valuation_or_consumption_chi
                     to_jsonb(original)||jsonb_build_object('id',%s::text))).*
                 FROM reconforge.{table} original WHERE original.tenant_id=%s AND original.id=%s""")
                 .format(table=sql.Identifier(table)), ("HOSTILE-CLOSED-" + table, runtime.tenant, row_id))
-        _cause(denied.value, "inventory_transfer_owner", ACTIVE_MESSAGE)
+        if table == "inventory_valuation_lines":
+            _cause(denied.value, "inventory_transfer_owner", ACTIVE_MESSAGE)
+        else:
+            # The earlier retained receipt-layer trigger already forbids a
+            # new consumption against this final Approved valuation. The
+            # independent current-zero guard is exercised on a real Draft
+            # valuation in the preceding third-human test.
+            _cause(denied.value, None, "Reserved layer consumption must bind its exact scoped item and monetary units.")
         assert capture_rounding(runtime) == before
 
 

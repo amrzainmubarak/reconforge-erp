@@ -53,7 +53,7 @@ class Consumption:
     def __post_init__(self) -> None:
         identifier(self.id)
         amount(self.quantity_scaled, positive=True)
-        amount(self.value_minor)
+        amount(self.value_minor, positive=True)
 
 
 @dataclass(frozen=True)
@@ -72,7 +72,7 @@ class Birth:
         amount(self.revenue_minor, positive=True)
         amount(self.collected_minor)
         require(self.collected_minor <= self.revenue_minor and type(self.consumptions) is tuple
-                and 0 < len(self.consumptions) <= 200 and all(type(c) is Consumption for c in self.consumptions))
+                and 0 < len(self.consumptions) <= 32 and all(type(c) is Consumption for c in self.consumptions))
         require(sum(c.quantity_scaled for c in self.consumptions) == self.quantity_scaled
                 and len({c.id for c in self.consumptions}) == len(self.consumptions))
         require(type(self.source_fingerprint) is str and len(self.source_fingerprint) == 64

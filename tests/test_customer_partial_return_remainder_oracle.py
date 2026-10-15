@@ -100,8 +100,10 @@ def test_zero_financial_legs_still_change_quantity_history_and_can_reverse_witho
 
 
 def test_mixed_zero_cost_portion_has_a_real_plan_cost_leg_owned_by_the_aggregate_cost() -> None:
-    source = Birth(2, 1, 0, (Consumption("free-first", 1, 0), Consumption("valued-second", 1, 1)), "f" * 64, POLICY, "HALF_UP", "HALF_EVEN")
-    witness = cut(History(source), 2)
+    source = Birth(4, 4, 0, (Consumption("first", 3, 1), Consumption("second", 1, 1)), "f" * 64, POLICY, "HALF_UP", "HALF_EVEN")
+    history = History(source)
+    assert cut(history, 2, "consume-first-value").cost_minor == 1
+    witness = cut(history, 2, "cross-exhausted-value")
     assert [p.value_minor for p in witness.portions] == [0, 1]
     assert witness.cost_minor == 1
     assert return_entries(witness)[1] == ("CostRestoration", (("INVENTORY", 1, 0), ("COGS", 0, 1)))
@@ -253,7 +255,7 @@ def compositions(total: int) -> list[tuple[int, ...]]:
 @pytest.mark.parametrize("quantity", range(1, 8))
 def test_exhaustive_ordered_partitions_conserve_exact_original_money_and_reversal_restores_each_active_prefix(quantity: int) -> None:
     for revenue in range(1, 8):
-        for cost in range(8):
+        for cost in range(1, 8):
             for partition in compositions(quantity):
                 history = History(birth(quantity, revenue, cost, paid=revenue // 2))
                 prefixes = []
@@ -276,6 +278,16 @@ def test_nearest_tie_rules_are_invariant_to_fraction_representation_and_leave_in
     assert nearest(Fraction(1001 * 2, 3), "HALF_EVEN") == 667
     assert nearest(Fraction(667, 2), "HALF_EVEN") == 334
     assert all(nearest(Fraction(i, 1), rule) == i for i in range(20) for rule in ("HALF_UP", "HALF_EVEN"))
+
+
+def test_native_original_admission_is_positive_and_bounded_to_thirty_two_consumptions() -> None:
+    with pytest.raises(RemainderRefusal):
+        Consumption("unsupported-zero-original", 1, 0)
+    admitted = tuple(Consumption(f"consumption-{index}", 1, 1) for index in range(32))
+    source = Birth(32, 32, 0, admitted, "f" * 64, POLICY, "HALF_UP", "HALF_EVEN")
+    assert len(source.consumptions) == 32
+    with pytest.raises(RemainderRefusal):
+        replace(source, quantity_scaled=33, consumptions=(*admitted, Consumption("too-many", 1, 1)))
 
 
 @pytest.mark.parametrize(("selected", "expected"), [

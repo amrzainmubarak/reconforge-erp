@@ -110,10 +110,10 @@ def _snapshot() -> str:
     value = _replace(value, "AND values_minor BETWEEN 1 AND 9000000000000000000", "AND values_minor BETWEEN 0 AND 9000000000000000000 AND(values_minor>0 OR has_rounding)")
     value = _replace(value, "CASE WHEN has_restitution THEN'inventory-transfer-cost-v2' ELSE'inventory-transfer-cost-v1' END",
         "CASE WHEN has_rounding THEN'inventory-transfer-cost-v3' WHEN has_restitution THEN'inventory-transfer-cost-v2' ELSE'inventory-transfer-cost-v1' END")
-    value = _replace(value, "  sources:=sources||jsonb_build_array(original);", r"""  IF EXISTS(SELECT 1 FROM jsonb_array_elements(consumptions) consumed_value WHERE consumed_value->>'value_minor'='0') THEN
+    value = _replace(value, "  sources:=sources||jsonb_build_array(original);", r"""  IF EXISTS(SELECT 1 FROM jsonb_array_elements(consumptions) consumed_row(value) WHERE consumed_row.value->>'value_minor'='0') THEN
    original:=original||jsonb_build_object('restituted_consumption_admissions',(SELECT jsonb_agg(
-    reconforge.customer_partial_return_zero_consumption(t,consumed_value->>'id') ORDER BY ordinal)
-    FROM jsonb_array_elements(consumptions) WITH ORDINALITY history(consumed_value,ordinal) WHERE consumed_value->>'value_minor'='0'));
+    reconforge.customer_partial_return_zero_consumption(t,consumed_row.value->>'id') ORDER BY consumed_row.ordinal)
+    FROM jsonb_array_elements(consumptions) WITH ORDINALITY consumed_row(value,ordinal) WHERE consumed_row.value->>'value_minor'='0'));
    has_rounding:=TRUE;
   END IF;
   sources:=sources||jsonb_build_array(original);""")

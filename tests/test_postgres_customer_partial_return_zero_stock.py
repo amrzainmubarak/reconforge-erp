@@ -106,7 +106,7 @@ def test_actual_zero_cost_restituted_stock_resale_new_return_and_transfer_pool_k
 def test_actual_mixed_zero_original_consumption_keeps_one_real_total_cogs_effect(receipt_database: tuple[str, str]) -> None:
     runtime, original = create_remainder_runtime(receipt_database, zero=True)
     post_v2(runtime, prepare_v2(runtime, original, 1, 0, "mixed-original-zero-return"))
-    request = replace(receipt_request("MIXED-EXTRA"), quantity="0.1", total_value_minor=10)
+    request = replace(receipt_request("MIXED-EXTRA"), quantity="0.1", total_value_minor=10, posting_date="2026-10-14")
     with runtime.actor("maker") as (_, owner, actor):
         prepared = owner.prepare_receipt(request, command_id="mixed-extra-prepare", actor=actor)
     with runtime.actor("checker") as (_, owner, actor):

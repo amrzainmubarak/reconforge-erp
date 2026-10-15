@@ -15,12 +15,22 @@ def _backlog() -> dict[str, Any]:
     return loaded
 
 
+def test_completion_program_uses_one_authoritative_matrix_and_one_domain() -> None:
+    backlog = _backlog()
+    assert backlog["phase"] == "Enterprise ERP v1.0 — Functional Completion"
+    assert backlog["completion_source_of_truth"] == "docs/execution/ENTERPRISE_COMPLETION_MASTER_MATRIX.md"
+    assert (ROOT / backlog["completion_source_of_truth"]).is_file()
+    assert type(backlog["major_domain_wip_limit"]) is int and backlog["major_domain_wip_limit"] == 1
+    assert set(backlog["completion_status_values"]) == {
+        "VERIFIED COMPLETE", "INCOMPLETE", "BLOCKED", "NOT STARTED",
+    }
+
+
 def test_phase4_goal_covers_all_seven_workstreams_without_relabeling_old_closure() -> None:
     backlog = _backlog()
     tasks = backlog["tasks"]
     phase4 = [task for task in tasks if task["id"].startswith("P4-")]
 
-    assert backlog["phase"] == "Phase 4 — Global Capability Expansion"
     assert {task["goal_workstream"] for task in phase4} == {
         "deep_close_and_consolidation",
         "advanced_matching",

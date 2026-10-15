@@ -276,3 +276,23 @@ def test_nearest_tie_rules_are_invariant_to_fraction_representation_and_leave_in
     assert nearest(Fraction(1001 * 2, 3), "HALF_EVEN") == 667
     assert nearest(Fraction(667, 2), "HALF_EVEN") == 334
     assert all(nearest(Fraction(i, 1), rule) == i for i in range(20) for rule in ("HALF_UP", "HALF_EVEN"))
+
+
+@pytest.mark.parametrize(("selected", "expected"), [
+    (4499999999999499999, 4499999999999),
+    (8999999999999999999, 9000000000000),
+])
+def test_bigint_boundary_ratios_do_not_round_the_quotient_before_applying_the_captured_integer_policy(
+    selected: int, expected: int,
+) -> None:
+    # Q uses precision6; a one-minor-unit quote gives the exact original G below.
+    # The first exact ratio ends in .499999; finite intermediate scale must not
+    # turn it into .5000. The second is just below an integer and must not add1.
+    history = History(birth(9000000000000000000, 9000000000000, 9000000000000))
+    first = cut(history, selected, "large-first")
+    assert first.credit_minor == first.cost_minor == expected
+    assert first.cost_minor <= first.portions[0].before_value_minor
+    final = cut(history, history.birth.quantity_scaled - selected, "large-final")
+    assert first.credit_minor + final.credit_minor == 9000000000000
+    assert first.cost_minor + final.cost_minor == 9000000000000
+    assert history.remaining == ((0, 0),)

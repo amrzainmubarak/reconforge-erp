@@ -145,6 +145,20 @@ def qualify_raw_cycle(packet: dict[str, Any]) -> dict[str, Any]:
     new_source = base._one(stages[3]["customer_partial_return_sources"], source_order_id=new_id)
     admission = factual.verify_restituted_original(stages[1], stages[2], new_source, tenant_id=tenant,
                                                   original_source_order_id=old_id, resale_source_order_id=new_id)
+    invoice_plan = base._one(stages[2]["operational_finance_plans"], id=new_stock["invoice_plan_id"])
+    invoice_link = base._one(stages[2]["operational_finance_links"], plan_id=invoice_plan["id"])
+    invoice_effect = base._one(stages[2]["finance_posting_effects"], id=invoice_link["posting_effect_id"])
+    require(invoice_plan["source_kind"] == "ARInvoice" and invoice_plan["source_id"] == new_stock["invoice_id"]
+            and integer(invoice_plan["amount_minor"]) == 100 and invoice_plan["entry_id"] == invoice_effect["entry_id"]
+            and invoice_plan["validation_digest"] == invoice_effect["validation_digest"]
+            and invoice_link["plan_digest"] == invoice_plan["plan_digest"]
+            and invoice_effect["id"] not in {row["id"] for row in stages[1]["finance_posting_effects"]}
+            and all(invoice_plan[key] == new_stock[key] for key in ("workspace_id", "organization_id", "legal_entity_id"))
+            and new_source["original_revenue_effect_id"] == invoice_effect["id"]
+            and new_source["source_payload"]["original_source"]["revenue"] == invoice_effect
+            and new_source["source_payload"]["typed_source"]["original_revenue"]["posting_effect_id"] == invoice_effect["id"]
+            and new_source["source_payload"]["typed_source"]["original_revenue"]["validation_digest"] == invoice_effect["validation_digest"]
+            and new_source["source_payload"]["fingerprint_payload"]["original_revenue"] == [invoice_effect["id"], invoice_effect["validation_digest"]])
     require(tuple(integer(new_source[key]) for key in ("original_quantity_scaled", "gross_minor", "initial_collected_minor")) == (1, 100, 0))
     zero_consumption = base._one(stages[2]["inventory_layer_consumptions"], valuation_line_id=admission_line(stages[2], new_stock))
     new_plan = _plan(stages[3], new_source, new_stock, credit=100, consumption=zero_consumption, before_q=1, before_v=0, before_revenue=100)

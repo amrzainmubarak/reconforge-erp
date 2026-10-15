@@ -104,7 +104,7 @@ def fixture() -> dict[str, Any]:
         initial[name] = [json.loads(value) for value in initial[name]]
     # Rebind every captured factual component to the exact prior originals.
     sale = copy.deepcopy(issued["stock_sales_orders"][0])
-    sale.update(item_id="item", uom_id="uom", location_id="location")
+    sale.update(item_id="item", uom_id="uom", location_id="location", invoice_plan_id="resale-invoice-plan")
     pool = sale["issue_plan"]["restitution_cost_snapshot"]["sources"][0]
     pool["layer"] = copy.deepcopy(prior["inventory_cost_layers"][0])
     correction = pool["partial_return_corrections"][0]
@@ -119,7 +119,15 @@ def fixture() -> dict[str, Any]:
     second["inventory_layer_consumptions"].append(copy.deepcopy(issued["inventory_layer_consumptions"][-1]))
     second["inventory_cost_layers"][0]["remaining_quantity_scaled"] = 0
     add_gl(second, "new-invoice-entry", (("AR", 100, 0), ("REVENUE", 0, 100)))
+    revenue = copy.deepcopy(second["finance_posting_effects"][-1])
+    second["operational_finance_plans"].append({**scope, "id": "resale-invoice-plan", "entry_id": revenue["entry_id"], "source_kind": "ARInvoice", "source_id": "invoice",
+                                              "amount_minor": 100, "validation_digest": revenue["validation_digest"], "plan_digest": "c" * 64})
+    second["operational_finance_links"].append({"tenant_id": "tenant", "plan_id": "resale-invoice-plan", "posting_effect_id": revenue["id"], "plan_digest": "c" * 64})
     source.update(id="new-source", original_quantity_scaled=1, gross_minor=100, initial_collected_minor=0)
+    source["original_revenue_effect_id"] = revenue["id"]
+    source["source_payload"]["original_source"]["revenue"] = revenue
+    source["source_payload"]["typed_source"]["original_revenue"] = {"posting_effect_id": revenue["id"], "validation_digest": revenue["validation_digest"]}
+    source["source_payload"]["fingerprint_payload"]["original_revenue"] = [revenue["id"], revenue["validation_digest"]]
     proof = source["source_payload"]["original_source"]["cost_admission"]
     proof["issue_plan"] = copy.deepcopy(sale["issue_plan"])
     digest = reader.base._digest(proof)
@@ -155,6 +163,14 @@ def test_four_literal_checkpoints_preserve_old_source_and_require_real_new_zero_
     assert proof["final_account_minor_balances"] == reader.ACCOUNT_BALANCES
     assert proof["old_return_later_immutable_consumption_dependency"] is True
     assert proof["dependency_refusal_http_proven"] is proof["current_authorization_proven"] is proof["populated_restore_proven"] is False
+
+
+def test_balanced_hundred_minor_effect_cannot_replace_the_real_resale_invoice_owner_link() -> None:
+    value = fixture()
+    tables = value["captures"][2]["tables"]
+    tables["operational_finance_links"] = [json.dumps({"tenant_id": "tenant", "plan_id": "resale-invoice-plan", "posting_effect_id": "old-cogs-effect"})]
+    with pytest.raises(ValueError):
+        reader.qualify_raw_cycle(value)
 
 
 @pytest.mark.parametrize("attack", ["checkpoint", "source-swap", "missing-table", "old-consumption", "resale-value", "later-consumption-witness", "fake-zero-entry", "new-credit", "snapshot-line", "new-original-claim", "old-history", "physical", "witness", "old-audit-prefix"])

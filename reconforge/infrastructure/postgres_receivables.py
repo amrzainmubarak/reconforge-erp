@@ -41,6 +41,11 @@ from reconforge.domain.receivables_replay import (
 from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_monetary_receivables import (
+    monetary_return_schema,
+    natural_minor_text,
+    read_monetary_invoice_balance,
+)
 from reconforge.infrastructure.postgres_repository_scope import (
     PostgresRepositoryScopeError,
     ensure_repository_tenant_scope,
@@ -664,6 +669,7 @@ class PostgresReceivablesRepository:
 
     def _invoice(self, invoice_id: str) -> dict[str, Any]:
         partial = self._partial_return_schema()
+        monetary = monetary_return_schema(self.connection)
         query = (
             "SELECT id,workspace_id,organization_id,legal_entity_id,customer_id,invoice_number,invoice_date,due_date,currency_code,subtotal_minor,tax_minor,total_minor,status,created_by,approved_by,approved_at,credit_override_reason,cancelled_by,cancelled_at,cancel_reason,created_at,updated_at,row_version,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest,customer_partial_return_source_id FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s"
             if partial else
@@ -684,6 +690,18 @@ class PostgresReceivablesRepository:
         result["lines"] = [_row(line, self._LINE) for line in lines]
         result["allocated_minor"] = self._invoice_allocated(invoice_id)
         result["outstanding_minor"] = int(result["total_minor"]) - result["allocated_minor"]
+        balance_monetary = read_monetary_invoice_balance(
+            self.connection, self.tenant_id, invoice_id,
+            total_minor=result["total_minor"], allocated_minor=result["allocated_minor"],
+        ) if monetary else None
+        if balance_monetary is not None:
+            if partial_source_id is not None or result["status"] == "Cancelled":
+                raise PlatformError("Monetary invoice has conflicting original-source ownership or state.")
+            result.update(
+                credited_minor=natural_minor_text(balance_monetary["transaction_credited_minor"]),
+                refund_due_minor=natural_minor_text(balance_monetary["transaction_refund_due_minor"]),
+                outstanding_minor=natural_minor_text(balance_monetary["transaction_outstanding_minor"]),
+            )
         if partial_source_id is not None:
             self.connection.execute("SELECT reconforge.customer_partial_return_source_close(%s,%s)",
                                     (self.tenant_id, partial_source_id))
@@ -979,16 +997,28 @@ class PostgresReceivablesRepository:
 
     def _exposure(self, customer_id: str, exclude_invoice_id: str = "") -> int:
         partial = self._partial_return_schema()
+        monetary = monetary_return_schema(self.connection)
         query = (
             "SELECT COALESCE(SUM(greatest(i.total_minor-COALESCE(a.allocated,0)-CASE WHEN i.customer_partial_return_source_id IS NULL THEN 0 ELSE reconforge.customer_partial_return_credit(i.tenant_id,i.id) END,0)),0) FROM reconforge.ar_invoices i LEFT JOIN (SELECT tenant_id,invoice_id,SUM(amount_minor) allocated FROM reconforge.ar_receipt_allocations GROUP BY tenant_id,invoice_id) a ON a.tenant_id=i.tenant_id AND a.invoice_id=i.id WHERE i.tenant_id=%s AND i.customer_id=%s AND i.status IN ('Approved','PartiallyPaid') AND i.id<>%s"
             if partial else
             "SELECT COALESCE(SUM(greatest(i.total_minor-COALESCE(a.allocated,0),0)),0) FROM reconforge.ar_invoices i LEFT JOIN (SELECT tenant_id,invoice_id,SUM(amount_minor) allocated FROM reconforge.ar_receipt_allocations GROUP BY tenant_id,invoice_id) a ON a.tenant_id=i.tenant_id AND a.invoice_id=i.id WHERE i.tenant_id=%s AND i.customer_id=%s AND i.status IN ('Approved','PartiallyPaid') AND i.id<>%s"
         )
+        if monetary:
+            credit = (
+                "reconforge.monetary_stock_invoice_credit(i.tenant_id,i.id)",
+                "+CASE WHEN i.customer_partial_return_source_id IS NULL THEN 0 ELSE reconforge.customer_partial_return_credit(i.tenant_id,i.id) END" if partial else "",
+            )
+            query = "".join((
+                "SELECT COALESCE(SUM(greatest(i.total_minor-COALESCE(a.allocated,0)-(", *credit,
+                "),0)),0)::text FROM reconforge.ar_invoices i LEFT JOIN (SELECT tenant_id,invoice_id,SUM(amount_minor) allocated FROM reconforge.ar_receipt_allocations GROUP BY tenant_id,invoice_id) a ON a.tenant_id=i.tenant_id AND a.invoice_id=i.id WHERE i.tenant_id=%s AND i.customer_id=%s AND i.status IN ('Approved','PartiallyPaid') AND i.id<>%s",
+            ))
         row = self.connection.execute(
             query,
             (self.tenant_id, customer_id, exclude_invoice_id),
         ).fetchone()
         value = row[0] if not isinstance(row, Mapping) else next(iter(row.values()))
+        if monetary:
+            return natural_minor_text(value, bounded=False)
         return max(int(value or 0), 0)
 
     def approve_invoice(
@@ -1284,12 +1314,23 @@ class PostgresReceivablesRepository:
         as_of = _iso_date(as_of_date, "Aging as-of date")
         with self._transaction():
             partial = self._partial_return_schema()
+            monetary = monetary_return_schema(self.connection)
             workspace_id = self._required_workspace_id(workspace)
             query = (
                 "SELECT i.id,i.organization_id,i.legal_entity_id,i.invoice_number,c.customer_code,c.name,i.currency_code,i.invoice_date,i.due_date,i.total_minor,i.currency_precision,i.currency_rounding_policy,i.currency_registry_version,i.currency_registry_digest,COALESCE((SELECT SUM(a.amount_minor) FROM reconforge.ar_receipt_allocations a WHERE a.tenant_id=i.tenant_id AND a.invoice_id=i.id),0) AS allocated_minor,CASE WHEN i.customer_partial_return_source_id IS NULL THEN 0 ELSE reconforge.customer_partial_return_credit(i.tenant_id,i.id) END AS credited_minor FROM reconforge.ar_invoices i JOIN reconforge.ar_customers c ON c.tenant_id=i.tenant_id AND c.id=i.customer_id WHERE i.tenant_id=%s AND i.workspace_id=%s AND i.status IN ('Approved','PartiallyPaid') ORDER BY i.due_date,i.invoice_number,i.id"
                 if partial else
                 "SELECT i.id,i.organization_id,i.legal_entity_id,i.invoice_number,c.customer_code,c.name,i.currency_code,i.invoice_date,i.due_date,i.total_minor,i.currency_precision,i.currency_rounding_policy,i.currency_registry_version,i.currency_registry_digest,COALESCE((SELECT SUM(a.amount_minor) FROM reconforge.ar_receipt_allocations a WHERE a.tenant_id=i.tenant_id AND a.invoice_id=i.id),0) AS allocated_minor,0 AS credited_minor FROM reconforge.ar_invoices i JOIN reconforge.ar_customers c ON c.tenant_id=i.tenant_id AND c.id=i.customer_id WHERE i.tenant_id=%s AND i.workspace_id=%s AND i.status IN ('Approved','PartiallyPaid') ORDER BY i.due_date,i.invoice_number,i.id"
             )
+            if monetary:
+                credit = (
+                    "reconforge.monetary_stock_invoice_credit(i.tenant_id,i.id)",
+                    "+CASE WHEN i.customer_partial_return_source_id IS NULL THEN 0 ELSE reconforge.customer_partial_return_credit(i.tenant_id,i.id) END" if partial else "",
+                )
+                query = "".join((
+                    "SELECT i.id,i.organization_id,i.legal_entity_id,i.invoice_number,c.customer_code,c.name,i.currency_code,i.invoice_date,i.due_date,i.total_minor,i.currency_precision,i.currency_rounding_policy,i.currency_registry_version,i.currency_registry_digest,COALESCE((SELECT SUM(a.amount_minor) FROM reconforge.ar_receipt_allocations a WHERE a.tenant_id=i.tenant_id AND a.invoice_id=i.id),0)::text AS allocated_minor,(",
+                    *credit,
+                    ")::text AS credited_minor FROM reconforge.ar_invoices i JOIN reconforge.ar_customers c ON c.tenant_id=i.tenant_id AND c.id=i.customer_id WHERE i.tenant_id=%s AND i.workspace_id=%s AND i.status IN ('Approved','PartiallyPaid') ORDER BY i.due_date,i.invoice_number,i.id",
+                ))
             rows = self.connection.execute(
                 query,
                 (self.tenant_id, workspace_id),
@@ -1313,7 +1354,14 @@ class PostgresReceivablesRepository:
             policies = []
             for raw in rows:
                 row = _row(raw, columns)
-                outstanding = max(int(row["total_minor"]) - int(row["allocated_minor"]) - int(row["credited_minor"]), 0)
+                if monetary:
+                    allocated = natural_minor_text(row["allocated_minor"])
+                    credited = natural_minor_text(row["credited_minor"])
+                    if credited > int(row["total_minor"]):
+                        raise PlatformError("Original monetary invoice credit exceeds its actual gross amount.")
+                    outstanding = max(int(row["total_minor"]) - allocated - credited, 0)
+                else:
+                    outstanding = max(int(row["total_minor"]) - int(row["allocated_minor"]) - int(row["credited_minor"]), 0)
                 if outstanding <= 0:
                     continue
                 policies.append(self._policy(row))

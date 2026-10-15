@@ -20,6 +20,7 @@ BALANCE_FIELDS = SCOPE_FIELDS | POLICY_FIELDS | frozenset({
     "refund_entitlement_minor", "refunded_minor", "refund_due_minor", "outstanding_minor", "active_plan_id",
 })
 ENTRY_FIELDS = frozenset({"entry_id", "purpose", "validation_digest", "posting_effect_id"})
+ALLOCATION_POLICY = "remaining-original-v1"
 PREFIXES = {"Return": "CR2", "Refund": "CRF2", "ReverseReturn": "CR2R", "ReverseRefund": "CRF2R"}
 ENTRY_PURPOSES = {"Return": ("RevenueCredit", "CostRestoration"), "Refund": ("Refund",),
                   "ReverseReturn": ("ReverseRevenueCredit", "ReverseCostRestoration"), "ReverseRefund": ("ReverseRefund",)}
@@ -82,10 +83,13 @@ def _money(row: dict[str, Any], *, positive: frozenset[str] = frozenset()) -> No
             row[key] = str(value)
 
 
-def project_partial_plan(value: Any, scope: Mapping[str, Any]) -> dict[str, Any]:
-    row = _object(value, PLAN_FIELDS)
+def _project_partial_plan(value: Any, scope: Mapping[str, Any], *, remainder: bool) -> dict[str, Any]:
+    row = _object(value, PLAN_FIELDS | {"allocation_policy"} if remainder else PLAN_FIELDS)
     _scope_policy(row, scope)
-    _require(row["schema_version"] == "customer-partial-return-v1" and type(row["operation"]) is str and row["operation"] in PREFIXES)
+    _require(row["schema_version"] == ("customer-partial-return-v2" if remainder else "customer-partial-return-v1")
+             and type(row["operation"]) is str and row["operation"] in PREFIXES)
+    if remainder:
+        _require(row["allocation_policy"] == ALLOCATION_POLICY)
     operation = row["operation"]
     _identity(row["id"], PREFIXES[operation])
     _identity(row["source_id"], "CRS2")
@@ -110,7 +114,8 @@ def project_partial_plan(value: Any, scope: Mapping[str, Any]) -> dict[str, Any]
     _require((row["poster_actor_id"] is not None and row["poster_actor_id"] not in {row["preparer_actor_id"], row["reviewer_actor_id"]})
              if phase == 2 else row["poster_actor_id"] is None)
     merchandise = operation in {"Return", "ReverseReturn"}
-    _money(row, positive=frozenset({"amount_minor", "quantity_scaled", "credit_minor", "cogs_restored_minor"}) if merchandise else frozenset({"amount_minor"}))
+    positive = frozenset({"quantity_scaled"}) if remainder else frozenset({"amount_minor", "quantity_scaled", "credit_minor", "cogs_restored_minor"})
+    _money(row, positive=positive if merchandise else frozenset({"amount_minor"}))
     if merchandise:
         _require(int(row["credit_minor"]) == int(row["receivable_released_minor"]) + int(row["refund_entitlement_delta_minor"])
                  and int(row["amount_minor"]) == int(row["credit_minor"]) + int(row["cogs_restored_minor"]))
@@ -120,9 +125,12 @@ def project_partial_plan(value: Any, scope: Mapping[str, Any]) -> dict[str, Any]
         _require(row["original_id"] is None)
     else:
         _identity(row["original_id"], "CRF2" if operation == "ReverseRefund" else "CR2")
-    _require(type(row["entries"]) is list and len(row["entries"]) == (2 if merchandise else 1))
+    purposes = ENTRY_PURPOSES[operation]
+    if remainder and merchandise:
+        purposes = tuple(purpose for purpose, amount in zip(purposes, (row["credit_minor"], row["cogs_restored_minor"]), strict=True) if amount != "0")
+    _require(type(row["entries"]) is list and len(row["entries"]) == len(purposes))
     entries = []
-    for value, expected_purpose in zip(row["entries"], ENTRY_PURPOSES[operation], strict=True):
+    for value, expected_purpose in zip(row["entries"], purposes, strict=True):
         entry = _object(value, ENTRY_FIELDS)
         _text(entry["entry_id"])
         _require(entry["purpose"] == expected_purpose)
@@ -136,8 +144,18 @@ def project_partial_plan(value: Any, scope: Mapping[str, Any]) -> dict[str, Any]
     return row
 
 
-def project_partial_balance(value: Any, scope: Mapping[str, Any]) -> dict[str, Any]:
-    row = _object(value, BALANCE_FIELDS)
+def project_partial_plan(value: Any, scope: Mapping[str, Any]) -> dict[str, Any]:
+    return _project_partial_plan(value, scope, remainder=False)
+
+
+def project_partial_plan_v2(value: Any, scope: Mapping[str, Any]) -> dict[str, Any]:
+    return _project_partial_plan(value, scope, remainder=True)
+
+
+def _project_partial_balance(value: Any, scope: Mapping[str, Any], *, remainder: bool) -> dict[str, Any]:
+    row = _object(value, BALANCE_FIELDS | {"schema_version", "allocation_policy"} if remainder else BALANCE_FIELDS)
+    if remainder:
+        _require(row["schema_version"] == "customer-partial-return-balance-v2" and row["allocation_policy"] == ALLOCATION_POLICY)
     _scope_policy(row, scope)
     _identity(row["source_id"], "CRS2", nullable=True)
     _text(row["source_order_id"])
@@ -157,13 +175,36 @@ def project_partial_balance(value: Any, scope: Mapping[str, Any]) -> dict[str, A
     return row
 
 
-def project_partial_response(value: Any, scope: Mapping[str, Any]) -> dict[str, Any]:
+def project_partial_balance(value: Any, scope: Mapping[str, Any]) -> dict[str, Any]:
+    return _project_partial_balance(value, scope, remainder=False)
+
+
+def project_partial_balance_v2(value: Any, scope: Mapping[str, Any]) -> dict[str, Any]:
+    return _project_partial_balance(value, scope, remainder=True)
+
+
+def _project_partial_response(value: Any, scope: Mapping[str, Any], *, union: bool) -> dict[str, Any]:
     _require(type(value) is dict)
+    def plan(raw: Any) -> dict[str, Any]:
+        if union and type(raw) is dict and raw.get("schema_version") == "customer-partial-return-v2":
+            return project_partial_plan_v2(raw, scope)
+        return project_partial_plan(raw, scope)
+
     if set(value) == {"plan"}:
-        return {"plan": project_partial_plan(value["plan"], scope)}
+        return {"plan": plan(value["plan"])}
     if set(value) == {"balance"}:
+        if union and type(value["balance"]) is dict and value["balance"].get("schema_version") == "customer-partial-return-balance-v2":
+            return {"balance": project_partial_balance_v2(value["balance"], scope)}
         return {"balance": project_partial_balance(value["balance"], scope)}
     _require(set(value) == {"plans"} and type(value["plans"]) is list and len(value["plans"]) <= 200)
-    plans = [project_partial_plan(plan, scope) for plan in value["plans"]]
+    plans = [plan(raw) for raw in value["plans"]]
     _require(len({plan["id"] for plan in plans}) == len(plans))
     return {"plans": plans}
+
+
+def project_partial_response(value: Any, scope: Mapping[str, Any]) -> dict[str, Any]:
+    return _project_partial_response(value, scope, union=False)
+
+
+def project_partial_response_v2(value: Any, scope: Mapping[str, Any]) -> dict[str, Any]:
+    return _project_partial_response(value, scope, union=True)

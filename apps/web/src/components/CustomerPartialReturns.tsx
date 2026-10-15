@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useBrowserSession } from "../browserSession";
 import type { BudgetIdentity } from "../budget-control-data";
-import { parsePartialReturnBalance, parsePartialReturnPlan, partialMinor, partialPlanMatchesCommand, partialReturnPermissions, partialReturnRequest, partialReturnsRoot, type PartialReturnBalance, type PartialReturnPlan } from "../customer-partial-returns-data";
+import { parsePartialReturnBalance, parsePartialReturnBalanceUnion, parsePartialReturnPlan, parsePartialReturnPlanUnion, partialMinor, partialPlanMatchesCommandUnion, partialReturnPermissions, partialReturnRequest, partialReturnRequestV2, partialReturnsRoot, partialReturnsRootV2, type AnyPartialReturnBalance, type AnyPartialReturnPlan } from "../customer-partial-returns-data";
 import { partialReturnWords, type PartialReturnWord } from "../customer-partial-returns-words";
 import { AdminApiError } from "../data";
 import type { FinanceScope } from "../enterprise-finance-data";
@@ -9,11 +9,16 @@ import { prepareScopedCommand, type PreparedScopedCommand } from "../scoped-comm
 import type { Locale } from "../types";
 import { PartialBalanceEvidence, PartialPlanEvidence } from "./CustomerPartialReturnEvidence";
 
-interface Props { locale: Locale; scope: FinanceScope; identity: BudgetIdentity; onLockChange: (locked: boolean) => void; externallyLocked?: boolean }
-export default function CustomerPartialReturns({ locale, scope, identity, onLockChange, externallyLocked = false }: Props) {
+interface Props { locale: Locale; scope: FinanceScope; identity: BudgetIdentity; onLockChange: (locked: boolean) => void; externallyLocked?: boolean; protocolVersion?: 1 | 2 }
+export default function CustomerPartialReturns({ locale, scope, identity, onLockChange, externallyLocked = false, protocolVersion = 1 }: Props) {
   const auth = useBrowserSession(), t = (word: PartialReturnWord) => partialReturnWords[word][locale === "ar" ? 1 : 0];
-  const [plans, setPlans] = useState<PartialReturnPlan[]>([]), [plan, setPlan] = useState<PartialReturnPlan | null>(null);
-  const [source, setSource] = useState(""), [balance, setBalance] = useState<PartialReturnBalance | null>(null);
+  const root = protocolVersion === 2 ? partialReturnsRootV2 : partialReturnsRoot;
+  const read = protocolVersion === 2 ? partialReturnRequestV2 : partialReturnRequest;
+  const parsePlan = protocolVersion === 2 ? parsePartialReturnPlanUnion : parsePartialReturnPlan;
+  const parseBalance = protocolVersion === 2 ? parsePartialReturnBalanceUnion : parsePartialReturnBalance;
+  const planRoot = (value: AnyPartialReturnPlan) => value.schema_version === "customer-partial-return-v2" ? partialReturnsRootV2 : partialReturnsRoot;
+  const [plans, setPlans] = useState<AnyPartialReturnPlan[]>([]), [plan, setPlan] = useState<AnyPartialReturnPlan | null>(null);
+  const [source, setSource] = useState(""), [balance, setBalance] = useState<AnyPartialReturnBalance | null>(null);
   const [lookupId, setLookupId] = useState("");
   const [fields, setFields] = useState({ quantity_scaled: "", period_id: "", posting_date: "", journal_code: "", refund_liability_account_code: "", cash_account_code: "", reason: "" });
   const [refund, setRefund] = useState({ amount_minor: "", period_id: "", posting_date: "", reason: "" });
@@ -32,17 +37,17 @@ export default function CustomerPartialReturns({ locale, scope, identity, onLock
   }
   useEffect(() => {
     if (!auth.session || !has("read")) return; const controller = new AbortController();
-    partialReturnRequest(auth.session, scope, `${partialReturnsRoot}/plans`, undefined, controller.signal).then(raw => {
+    read(auth.session, scope, `${root}/plans`, undefined, controller.signal).then(raw => {
       if (!Array.isArray(raw.plans) || raw.plans.length > 200) throw new Error("partial_plan_page_invalid");
-      const values = raw.plans.map(value => parsePartialReturnPlan(value, scope));
+      const values = raw.plans.map(value => parsePlan(value, scope));
       if (new Set(values.map(value => value.id)).size !== values.length) throw new Error("partial_plan_page_invalid");
       if (!current() || controller.signal.aborted) return; setPlans(values); setPlan(old => old ? values.find(value => value.id === old.id) ?? old : null);
     }).catch(caught => { if (!controller.signal.aborted) fail(caught); }); return () => controller.abort();
-  }, [auth.session, scope, identity, refresh]);
+  }, [auth.session, scope, identity, refresh, protocolVersion]);
   async function loadBalance(sourceId: string, signal?: AbortSignal) {
     if (!auth.session || !has("read")) return; const generation = ++readGeneration.current;
-    const raw = await partialReturnRequest(auth.session, scope, `${partialReturnsRoot}/sources/${encodeURIComponent(sourceId)}/balance`, undefined, signal);
-    const value = parsePartialReturnBalance(raw.balance, scope, sourceId);
+    const raw = await read(auth.session, scope, `${root}/sources/${encodeURIComponent(sourceId)}/balance`, undefined, signal);
+    const value = parseBalance(raw.balance, scope, sourceId);
     if (current() && !signal?.aborted && generation === readGeneration.current) setBalance(value);
   }
   useEffect(() => {
@@ -61,7 +66,7 @@ export default function CustomerPartialReturns({ locale, scope, identity, onLock
     if (!/^CR(?:2|F2|2R|F2R)-[a-f0-9]{32}$/.test(lookupId)) { setError("invalid"); return; }
     lock.current = true; setBusy(true); onLockChange(true); setError(null);
     try {
-      const raw = await partialReturnRequest(auth.session, scope, `${partialReturnsRoot}/plans/${lookupId}`), value = parsePartialReturnPlan(raw.plan, scope);
+      const raw = await read(auth.session, scope, `${root}/plans/${lookupId}`), value = parsePlan(raw.plan, scope);
       if (value.id !== lookupId) throw new Error("partial_plan_identity_invalid");
       if (current()) { setPlan(value); setSource(value.source_order_id); setBalance(null); setPlans(old => [value, ...old.filter(row => row.id !== value.id)]); setRefresh(old => old + 1); }
     } catch (caught) { fail(caught); }
@@ -70,8 +75,9 @@ export default function CustomerPartialReturns({ locale, scope, identity, onLock
   async function send(command: PreparedScopedCommand) {
     if (!auth.session || lock.current || externallyLocked) return; lock.current = true; setBusy(true); onLockChange(true); setPending(command); setError(null);
     try {
-      const raw = await partialReturnRequest(auth.session, scope, command.path, command), value = parsePartialReturnPlan(raw.plan, scope);
-      if (!partialPlanMatchesCommand(value, command)) throw new Error("partial_command_receipt_mismatch");
+      const transport = command.path.startsWith(`${partialReturnsRootV2}/`) ? partialReturnRequestV2 : partialReturnRequest;
+      const raw = await transport(auth.session, scope, command.path, command), value = parsePartialReturnPlanUnion(raw.plan, scope);
+      if (!partialPlanMatchesCommandUnion(value, command)) throw new Error("partial_command_receipt_mismatch");
       if (!current()) return; setPlan(value); setSource(value.source_order_id); setPlans(old => [value, ...old.filter(row => row.id !== value.id)]);
       setBalance(null); setPending(null); setReason(""); setRefresh(old => old + 1); onLockChange(false);
     } catch (caught) {
@@ -85,25 +91,26 @@ export default function CustomerPartialReturns({ locale, scope, identity, onLock
     try {
       partialMinor(fields.quantity_scaled, true);
       if (BigInt(fields.quantity_scaled) > BigInt(balance.remaining_quantity_scaled)) throw new Error("overreturn");
-      void send(prepareScopedCommand(`${partialReturnsRoot}/plans`, { ...fields, source_order_id: balance.source_order_id, expected_history_version: balance.history_version }));
+      const sourceRoot = "schema_version" in balance ? partialReturnsRootV2 : partialReturnsRoot;
+      void send(prepareScopedCommand(`${sourceRoot}/plans`, { ...fields, source_order_id: balance.source_order_id, expected_history_version: balance.history_version }));
     } catch { setError("invalid"); }
   }
   function prepareRefund(event: FormEvent) {
     event.preventDefault(); if (locked || !allowed("prepare") || !balance || preparationBlocked || plan?.operation !== "Return" || plan.phase !== 2) return;
     try {
       partialMinor(refund.amount_minor, true); if (BigInt(refund.amount_minor) > BigInt(balance.refund_due_minor)) throw new Error("overrefund");
-      void send(prepareScopedCommand(`${partialReturnsRoot}/plans/${plan.id}/refunds`, { ...refund, expected_history_version: balance.history_version }));
+      void send(prepareScopedCommand(`${planRoot(plan)}/plans/${plan.id}/refunds`, { ...refund, expected_history_version: balance.history_version }));
     } catch { setError("invalid"); }
   }
   function prepareReverse(event: FormEvent) {
     event.preventDefault(); if (locked || !allowed("prepare") || !balance || preparationBlocked || !plan || plan.phase !== 2 || plan.operation.startsWith("Reverse")) return;
-    try { void send(prepareScopedCommand(`${partialReturnsRoot}/plans/${plan.id}/reversals`, { ...reversal, expected_history_version: balance.history_version })); }
+    try { void send(prepareScopedCommand(`${planRoot(plan)}/plans/${plan.id}/reversals`, { ...reversal, expected_history_version: balance.history_version })); }
     catch { setError("invalid"); }
   }
   const input = (key: PartialReturnWord, value: string, change: (value: string) => void) => <label>{t(key)}<input required disabled={locked} maxLength={key === "reason" ? 500 : 160} type={key === "posting_date" ? "date" : "text"} inputMode={key === "quantity_scaled" || key === "amount_minor" ? "numeric" : undefined} value={value} onChange={event => change(event.target.value)} /></label>;
   const independent = plan && identity.id !== plan.preparer_actor_id, third = independent && identity.id !== plan?.reviewer_actor_id;
   return <section aria-label={t("title")} dir={locale === "ar" ? "rtl" : "ltr"}>
-    <h2>{t("title")}</h2><p>{t("boundary")}</p><p>{t("duties")}</p>
+    <h2>{t(protocolVersion === 2 ? "titleRemainder" : "title")}</h2><p>{t(protocolVersion === 2 ? "boundaryRemainder" : "boundary")}</p><p>{t("duties")}</p>
     {error && <p role="alert" ref={alert} tabIndex={-1}>{t(error)}</p>}{busy && <p role="status">{t("busy")}</p>}
     {pending && !busy && <aside role="status"><p>{t("unknown")}</p><button onClick={() => void send(pending)}>{t("retry")}</button><code dir="ltr">{pending.body.command_id}</code></aside>}
     <section className="panel"><button disabled={locked} onClick={() => { setError(null); setRefresh(old => old + 1); }}>{t("refresh")}</button><label>{t("select")}<select disabled={locked} value={plan?.id ?? ""} onChange={event => { const selected = plans.find(value => value.id === event.target.value) ?? null; setPlan(selected); setSource(selected?.source_order_id ?? ""); setBalance(null); setError(null); }}><option value="">—</option>{plans.map(value => <option key={value.id} value={value.id}>{t(value.operation)} · {t(value.status)} · {value.id}</option>)}</select></label>{!plans.length && <p>{t("empty")}</p>}</section>
@@ -113,7 +120,7 @@ export default function CustomerPartialReturns({ locale, scope, identity, onLock
     {balance && has("prepare") && BigInt(balance.remaining_quantity_scaled) > 0n && <form className="panel reporting-form" aria-label={t("prepare")} onSubmit={prepare}>{(Object.keys(fields) as (keyof typeof fields)[]).map(key => <div key={key}>{input(key, fields[key], value => setFields({ ...fields, [key]: value }))}</div>)}<button disabled={locked || !allowed("prepare") || preparationBlocked}>{t("prepare")}</button></form>}
     {plan && <>
       <PartialPlanEvidence plan={plan} locale={locale} />
-      {[0, 1].includes(plan.phase) && <form className="panel reporting-form" aria-label={t(plan.phase === 0 ? "review" : "post")} onSubmit={event => { event.preventDefault(); const action = plan.phase === 0 ? "review" : "post"; if (!locked && reason.trim() && allowed(action) && (action === "review" ? independent : third)) void send(prepareScopedCommand(`${partialReturnsRoot}/plans/${plan.id}/${action}`, { expected_plan_digest: plan.plan_digest, reason })); }}>{input("reason", reason, setReason)}<button disabled={locked || !reason.trim() || !allowed(plan.phase === 0 ? "review" : "post") || !(plan.phase === 0 ? independent : third)}>{t(plan.phase === 0 ? "review" : "post")}</button><button type="button" disabled={locked || !reason.trim() || !allowed("cancel") || !third} onClick={() => void send(prepareScopedCommand(`${partialReturnsRoot}/plans/${plan.id}/cancel`, { expected_plan_digest: plan.plan_digest, reason }))}>{t("cancel")}</button></form>}
+      {[0, 1].includes(plan.phase) && <form className="panel reporting-form" aria-label={t(plan.phase === 0 ? "review" : "post")} onSubmit={event => { event.preventDefault(); const action = plan.phase === 0 ? "review" : "post"; if (!locked && reason.trim() && allowed(action) && (action === "review" ? independent : third)) void send(prepareScopedCommand(`${planRoot(plan)}/plans/${plan.id}/${action}`, { expected_plan_digest: plan.plan_digest, reason })); }}>{input("reason", reason, setReason)}<button disabled={locked || !reason.trim() || !allowed(plan.phase === 0 ? "review" : "post") || !(plan.phase === 0 ? independent : third)}>{t(plan.phase === 0 ? "review" : "post")}</button><button type="button" disabled={locked || !reason.trim() || !allowed("cancel") || !third} onClick={() => void send(prepareScopedCommand(`${planRoot(plan)}/plans/${plan.id}/cancel`, { expected_plan_digest: plan.plan_digest, reason }))}>{t("cancel")}</button></form>}
       {plan.phase === 2 && plan.operation === "Return" && balance && BigInt(balance.refund_due_minor) > 0n && has("prepare") && <form className="panel reporting-form" aria-label={t("refund")} onSubmit={prepareRefund}>{(Object.keys(refund) as (keyof typeof refund)[]).map(key => <div key={key}>{input(key, refund[key], value => setRefund({ ...refund, [key]: value }))}</div>)}<button disabled={locked || !allowed("prepare") || preparationBlocked}>{t("refund")}</button></form>}
       {plan.phase === 2 && !plan.operation.startsWith("Reverse") && balance && has("prepare") && <form className="panel reporting-form" aria-label={t("reverse")} onSubmit={prepareReverse}>{(Object.keys(reversal) as (keyof typeof reversal)[]).map(key => <div key={key}>{input(key, reversal[key], value => setReversal({ ...reversal, [key]: value }))}</div>)}<button disabled={locked || !allowed("prepare") || preparationBlocked}>{t("reverse")}</button></form>}
     </>}

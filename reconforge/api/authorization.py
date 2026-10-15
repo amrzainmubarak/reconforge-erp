@@ -226,6 +226,10 @@ for _path, _permissions in {
 }.items():
     _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/customer-partial-returns/plans" + _path)] = _erp_contract(_STOCK_READ, *_permissions)
 
+for (_method, _path), _contract in tuple(_CRITICAL_ROUTE_CONTRACTS.items()):
+    if _path.startswith("/api/v1/customer-partial-returns/"):
+        _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v2" + _path[len("/api/v1"):])] = _contract
+
 for _path, _permissions in {
     "": ("sales.manage",),
     "/{identifier}/submit": ("sales.manage",),

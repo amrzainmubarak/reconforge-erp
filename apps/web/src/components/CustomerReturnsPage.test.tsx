@@ -87,12 +87,31 @@ it("retains a partial command across the whole-source workspace and scope contro
   fireEvent.change(screen.getByLabelText("Partial cycle reason"), { target: { value: "Independent post" } });
   fireEvent.click(screen.getByRole("button", { name: "Post partial cycle plan" }));
   const retry = await screen.findByRole("button", { name: "Retry retained partial command" });
-  for (const name of ["Whole original tranche", "Partial return cycle", "Apply scope", "Sign out"]) expect(screen.getByRole("button", { name })).toBeDisabled();
+  for (const name of ["Whole original tranche", "Partial return cycle", "Partial return with remainder allocation", "Apply scope", "Sign out"]) expect(screen.getByRole("button", { name })).toBeDisabled();
   for (const label of ["Workspace ID", "Organization ID", "Legal entity ID"]) expect(screen.getByLabelText(label)).toBeDisabled();
   fireEvent.click(retry); await screen.findByText(/effect-0/); expect(attempts).toHaveLength(2); expect(attempts[0]).toBe(attempts[1]);
   expect(screen.getByRole("button", { name: "Whole original tranche" })).toBeEnabled();
   fireEvent.click(screen.getByRole("button", { name: "Whole original tranche" }));
   expect(await screen.findByRole("combobox", { name: "Retained credit or refund" })).toBeInTheDocument();
+});
+it("opens the explicit remainder workspace through v2 reads and preserves Arabic RTL without issuing a command", async () => {
+  const requests: Array<{ path: string; method: string | undefined }> = [];
+  vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    requests.push({ path: String(url), method: init?.method });
+    return new Response(JSON.stringify({ plans: [] }));
+  }));
+  const view = render(<CustomerReturnsPage locale="en" />);
+  await waitFor(() => expect(screen.getByLabelText("Workspace ID")).toHaveValue("work"));
+  fireEvent.click(screen.getByRole("button", { name: "Apply scope" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Partial return with remainder allocation" }));
+  expect(screen.getByRole("button", { name: "Partial return with remainder allocation" })).toHaveAttribute("aria-pressed", "true");
+  await screen.findByRole("heading", { name: "Partial customer return with retained remainders" });
+  await waitFor(() => expect(requests.some(row => row.path === "/api/v2/customer-partial-returns/plans")).toBe(true));
+  view.rerender(<CustomerReturnsPage locale="ar" />);
+  expect(view.container.querySelector("main")).toHaveAttribute("dir", "rtl");
+  expect(screen.getByRole("heading", { name: "إرجاع العميل الجزئي مع حفظ البواقي" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "إرجاع جزئي مع توزيع البواقي" })).toHaveAttribute("aria-pressed", "true");
+  expect(requests.every(row => row.method === "GET")).toBe(true);
 });
 it("allows explicit authority re-verification and refreshes the shared assurance without financial commands", async () => {
   const stepUp = vi.spyOn(apiData, "stepUpBrowserAdminSession").mockResolvedValueOnce("2099-01-01T00:00:00Z");

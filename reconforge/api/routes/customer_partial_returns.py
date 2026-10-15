@@ -7,7 +7,11 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from reconforge.api.customer_partial_return_contract import CustomerPartialReturnResponseError, project_partial_response
+from reconforge.api.customer_partial_return_contract import (
+    CustomerPartialReturnResponseError,
+    project_partial_response,
+    project_partial_response_v2,
+)
 from reconforge.api.errors import APIError
 from reconforge.api.routes.finance_posting import _actor
 from reconforge.api.routes.operational_finance import _authority
@@ -99,11 +103,17 @@ def execute(request: Request, user: LocalUser,
         raise APIError(status_code=503, code="customer_partial_return_backend_unavailable",
                        message="Persisted partial stock credits require PostgreSQL.")
     actor = _actor(request, user)
+    protocol = getattr(request.state, "customer_partial_return_protocol_version", 1)
+    if type(protocol) is not int or protocol not in (1, 2):
+        raise APIError(status_code=503, code="customer_partial_return_protocol_invalid",
+                       message="The server partial-return protocol is unavailable.")
 
     def invoke(finance: Any, scope: FinanceCoreExecutionScope) -> Any:
         try:
-            owner = PostgresCustomerPartialReturnsRepository(finance.connection, scope.tenant_id)
-            return project_partial_response(action(owner, actor, scope), {
+            owner = (PostgresCustomerPartialReturnsRepository(finance.connection, scope.tenant_id, protocol_version=2)
+                     if protocol == 2 else PostgresCustomerPartialReturnsRepository(finance.connection, scope.tenant_id))
+            projector = project_partial_response_v2 if protocol == 2 else project_partial_response
+            return projector(action(owner, actor, scope), {
                 "workspace_id": scope.workspace_id, "organization_id": scope.organization_id,
                 "legal_entity_id": scope.legal_entity_id,
             })

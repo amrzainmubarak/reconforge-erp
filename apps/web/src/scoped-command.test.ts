@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { prepareScopedCommand, type ScopedJsonValue } from "./scoped-command";
+import { isPartialReturnV2Path, prepareScopedCommand, type ScopedJsonValue } from "./scoped-command";
+
+it("admits only the finite partial-return v2 command routes without broadening other v2 domains", () => {
+  const root = "/api/v2/customer-partial-returns", id = "a".repeat(32);
+  const paths = [`${root}/plans`, `${root}/plans/CR2-${id}/refunds`, `${root}/plans/CR2-${id}/reversals`, `${root}/plans/CRF2-${id}/reversals`,
+    ...["CR2", "CRF2", "CR2R", "CRF2R"].flatMap(prefix => ["review", "post", "cancel"].map(action => `${root}/plans/${prefix}-${id}/${action}`))];
+  for (const path of paths) {
+    const body = { expected_history_version: 1, reason: "Original retained command" }, command = prepareScopedCommand(path, body);
+    body.expected_history_version = 2;
+    expect(command.path).toBe(path); expect(command.body.expected_history_version).toBe(1); expect(Object.isFrozen(command.body)).toBe(true);
+  }
+  for (const path of ["/api/v2/finance-core/entries/x/post", `${root}/plans/../finance-core/entries/x/post`, `${root}/plans?mode=legacy`, `${root}/plans/CR2R-${id}/refunds`, `${root}/plans/CR2R-${id}/reversals`, `${root}/sources/x/balance`, `${root}/plans/${id}/post`, `${root}/plans#fragment`]) expect(() => prepareScopedCommand(path, {})).toThrow();
+  for (const path of [`${root}/sources/../balance`, `${root}/sources/%2e%2e/balance`, `${root}/sources/a%2Fb/balance`, `${root}/sources/%00/balance`]) expect(isPartialReturnV2Path(path, false)).toBe(false);
+});
 
 describe("captured multiline command retries", () => {
   it("retains nested exact amounts and quantities after caller edits", () => {

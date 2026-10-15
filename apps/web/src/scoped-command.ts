@@ -9,8 +9,23 @@ export interface PreparedScopedCommand {
   readonly body: Readonly<Record<string, ScopedJsonValue> & { command_id: string }>;
 }
 
+export function isPartialReturnV2Path(path: string, mutation: boolean): boolean {
+  const root = "/api/v2/customer-partial-returns", id = "CR(?:2|F2|2R|F2R)-[a-f0-9]{32}";
+  if (mutation) return path === `${root}/plans` || new RegExp(`^${root}/plans/${id}/(?:review|post|cancel)$`).test(path)
+    || new RegExp(`^${root}/plans/CR2-[a-f0-9]{32}/refunds$`).test(path)
+    || new RegExp(`^${root}/plans/CR(?:2|F2)-[a-f0-9]{32}/reversals$`).test(path);
+  if (path === `${root}/plans` || new RegExp(`^${root}/plans/${id}$`).test(path)) return true;
+  const source = new RegExp(`^${root}/sources/([^/?#]+)/balance$`).exec(path);
+  if (!source) return false;
+  try {
+    const value = decodeURIComponent(source[1]);
+    return Boolean(value && value.length <= 160 && value === value.trim() && ![".", ".."].includes(value)
+      && !/[\\/?#\x00-\x1f\x7f]/.test(value) && encodeURIComponent(value) === source[1]);
+  } catch { return false; }
+}
+
 export function prepareScopedCommand(path: string, body: Record<string, ScopedJsonValue>): PreparedScopedCommand {
-  if (!path.startsWith("/api/v1/") || path.includes("?") || Object.hasOwn(body, "command_id")) throw new Error("scoped_command_invalid");
+  if ((!path.startsWith("/api/v1/") && !isPartialReturnV2Path(path, true)) || path.includes("?") || Object.hasOwn(body, "command_id")) throw new Error("scoped_command_invalid");
   let nodes = 0;
   const ancestors = new Set<object>();
   function copy(value: ScopedJsonValue, depth: number): ScopedJsonValue {

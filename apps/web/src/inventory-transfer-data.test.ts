@@ -197,3 +197,207 @@ it.each(["unknown-version", "extra-top", "extra-source", "extra-correction", "em
   if (field === "net-negative") original.partial_return_corrections = [await restitutionCorrection(2, -1, String((correction.plan as Row).id))];
   await reseal(source); await expect(parseTransfer(source, transferScope, "synthetic")).rejects.toThrow("invalid");
 });
+
+interface RemainingStep {
+  beforeQuantity: string; beforeValue: string; quantity: string; value: string;
+  sequence: number; reverse?: number; total?: string;
+}
+async function remainingFixture(quantity: string, value: string, steps: RemainingStep[], reviewed = false): Promise<TransferSource> {
+  const transfer = await restitutionFixture(), source = transfer.cost_snapshot.sources[0], history: Row[] = [];
+  let netQuantity = 0n, netValue = 0n;
+  for (const [index, step] of steps.entries()) {
+    const previous = step.reverse === undefined ? null : history[step.reverse];
+    const correction = await restitutionCorrection(index + 1, previous ? -1 : 1,
+      previous ? String((previous.plan as Row).id) : null, previous?.effect ? String((previous.effect as Row).id) : "original-restoration-effect");
+    const restored = correction.restoration as Row, plan = correction.plan as Row;
+    Object.assign(correction, { history_sequence: step.sequence, allocation_policy: "remaining-original-v1",
+      allocation_witness: { before_quantity_scaled: step.beforeQuantity, before_value_minor: step.beforeValue } });
+    Object.assign(restored, { offset_quantity_scaled: (BigInt(quantity) - BigInt(step.beforeQuantity)).toString(), quantity_scaled: step.quantity, value_minor: step.value });
+    const total = step.total ?? step.value;
+    plan.cogs_restored_minor = total;
+    (((correction.physical as Row).lines as Row[])[0]).quantity_scaled = step.quantity;
+    if (total === "0") {
+      restored.correction_effect_id = correction.entry = correction.effect = null;
+      correction.lines = []; correction.dimensions = [];
+    } else {
+      const entry = correction.entry as Row, effect = correction.effect as Row, lines = correction.lines as Row[], snapshot = effect.snapshot_json as Row;
+      entry.total_debit_minor = entry.total_credit_minor = total;
+      for (const line of lines) {
+        if (line.debit_minor !== "0") line.debit_minor = total;
+        if (line.credit_minor !== "0") line.credit_minor = total;
+      }
+      for (const line of snapshot.lines as Row[]) {
+        if (line.debit_minor !== "0") line.debit_minor = total;
+        if (line.credit_minor !== "0") line.credit_minor = total;
+      }
+      entry.validation_digest = effect.validation_digest = await transferDigest(snapshot, true);
+    }
+    history.push(correction);
+    netQuantity += (previous ? -1n : 1n) * BigInt(step.quantity);
+    netValue += (previous ? -1n : 1n) * BigInt(step.value);
+  }
+  Object.assign(source.layer as Row, { original_quantity_scaled: quantity, original_value_minor: value, remaining_quantity_scaled: netQuantity.toString(), remaining_value_minor: netValue.toString() });
+  Object.assign(source.valuation_line as Row, { quantity_scaled: quantity, value_minor: value });
+  (source.valuation_document as Row).total_value_minor = value;
+  Object.assign(source.finance_entry as Row, { total_debit_minor: value, total_credit_minor: value });
+  source.finance_lines = [{ debit_minor: value, credit_minor: "0" }, { debit_minor: "0", credit_minor: value }];
+  source.consumptions = [{ id: "sale-consumption", tenant_id: "synthetic", cost_layer_id: "original-layer", valuation_line_id: "sale-valuation-line", quantity_scaled: quantity, value_minor: value }];
+  const entryAmounts = history.filter(row => row.entry !== null).map(row => String((row.entry as Row).total_debit_minor));
+  source.partial_return_corrections = history;
+  source.exposed_amounts_minor = [value, netValue.toString(), value, value, value, value, value, value, "0", "0", value, ...entryAmounts, ...entryAmounts];
+  Object.assign(transfer.cost_snapshot, { schema_version: "inventory-transfer-cost-v3", remaining_quantity_scaled: netQuantity.toString(), remaining_value_minor: netValue.toString() });
+  if (reviewed) {
+    transfer.phase = 1; transfer.row_version = 2; transfer.reviewer_actor_id = "checker";
+    transfer.review_cost_snapshot = structuredClone(transfer.cost_snapshot);
+    transfer.claim = (await transferFixture(true)).claim;
+  }
+  return reseal(transfer);
+}
+it.each([false, true])("retains v3 remaining-value 1001/3 allocations and final residual with review=%s", async reviewed => {
+  const source = await remainingFixture("3", "1001", [
+    { sequence: 1, beforeQuantity: "3", beforeValue: "1001", quantity: "1", value: "334" },
+    { sequence: 4, beforeQuantity: "2", beforeValue: "667", quantity: "1", value: "334" },
+    { sequence: 7, beforeQuantity: "1", beforeValue: "333", quantity: "1", value: "333" },
+  ], reviewed);
+  expect(await parseTransfer(source, transferScope, "synthetic")).toEqual(source);
+});
+it("uses captured FIFO half-even and carries a zero-cost physical portion without a fake journal", async () => {
+  const source = await remainingFixture("2", "1", [
+    { sequence: 1, beforeQuantity: "2", beforeValue: "1", quantity: "1", value: "0" },
+    { sequence: 3, beforeQuantity: "1", beforeValue: "1", quantity: "1", value: "1" },
+  ]);
+  expect(await parseTransfer(source, transferScope, "synthetic")).toEqual(source);
+  expect((source.cost_snapshot.sources[0].exposed_amounts_minor as string[]).slice(11)).toEqual(["1", "1"]);
+});
+it("retains a positive remaining quantity after all original minor units were allocated and exhausts it at zero", async () => {
+  const source = await remainingFixture("3", "1", [
+    { sequence: 1, beforeQuantity: "3", beforeValue: "1", quantity: "2", value: "1" },
+    { sequence: 2, beforeQuantity: "1", beforeValue: "0", quantity: "1", value: "0" },
+  ]);
+  expect(await parseTransfer(source, transferScope, "synthetic")).toEqual(source);
+  expect(((source.cost_snapshot.sources[0].partial_return_corrections as Row[])[1]).effect).toBeNull();
+});
+it("reverses exact zero-cost original witnesses and then readmits the same remaining basis", async () => {
+  const source = await remainingFixture("2", "1", [
+    { sequence: 1, beforeQuantity: "2", beforeValue: "1", quantity: "1", value: "0" },
+    { sequence: 2, beforeQuantity: "2", beforeValue: "1", quantity: "1", value: "0", reverse: 0 },
+    { sequence: 3, beforeQuantity: "2", beforeValue: "1", quantity: "1", value: "0" },
+  ]);
+  expect(await parseTransfer(source, transferScope, "synthetic")).toEqual(source);
+});
+it("reverses the copied 334-minor portion instead of rerounding it on the later remaining basis", async () => {
+  const source = await remainingFixture("3", "1001", [
+    { sequence: 1, beforeQuantity: "3", beforeValue: "1001", quantity: "1", value: "334" },
+    { sequence: 2, beforeQuantity: "3", beforeValue: "1001", quantity: "1", value: "334", reverse: 0 },
+    { sequence: 5, beforeQuantity: "3", beforeValue: "1001", quantity: "2", value: "667" },
+  ]);
+  expect(await parseTransfer(source, transferScope, "synthetic")).toEqual(source);
+});
+it("keeps a zero-valued portion bound to its positive plan-total cost effect", async () => {
+  const source = await remainingFixture("2", "1", [{ sequence: 1, beforeQuantity: "2", beforeValue: "1", quantity: "1", value: "0", total: "1" }]);
+  const original = source.cost_snapshot.sources[0], correction = (original.partial_return_corrections as Row[])[0];
+  expect(correction.effect).not.toBeNull();
+  expect(await parseTransfer(source, transferScope, "synthetic")).toEqual(source);
+});
+it("accepts legacy exact corrections beside a separate immutable v2-owner source in a v3 pool", async () => {
+  const source = await remainingFixture("3", "1001", [{ sequence: 1, beforeQuantity: "3", beforeValue: "1001", quantity: "1", value: "334" }]);
+  const extra = (await restitutionFixture()).cost_snapshot.sources[0];
+  const legacy = (extra.partial_return_corrections as Row[])[0];
+  const newId = "CRS2-" + "a".repeat(32);
+  Object.assign(legacy.source as Row, { id: newId }); (legacy.plan as Row).source_id = newId;
+  // Keep the legacy envelope exact; it remains in its own layer and source.
+  const layer = extra.layer as Row; layer.id = "legacy-layer";
+  (extra.receipt_link as Row).cost_layer_id = layer.id;
+  (extra.consumptions as Row[])[0].cost_layer_id = layer.id;
+  Object.assign(legacy.restoration as Row, { cost_layer_id: layer.id, source_id: newId });
+  source.cost_snapshot.sources.push(extra);
+  source.cost_snapshot.remaining_quantity_scaled = "3"; source.cost_snapshot.remaining_value_minor = "2734";
+  // The new plan uses another id, avoiding the cross-pool immutable plan-position key.
+  const current = (source.cost_snapshot.sources[0].partial_return_corrections as Row[])[0];
+  await changeRemainingPlanIdentity(current, 9);
+  await reseal(source); expect(await parseTransfer(source, transferScope, "synthetic")).toEqual(source);
+});
+it("rejects coherently resealed half-up cost where captured FIFO requires half-even", async () => {
+  const wrong = await remainingFixture("2", "5", [{ sequence: 1, beforeQuantity: "2", beforeValue: "5", quantity: "1", value: "3" }]);
+  // The pool, actual lines, reviewed snapshot, validation seal and exposures all
+  // agree with 3. The captured remaining-value policy alone must refuse it.
+  await expect(parseTransfer(wrong, transferScope, "synthetic")).rejects.toThrow("invalid");
+  const right = await remainingFixture("2", "5", [{ sequence: 1, beforeQuantity: "2", beforeValue: "5", quantity: "1", value: "2" }]);
+  expect(await parseTransfer(right, transferScope, "synthetic")).toEqual(right);
+});
+it.each([1, 2])("keeps retained cost-v%s creation evidence when the current review is cost-v3", async version => {
+  const retained = version === 1 ? await transferFixture(true) : await restitutionFixture(true);
+  const current = await remainingFixture("3", "1001", [{ sequence: 1, beforeQuantity: "3", beforeValue: "1001", quantity: "1", value: "334" }], true);
+  retained.review_cost_snapshot = current.review_cost_snapshot;
+  await reseal(retained); expect(await parseTransfer(retained, transferScope, "synthetic")).toEqual(retained);
+});
+it("replays independent remaining bases for two original sources that share one physical layer", async () => {
+  const source = await remainingFixture("3", "1001", [
+    { sequence: 1, beforeQuantity: "3", beforeValue: "1001", quantity: "1", value: "334" },
+    { sequence: 1, beforeQuantity: "3", beforeValue: "1001", quantity: "2", value: "667" },
+  ]);
+  const layer = source.cost_snapshot.sources[0], rows = layer.partial_return_corrections as Row[];
+  Object.assign(layer.layer as Row, { original_quantity_scaled: "6", original_value_minor: "2002" });
+  const second = structuredClone((layer.consumptions as Row[])[0]); second.id = "second-sale-consumption";
+  (layer.consumptions as Row[]).push(second);
+  (rows[1].restoration as Row).original_consumption_id = second.id;
+  const firstId = "CRS2-" + "a".repeat(32);
+  (rows[0].source as Row).id = (rows[0].restoration as Row).source_id = (rows[0].plan as Row).source_id = firstId;
+  await reseal(source); expect(await parseTransfer(source, transferScope, "synthetic")).toEqual(source);
+});
+it("refuses reversing an earlier return while a later return of the same source stays active on another layer", async () => {
+  const source = await remainingFixture("3", "1001", [
+    { sequence: 1, beforeQuantity: "3", beforeValue: "1001", quantity: "1", value: "334" },
+    { sequence: 3, beforeQuantity: "3", beforeValue: "1001", quantity: "1", value: "334", reverse: 0 },
+  ]);
+  const extra = (await remainingFixture("3", "1001", [{ sequence: 2, beforeQuantity: "3", beforeValue: "1001", quantity: "1", value: "334" }])).cost_snapshot.sources[0];
+  const row = (extra.partial_return_corrections as Row[])[0];
+  await changeRemainingPlanIdentity(row, 9);
+  Object.assign(extra.layer as Row, { id: "second-layer", source_valuation_line_id: "second-inbound-line" });
+  (extra.valuation_line as Row).id = "second-inbound-line";
+  (extra.receipt_link as Row).cost_layer_id = "second-layer";
+  Object.assign((extra.consumptions as Row[])[0], { id: "second-consumption", cost_layer_id: "second-layer", valuation_line_id: "second-sale-line" });
+  Object.assign(row.restoration as Row, { cost_layer_id: "second-layer", original_consumption_id: "second-consumption", original_valuation_line_id: "second-sale-line" });
+  source.cost_snapshot.sources.push(extra);
+  source.cost_snapshot.remaining_quantity_scaled = "1"; source.cost_snapshot.remaining_value_minor = "334";
+  await reseal(source);
+  await expect(parseTransfer(source, transferScope, "synthetic")).rejects.toThrow("invalid");
+});
+async function changeRemainingPlanIdentity(correction: Row, index: number): Promise<void> {
+  const plan = correction.plan as Row, restored = correction.restoration as Row, physical = correction.physical as Row;
+  const id = "CR2-" + index.toString(16).padStart(32, "0");
+  plan.id = restored.plan_id = id;
+  restored.physical_movement_id = `movement-${index}`;
+  Object.assign(physical.head as Row, { id: restored.physical_movement_id, source_reference: id, movement_number: id.toUpperCase() });
+  ((physical.lines as Row[])[0]).movement_id = restored.physical_movement_id;
+  if (correction.entry !== null) {
+    const entry = correction.entry as Row, effect = correction.effect as Row, snapshot = effect.snapshot_json as Row;
+    entry.id = `entry-${index}`; effect.id = restored.correction_effect_id = `effect-${index}`;
+    effect.entry_id = effect.source_id = entry.id;
+    for (const [position, line] of (correction.lines as Row[]).entries()) { line.id = `line-${index}-${position}`; line.entry_id = entry.id; }
+    entry.external_reference = id; entry.entry_number = id.toUpperCase() + "-C";
+    Object.assign(snapshot.entry as Row, { id: entry.id, external_reference: entry.external_reference, entry_number: entry.entry_number });
+    entry.validation_digest = effect.validation_digest = await transferDigest(snapshot, true);
+  }
+}
+it.each(["before-quantity", "before-value", "policy", "extra-witness", "numeric-witness", "boolean-sequence", "late-sequence", "sequence-order", "zero-effect", "nonzero-null", "physical", "wrong-rounding", "source-drift"])("refuses sealed v3 %s drift", async field => {
+  const source = await remainingFixture("3", "1001", [
+    { sequence: 1, beforeQuantity: "3", beforeValue: "1001", quantity: "1", value: "334" },
+    { sequence: 4, beforeQuantity: "2", beforeValue: "667", quantity: "1", value: "334" },
+  ]);
+  const rows = source.cost_snapshot.sources[0].partial_return_corrections as Row[], first = rows[0], second = rows[1], witness = second.allocation_witness as Row;
+  if (field === "before-quantity") witness.before_quantity_scaled = "3";
+  if (field === "before-value") witness.before_value_minor = "668";
+  if (field === "policy") second.allocation_policy = "caller-priced";
+  if (field === "extra-witness") witness.current_cost = "334";
+  if (field === "numeric-witness") witness.before_value_minor = 667;
+  if (field === "boolean-sequence") second.history_sequence = true;
+  if (field === "late-sequence") second.history_sequence = 257;
+  if (field === "sequence-order") first.history_sequence = 5;
+  if (field === "zero-effect") { (second.plan as Row).cogs_restored_minor = "0"; (second.restoration as Row).value_minor = "0"; }
+  if (field === "nonzero-null") { second.entry = second.effect = null; second.lines = []; second.dimensions = []; }
+  if (field === "physical") (((second.physical as Row).lines as Row[])[0]).quantity_scaled = "0";
+  if (field === "wrong-rounding") (second.restoration as Row).value_minor = "333";
+  if (field === "source-drift") (second.source as Row).source_fingerprint = "e".repeat(64);
+  await reseal(source); await expect(parseTransfer(source, transferScope, "synthetic")).rejects.toThrow("invalid");
+});

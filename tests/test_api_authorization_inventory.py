@@ -30,8 +30,8 @@ ENTERPRISE_M3_EXACT_ROUTES = frozenset({
 EXPECTED_ENTERPRISE_M3_ROUTE_COUNT = 9
 ENTERPRISE_M4_PREFIXES = ("/api/v1/inventory-transfer/",)
 EXPECTED_ENTERPRISE_M4_ROUTE_COUNT = 8
-ENTERPRISE_M7_PREFIXES = ("/api/v1/customer-partial-returns/",)
-EXPECTED_ENTERPRISE_M7_ROUTE_COUNT = 9
+ENTERPRISE_M7_PREFIXES = ("/api/v1/customer-partial-returns/", "/api/v2/customer-partial-returns/")
+EXPECTED_ENTERPRISE_M7_ROUTE_COUNT = 18
 WAVE5_PREFIXES = ("/api/v1/manufacturing-execution/", "/api/v1/intercompany-operations/", "/api/v1/procurement-sourcing/")
 WAVE4_PREFIXES = (
     "/api/v1/customer-returns/", "/api/v1/procurement-commitments/",

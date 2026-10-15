@@ -3,6 +3,8 @@ import type { PreparedScopedCommand } from "./scoped-command";
 import type { BrowserAdminSession } from "./types";
 
 export const partialReturnsRoot = "/api/v1/customer-partial-returns";
+export const partialReturnsRootV2 = "/api/v2/customer-partial-returns";
+export const partialAllocationPolicy = "remaining-original-v1";
 export const partialReturnPermissions = {
   read: ["sales.read", "receivables.read", "inventory.read", "finance_core.read"],
   prepare: ["sales.read", "receivables.read", "inventory.read", "finance_core.read", "sales.manage", "receivables.manage", "inventory.valuation.manage", "finance_core.manage", "finance_core.reverse"],
@@ -30,6 +32,14 @@ export interface PartialReturnBalance extends FinanceScope, CapturedPolicy {
   quantity_precision: number; refund_entitlement_minor: string; refunded_minor: string; refund_due_minor: string;
   outstanding_minor: string; active_plan_id: string | null;
 }
+export type PartialReturnPlanV2 = Omit<PartialReturnPlan, "schema_version"> & {
+  schema_version: "customer-partial-return-v2"; allocation_policy: typeof partialAllocationPolicy;
+};
+export type PartialReturnBalanceV2 = PartialReturnBalance & {
+  schema_version: "customer-partial-return-balance-v2"; allocation_policy: typeof partialAllocationPolicy;
+};
+export type AnyPartialReturnPlan = PartialReturnPlan | PartialReturnPlanV2;
+export type AnyPartialReturnBalance = PartialReturnBalance | PartialReturnBalanceV2;
 const max = 9_000_000_000_000_000_000n;
 const policyKeys = ["currency_code", "currency_precision", "currency_rounding_policy", "currency_registry_version", "currency_registry_digest"];
 const scopeKeys = ["workspace_id", "organization_id", "legal_entity_id"];
@@ -69,9 +79,10 @@ function policy(row: Record<string, unknown>, scope: FinanceScope): void {
   if (!/^[A-Z]{3}$/.test(text(row.currency_code)) || row.currency_rounding_policy !== "ROUND_HALF_UP") invalid();
   integer(row.currency_precision, 8); text(row.currency_registry_version); digest(row.currency_registry_digest);
 }
-export function parsePartialReturnPlan(value: unknown, scope: FinanceScope): PartialReturnPlan {
-  const row = object(value, planKeys); policy(row, scope);
-  if (row.schema_version !== "customer-partial-return-v1" || typeof row.operation !== "string" || !Object.hasOwn(prefixes, row.operation)) invalid();
+function parsePlan(value: unknown, scope: FinanceScope, remainder: boolean): AnyPartialReturnPlan {
+  const row = object(value, remainder ? [...planKeys, "allocation_policy"] : planKeys); policy(row, scope);
+  if (row.schema_version !== (remainder ? "customer-partial-return-v2" : "customer-partial-return-v1") || typeof row.operation !== "string" || !Object.hasOwn(prefixes, row.operation)) invalid();
+  if (remainder && row.allocation_policy !== partialAllocationPolicy) invalid();
   const operation = row.operation as PartialReturnPlan["operation"];
   identity(row.id, prefixes[operation]); identity(row.source_id, "CRS2"); text(row.source_order_id); text(row.invoice_id);
   digest(row.plan_digest); integer(row.expected_history_version, 255); integer(row.quantity_precision, 6);
@@ -81,27 +92,39 @@ export function parsePartialReturnPlan(value: unknown, scope: FinanceScope): Par
   if (row.reviewer_actor_id !== null && row.reviewer_actor_id === row.preparer_actor_id || phase === 0 && row.reviewer_actor_id !== null) invalid();
   if ([1, 2].includes(phase) && (!row.reviewer_actor_id || row.reviewer_actor_id === row.preparer_actor_id)) invalid();
   if (phase === 2 ? !row.poster_actor_id || [row.preparer_actor_id, row.reviewer_actor_id].includes(row.poster_actor_id) : row.poster_actor_id !== null) invalid();
-  for (const key of ["quantity_scaled", "credit_minor", "cogs_restored_minor", "receivable_released_minor", "refund_entitlement_delta_minor", "amount_minor"]) partialMinor(row[key], key === "amount_minor");
   const merchandise = operation === "Return" || operation === "ReverseReturn";
+  for (const key of ["quantity_scaled", "credit_minor", "cogs_restored_minor", "receivable_released_minor", "refund_entitlement_delta_minor", "amount_minor"]) partialMinor(row[key], key === "amount_minor" && !(remainder && merchandise));
   if (merchandise) {
-    partialMinor(row.quantity_scaled, true); partialMinor(row.credit_minor, true); partialMinor(row.cogs_restored_minor, true);
+    partialMinor(row.quantity_scaled, true); partialMinor(row.credit_minor, !remainder); partialMinor(row.cogs_restored_minor, !remainder);
     if (BigInt(String(row.credit_minor)) !== BigInt(String(row.receivable_released_minor)) + BigInt(String(row.refund_entitlement_delta_minor)) ||
         BigInt(String(row.amount_minor)) !== BigInt(String(row.credit_minor)) + BigInt(String(row.cogs_restored_minor))) invalid();
   } else if (["quantity_scaled", "credit_minor", "cogs_restored_minor", "receivable_released_minor", "refund_entitlement_delta_minor"].some(key => row[key] !== "0")) invalid();
   if (operation === "Return") { if (row.original_id !== null) invalid(); }
   else identity(row.original_id, operation === "ReverseRefund" ? "CRF2" : "CR2");
-  if (!Array.isArray(row.entries) || row.entries.length !== (merchandise ? 2 : 1)) invalid();
+  const expectedPurposes = purposes[operation].filter((_purpose, index) => !remainder || !merchandise || row[index === 0 ? "credit_minor" : "cogs_restored_minor"] !== "0");
+  if (!Array.isArray(row.entries) || row.entries.length !== expectedPurposes.length) invalid();
   const entries = row.entries.map((item, index) => {
     const entry = object(item, ["entry_id", "purpose", "validation_digest", "posting_effect_id"]);
-    text(entry.entry_id); if (entry.purpose !== purposes[operation][index]) invalid(); digest(entry.validation_digest); nullableText(entry.posting_effect_id);
+    text(entry.entry_id); if (entry.purpose !== expectedPurposes[index]) invalid(); digest(entry.validation_digest); nullableText(entry.posting_effect_id);
     if ((phase === 2) !== (entry.posting_effect_id !== null)) invalid(); return entry as unknown as PartialReturnEntry;
   });
   if (new Set(entries.map(entry => entry.entry_id)).size !== entries.length || (phase === 2 && new Set(entries.map(entry => entry.posting_effect_id)).size !== entries.length)) invalid();
   text(row.audit_event_id); text(row.outbox_event_id);
-  return { ...row, entries } as unknown as PartialReturnPlan;
+  return { ...row, entries } as unknown as AnyPartialReturnPlan;
 }
-export function parsePartialReturnBalance(value: unknown, scope: FinanceScope, sourceOrderId: string): PartialReturnBalance {
-  const row = object(value, balanceKeys); policy(row, scope);
+export function parsePartialReturnPlan(value: unknown, scope: FinanceScope): PartialReturnPlan {
+  return parsePlan(value, scope, false) as PartialReturnPlan;
+}
+export function parsePartialReturnPlanV2(value: unknown, scope: FinanceScope): PartialReturnPlanV2 {
+  return parsePlan(value, scope, true) as PartialReturnPlanV2;
+}
+export function parsePartialReturnPlanUnion(value: unknown, scope: FinanceScope): AnyPartialReturnPlan {
+  return value && typeof value === "object" && (value as Record<string, unknown>).schema_version === "customer-partial-return-v2"
+    ? parsePartialReturnPlanV2(value, scope) : parsePartialReturnPlan(value, scope);
+}
+function parseBalance(value: unknown, scope: FinanceScope, sourceOrderId: string, remainder: boolean): AnyPartialReturnBalance {
+  const row = object(value, remainder ? [...balanceKeys, "schema_version", "allocation_policy"] : balanceKeys); policy(row, scope);
+  if (remainder && (row.schema_version !== "customer-partial-return-balance-v2" || row.allocation_policy !== partialAllocationPolicy)) invalid();
   if (text(row.source_order_id) !== text(sourceOrderId)) invalid();
   if (row.source_id !== null) identity(row.source_id, "CRS2");
   digest(row.source_fingerprint); digest(row.history_fingerprint); integer(row.history_version, 256); integer(row.quantity_precision, 6);
@@ -113,27 +136,49 @@ export function parsePartialReturnBalance(value: unknown, scope: FinanceScope, s
   if (collected > gross || credited > gross || row.outstanding_minor !== (residual > 0n ? residual : 0n).toString() ||
       row.refund_entitlement_minor !== (entitlement > 0n ? entitlement : 0n).toString() ||
       BigInt(String(row.refund_due_minor)) + BigInt(String(row.refunded_minor)) !== BigInt(String(row.refund_entitlement_minor))) invalid();
-  return row as unknown as PartialReturnBalance;
+  return row as unknown as AnyPartialReturnBalance;
 }
-export function partialPlanMatchesCommand(plan: PartialReturnPlan, command: PreparedScopedCommand): boolean {
+export function parsePartialReturnBalance(value: unknown, scope: FinanceScope, sourceOrderId: string): PartialReturnBalance {
+  return parseBalance(value, scope, sourceOrderId, false) as PartialReturnBalance;
+}
+export function parsePartialReturnBalanceV2(value: unknown, scope: FinanceScope, sourceOrderId: string): PartialReturnBalanceV2 {
+  return parseBalance(value, scope, sourceOrderId, true) as PartialReturnBalanceV2;
+}
+export function parsePartialReturnBalanceUnion(value: unknown, scope: FinanceScope, sourceOrderId: string): AnyPartialReturnBalance {
+  return value && typeof value === "object" && (value as Record<string, unknown>).schema_version === "customer-partial-return-balance-v2"
+    ? parsePartialReturnBalanceV2(value, scope, sourceOrderId) : parsePartialReturnBalance(value, scope, sourceOrderId);
+}
+function matchesCommand(plan: AnyPartialReturnPlan, command: PreparedScopedCommand, root: string): boolean {
   if (command.body.expected_plan_digest !== undefined && plan.plan_digest !== command.body.expected_plan_digest) return false;
   if (command.body.expected_history_version !== undefined && plan.expected_history_version !== command.body.expected_history_version) return false;
-  if (command.path === `${partialReturnsRoot}/plans`) return plan.operation === "Return" && plan.phase === 0 && plan.source_order_id === command.body.source_order_id && plan.quantity_scaled === command.body.quantity_scaled;
-  if (command.path.endsWith("/refunds")) return plan.operation === "Refund" && plan.phase === 0 && plan.amount_minor === command.body.amount_minor && command.path === `${partialReturnsRoot}/plans/${plan.original_id}/refunds`;
-  if (command.path.endsWith("/reversals")) return plan.operation.startsWith("Reverse") && plan.phase === 0 && command.path === `${partialReturnsRoot}/plans/${plan.original_id}/reversals`;
-  for (const [action, phase] of [["review", 1], ["post", 2], ["cancel", 3]] as const) if (command.path === `${partialReturnsRoot}/plans/${plan.id}/${action}`) return plan.phase === phase;
+  if (command.path === `${root}/plans`) return plan.operation === "Return" && plan.phase === 0 && plan.source_order_id === command.body.source_order_id && plan.quantity_scaled === command.body.quantity_scaled;
+  if (command.path.endsWith("/refunds")) return plan.operation === "Refund" && plan.phase === 0 && plan.amount_minor === command.body.amount_minor && command.path === `${root}/plans/${plan.original_id}/refunds`;
+  if (command.path.endsWith("/reversals")) return plan.operation.startsWith("Reverse") && plan.phase === 0 && command.path === `${root}/plans/${plan.original_id}/reversals`;
+  for (const [action, phase] of [["review", 1], ["post", 2], ["cancel", 3]] as const) if (command.path === `${root}/plans/${plan.id}/${action}`) return plan.phase === phase;
   return false;
 }
-export async function partialReturnRequest(session: BrowserAdminSession, scope: FinanceScope, path: string, command?: PreparedScopedCommand, signal?: AbortSignal): Promise<Record<string, unknown>> {
+export function partialPlanMatchesCommand(plan: PartialReturnPlan, command: PreparedScopedCommand): boolean {
+  return matchesCommand(plan, command, partialReturnsRoot);
+}
+export function partialPlanMatchesCommandUnion(plan: AnyPartialReturnPlan, command: PreparedScopedCommand): boolean {
+  return matchesCommand(plan, command, plan.schema_version === "customer-partial-return-v2" ? partialReturnsRootV2 : partialReturnsRoot);
+}
+async function request(session: BrowserAdminSession, scope: FinanceScope, path: string, root: string, command?: PreparedScopedCommand, signal?: AbortSignal): Promise<Record<string, unknown>> {
   const id = "CR(?:2|F2|2R|F2R)-[a-f0-9]{32}";
   let sourceBalance = false;
-  const source = new RegExp(`^${partialReturnsRoot}/sources/([^/?#]+)/balance$`).exec(path);
+  const source = new RegExp(`^${root}/sources/([^/?#]+)/balance$`).exec(path);
   if (!command && source) {
     try { const decoded = text(decodeURIComponent(source[1])); sourceBalance = ![".", ".."].includes(decoded) && !/[\\/?#]/.test(decoded) && encodeURIComponent(decoded) === source[1]; }
     catch { invalid(); }
   }
-  const allowed = command ? path === `${partialReturnsRoot}/plans` || new RegExp(`^${partialReturnsRoot}/plans/${id}/(?:review|post|cancel)$`).test(path) || new RegExp(`^${partialReturnsRoot}/plans/CR2-[a-f0-9]{32}/refunds$`).test(path) || new RegExp(`^${partialReturnsRoot}/plans/CR(?:2|F2)-[a-f0-9]{32}/reversals$`).test(path) : path === `${partialReturnsRoot}/plans` || new RegExp(`^${partialReturnsRoot}/plans/${id}$`).test(path) || sourceBalance;
+  const allowed = command ? path === `${root}/plans` || new RegExp(`^${root}/plans/${id}/(?:review|post|cancel)$`).test(path) || new RegExp(`^${root}/plans/CR2-[a-f0-9]{32}/refunds$`).test(path) || new RegExp(`^${root}/plans/CR(?:2|F2)-[a-f0-9]{32}/reversals$`).test(path) : path === `${root}/plans` || new RegExp(`^${root}/plans/${id}$`).test(path) || sourceBalance;
   if (!allowed || (command && command.path !== path)) invalid();
   const result = await financeRequest(session, scope, path, command?.body, signal);
-  return object(result, [!command && path === `${partialReturnsRoot}/plans` ? "plans" : path.includes("/sources/") ? "balance" : "plan"]);
+  return object(result, [!command && path === `${root}/plans` ? "plans" : path.includes("/sources/") ? "balance" : "plan"]);
+}
+export async function partialReturnRequest(session: BrowserAdminSession, scope: FinanceScope, path: string, command?: PreparedScopedCommand, signal?: AbortSignal): Promise<Record<string, unknown>> {
+  return request(session, scope, path, partialReturnsRoot, command, signal);
+}
+export async function partialReturnRequestV2(session: BrowserAdminSession, scope: FinanceScope, path: string, command?: PreparedScopedCommand, signal?: AbortSignal): Promise<Record<string, unknown>> {
+  return request(session, scope, path, partialReturnsRootV2, command, signal);
 }

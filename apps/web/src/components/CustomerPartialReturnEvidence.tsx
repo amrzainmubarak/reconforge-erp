@@ -1,14 +1,15 @@
-import type { PartialReturnBalance, PartialReturnPlan } from "../customer-partial-returns-data";
+import type { AnyPartialReturnBalance, AnyPartialReturnPlan } from "../customer-partial-returns-data";
 import { partialReturnWords, type PartialReturnWord } from "../customer-partial-returns-words";
 import { financeMoney } from "../enterprise-finance-data";
 import { formatExactDecimal } from "../locale-format";
 import type { Locale } from "../types";
 
-export function PartialBalanceEvidence({ balance, locale }: { balance: PartialReturnBalance; locale: Locale }) {
+export function PartialBalanceEvidence({ balance, locale }: { balance: AnyPartialReturnBalance; locale: Locale }) {
   const t = (word: PartialReturnWord) => partialReturnWords[word][locale === "ar" ? 1 : 0];
   const money = (value: string) => `${formatExactDecimal(financeMoney(value, balance.currency_precision), locale)} ${balance.currency_code}`;
   return <section className="panel" aria-label={t("balance")}>
     <h3>{t("balance")}</h3>
+    <p>{t("allocationPolicy")}: {t("allocation_policy" in balance ? "remainderPolicy" : "legacyPolicy")}</p>
     {([["gross", balance.gross_minor], ["collected", balance.collected_minor], ["credited", balance.credited_minor], ["outstanding", balance.outstanding_minor], ["liability", balance.refund_entitlement_minor], ["refunded", balance.refunded_minor], ["due", balance.refund_due_minor]] as const).map(([label, value]) => <p key={label}>{t(label)}: <bdi>{money(value)}</bdi></p>)}
     <p>{t("remaining")}: <bdi>{formatExactDecimal(financeMoney(balance.remaining_quantity_scaled, balance.quantity_precision), locale)}</bdi></p>
     <p>{t("scale")}: <bdi>{balance.quantity_precision}</bdi> · {t("history")}: <bdi>{balance.history_version}</bdi></p>
@@ -18,11 +19,13 @@ export function PartialBalanceEvidence({ balance, locale }: { balance: PartialRe
     <details><summary>{t("evidence")}</summary><p><code dir="ltr">{balance.source_id ?? "—"}</code></p><p><code dir="ltr">{balance.source_fingerprint}</code></p><p><code dir="ltr">{balance.history_fingerprint}</code></p><p><code dir="ltr">{balance.currency_registry_version} · {balance.currency_registry_digest}</code></p></details>
   </section>;
 }
-export function PartialPlanEvidence({ plan, locale }: { plan: PartialReturnPlan; locale: Locale }) {
+export function PartialPlanEvidence({ plan, locale }: { plan: AnyPartialReturnPlan; locale: Locale }) {
   const t = (word: PartialReturnWord) => partialReturnWords[word][locale === "ar" ? 1 : 0];
   const money = (value: string) => `${formatExactDecimal(financeMoney(value, plan.currency_precision), locale)} ${plan.currency_code}`;
   return <section className="panel" aria-label={t("evidence")}>
     <h3>{t("evidence")}</h3><p><bdi>{t(plan.operation)} · {t(plan.status)}</bdi> · <code dir="ltr">{plan.id}</code></p>
+    <p>{t("allocationPolicy")}: {t(plan.schema_version === "customer-partial-return-v2" ? "remainderPolicy" : "legacyPolicy")}</p>
+    {plan.schema_version === "customer-partial-return-v2" && plan.entries.length === 0 && <p role="status">{t("noMonetaryLeg")}</p>}
     {plan.operation.startsWith("Reverse") && <p>{t("reverseMeaning")}</p>}
     <p><code dir="ltr">{plan.source_order_id} → {plan.source_id} → {plan.invoice_id}</code></p>
     {(plan.operation === "Return" || plan.operation === "ReverseReturn") && <>

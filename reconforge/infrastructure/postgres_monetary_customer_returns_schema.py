@@ -376,6 +376,13 @@ BEGIN
  SELECT id,workspace_id,organization_id,legal_entity_id,total_minor,customer_partial_return_source_id INTO invoice_owner
   FROM reconforge.ar_invoices WHERE tenant_id=t AND id=i;
  PERFORM reconforge.monetary_return_assert(invoice_owner.id IS NOT NULL,'A visible actual native AR invoice is required');
+ -- Legacy AR visibility can be tenant-wide. Establish the actual invoice's
+ -- current full scope before origin RLS absence may classify it as unowned.
+ -- A genuinely unscoped legacy invoice cannot be a new origin: the new
+ -- directory requires all three non-null scope IDs and exact native affinity.
+ PERFORM reconforge.monetary_return_assert(invoice_owner.organization_id IS NULL OR invoice_owner.legal_entity_id IS NULL
+  OR reconforge.irp_scope(t,invoice_owner.workspace_id,invoice_owner.organization_id,invoice_owner.legal_entity_id),
+  'A visible invoice outside the current full child scope cannot fall back to legacy monetary economics');
  SELECT id,workspace_id,organization_id,legal_entity_id,invoice_id,ar_balance INTO origin_owner
   FROM reconforge.stock_sales_monetary_origins WHERE tenant_id=t AND invoice_id=i;
  IF origin_owner.id IS NULL THEN RETURN NULL;END IF;

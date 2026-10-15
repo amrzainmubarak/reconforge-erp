@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SHARDS = {
     "writeback", "native", "parity", "durable-scale", "matching-runtime",
     "industry-close", "receivables", "finance-posting", "inventory-payables", "erp-expansion", "finance-reporting",
-    "commercial-integrity", "supply-integrity", "finance-integrity",
+    "commercial-integrity", "customer-partial-cycle", "customer-partial-security", "supply-integrity", "finance-integrity",
     "supplier-returns", "fx-revaluation",
     "manufacturing-execution", "intercompany-operations", "intercompany-cashflow", "intercompany-group-reporting", "procurement-sourcing", "procurement-sourcing-api", "manufacturing-sourcing",
     "people-project-payroll", "accrual-deferral", "manufacturing-supply-plan", "project-time-billing", "project-source-reconciliation", "inventory-transfer",
@@ -39,10 +39,12 @@ INTEGRITY_FILES = {
     "commercial-integrity": (
         "tests/test_postgres_commercial_collections.py", "tests/test_postgres_commercial_collection_cancellation.py",
         "tests/test_postgres_customer_returns.py", "tests/test_postgres_customer_return_read_authority.py",
+    ),
+    "customer-partial-cycle": (
         "tests/test_postgres_customer_partial_return_source.py", "tests/test_postgres_customer_partial_returns.py",
-        "tests/test_postgres_customer_partial_return_posted_security.py",
         "tests/test_postgres_customer_partial_return_transfer.py",
     ),
+    "customer-partial-security": ("tests/test_postgres_customer_partial_return_posted_security.py",),
     "supply-integrity": (
         "tests/test_postgres_landed_cost.py", "tests/test_postgres_landed_cost_api.py",
         "tests/test_postgres_landed_cost_cancellation.py",

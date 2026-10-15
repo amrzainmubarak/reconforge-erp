@@ -431,6 +431,8 @@ jobs:
         shard:
           # Exercise changed-owner invariants before the legacy partition.
           - commercial-integrity
+          - customer-partial-cycle
+          - customer-partial-security
           - supply-integrity
           - finance-integrity
           - accrual-deferral
@@ -731,10 +733,14 @@ jobs:
             commercial-integrity)
               uv run --no-sync pytest tests/test_postgres_commercial_collections.py tests/test_postgres_commercial_collection_cancellation.py -q
               uv run --no-sync pytest tests/test_postgres_customer_returns.py tests/test_postgres_customer_return_read_authority.py -q
+              ;;
+            customer-partial-cycle)
               uv run --no-sync pytest tests/test_postgres_customer_partial_return_source.py -q
               uv run --no-sync pytest tests/test_postgres_customer_partial_returns.py -q
-              uv run --no-sync pytest tests/test_postgres_customer_partial_return_posted_security.py -q
               uv run --no-sync pytest tests/test_postgres_customer_partial_return_transfer.py -q
+              ;;
+            customer-partial-security)
+              uv run --no-sync pytest tests/test_postgres_customer_partial_return_posted_security.py -q
               ;;
             supply-integrity)
               uv run --no-sync pytest tests/test_postgres_landed_cost.py tests/test_postgres_landed_cost_api.py tests/test_postgres_landed_cost_cancellation.py -q

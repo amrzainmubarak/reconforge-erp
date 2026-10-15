@@ -77,7 +77,8 @@ WORKSPACE_CASE_TITLES = {
         for locale in ("en", "ar")
     },
 }
-PRIVATE_RETURN_FAMILIES = {"native-customer-return-originals", "native-customer-partial-return-originals"}
+PRIVATE_PARTIAL_RETURN_FAMILIES = {"native-customer-partial-return-originals", "native-customer-partial-return-failed-observation-originals"}
+PRIVATE_RETURN_FAMILIES = {"native-customer-return-originals", *PRIVATE_PARTIAL_RETURN_FAMILIES}
 
 
 def private_diagnostics_directory(output: Path) -> Path:
@@ -109,7 +110,7 @@ def _public_diagnostic_paths(output: Path) -> list[Path]:
     if projections.is_dir():
         paths.extend(path for path in sorted(projections.rglob("*")) if path.is_symlink() or path.is_file())
     for partial_originals in sorted(output.iterdir()):
-        if partial_originals.name.casefold() != "native-customer-partial-return-originals":
+        if partial_originals.name.casefold() not in PRIVATE_PARTIAL_RETURN_FAMILIES:
             continue
         if partial_originals.is_symlink():
             raise ValueError("Public partial-return raw custody cannot be a symlink.")
@@ -293,7 +294,7 @@ def _stage_original_browser_artifacts(output: Path, private: Path, known_private
         if not source.is_file() or source.name == "error-context.md":
             continue
         name = source.relative_to(private).as_posix()
-        if source.relative_to(artifacts).parts[0].casefold() == "native-customer-partial-return-originals":
+        if source.relative_to(artifacts).parts[0].casefold() in PRIVATE_PARTIAL_RETURN_FAMILIES:
             # CR2 raw captures have a separate owned private root. No producer
             # attaches them here, regardless of an otherwise public basename.
             raise ValueError("Partial-return originals cannot enter browser attachment publication.")

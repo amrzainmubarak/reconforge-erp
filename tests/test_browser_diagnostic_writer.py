@@ -109,7 +109,8 @@ def inputs(tmp_path: Path, *, unexpected: int = 0) -> tuple[Path, Path, dict[str
     return output, private, raw, stats
 
 
-@pytest.mark.parametrize("directory", ["native-customer-partial-return-originals", "Native-Customer-Partial-Return-Originals"])
+@pytest.mark.parametrize("directory", ["native-customer-partial-return-originals", "Native-Customer-Partial-Return-Originals",
+                                      "native-customer-partial-return-failed-observation-originals", "Native-Customer-Partial-Return-Failed-Observation-Originals"])
 def test_partial_return_raw_family_in_reused_public_output_is_retained_privately(tmp_path: Path, directory: str) -> None:
     output, private, _, _ = inputs(tmp_path)
     family = output / directory
@@ -123,7 +124,8 @@ def test_partial_return_raw_family_in_reused_public_output_is_retained_privately
     assert all(path.read_bytes() != raw for path in output.rglob("*") if path.is_file())
 
 
-@pytest.mark.parametrize("directory", ["native-customer-partial-return-originals", "Native-Customer-Partial-Return-Originals"])
+@pytest.mark.parametrize("directory", ["native-customer-partial-return-originals", "Native-Customer-Partial-Return-Originals",
+                                      "native-customer-partial-return-failed-observation-originals", "Native-Customer-Partial-Return-Failed-Observation-Originals"])
 @pytest.mark.parametrize("basename", ["native-financial-snapshot-oracle-1.json", "original.sql", "original.png"])
 @pytest.mark.parametrize("location", ["reused-public", "private-attachment"])
 def test_mislocated_partial_return_raw_attachment_cannot_use_generic_original_allowlist(

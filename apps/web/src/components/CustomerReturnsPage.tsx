@@ -6,7 +6,9 @@ import { AdminApiError, beginBrowserAdminSession, endBrowserAdminSession, stepUp
 import { financeMoney, type FinanceScope } from "../enterprise-finance-data";
 import { formatExactDecimal } from "../locale-format";
 import { prepareScopedCommand, type PreparedScopedCommand } from "../scoped-command";
+import { partialReturnWords } from "../customer-partial-returns-words";
 import type { Locale } from "../types";
+import CustomerPartialReturns from "./CustomerPartialReturns";
 import "./FinancialReportingPage.css";
 
 const words = {
@@ -50,8 +52,10 @@ function ReturnSession({ locale }: { locale: Locale }) {
   const [fields, setFields] = useState({ source_order_id: "", period_id: "", posting_date: "", journal_code: "", refund_liability_account_code: "", cash_account_code: "", reason: "" });
   const [refund, setRefund] = useState({ amount_minor: "", period_id: "", posting_date: "", reason: "" }), [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false), [pending, setPending] = useState<PreparedScopedCommand | null>(null), [error, setError] = useState<Word | null>(null), [refresh, setRefresh] = useState(0);
+  const [mode, setMode] = useState<"whole" | "partial">("whole"), [partialLocked, setPartialLocked] = useState(false);
+  const [reauthenticate, setReauthenticate] = useState(false);
   const mounted = useRef(true), lock = useRef(false), alert = useRef<HTMLParagraphElement>(null);
-  const current = () => mounted.current && auth.isCurrent(auth.revision), locked = busy || Boolean(pending);
+  const current = () => mounted.current && auth.isCurrent(auth.revision), locked = busy || Boolean(pending) || partialLocked;
   const has = (names: readonly string[]) => Boolean(identity?.human && names.every(name => identity.permissions.includes(name)));
   const allowed = (action: keyof typeof permissions) => Boolean(scope && identity?.stepUp && has(permissions[action]));
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -66,7 +70,7 @@ function ReturnSession({ locale }: { locale: Locale }) {
     return () => controller.abort();
   }, [auth.session, auth.revision]);
   useEffect(() => {
-    if (!auth.session || !scope || !has(READ)) return; const controller = new AbortController();
+    if (!auth.session || !scope || !has(READ) || mode !== "whole") return; const controller = new AbortController();
     returnRequest(auth.session, scope, root, undefined, controller.signal).then(async response => {
       if (!Array.isArray(response.plans) || response.plans.length > 200) throw new Error("invalid_return_page");
       const values = await Promise.all(response.plans.map(row => parseReturnPlan(row, scope)));
@@ -74,17 +78,17 @@ function ReturnSession({ locale }: { locale: Locale }) {
       setPlan(old => old ? values.find(row => row.id === old.id) ?? old : null);
     }).catch(caught => { if (!controller.signal.aborted) fail(caught); });
     return () => controller.abort();
-  }, [auth.session, scope, identity, refresh]);
+  }, [auth.session, scope, identity, refresh, mode]);
   useEffect(() => {
-    setBalance(null); if (!auth.session || !scope || plan?.operation !== "Return" || plan.phase !== 2) return; const controller = new AbortController();
+    setBalance(null); if (!auth.session || !scope || plan?.operation !== "Return" || plan.phase !== 2 || mode !== "whole") return; const controller = new AbortController();
     returnRequest(auth.session, scope, `${root}/${encodeURIComponent(plan.id)}/balance`, undefined, controller.signal).then(raw => {
       const value = parseRefundBalance(raw.balance, plan); if (current() && !controller.signal.aborted) setBalance(value);
     }).catch(caught => { if (!controller.signal.aborted) fail(caught); }); return () => controller.abort();
-  }, [plan, auth.session, scope, refresh]);
+  }, [plan, auth.session, scope, refresh, mode]);
   async function authenticate(event: FormEvent, stepUp = false) {
     event.preventDefault(); if (lock.current) return; lock.current = true; setBusy(true); setError(null);
     try {
-      if (stepUp && auth.session) { await stepUpBrowserAdminSession(auth.session, login.password); const value = await loadBudgetIdentity(auth.session); if (current()) setIdentity(value); }
+      if (stepUp && auth.session) { const expires = await stepUpBrowserAdminSession(auth.session, login.password); const value = await loadBudgetIdentity(auth.session); if (current()) { auth.elevate(expires, auth.revision); setIdentity(value); setReauthenticate(false); } }
       else { const session = await beginBrowserAdminSession({ tenantId: login.tenant, username: login.username, password: login.password }); if (current()) auth.begin(session, login.username, auth.revision); }
     } catch (caught) { fail(caught); } finally { lock.current = false; if (current()) { setBusy(false); setLogin(old => ({ ...old, password: "" })); } }
   }
@@ -119,14 +123,17 @@ function ReturnSession({ locale }: { locale: Locale }) {
   const money = (value: string | undefined) => value !== undefined && plan ? `${formatExactDecimal(financeMoney(value, plan.currency_precision), locale)} ${plan.currency_code}` : "—";
   const independent = Boolean(plan && identity?.id !== plan.preparer_actor_id), third = independent && identity?.id !== plan?.reviewer_actor_id;
   return <main id="main-content" className="financial-reporting" dir={locale === "ar" ? "rtl" : "ltr"}>
-    <header><h1>{t("title")}</h1><p>{t("boundary")}</p><p>{t("duties")}</p></header>
+    <header><h1>{t("title")}</h1>{mode === "whole" && <p>{t("boundary")}</p>}<p>{t("duties")}</p></header>
     {error && <p role="alert" ref={alert} tabIndex={-1}>{t(error)}</p>}
     {pending && !busy && <aside role="status"><p>{t("unknown")}</p><button onClick={() => void send(pending)}>{t("retry")}</button><code dir="ltr">{pending.body.command_id}</code></aside>}
     {!auth.session ? <form className="panel reporting-form" aria-label={t("signIn")} onSubmit={event => void authenticate(event)}>{(["tenant", "username", "password"] as const).map(key => <div key={key}>{input(key, login[key], value => setLogin({ ...login, [key]: value }), key === "password" ? "password" : "text")}</div>)}<button disabled={locked}>{t("signIn")}</button></form> : <>
       <section className="panel"><bdi>{auth.username}</bdi><button disabled={locked} onClick={() => { if (!auth.session) return; setBusy(true); void endBrowserAdminSession(auth.session).then(() => { if (current()) auth.clear(auth.revision); }).catch(fail).finally(() => { if (current()) setBusy(false); }); }}>{t("signOut")}</button></section>
-      {!identity?.stepUp && identity?.human && <form className="panel reporting-form" aria-label={t("stepUp")} onSubmit={event => void authenticate(event, true)}>{input("password", login.password, value => setLogin({ ...login, password: value }), "password")}<button disabled={locked}>{t("stepUp")}</button></form>}
+      {identity?.human && identity.stepUp && !reauthenticate && <section className="panel"><button disabled={locked} onClick={() => setReauthenticate(true)}>{t("stepUp")}</button></section>}
+      {(!identity?.stepUp || reauthenticate) && identity?.human && <form className="panel reporting-form" aria-label={t("stepUp")} onSubmit={event => void authenticate(event, true)}>{input("password", login.password, value => setLogin({ ...login, password: value }), "password")}<button disabled={locked}>{t("stepUp")}</button></form>}
       <form className="panel reporting-form" aria-label={t("apply")} onSubmit={apply}>{(["workspace_id", "organization_id", "legal_entity_id"] as const).map(key => <div key={key}>{input(key, scopeInput[key], value => { setScopeInput(old => ({ ...old, [key]: value })); setScope(null); setPlans([]); setPlan(null); }, "text", !identity)}</div>)}<button disabled={locked || !identity}>{t("apply")}</button></form>
       {scope && has(READ) && <>
+        <section className="panel" aria-label={partialReturnWords.workflow[locale === "ar" ? 1 : 0]}><button type="button" disabled={locked} aria-pressed={mode === "whole"} onClick={() => { setMode("whole"); setError(null); }}>{partialReturnWords.modeWhole[locale === "ar" ? 1 : 0]}</button><button type="button" disabled={locked} aria-pressed={mode === "partial"} onClick={() => { setMode("partial"); setError(null); }}>{partialReturnWords.modePartial[locale === "ar" ? 1 : 0]}</button></section>
+        {mode === "partial" && identity ? <CustomerPartialReturns key={JSON.stringify(scope)} locale={locale} scope={scope} identity={identity} onLockChange={setPartialLocked} externallyLocked={busy || Boolean(pending)} /> : <>
         <section className="panel"><button disabled={locked} onClick={() => setRefresh(old => old + 1)}>{t("refresh")}</button><label>{t("select")}<select disabled={locked} value={plan?.id ?? ""} onChange={event => { setPlan(plans.find(row => row.id === event.target.value) ?? null); setError(null); }}><option value="">—</option>{plans.map(row => <option key={row.id} value={row.id}>{row.operation} · {row.status} · {row.id}</option>)}</select></label>{!plans.length && <p>{t("empty")}</p>}</section>
         {has(permissions.prepare) && <form className="panel reporting-form" aria-label={t("prepare")} onSubmit={prepare}>{(Object.keys(fields) as (keyof typeof fields)[]).map(key => <div key={key}>{input(key, fields[key], value => setFields({ ...fields, [key]: value }), key === "posting_date" ? "date" : "text")}</div>)}<button disabled={locked || !allowed("prepare")}>{t("prepare")}</button></form>}
         {plan && <section className="panel" aria-label={t("evidence")}><h2>{t("evidence")}</h2><p><bdi>{plan.operation} · {plan.status}</bdi> · <code dir="ltr">{plan.id}</code></p><p>{t("source_order_id")}: <code dir="ltr">{plan.source_order_id}</code> · <code dir="ltr">{plan.invoice_id}</code></p>
@@ -139,6 +146,7 @@ function ReturnSession({ locale }: { locale: Locale }) {
           {plan.phase === 3 && <p>{plan.cancellation_reason}</p>}
           {plan.operation === "Return" && plan.phase === 2 && balance && BigInt(balance.refund_due_minor) > 0n && has(permissions.prepare) && <form className="reporting-form" aria-label={t("refund")} onSubmit={prepareRefund}>{(Object.keys(refund) as (keyof typeof refund)[]).map(key => <div key={key}>{input(key, refund[key], value => setRefund({ ...refund, [key]: value }), key === "posting_date" ? "date" : "text")}</div>)}<button disabled={locked || !allowed("prepare")}>{t("refund")}</button></form>}
         </section>}
+        </>}
       </>}
     </>}
   </main>;

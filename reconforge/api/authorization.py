@@ -214,6 +214,18 @@ _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/procurement-partial/orders/{order_id
 _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/procurement-partial/orders/{order_id}/commands/match-invoice-lines")] = _erp_contract(
     _PROCUREMENT_READ, "payables.manage", "payables.match")
 _STOCK_READ = _SALES_READ | frozenset({"inventory.read"})
+for _path in ("/plans", "/plans/{plan_id}", "/sources/{source_order_id}/balance"):
+    _CRITICAL_ROUTE_CONTRACTS[("GET", "/api/v1/customer-partial-returns" + _path)] = _erp_contract(_STOCK_READ)
+for _path, _permissions in {
+    "": ("sales.manage", "receivables.manage", "inventory.valuation.manage", "finance_core.manage", "finance_core.reverse"),
+    "/{return_id}/refunds": ("sales.manage", "receivables.manage", "inventory.valuation.manage", "finance_core.manage", "finance_core.reverse"),
+    "/{original_id}/reversals": ("sales.manage", "receivables.manage", "inventory.valuation.manage", "finance_core.manage", "finance_core.reverse"),
+    "/{plan_id}/review": ("sales.approve", "inventory.valuation.approve", "finance_core.validate", "finance_core.reverse"),
+    "/{plan_id}/post": ("sales.manage", "receivables.manage", "inventory.post", "inventory.valuation.approve", "finance_core.post", "finance_core.reverse"),
+    "/{plan_id}/cancel": ("sales.approve", "finance_core.validate"),
+}.items():
+    _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/customer-partial-returns/plans" + _path)] = _erp_contract(_STOCK_READ, *_permissions)
+
 for _path, _permissions in {
     "": ("sales.manage",),
     "/{identifier}/submit": ("sales.manage",),

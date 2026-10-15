@@ -54,6 +54,7 @@ from reconforge.api.routes import (
     consolidation_ownership,
     consolidation_ownership_change,
     consolidation_ppa,
+    customer_partial_returns,
     customer_returns,
     durable_job_operations,
     emergency_access,
@@ -468,6 +469,7 @@ def create_api_app(
     app.include_router(financial_installments.router, prefix="/api/v1")
     app.include_router(commercial_collections.router, prefix="/api/v1")
     app.include_router(customer_returns.router, prefix="/api/v1")
+    app.include_router(customer_partial_returns.router, prefix="/api/v1")
     app.include_router(intercompany_operations.router, prefix="/api/v1")
     app.include_router(intercompany_fx.router, prefix="/api/v1")
     app.include_router(intercompany_cashflow.router, prefix="/api/v1")
@@ -547,6 +549,7 @@ def create_api_app(
         financial_installments.router,
         commercial_collections.router,
         customer_returns.router,
+        customer_partial_returns.router,
         intercompany_operations.router,
         intercompany_fx.router,
         intercompany_cashflow.router,

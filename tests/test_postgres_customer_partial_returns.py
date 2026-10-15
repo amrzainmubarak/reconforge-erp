@@ -36,7 +36,7 @@ def create_partial_runtime(database: tuple[str, str], paid: int = 10000, *, quan
 
 def retained_partial_state(runtime: ReceiptRuntime) -> dict[str, Any]:
     from psycopg import sql
-    state = retained_state(runtime)
+    state = {"legacy_rows": retained_state(runtime)}
     with runtime.actor("maker") as (connection, _, _actor):
         names = connection.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='reconforge' AND table_name LIKE 'customer_partial_return_%' ORDER BY table_name").fetchall()
         for row in names:

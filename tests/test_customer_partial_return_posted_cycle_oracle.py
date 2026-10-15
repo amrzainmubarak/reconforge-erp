@@ -374,6 +374,24 @@ def test_independent_audit_append_preserves_all_business_originals_and_verifies_
     assert verify_audit_only_transition(after, deepcopy(after), tenant_id="tenant")["appended_audit_events"] == 0
 
 
+@pytest.mark.parametrize(("suffix", "permission", "rejected_permission"), [
+    ("audit/verify", "audit.verify", "audit.read"),
+    ("security/integrations", "security.policy.manage", "security.integrations.manage"),
+    ("security/retention-policies", "security.policy.manage", "security.retention.manage"),
+])
+def test_admin_read_audit_contract_binds_the_exact_route_permission(
+    suffix: str, permission: str, rejected_permission: str,
+) -> None:
+    # These finite permissions belong to the actual GET handlers; no mutation is admitted.
+    surface = "GET /api/v1/admin/" + suffix
+    before = audit_capture()
+    after = audit_capture([policy_event(1, "0" * 64, surface=surface, permission=permission)])
+    assert verify_audit_only_transition(before, after, tenant_id="tenant")["appended_audit_events"] == 1
+    after = audit_capture([policy_event(1, "0" * 64, surface=surface, permission=rejected_permission)])
+    with pytest.raises(CycleRefusal):
+        verify_audit_only_transition(before, after, tenant_id="tenant")
+
+
 @pytest.mark.parametrize("attack", ["business-add", "business-change", "old-byte-mutation", "old-resealed-mutation", "sequence-gap",
     "forged-head", "head-sequence", "head-time", "foreign-tenant", "duplicate", "unrelated-action", "unrelated-surface",
     "wrong-permission", "unbound-actor", "wrong-actor-digest", "policy-digest", "request-digest", "bad-previous", "missing-head", "unknown-table"])

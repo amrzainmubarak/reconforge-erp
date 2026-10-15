@@ -664,10 +664,10 @@ def _surface_contracts(tables: dict[str, tuple[str, ...]], post_plan_ids: set[st
         surfaces["GET /api/v1/customer-partial-returns/plans/" + identifier] = READ_PERMISSIONS
         if plan["phase"] == 2 and (post_plan_ids is None or identifier in post_plan_ids):
             surfaces["POST /api/v1/customer-partial-returns/plans/" + identifier + "/post"] = POST_PERMISSIONS
-    for suffix, permission in (("audit/events", "audit.read"), ("audit/verify", "audit.read"),
+    for suffix, permission in (("audit/events", "audit.read"), ("audit/verify", "audit.verify"),
             ("security/overview", "security.center.read"), ("identity/users", "users.manage"),
             ("identity/sessions", "users.manage"), ("access/permissions", "roles.manage"), ("access/roles", "roles.manage"),
-            ("security/integrations", "security.integrations.manage"), ("security/retention-policies", "security.retention.manage")):
+            ("security/integrations", "security.policy.manage"), ("security/retention-policies", "security.policy.manage")):
         surfaces["GET /api/v1/admin/" + suffix] = frozenset({permission})
     return {_text_digest("audit.surface", surface): permissions for surface, permissions in surfaces.items()}, actors
 

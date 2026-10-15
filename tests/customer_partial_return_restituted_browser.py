@@ -154,6 +154,8 @@ def capture_restituted_browser(runtime: ReceiptRuntime, original: str, root: Pat
     if index == len(files):
         require(observation is None and refusal is None)
         _retain(root / f"checkpoint-{index}.json", _bytes({"checkpoint": checkpoint, "tables": tables}, MAX_CAPTURE_BYTES))
+        if index == 3:
+            assemble_restituted_browser(root, tenant=runtime.tenant, original=original, resale=_text(resale))
     else:
         require(checkpoint == "ResaleReturned" and observation in KINDS and resale is not None)
         _observe(root, runtime=runtime, original=original, resale=_text(resale), kind=str(observation),
@@ -173,6 +175,23 @@ def assemble_restituted_browser(root: Path, *, tenant: str, original: str, resal
 
 def seed_restituted_browser(admin_dsn: str, app_dsn: str) -> tuple[ReceiptRuntime, str]:
     return seed_remainder_browser(admin_dsn, app_dsn, case="zero")
+
+
+def verify_seeded_restituted_browser(runtime: ReceiptRuntime, *, custody_root: Path, original: str,
+                                    original_app_dsn: str) -> dict[str, Any]:
+    """Use the real browser's sealed resale identity, never a guessed identifier."""
+    root = _root(custody_root)
+    _regular_path(root / PACKET)
+    value = parse_json_document(_read(root / PACKET, MAX_PACKET_BYTES).decode("utf-8"),
+                                policy=LOAD_POLICY, reject_fractional_numbers=True)
+    require(type(value) is dict)
+    packet = cast(dict[str, Any], value)
+    require(set(packet) == {"schema_version", "tenant_id", "original_source_order_id", "resale_source_order_id", "captures"}
+            and packet["schema_version"] == "customer-partial-return-restituted-cycle-input-v1"
+            and packet["tenant_id"] == runtime.tenant and packet["original_source_order_id"] == original)
+    resale = _text(packet["resale_source_order_id"])
+    require(packet == assemble_restituted_browser(root, tenant=runtime.tenant, original=original, resale=resale))
+    return verify_restituted_browser(runtime, custody_root=root, original=original, resale=resale, original_app_dsn=original_app_dsn)
 
 
 def verify_restituted_browser(runtime: ReceiptRuntime, *, custody_root: Path, original: str, resale: str,

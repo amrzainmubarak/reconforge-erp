@@ -80,6 +80,7 @@ def test_four_immutable_checkpoints_three_observations_and_exact_populated_resto
     repeated = observer.verify_restituted_browser(runtime(), custody_root=root, original="original", resale="resale", original_app_dsn="original")
     restored = observer.verify_restituted_browser(runtime("restored"), custody_root=root, original="original", resale="resale", original_app_dsn="original")
     assert proof == repeated == restored and proof["checkpoints"] == 4 and len(proof["tables"]) == 79
+    assert observer.verify_seeded_restituted_browser(runtime(), custody_root=root, original="original", original_app_dsn="original") == proof
     assert originals == [(root / f"checkpoint-{n}.json").read_bytes() for n in range(4)]
     assert {path.name for path in (tmp_path / observer.OBSERVATIONS).iterdir()} == {observer.OBSERVATION_PACKET, *(name + ".json" for name in observer.KINDS)}
     restored_packet = observer.parse_json_document((root / observer.RESTORE).read_text(encoding="utf-8"), reject_fractional_numbers=True)
@@ -163,3 +164,64 @@ def test_restore_cannot_accept_changed_business_rows(tmp_path: Path, monkeypatch
     monkeypatch.setattr(observer, "_snapshot", lambda *args: (1, tables(9, 3), {"sequence": 1, "plan_id": NEW, "plan_digest": DIGEST, "phase": 2}))
     with pytest.raises(ValueError):
         observer.verify_restituted_browser(runtime("restored"), custody_root=root, original="original", resale="resale", original_app_dsn="original")
+
+
+def test_real_c_reader_accepts_complete_producer_wire_without_reusing_financial_math(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Synthetic row transport bridge; the C reader owns every expected amount."""
+    from tests import customer_partial_return_restituted_cycle_oracle as independent
+    from tests.test_customer_partial_return_restituted_cycle_oracle import observations_fixture
+    expected, observations, _restored = observations_fixture()
+    original, resale, tenant = (expected[key] for key in ("original_source_order_id", "resale_source_order_id", "tenant_id"))
+    selected = {"tables": expected["captures"][0]["tables"]}
+    def snapshot(_: Any, source: str, case: str) -> tuple[int, dict[str, list[str]], dict[str, Any] | None]:
+        assert case == "zero"
+        rows = independent.base._rows(selected["tables"])
+        plans = [row for row in rows["customer_partial_return_plans"] if row["source_order_id"] == source]
+        plan = plans[0] if plans else None
+        return len(plans), selected["tables"], ({"phase": plan["phase"], "plan_id": plan["id"], "plan_digest": plan["plan_digest"]} if plan else None)
+    monkeypatch.setattr(observer, "_snapshot", snapshot)
+    role = runtime()
+    role.tenant = tenant
+    root = tmp_path / observer.FAMILY
+    for index, value in enumerate(expected["captures"]):
+        selected["tables"] = value["tables"]
+        plans = independent.base._rows(value["tables"])["customer_partial_return_plans"]
+        plan = next((row for row in plans if row["source_order_id"] == (original if index == 1 else resale)), None) if index in {1, 3} else None
+        observer.capture_restituted_browser(role, original, root, checkpoint=value["checkpoint"], resale=resale if index >= 2 else None,
+            posted_plan_id=plan["id"] if plan else None, plan_digest=plan["plan_digest"] if plan else None)
+    for value in observations["observations"][:2]:
+        selected["tables"] = value["tables"]
+        observer.capture_restituted_browser(role, original, root, checkpoint="ResaleReturned", resale=resale,
+            posted_plan_id=value["posted_plan_id"], plan_digest=value["plan_digest"], observation=value["kind"], refusal=value["refusal"])
+    selected["tables"] = observations["observations"][-1]["tables"]
+    observer.verify_seeded_restituted_browser(role, custody_root=root, original=original, original_app_dsn="original")
+    role.factory.settings.dsn = "restored"
+    observer.verify_seeded_restituted_browser(role, custody_root=root, original=original, original_app_dsn="original")
+    def document(path: Path) -> dict[str, Any]:
+        return cast(dict[str, Any], observer.parse_json_document(path.read_text(encoding="utf-8"), reject_fractional_numbers=True))
+    packet, observed, restored = (document(path) for path in (root / observer.PACKET,
+        tmp_path / observer.OBSERVATIONS / observer.OBSERVATION_PACKET, root / observer.RESTORE))
+    assert packet == expected and observed == observations
+    assert independent.qualify_raw_cycle(packet)["status"] == "passed"
+    assert independent.verify_raw_observations(packet, observed)["dependency_refusal_http_proven"]
+    assert independent.verify_restored_cycle(packet, restored, observed)["populated_restore_proven"]
+
+
+@pytest.mark.parametrize("attack", ["missing-packet", "foreign-original", "foreign-tenant", "extra-capture"])
+def test_seeded_adapter_refuses_unbound_discovery_before_query(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, attack: str) -> None:
+    root = tmp_path / observer.FAMILY
+    current = state(monkeypatch)
+    complete(root, current)
+    if attack == "missing-packet":
+        (root / observer.PACKET).unlink()
+    elif attack == "extra-capture":
+        (root / "checkpoint-4.json").write_text("{}", encoding="utf-8")
+    else:
+        packet = cast(dict[str, Any], observer.parse_json_document((root / observer.PACKET).read_text(encoding="utf-8"), reject_fractional_numbers=True))
+        packet["tenant_id" if attack == "foreign-tenant" else "original_source_order_id"] = "foreign"
+        (root / observer.PACKET).write_bytes(observer._bytes(packet, observer.MAX_PACKET_BYTES))
+    def refused_query(*args: Any) -> Any:
+        pytest.fail("Unbound packet must be refused before any database snapshot")
+    monkeypatch.setattr(observer, "_snapshot", refused_query)
+    with pytest.raises((ValueError, OSError)):
+        observer.verify_seeded_restituted_browser(runtime(), custody_root=root, original="original", original_app_dsn="original")

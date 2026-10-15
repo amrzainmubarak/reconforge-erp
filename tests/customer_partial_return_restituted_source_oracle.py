@@ -26,6 +26,10 @@ def digest(value: Any) -> str:
     ).hexdigest()
 
 
+def _integers(value: Any, *keys: str) -> None:
+    require(type(value) is dict and all(type(value[key]) is int for key in keys))
+
+
 def one(rows: list[dict[str, Any]], **keys: Any) -> dict[str, Any]:
     values = [row for row in rows if all(row.get(key) == value for key, value in keys.items())]
     require(len(values) == 1)
@@ -44,6 +48,8 @@ def verify_restituted_original(
     require(type(tenant_id) is str and original_source_order_id != resale_source_order_id)
     stock = one(issued["stock_sales_orders"], id=resale_source_order_id)
     invoice = one(issued["ar_invoices"], id=stock["invoice_id"])
+    _integers(stock, "quantity_scaled", "quantity_precision", "total_minor")
+    _integers(invoice, "total_minor", "tax_minor")
     payload = source["source_payload"]
     proof = payload["original_source"]["cost_admission"]
     require(
@@ -87,6 +93,10 @@ def verify_restituted_original(
     )
     valuation = one(issued["inventory_valuation_documents"], id=stock["valuation_id"])
     lines = [row for row in issued["inventory_valuation_lines"] if row["valuation_document_id"] == valuation["id"]]
+    _integers(valuation, "total_value_minor")
+    _integers(proof["valuation_document"], "total_value_minor")
+    for line in (*lines, *proof["valuation_lines"]):
+        _integers(line, "quantity_scaled", "value_minor")
     require(
         proof["valuation_document"] == valuation
         and proof["valuation_lines"] == lines
@@ -100,6 +110,8 @@ def verify_restituted_original(
         and lines[0]["value_minor"] == 0
     )
     consumed = [row for row in issued["inventory_layer_consumptions"] if row["valuation_line_id"] == lines[0]["id"]]
+    for row in (*consumed, *proof["consumptions"]):
+        _integers(row, "quantity_scaled", "value_minor")
     require(
         proof["consumptions"] == consumed
         and len(consumed) == len(issue["allocations"]) == 1
@@ -109,6 +121,7 @@ def verify_restituted_original(
         and consumed[0]["value_minor"] == 0
     )
     allocation = issue["allocations"][0]
+    _integers(allocation, "quantity_scaled", "value_minor")
     require(
         (allocation["cost_layer_id"], allocation["quantity_scaled"], allocation["value_minor"])
         == (consumed[0]["cost_layer_id"], 1, 0)
@@ -137,10 +150,14 @@ def verify_restituted_original(
     )
     captured = snapshot["sources"][0]
     layer = one(prior["inventory_cost_layers"], id=consumed[0]["cost_layer_id"])
+    for row in (snapshot, layer, captured["layer"]):
+        _integers(row, "remaining_quantity_scaled", "remaining_value_minor")
     require(
         captured["layer"] == layer and layer["remaining_quantity_scaled"] == 1 and layer["remaining_value_minor"] == 0
     )
     before_consumed = [row for row in prior["inventory_layer_consumptions"] if row["cost_layer_id"] == layer["id"]]
+    for row in (*before_consumed, *captured["consumptions"]):
+        _integers(row, "quantity_scaled", "value_minor")
     require(
         captured["consumptions"] == before_consumed
         and len(before_consumed) == 1
@@ -175,6 +192,13 @@ def verify_restituted_original(
     old_plan = one(prior["customer_partial_return_plans"], id=correction["plan"]["id"])
     restoration = one(prior["customer_partial_return_restorations"], plan_id=old_plan["id"], position=1)
     witness = one(prior["customer_partial_return_allocation_witnesses"], plan_id=old_plan["id"], position=1)
+    _integers(old_source, "quantity_precision")
+    _integers(correction["source"], "quantity_precision")
+    for row in (witness, correction["allocation_witness"]):
+        _integers(row, "before_quantity_scaled", "before_value_minor")
+    for row in (restoration, correction["restoration"]):
+        _integers(row, "position", "quantity_scaled", "value_minor", "direction")
+    _integers(correction, "history_sequence")
     require(
         correction["restoration"] == restoration
         and restoration["source_id"] == old_source["id"]
@@ -246,6 +270,9 @@ def verify_restituted_original(
         and source["original_cogs_effect_id"] is None
     )
     fingerprint = payload["fingerprint_payload"]
+    _integers(fingerprint, "quantity_scaled", "gross_minor")
+    for row in fingerprint["consumptions"]:
+        _integers(row, "quantity_scaled", "value_minor")
     require(
         fingerprint["currency"] == captured_policy["currency_code"]
         and fingerprint["policy"] == {key: value for key, value in captured_policy.items() if key != "currency_code"}

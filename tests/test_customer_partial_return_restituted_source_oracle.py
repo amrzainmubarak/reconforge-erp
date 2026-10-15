@@ -247,6 +247,20 @@ def test_explicit_zero_original_requires_its_actual_prior_restitution_and_absent
     assert proof["current_authorization_proven"] is proof["native_execution_proven"] is False
 
 
+def test_resealed_boolean_before_value_is_not_an_integer_witness() -> None:
+    prior, issued, source = fixture()
+    issue = issued["stock_sales_orders"][0]["issue_plan"]
+    issue["restitution_cost_snapshot"]["sources"][0]["partial_return_corrections"][0]["allocation_witness"]["before_value_minor"] = True
+    proof = source["source_payload"]["original_source"]["cost_admission"]
+    proof["issue_plan"] = copy.deepcopy(issue)
+    admission_digest = digest(proof)
+    source["source_payload"]["typed_source"]["original_cost_admission"] = {"evidence_digest": admission_digest}
+    source["source_payload"]["fingerprint_payload"]["original_cost_admission"] = ["stock-sales-restituted-cost-v1", admission_digest]
+    source["source_fingerprint"] = digest(source["source_payload"]["fingerprint_payload"])
+    with pytest.raises(ValueError):
+        verify(prior, issued, source)
+
+
 @pytest.mark.parametrize(
     "attack",
     [

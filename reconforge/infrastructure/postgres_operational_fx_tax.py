@@ -386,12 +386,14 @@ class PostgresOperationalFxTaxRepository:
         with self.owner._transaction():
             plan = self._peek("plan", plan_id)
             source = self._peek("source", plan["source_id"])
+            self._admit_journal_presence(source, plan)
             self._authorize(actor, permission, source, plan)
             digest, replay = self._command(plan, operation, command_id, actor, request)
             self._period(plan["period_id"])
             FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(plan["workspace_id"])
             plan = self._plan(plan_id)
             source = self._source(plan["source_id"])
+            self._admit_journal_presence(source, plan)
             # Grants can be revoked while the command waits for a currency or
             # native parent lock; retained ACKs require authority at return.
             self._authorize(actor, permission, source, plan)
@@ -447,6 +449,10 @@ class PostgresOperationalFxTaxRepository:
 
     def _receipt_number(self, plan: Mapping[str, Any]) -> str:
         return str(plan["id"])
+
+    def _admit_journal_presence(self, source: Mapping[str, Any], plan: Mapping[str, Any]) -> None:
+        if plan.get("entry_id") is None:
+            fail("Legacy foreign receivable phases require their exact retained functional journal.", "fx_state_invalid")
 
     def _after_posted(self, source: Mapping[str, Any], plan: Mapping[str, Any]) -> None:
         """Legacy FX1 has no additional owner history to append."""

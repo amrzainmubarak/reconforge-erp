@@ -10,13 +10,16 @@ from typing import Any
 import pytest
 
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor
+from reconforge.domain.monetary_customer_returns import MonetaryHistory, apply_monetary_event, prepare_monetary_event
 from reconforge.infrastructure.postgres_monetary_stock_sales import (
     OPERATION_PERMISSIONS,
     PostgresMonetaryStockSalesRepository,
+    _StockFxOwner,
 )
 from reconforge.infrastructure.postgres_operational_fx_tax import PostgresOperationalFxTaxRepository
 from reconforge.infrastructure.postgres_stock_sales import OPERATION_PERMISSIONS as LEGACY_PERMISSIONS
 from reconforge.infrastructure.postgres_stock_sales import PostgresStockSalesRepository
+from tests.test_monetary_customer_returns import DAY, original, rate
 
 
 def policy(currency: str, precision: int) -> dict[str, Any]:
@@ -106,3 +109,85 @@ def test_old_fx_source_getter_refuses_monetary_stock_owner_before_parent_wait() 
     with pytest.raises(FinancePostingError) as caught:
         owner._peek("source", "fx-source")
     assert caught.value.code == "fx_source_protocol_conflict"
+
+
+def test_default_foreign_owner_denies_nullable_journal_before_any_phase_mutation() -> None:
+    owner = object.__new__(PostgresOperationalFxTaxRepository)
+    for source_schema in ("operational-fx-source-v1", "operational-fx-stock-source-v2"):
+        with pytest.raises(FinancePostingError) as caught:
+            owner._admit_journal_presence({"schema_version": source_schema}, {"entry_id": None, "amount_minor": 0})
+        assert caught.value.code == "fx_state_invalid"
+
+
+def zero_collection(monkeypatch: pytest.MonkeyPatch) -> tuple[_StockFxOwner, dict[str, Any], dict[str, Any], MonetaryHistory]:
+    source = original(amount=2, exchange="0.5", quantity=3, cost=0, tax=None)
+    history = MonetaryHistory(source)
+    first = prepare_monetary_event(history, "Collection", posting_date=DAY, amount_minor=1, settlement_rate=rate("0.5"))
+    history = apply_monetary_event(history, first)
+    pending = prepare_monetary_event(history, "Collection", posting_date=DAY, amount_minor=1, settlement_rate=rate("0.000001"))
+    assert pending.monetary.functional_turnover_minor == 0
+    owner = object.__new__(_StockFxOwner)
+    owner.tenant_id = "tenant"
+    owner.stock = SimpleNamespace(_origin=lambda identifier: {"id": "origin", "fx_source_id": "fx", "invoice_id": "invoice"},
+                                  _history=lambda identifier: history)  # type: ignore[assignment]
+    monkeypatch.setattr(owner, "_state", lambda source: {"active_revaluation_plan_id": None})
+    from dataclasses import asdict
+    native_source = {"id": "fx", "schema_version": "operational-fx-stock-source-v2", "stock_order_id": "stock", "invoice_id": "invoice"}
+    plan = {"id": "FX1-" + "a" * 32, "schema_version": "operational-fx-stock-plan-v2", "kind": "settle", "source_id": "fx",
+        "entry_id": None, "amount_minor": 0, "snapshot": None, "validation_digest": None, "posting_date": DAY,
+        "equation": {"foreign_minor": 1, "monetary_event": asdict(pending), "lines": []}}
+    return owner, native_source, plan, history
+
+
+def test_new_fixed_owner_allows_only_proved_zero_local_foreign_cash_without_journal(monkeypatch: pytest.MonkeyPatch) -> None:
+    owner, source, plan, _ = zero_collection(monkeypatch)
+    owner._admit_journal_presence(source, plan)
+
+
+def test_new_zero_collection_refuses_active_closing_valuation_before_review_or_post(monkeypatch: pytest.MonkeyPatch) -> None:
+    owner, source, plan, _ = zero_collection(monkeypatch)
+    monkeypatch.setattr(owner, "_state", lambda source: {"active_revaluation_plan_id": "FX1-" + "c" * 32})
+    with pytest.raises(FinancePostingError) as caught:
+        owner._admit_journal_presence(source, plan)
+    assert caught.value.code == "stock_monetary_state_conflict"
+
+
+@pytest.mark.parametrize("changed", ["legacy", "recognize", "boolean", "fake_snapshot", "fake_line", "foreign_zero", "functional_cash"])
+def test_zero_journal_has_no_legacy_missing_or_balanced_foreign_source_fallback(changed: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    owner, source, plan, _ = zero_collection(monkeypatch)
+    if changed == "legacy":
+        source["schema_version"] = "operational-fx-source-v1"
+    elif changed == "recognize":
+        plan["kind"] = "recognize"
+    elif changed == "boolean":
+        plan["amount_minor"] = False
+    elif changed == "fake_snapshot":
+        plan["snapshot"] = {}
+    elif changed == "fake_line":
+        plan["equation"]["lines"] = [{"debit_minor": 0, "credit_minor": 0}]
+    elif changed == "foreign_zero":
+        plan["equation"]["foreign_minor"] = 0
+    else:
+        plan["equation"]["monetary_event"]["monetary"]["functional_cash_minor"] = 1
+    with pytest.raises(FinancePostingError):
+        owner._admit_journal_presence(source, plan)
+
+
+def test_retained_zero_ack_must_pin_its_native_history_member_and_can_survive_later_closing_valuation(monkeypatch: pytest.MonkeyPatch) -> None:
+    from dataclasses import asdict
+    owner, source, plan, history = zero_collection(monkeypatch)
+    pending = prepare_monetary_event(history, "Collection", posting_date=DAY, amount_minor=1, settlement_rate=rate("0.000001"))
+    history = apply_monetary_event(history, pending)
+    monkeypatch.setattr(owner.stock, "_history", lambda identifier: history)
+    monkeypatch.setattr(owner, "_state", lambda source: {"active_revaluation_plan_id": "FX1-" + "c" * 32})
+    calls = []
+    def execute(sql: str, args: tuple[Any, ...]) -> Any:
+        calls.append(args)
+        return SimpleNamespace(fetchone=lambda: (1,))
+    owner.connection = SimpleNamespace(execute=execute)
+    owner._admit_journal_presence(source, plan)
+    assert calls == [("tenant", "origin", 2, plan["id"])]
+    assert plan["equation"]["monetary_event"] == asdict(pending)
+    owner.connection = SimpleNamespace(execute=lambda sql, args: SimpleNamespace(fetchone=lambda: None))
+    with pytest.raises(FinancePostingError):
+        owner._admit_journal_presence(source, plan)

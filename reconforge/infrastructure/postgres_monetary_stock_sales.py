@@ -25,6 +25,7 @@ from reconforge.domain.monetary_customer_returns import (
     MonetaryPosition,
     MonetaryReturnSource,
     prepare_monetary_event,
+    replay_monetary_history,
 )
 from reconforge.domain.operational_fx_tax import (
     ForeignInvoicePreparation,
@@ -321,6 +322,49 @@ class _StockFxOwner(PostgresOperationalFxTaxRepository):
         state = self.stock._one("SELECT reconforge.monetary_stock_fx_state(%s,%s) value",
                                 (self.tenant_id, source["stock_order_id"]))["value"]
         return dict(state)
+
+    def _admit_journal_presence(self, source: Mapping[str, Any], plan: Mapping[str, Any]) -> None:
+        if plan.get("entry_id") is not None:
+            return
+        if (source.get("schema_version") != FX_SOURCE_SCHEMA or plan.get("schema_version") != "operational-fx-stock-plan-v2"
+                or plan.get("kind") != "settle" or plan.get("source_id") != source.get("id")
+                or type(plan.get("amount_minor")) is not int or plan["amount_minor"] != 0
+                or plan.get("snapshot") is not None or plan.get("validation_digest") is not None):
+            _fail("evidence_invalid", "Absent functional journals require the exact fixed monetary collection owner.")
+        try:
+            equation = plan["equation"]
+            retained = equation["monetary_event"]
+            if set(equation) != {"foreign_minor", "monetary_event", "lines"} or equation["lines"] != []:
+                _fail("evidence_invalid", "A zero-turnover collection cannot retain financial journal lines.")
+            if (type(equation["foreign_minor"]) is not int or equation["foreign_minor"] <= 0
+                    or type(retained["sequence"]) is not int or retained["kind"] != "Collection"
+                    or retained["amount_minor"] != equation["foreign_minor"]
+                    or any(type(value) is not int or value != 0 for key, value in retained["monetary"].items() if key.startswith("functional_"))):
+                _fail("evidence_invalid", "Zero functional posting retains positive exact transaction cash and every zero functional leg.")
+            origin = self.stock._origin(source["stock_order_id"])
+            if origin is None or origin["fx_source_id"] != source["id"] or origin["invoice_id"] != source["invoice_id"]:
+                _fail("evidence_invalid", "The complete current immutable Stock/AR/FX source must own this zero collection.")
+            history = self.stock._history(source["stock_order_id"])
+            replay_monetary_history(history)
+            sequence = retained["sequence"]
+            if 1 <= sequence <= len(history.events):
+                expected = history.events[sequence - 1]
+                if self.connection.execute("""SELECT 1 FROM reconforge.customer_partial_return_monetary_history
+                    WHERE tenant_id=%s AND origin_id=%s AND sequence=%s AND stock_fx_plan_id=%s""",
+                    (self.tenant_id, origin["id"], sequence, plan["id"])).fetchone() is None:
+                    _fail("evidence_invalid", "A retained zero collection belongs only to its exact original native history member.")
+            else:
+                if self._state(source)["active_revaluation_plan_id"] is not None:
+                    _fail("state_conflict", "Reverse the active closing valuation before a new historical collection.")
+                rate = retained["settlement_rate"]
+                expected = prepare_monetary_event(history, "Collection", posting_date=plan["posting_date"],
+                    amount_minor=equation["foreign_minor"], settlement_rate=HistoricalRate(**rate) if rate is not None else None)
+            if canonical_json(asdict(expected)) != canonical_json(retained) or expected.monetary.functional_turnover_minor != 0:
+                _fail("evidence_invalid", "The complete zero collection witness must match its exact active or retained monetary prefix.")
+        except FinancePostingError:
+            raise
+        except (KeyError, TypeError, ValueError) as exc:
+            raise FinancePostingError("stock_monetary_evidence_invalid", "The zero functional collection evidence refused.") from exc
 
     def _prepare(self, source: Mapping[str, Any], *, kind: str, equation: dict[str, Any], period_id: str,
                  posting_date: str, reason: str, sequence: int, request: Mapping[str, Any],

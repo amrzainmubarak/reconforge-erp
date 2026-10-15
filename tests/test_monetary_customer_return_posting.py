@@ -1,13 +1,22 @@
 """Literal GL directions and omitted-zero membership for monetary corrections."""
 
+from contextlib import nullcontext
 from dataclasses import asdict
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
-from reconforge.domain.finance_posting import FinancePostingError
+from reconforge.domain.finance_posting import FinancePostingError, PostingActor
+from reconforge.domain.monetary_customer_partial_return_commands import (
+    MonetaryPartialRefundPreparation,
+    MonetaryPartialReversePreparation,
+)
 from reconforge.domain.monetary_customer_returns import MonetaryHistory, prepare_monetary_event
-from reconforge.infrastructure.postgres_monetary_customer_partial_returns import correction_lines
+from reconforge.infrastructure.postgres_monetary_customer_partial_returns import (
+    PostgresMonetaryCustomerPartialReturnsRepository,
+    correction_lines,
+)
 from tests.test_monetary_customer_returns import DAY, append, original
 
 
@@ -79,3 +88,40 @@ def test_missing_captured_dimensions_are_not_silently_replaced_with_empty_dimens
     with pytest.raises(FinancePostingError) as caught:
         correction_lines(event, native)
     assert caught.value.code == "monetary_return_evidence_invalid"
+
+
+@pytest.mark.parametrize("operation", ["refund", "reverse", "review", "post", "cancel", "get"])
+def test_current_scope_and_persisted_permissions_precede_every_private_plan_read(operation: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    owner = object.__new__(PostgresMonetaryCustomerPartialReturnsRepository)
+    owner.tenant_id = "tenant"
+    scope = {"workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity"}
+    seen = []
+
+    def scoped(query: str, parameters: Any) -> Any:
+        assert "payload" not in query and "SELECT *" not in query
+        seen.append(parameters)
+        return scope
+
+    def denied(actor: Any, phase: str, value: Any) -> None:
+        assert value == scope
+        raise FinancePostingError("operational_actor_denied", "Current permission was withdrawn.")
+
+    def private(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("Financial payload read before current authority admission")
+
+    monkeypatch.setattr(owner, "owner", SimpleNamespace(_transaction=nullcontext), raising=False)
+    monkeypatch.setattr(owner, "legacy", SimpleNamespace(_authority_locks=denied), raising=False)
+    monkeypatch.setattr(owner, "_one", scoped)
+    monkeypatch.setattr(owner, "_row", private)
+    actor = PostingActor("actor", "human", frozenset())
+    with pytest.raises(FinancePostingError) as caught:
+        if operation == "refund":
+            owner.prepare_refund(MonetaryPartialRefundPreparation("plan", 1, "period", DAY, None, "Return refund", 0), command_id="command", actor=actor)
+        elif operation == "reverse":
+            owner.prepare_reversal(MonetaryPartialReversePreparation("plan", "period", DAY, "Exact inverse", 0), command_id="command", actor=actor)
+        elif operation == "get":
+            owner.get("plan", actor=actor)
+        else:
+            getattr(owner, operation)("plan", expected_plan_digest="a" * 64, command_id="command", reason="Current human action", actor=actor)
+    assert caught.value.code == "operational_actor_denied"
+    assert seen == [("tenant", "plan")]

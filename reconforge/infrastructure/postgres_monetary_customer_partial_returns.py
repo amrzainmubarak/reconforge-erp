@@ -131,6 +131,12 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
         return self._one("SELECT * FROM reconforge.stock_sales_monetary_origins WHERE tenant_id=%s AND id=%s",
                          (self.tenant_id, identifier))
 
+    def _plan_authority(self, identifier: str, actor: PostingActor, operation: str) -> None:
+        scope = self._one("""SELECT workspace_id,organization_id,legal_entity_id
+            FROM reconforge.customer_partial_return_monetary_plans WHERE tenant_id=%s AND id=%s""",
+            (self.tenant_id, text(identifier, "plan_id")))
+        self.legacy._authority_locks(actor, operation, scope)
+
     def _stock(self, origin: Mapping[str, Any]) -> PostgresMonetaryStockSalesRepository:
         codes = self._one("""SELECT organization.organization_code,entity.entity_code
             FROM reconforge.organizations organization JOIN reconforge.legal_entities entity
@@ -350,6 +356,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
     def prepare_refund(self, request: MonetaryPartialRefundPreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
         args = request.payload()
         with self.owner._transaction():
+            self._plan_authority(args["return_id"], actor, "prepare")
             original = self._row(args["return_id"])
             if original["operation"] != "Return" or original["phase"] != 2:
                 _fail("state_conflict", "Refund preparation requires the actual posted Return parent.")
@@ -358,6 +365,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
     def prepare_reversal(self, request: MonetaryPartialReversePreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
         args = request.payload()
         with self.owner._transaction():
+            self._plan_authority(args["original_id"], actor, "prepare")
             original = self._row(args["original_id"])
             if original["operation"] not in {"Return", "Refund"} or original["phase"] != 2:
                 _fail("state_conflict", "Only a posted original Return or Refund may be inverted.")
@@ -436,6 +444,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
 
     def _phase(self, identifier: str, operation: str, expected: str, command: str, reason: str, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():
+            self._plan_authority(identifier, actor, operation)
             plan = self._row(identifier)
             origin = self._origin(plan["source_id"])
             self._actor(actor, operation, origin)
@@ -499,6 +508,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
 
     def get(self, plan_id: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():
+            self._plan_authority(plan_id, actor, "read")
             plan = self._row(plan_id)
             self._actor(actor, "read", self._origin(plan["source_id"]))
             self.connection.execute("SELECT reconforge.monetary_partial_close(%s,%s)", (self.tenant_id, plan_id))

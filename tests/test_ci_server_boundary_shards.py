@@ -48,6 +48,7 @@ INTEGRITY_FILES = {
     "customer-partial-security": ("tests/test_postgres_customer_partial_return_posted_security.py",),
     "customer-partial-rounding": (
         "tests/test_postgres_customer_partial_return_rounding.py",
+        "tests/test_postgres_customer_partial_return_zero_stock.py",
     ),
     "customer-partial-rounding-migration": ("tests/test_postgres_customer_partial_return_rounding_migration.py",),
     "customer-partial-rounding-security": ("tests/test_postgres_customer_partial_return_rounding_security.py",),
@@ -268,7 +269,9 @@ def test_enterprise_browser_matrix_requires_every_real_https_and_populated_resto
     job = _workflow()["jobs"]["enterprise-browser-recovery"]
     assert job["strategy"]["matrix"]["scenario"] == [
         "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets",
-        "procurement-commitments", "customer-returns", "customer-partial-returns", "supplier-returns", "operational-fx-tax",
+        "procurement-commitments", "customer-returns", "customer-partial-returns",
+        "customer-partial-return-remainder-ordinary", "customer-partial-return-remainder-zero", "customer-partial-return-remainder-refund",
+        "supplier-returns", "operational-fx-tax",
         "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing",
         "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer",
     ]

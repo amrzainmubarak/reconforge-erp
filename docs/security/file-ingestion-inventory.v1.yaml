@@ -959,6 +959,24 @@ surfaces:
       - The adapter's supplied connection/envelope must already be authorized; current human/permission/period locks and source revalidation remain the composing owner's responsibility. SELECT-only mapper statements do not imply read-only application table ACLs.
       - This finite source mapping supplies no claim, approved account, command, physical partial receipt, AR adjustment or financial posting. Independent raw native row-text custody is retained separately and proposals remain unposted.
     next_action: Bind future native CR2 source ownership, shared AR and same-layer restoration guards before admitting any financial effect; keep byte-original evidence separate from decoded content.
+  - id: FI-049
+    name: Internal explicit restituted-cost original evidence
+    module_ids: [platform.core, finance.controls]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/domain/customer_partial_return_cost_evidence.py::OriginalRestitutedCostEvidence.snapshot
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_customer_partial_return_zero_stock.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - Reuses the shared integer-only structured decoder with duplicate and non-finite rejection and bounds of6291456 UTF-8 bytes,131072 nodes,depth48,4096 items per collection and262144 characters per scalar; no upload boundary is introduced.
+      - Canonical root, seven factual fields, explicit restituted Stock-v2 policy, actual valuation/consumption affinity and zero-only absent COGS are required; a digest authenticates supplied content only.
+      - Native source ownership, current actor and third-human duties, exact layer changes, atomic posting and populated restore need independent database evidence; parser tests do not close those gates.
+    next_action: Qualify native zero-cost resale and repeated return, SQL bypass and populated restore before accepting the new factual-source path.
 
 direct_tabular_parser_allowlist:
   - path: reconforge/benchmark/amlsim_reconciliation.py

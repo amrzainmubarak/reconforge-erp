@@ -1,6 +1,7 @@
 """Independent arithmetic/adversarial vectors; native row binding is separate."""
 from __future__ import annotations
 
+import hashlib
 import json
 from copy import deepcopy
 from dataclasses import replace
@@ -21,7 +22,9 @@ from tests.customer_partial_return_posted_cycle_oracle import (
     posted_ledger_totals,
     prefix_portions,
     qualify_raw_cycle,
+    verify_audit_only_transition,
     verify_posted_gl_amount_delta,
+    verify_raw_observations,
     verify_raw_restore,
 )
 
@@ -315,6 +318,177 @@ def test_populated_restore_requires_identical_original_membership_and_bytes() ->
             candidate["capture"]["finance_entries"][0] += " "
         with pytest.raises(CycleRefusal):
             verify_raw_restore(packet, candidate)
+
+
+def audit_hash(value: Any) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()).hexdigest()
+
+
+def policy_event(sequence: int, previous: str, *, surface: str = "GET /api/v1/customer-partial-returns/plans",
+                 actor: str = "poster", permission: str = "finance_core.read") -> dict[str, Any]:
+    policy = {"schema_version": 1, "policy_version": "central-policy-v3", "allowed": True, "reason_code": "allowed",
+              "evaluator": "central-policy", "principal_type": "user", "context_binding": "bound",
+              "actor_digest": audit_hash({"namespace": "principal.actor", "value": actor}),
+              "required_permission_digest": audit_hash({"namespace": "permission.contract", "values": [permission]}),
+              "granted_permission_digest": audit_hash({"namespace": "permission.granted", "value": permission}),
+              "context_digest": "a" * 64, "scope_digest": "b" * 64,
+              "surface_digest": audit_hash({"namespace": "audit.surface", "value": surface}), "request_id_digest": "c" * 64}
+    policy["decision_digest"] = audit_hash(policy)
+    row = {"tenant_id": "tenant", "id": f"audit-{sequence}", "sequence": sequence, "previous_hash": previous,
+           "actor_user_id": actor, "actor_label": "policy-engine", "object_type": "authorization.policy_decision",
+           "object_id": policy["decision_digest"], "action": "evaluated", "before_hash": None,
+           "after_hash": policy["decision_digest"], "metadata_json": {"policy_decision_evidence": policy, "request_id_digest": "c" * 64},
+           "created_at": f"2026-10-15T00:00:{sequence:02d}+00:00"}
+    return seal_audit(row)
+
+
+def seal_audit(row: dict[str, Any]) -> dict[str, Any]:
+    payload = {key: value for key, value in row.items() if key not in {"tenant_id", "event_hash"}}
+    payload["metadata_json"] = json.dumps(row["metadata_json"], sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    row["event_hash"] = audit_hash(payload)
+    return row
+
+
+def audit_capture(events: list[dict[str, Any]] | None = None) -> dict[str, list[str]]:
+    """Only an observation-contract fixture; this is deliberately NOT a financial cycle."""
+    result: dict[str, list[str]] = {name: [] for name in TABLES}
+    result["customer_partial_return_plans"] = [json.dumps({"tenant_id": "tenant", "id": f"plan-{number}", "phase": 2,
+        "source_order_id": "stock", "plan_digest": "d" * 64, "preparer_actor_id": "maker"}, sort_keys=True) for number in range(1, 9)]
+    result["customer_partial_return_events"] = [json.dumps({"tenant_id": "tenant", "actor_id": "poster"})]
+    set_audits(result, events or [])
+    return result
+
+
+def set_audits(capture: dict[str, list[str]], events: list[dict[str, Any]]) -> None:
+    capture["domain_audit_events"] = sorted(json.dumps(row, sort_keys=True) for row in events)
+    capture["domain_audit_ledger_state"] = [json.dumps({"tenant_id": "tenant", "last_sequence": len(events),
+        "last_event_hash": events[-1]["event_hash"] if events else "0" * 64,
+        "updated_at": events[-1]["created_at"] if events else "2026-10-15T00:00:00+00:00"}, sort_keys=True)]
+
+
+def test_independent_audit_append_preserves_all_business_originals_and_verifies_canonical_head() -> None:
+    before, after = audit_capture(), audit_capture([policy_event(1, "0" * 64)])
+    proof = verify_audit_only_transition(before, after, tenant_id="tenant")
+    assert proof == {"business_tables": 76, "business_original_rows_equal": True, "audit_original_prefix_equal": True,
+                     "audit_chain_valid": True, "audit_actions_bound": True, "appended_audit_events": 1}
+    assert verify_audit_only_transition(after, deepcopy(after), tenant_id="tenant")["appended_audit_events"] == 0
+
+
+@pytest.mark.parametrize("attack", ["business-add", "business-change", "old-byte-mutation", "old-resealed-mutation", "sequence-gap",
+    "forged-head", "head-sequence", "head-time", "foreign-tenant", "duplicate", "unrelated-action", "unrelated-surface",
+    "wrong-permission", "unbound-actor", "wrong-actor-digest", "policy-digest", "request-digest", "bad-previous", "missing-head", "unknown-table"])
+def test_audit_observation_cannot_hide_business_changes_or_invalid_resealed_audit_history(attack: str) -> None:
+    first = policy_event(1, "0" * 64)
+    before, after = audit_capture([first]), audit_capture([first, policy_event(2, first["event_hash"])])
+    events = [json.loads(raw) for raw in after["domain_audit_events"]]
+    events.sort(key=lambda row: row["sequence"])
+    current = events[-1]
+    if attack == "business-add":
+        after["finance_posting_effects"] = [json.dumps({"tenant_id": "tenant", "id": "extra-effect"})]
+    elif attack == "business-change":
+        after["customer_partial_return_plans"][0] += " "
+    elif attack == "old-byte-mutation":
+        after["domain_audit_events"][after["domain_audit_events"].index(json.dumps(first, sort_keys=True))] += " "
+    elif attack == "old-resealed-mutation":
+        events[0]["actor_label"] = "rewritten-original"
+        seal_audit(events[0])
+        current["previous_hash"] = events[0]["event_hash"]
+    elif attack == "sequence-gap":
+        current["sequence"] = 3
+    elif attack == "foreign-tenant":
+        current["tenant_id"] = "foreign"
+    elif attack == "duplicate":
+        after["domain_audit_events"].append(after["domain_audit_events"][0])
+    elif attack == "unrelated-action":
+        current["action"] = "posted"
+    elif attack in {"unrelated-surface", "wrong-permission", "unbound-actor"}:
+        current = policy_event(2, first["event_hash"], surface="POST /api/v1/admin/access/roles" if attack == "unrelated-surface"
+                               else "GET /api/v1/customer-partial-returns/plans", permission="users.manage" if attack == "wrong-permission"
+                               else "finance_core.read", actor="unbound-other-human" if attack == "unbound-actor" else "poster")
+        events[-1] = current
+    elif attack == "wrong-actor-digest":
+        current["metadata_json"]["policy_decision_evidence"]["actor_digest"] = "e" * 64
+    elif attack == "policy-digest":
+        current["metadata_json"]["policy_decision_evidence"]["decision_digest"] = "e" * 64
+    elif attack == "request-digest":
+        current["metadata_json"]["request_id_digest"] = "e" * 64
+    elif attack == "bad-previous":
+        current["previous_hash"] = "e" * 64
+    elif attack == "unknown-table":
+        after["unreviewed"] = []
+    if attack not in {"old-byte-mutation", "duplicate", "business-add", "business-change", "unknown-table"}:
+        seal_audit(current)
+        set_audits(after, events)
+    if attack in {"forged-head", "head-sequence", "head-time"}:
+        head = json.loads(after["domain_audit_ledger_state"][0])
+        head[{"forged-head": "last_event_hash", "head-sequence": "last_sequence", "head-time": "updated_at"}[attack]] = 0 if attack == "head-sequence" else "e" * 64
+        after["domain_audit_ledger_state"] = [json.dumps(head)]
+    if attack == "missing-head":
+        after["domain_audit_ledger_state"] = []
+    with pytest.raises(CycleRefusal):
+        verify_audit_only_transition(before, after, tenant_id="tenant")
+
+
+def observations_contract() -> tuple[dict[str, Any], dict[str, Any]]:
+    """Metadata-only admission vectors; main financial reader must refuse them."""
+    events = [policy_event(1, "0" * 64)]
+    captures, observations = [], []
+    for version in range(9):
+        capture = audit_capture(deepcopy(events))
+        capture["customer_partial_return_history"] = [json.dumps({"tenant_id": "tenant", "sequence": number, "plan_id": f"plan-{number}"}) for number in range(1, version + 1)]
+        captures.append(capture)
+        if version in {1, 6, 8}:
+            events.append(policy_event(len(events) + 1, events[-1]["event_hash"]))
+            observed = deepcopy(capture)
+            set_audits(observed, deepcopy(events))
+            observations.append({"schema_version": "customer-partial-return-browser-observation-v1", "kind": "FinalRead" if version == 8 else "RetainedReplay",
+                "tenant_id": "tenant", "source_order_id": "stock", "history_version": version, "posted_plan_id": f"plan-{version}", "plan_digest": "d" * 64, "tables": observed})
+    return ({"schema_version": "customer-partial-return-posted-cycle-input-v1", "tenant_id": "tenant", "source_order_id": "stock", "captures": captures},
+            {"schema_version": "customer-partial-return-posted-observations-input-v1", "tenant_id": "tenant", "source_order_id": "stock", "observations": observations})
+
+
+def test_three_closed_observations_bind_economic_versions_and_all_restored_final_originals() -> None:
+    packet, observations = observations_contract()
+    proof = verify_raw_observations(packet, observations)
+    assert proof["observations"] == 3 and proof["observation_audit_appended_events"] == 3
+    assert proof["observation_audit_chronology_valid"] is True
+    restored = {"schema_version": "customer-partial-return-posted-restore-input-v1", "tenant_id": "tenant", "source_order_id": "stock",
+                "capture": deepcopy(observations["observations"][-1]["tables"])}
+    assert verify_raw_restore(packet, restored, observations=observations)["restore_uses_final_observation"] is True
+    with pytest.raises(CycleRefusal):
+        verify_raw_restore(packet, {**restored, "capture": packet["captures"][-1]}, observations=observations)
+    with pytest.raises((CycleRefusal, KeyError)):
+        qualify_raw_cycle(packet)  # Observation-only fixtures can never qualify financial posting.
+
+
+@pytest.mark.parametrize("attack", ["wrong-version", "bool-version", "wrong-kind", "wrong-plan", "wrong-digest", "dropped-observation", "audit-rebranch", "business-delta", "replay-wrong-post", "final-post-action"])
+def test_observation_affinity_and_chronology_cannot_be_reframed_as_business_replay(attack: str) -> None:
+    packet, observations = observations_contract()
+    current = observations["observations"][0]
+    if attack == "wrong-version":
+        current["history_version"] = 2
+    if attack == "bool-version":
+        current["history_version"] = True
+    if attack == "wrong-kind":
+        current["kind"] = "FinalRead"
+    if attack == "wrong-plan":
+        current["posted_plan_id"] = "plan-2"
+    if attack == "wrong-digest":
+        current["plan_digest"] = "e" * 64
+    if attack == "dropped-observation":
+        observations["observations"].pop()
+    if attack == "audit-rebranch":
+        set_audits(packet["captures"][2], [policy_event(1, "0" * 64)])
+    if attack == "business-delta":
+        current["tables"]["inventory_movements"] = [json.dumps({"tenant_id": "tenant", "id": "changed"})]
+    if attack in {"replay-wrong-post", "final-post-action"}:
+        current = observations["observations"][1 if attack == "replay-wrong-post" else 2]
+        old = [json.loads(raw) for raw in packet["captures"][current["history_version"]]["domain_audit_events"]]
+        old.sort(key=lambda row: row["sequence"])
+        old.append(policy_event(len(old) + 1, old[-1]["event_hash"], surface="POST /api/v1/customer-partial-returns/plans/plan-1/post"))
+        set_audits(current["tables"], old)
+    with pytest.raises(CycleRefusal):
+        verify_raw_observations(packet, observations)
 
 
 def test_final_posted_totals_exclude_complete_unposted_and_void_entry_lines() -> None:

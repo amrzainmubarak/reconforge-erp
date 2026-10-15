@@ -6,6 +6,7 @@ rows, posted effects and populated restore. Arithmetic alone is not native proof
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from collections import Counter
@@ -570,6 +571,186 @@ def qualify_raw_cycle(packet: dict[str, Any]) -> dict[str, Any]:
             "scope": "Incremental GL amounts, original FIFO portions, layer deltas and history only; authority, RLS, recovery and API need separate native qualification."}
 
 
+AUDIT_TABLES = frozenset({"domain_audit_events", "domain_audit_ledger_state"})
+AUDIT_FIELDS = frozenset({"tenant_id", "id", "sequence", "previous_hash", "event_hash", "actor_user_id", "actor_label",
+                          "object_type", "object_id", "action", "before_hash", "after_hash", "metadata_json", "created_at"})
+POLICY_FIELDS = frozenset({"actor_digest", "allowed", "context_binding", "context_digest", "decision_digest", "evaluator",
+                           "granted_permission_digest", "policy_version", "principal_type", "reason_code", "request_id_digest",
+                           "required_permission_digest", "schema_version", "scope_digest", "surface_digest"})
+READ_PERMISSIONS = frozenset({"sales.read", "receivables.read", "inventory.read", "finance_core.read"})
+POST_PERMISSIONS = READ_PERMISSIONS | {"sales.manage", "receivables.manage", "inventory.post", "inventory.valuation.approve",
+                                       "finance_core.post", "finance_core.reverse"}
+
+
+def audit_canonical(value: Any) -> str:
+    """The documented v1 JSON wire grammar, independently implemented here."""
+    try:
+        return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False)
+    except (TypeError, ValueError, OverflowError, RecursionError) as exc:
+        raise CycleRefusal("Independent audit originals refused.") from exc
+
+
+def audit_digest(value: Any) -> str:
+    return hashlib.sha256(audit_canonical(value).encode()).hexdigest()
+
+
+def _text_digest(namespace: str, value: str) -> str:
+    return audit_digest({"namespace": namespace, "value": value})
+
+
+def _hex(value: Any) -> str:
+    require(type(value) is str and re.fullmatch(r"[a-f0-9]{64}", value) is not None)
+    return cast(str, value)
+
+
+def _capture_originals(value: Any, tenant_id: str) -> dict[str, tuple[str, ...]]:
+    require(type(value) is dict and set(value) == set(TABLES))
+    result = {}
+    for name, rows in value.items():
+        require(type(rows) in {list, tuple} and len(rows) <= 4096 and all(type(row) is str for row in rows))
+        require(len(rows) == len(set(rows)))
+        require(all(decode_row(row).get("tenant_id") == tenant_id for row in rows))
+        result[name] = tuple(sorted(rows))
+    return result
+
+
+def _audit_chain(tables: dict[str, tuple[str, ...]], tenant_id: str) -> list[tuple[dict[str, Any], str]]:
+    rows = sorted(((decode_row(raw), raw) for raw in tables["domain_audit_events"]),
+                  key=lambda pair: integer(pair[0].get("sequence"), positive=True))
+    previous = "0" * 64
+    seen: set[str] = set()
+    for sequence, (row, _raw) in enumerate(rows, 1):
+        require(set(row) == AUDIT_FIELDS and row["tenant_id"] == tenant_id
+                and integer(row["sequence"], positive=True) == sequence and row["previous_hash"] == previous)
+        identifier = identity(row["id"])
+        require(identifier not in seen)
+        seen.add(identifier)
+        for field in ("actor_label", "object_type", "object_id", "action", "created_at"):
+            identity(row[field])
+        require(row["actor_user_id"] is None or type(row["actor_user_id"]) is str)
+        require(all(row[field] is None or type(row[field]) is str for field in ("before_hash", "after_hash")))
+        require(type(row["metadata_json"]) is dict)
+        unsigned = {key: row[key] for key in AUDIT_FIELDS - {"tenant_id", "event_hash"}}
+        unsigned["metadata_json"] = audit_canonical(row["metadata_json"])
+        previous = audit_digest(unsigned)
+        require(_hex(row["event_hash"]) == previous)
+    heads = tables["domain_audit_ledger_state"]
+    require(len(heads) == 1 or not rows and not heads)
+    if heads:
+        head = decode_row(heads[0])
+        require(set(head) == {"tenant_id", "last_sequence", "last_event_hash", "updated_at"}
+                and head["tenant_id"] == tenant_id and integer(head["last_sequence"]) == len(rows)
+                and _hex(head["last_event_hash"]) == previous)
+        identity(head["updated_at"])
+        require(not rows or head["updated_at"] == rows[-1][0]["created_at"])
+    return rows
+
+
+def _surface_contracts(tables: dict[str, tuple[str, ...]], post_plan_ids: set[str] | None = None) -> tuple[dict[str, frozenset[str]], set[str]]:
+    plans = [decode_row(raw) for raw in tables["customer_partial_return_plans"]]
+    orders = {identity(row["source_order_id"]) for row in plans}
+    require(len(orders) == 1)
+    actors = {identity(row["preparer_actor_id"]) for row in plans}
+    actors.update(identity(decode_row(raw)["actor_id"]) for raw in tables["customer_partial_return_events"])
+    surfaces: dict[str, frozenset[str]] = {
+        "GET /api/v1/customer-partial-returns/plans": READ_PERMISSIONS,
+        "GET /api/v1/customer-returns/plans": READ_PERMISSIONS,
+        "server.scoped:finance_core.read": frozenset({"finance_core.read"}),
+    }
+    for order in orders:
+        surfaces["GET /api/v1/customer-partial-returns/sources/" + order + "/balance"] = READ_PERMISSIONS
+    for plan in plans:
+        identifier = identity(plan["id"])
+        surfaces["GET /api/v1/customer-partial-returns/plans/" + identifier] = READ_PERMISSIONS
+        if plan["phase"] == 2 and (post_plan_ids is None or identifier in post_plan_ids):
+            surfaces["POST /api/v1/customer-partial-returns/plans/" + identifier + "/post"] = POST_PERMISSIONS
+    for suffix, permission in (("audit/events", "audit.read"), ("audit/verify", "audit.read"),
+            ("security/overview", "security.center.read"), ("identity/users", "users.manage"),
+            ("identity/sessions", "users.manage"), ("access/permissions", "roles.manage"), ("access/roles", "roles.manage"),
+            ("security/integrations", "security.integrations.manage"), ("security/retention-policies", "security.retention.manage")):
+        surfaces["GET /api/v1/admin/" + suffix] = frozenset({permission})
+    return {_text_digest("audit.surface", surface): permissions for surface, permissions in surfaces.items()}, actors
+
+
+def _policy_append(row: dict[str, Any], tables: dict[str, tuple[str, ...]], post_plan_ids: set[str] | None = None) -> None:
+    require(row["actor_label"] == "policy-engine" and row["object_type"] == "authorization.policy_decision"
+            and row["action"] == "evaluated" and row["before_hash"] is None)
+    metadata = row["metadata_json"]
+    require(set(metadata) == {"policy_decision_evidence", "request_id_digest"})
+    policy = metadata["policy_decision_evidence"]
+    require(type(policy) is dict and set(policy) == POLICY_FIELDS and type(policy["schema_version"]) is int
+            and policy["schema_version"] == 1 and policy["policy_version"] == "central-policy-v3"
+            and policy["allowed"] is True and policy["principal_type"] == "user" and policy["context_binding"] == "bound")
+    for field in ("actor_digest", "context_digest", "decision_digest", "required_permission_digest", "scope_digest", "surface_digest", "request_id_digest", "granted_permission_digest"):
+        _hex(policy[field])
+    for field in ("reason_code", "evaluator"):
+        identity(policy[field])
+    unsigned = {key: value for key, value in policy.items() if key != "decision_digest"}
+    require(audit_digest(unsigned) == policy["decision_digest"] == row["object_id"] == row["after_hash"]
+            and metadata["request_id_digest"] == policy["request_id_digest"])
+    surfaces, actors = _surface_contracts(tables, post_plan_ids)
+    actor = identity(row["actor_user_id"])
+    require(actor in actors and policy["actor_digest"] == _text_digest("principal.actor", actor.strip().casefold()))
+    permissions = surfaces.get(policy["surface_digest"])
+    require(permissions is not None)
+    require(any(policy["required_permission_digest"] == audit_digest({"namespace": "permission.contract", "values": [permission]})
+                and policy["granted_permission_digest"] == _text_digest("permission.granted", permission)
+                for permission in cast(frozenset[str], permissions)))
+
+
+def verify_audit_only_transition(before_tables: dict[str, Any], after_tables: dict[str, Any], *, tenant_id: str) -> dict[str, Any]:
+    """Retain every business byte and independently verify only allowed audit appends."""
+    tenant = identity(tenant_id)
+    before, after = _capture_originals(before_tables, tenant), _capture_originals(after_tables, tenant)
+    require(all(before[name] == after[name] for name in set(TABLES) - AUDIT_TABLES))
+    old, new = _audit_chain(before, tenant), _audit_chain(after, tenant)
+    require(len(new) >= len(old) and [raw for _row, raw in new[:len(old)]] == [raw for _row, raw in old])
+    if len(old) == len(new):
+        require(before["domain_audit_ledger_state"] == after["domain_audit_ledger_state"])
+    for row, _raw in new[len(old):]:
+        _policy_append(row, after)
+    return {"business_tables": 76, "business_original_rows_equal": True, "audit_original_prefix_equal": True,
+            "audit_chain_valid": True, "audit_actions_bound": True, "appended_audit_events": len(new) - len(old)}
+
+
+def verify_raw_observations(packet: dict[str, Any], observations: dict[str, Any]) -> dict[str, Any]:
+    """Check the closed HTTPS replay/read observations; financial arithmetic stays in qualify_raw_cycle."""
+    require(type(observations) is dict and set(observations) == {"schema_version", "tenant_id", "source_order_id", "observations"}
+            and observations["schema_version"] == "customer-partial-return-posted-observations-input-v1"
+            and observations["tenant_id"] == packet["tenant_id"] and observations["source_order_id"] == packet["source_order_id"])
+    rows = observations["observations"]
+    require(type(rows) is list and len(rows) == 3 and len(packet["captures"]) == 9)
+    chains = [_audit_chain(_capture_originals(capture, packet["tenant_id"]), packet["tenant_id"]) for capture in packet["captures"]]
+    for old, new in zip(chains, chains[1:], strict=False):
+        require(len(new) >= len(old) and [raw for _event, raw in new[:len(old)]] == [raw for _event, raw in old])
+    count = 0
+    for row, (kind, version) in zip(rows, (("RetainedReplay", 1), ("RetainedReplay", 6), ("FinalRead", 8)), strict=True):
+        require(type(row) is dict and set(row) == {"schema_version", "kind", "tenant_id", "source_order_id", "history_version", "posted_plan_id", "plan_digest", "tables"}
+                and row["schema_version"] == "customer-partial-return-browser-observation-v1" and row["kind"] == kind
+                and row["tenant_id"] == packet["tenant_id"] and row["source_order_id"] == packet["source_order_id"]
+                and type(row["history_version"]) is int and row["history_version"] == version)
+        baseline = packet["captures"][version]
+        history = sorted((decode_row(raw) for raw in baseline["customer_partial_return_history"]), key=lambda item: integer(item["sequence"], positive=True))
+        require(len(history) == version and history[-1]["sequence"] == version and history[-1]["plan_id"] == row["posted_plan_id"])
+        plan = row_index(tuple(decode_row(raw) for raw in baseline["customer_partial_return_plans"]))[identity(row["posted_plan_id"])]
+        require(plan["phase"] == 2 and _hex(plan["plan_digest"]) == _hex(row["plan_digest"]) and plan["source_order_id"] == row["source_order_id"])
+        result = verify_audit_only_transition(baseline, row["tables"], tenant_id=packet["tenant_id"])
+        count += result["appended_audit_events"]
+        old = _audit_chain(_capture_originals(baseline, packet["tenant_id"]), packet["tenant_id"])
+        after = _capture_originals(row["tables"], packet["tenant_id"])
+        observed_chain = _audit_chain(after, packet["tenant_id"])
+        if version < 8:
+            next_chain = chains[version + 1]
+            require(len(next_chain) >= len(observed_chain)
+                    and [raw for _event, raw in next_chain[:len(observed_chain)]] == [raw for _event, raw in observed_chain])
+        for event, _raw in observed_chain[len(old):]:
+            _policy_append(event, after, {row["posted_plan_id"]} if kind == "RetainedReplay" else set())
+    return {"observations": 3, "retained_replay_observations": 2, "final_read_observations": 1, "observation_tables": 78,
+            "observation_business_tables": 76, "observation_business_original_rows_equal": True,
+            "observation_audit_prefix_original_bytes_equal": True, "observation_audit_chain_valid": True,
+            "observation_audit_actions_bound": True, "observation_audit_chronology_valid": True, "observation_audit_appended_events": count}
+
+
 def main() -> int:
     import argparse
     import hashlib
@@ -579,6 +760,7 @@ def main() -> int:
     parser.add_argument("--input", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--restore-input", type=Path)
+    parser.add_argument("--observations-input", type=Path)
     args = parser.parse_args()
     try:
         require(args.input.resolve() != args.output.resolve() and not args.output.exists())
@@ -586,10 +768,17 @@ def main() -> int:
         original = args.input.read_bytes()
         packet = decode_row(original.decode("utf-8"), maximum_bytes=32 * 1024 * 1024)
         proof = qualify_raw_cycle(packet)
+        observations = None
+        if args.observations_input is not None:
+            require(args.observations_input.stat().st_size <= 32 * 1024 * 1024)
+            observation_original = args.observations_input.read_bytes()
+            observations = decode_row(observation_original.decode("utf-8"), maximum_bytes=32 * 1024 * 1024)
+            proof.update(verify_raw_observations(packet, observations))
+            proof["observations_input_sha256"] = hashlib.sha256(observation_original).hexdigest()
         if args.restore_input is not None:
             require(args.restore_input.stat().st_size <= 32 * 1024 * 1024)
             restored_original = args.restore_input.read_bytes()
-            proof.update(verify_raw_restore(packet, decode_row(restored_original.decode("utf-8"), maximum_bytes=32 * 1024 * 1024)))
+            proof.update(verify_raw_restore(packet, decode_row(restored_original.decode("utf-8"), maximum_bytes=32 * 1024 * 1024), observations=observations))
             proof["restore_input_sha256"] = hashlib.sha256(restored_original).hexdigest()
         proof.update(input_sha256=hashlib.sha256(original).hexdigest(), oracle_source_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
         with args.output.open("x", encoding="utf-8", newline="\n") as stream:
@@ -601,18 +790,21 @@ def main() -> int:
     return 0
 
 
-def verify_raw_restore(packet: dict[str, Any], restored: dict[str, Any]) -> dict[str, Any]:
+def verify_raw_restore(packet: dict[str, Any], restored: dict[str, Any], *, observations: dict[str, Any] | None = None) -> dict[str, Any]:
     """Require populated restored SQL originals to match final native custody."""
     require(type(restored) is dict and set(restored) == {"schema_version", "tenant_id", "source_order_id", "capture"})
     require(restored["schema_version"] == "customer-partial-return-posted-restore-input-v1"
             and restored["tenant_id"] == packet["tenant_id"] and restored["source_order_id"] == packet["source_order_id"])
     last = packet["captures"][-1]
+    if observations is not None:
+        verify_raw_observations(packet, observations)
+        last = observations["observations"][-1]["tables"]
     current = restored["capture"]
     require(type(current) is dict and set(current) == set(last))
     for name, originals in last.items():
         require(type(current[name]) in {tuple, list} and sorted(current[name]) == sorted(originals))
     return {"populated_restore_original_rows_equal": True, "restored_tables": len(last),
-            "restored_rows": sum(len(rows) for rows in last.values())}
+            "restored_rows": sum(len(rows) for rows in last.values()), **({"restore_uses_final_observation": True} if observations is not None else {})}
 
 
 if __name__ == "__main__":

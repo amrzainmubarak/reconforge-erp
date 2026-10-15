@@ -117,7 +117,10 @@ def inputs(tmp_path: Path, *, unexpected: int = 0) -> tuple[Path, Path, dict[str
                                       "native-customer-partial-return-remainder-failed-observation-originals", "Native-Customer-Partial-Return-Remainder-Failed-Observation-Originals",
                                       "native-customer-partial-return-restituted-originals", "Native-Customer-Partial-Return-Restituted-Originals",
                                       "native-customer-partial-return-restituted-observation-originals", "Native-Customer-Partial-Return-Restituted-Observation-Originals",
-                                      "native-customer-partial-return-restituted-failed-observation-originals", "Native-Customer-Partial-Return-Restituted-Failed-Observation-Originals"])
+                                      "native-customer-partial-return-restituted-failed-observation-originals", "Native-Customer-Partial-Return-Restituted-Failed-Observation-Originals",
+                                      "native-customer-partial-return-monetary-originals", "Native-Customer-Partial-Return-Monetary-Originals",
+                                      "native-customer-partial-return-monetary-observation-originals", "Native-Customer-Partial-Return-Monetary-Observation-Originals",
+                                      "native-customer-partial-return-monetary-failed-observation-originals", "Native-Customer-Partial-Return-Monetary-Failed-Observation-Originals"])
 def test_partial_return_raw_family_in_reused_public_output_is_retained_privately(tmp_path: Path, directory: str) -> None:
     output, private, _, _ = inputs(tmp_path)
     family = output / directory
@@ -139,7 +142,10 @@ def test_partial_return_raw_family_in_reused_public_output_is_retained_privately
                                       "native-customer-partial-return-remainder-failed-observation-originals", "Native-Customer-Partial-Return-Remainder-Failed-Observation-Originals",
                                       "native-customer-partial-return-restituted-originals", "Native-Customer-Partial-Return-Restituted-Originals",
                                       "native-customer-partial-return-restituted-observation-originals", "Native-Customer-Partial-Return-Restituted-Observation-Originals",
-                                      "native-customer-partial-return-restituted-failed-observation-originals", "Native-Customer-Partial-Return-Restituted-Failed-Observation-Originals"])
+                                      "native-customer-partial-return-restituted-failed-observation-originals", "Native-Customer-Partial-Return-Restituted-Failed-Observation-Originals",
+                                      "native-customer-partial-return-monetary-originals", "Native-Customer-Partial-Return-Monetary-Originals",
+                                      "native-customer-partial-return-monetary-observation-originals", "Native-Customer-Partial-Return-Monetary-Observation-Originals",
+                                      "native-customer-partial-return-monetary-failed-observation-originals", "Native-Customer-Partial-Return-Monetary-Failed-Observation-Originals"])
 @pytest.mark.parametrize("basename", ["native-financial-snapshot-oracle-1.json", "original.sql", "original.png"])
 @pytest.mark.parametrize("location", ["reused-public", "private-attachment"])
 @pytest.mark.parametrize("case_alias", [False, True])
@@ -149,7 +155,8 @@ def test_mislocated_partial_return_raw_attachment_cannot_use_generic_original_al
     output, private, _, _ = inputs(tmp_path)
     base = output if location == "reused-public" else private
     artifacts = base / "playwright-artifacts"
-    original = (artifacts / "case-alias" if case_alias else artifacts) / directory / basename
+    family = (artifacts / "case-alias" if case_alias else artifacts) / directory
+    original = (family / "foreign" if "monetary" in directory.casefold() else family) / basename
     original.parent.mkdir(parents=True)
     raw = PRIVATE_MONEY.encode() + b" " + PRIVATE_SOURCE.encode()
     original.write_bytes(raw)

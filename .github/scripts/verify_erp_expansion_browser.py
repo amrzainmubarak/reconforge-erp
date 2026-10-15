@@ -90,7 +90,10 @@ PRIVATE_PARTIAL_RETURN_FAMILIES = {"native-customer-partial-return-originals", "
                                   "native-customer-partial-return-remainder-failed-observation-originals",
                                   "native-customer-partial-return-restituted-originals",
                                   "native-customer-partial-return-restituted-observation-originals",
-                                  "native-customer-partial-return-restituted-failed-observation-originals"}
+                                  "native-customer-partial-return-restituted-failed-observation-originals",
+                                  "native-customer-partial-return-monetary-originals",
+                                  "native-customer-partial-return-monetary-observation-originals",
+                                  "native-customer-partial-return-monetary-failed-observation-originals"}
 PRIVATE_RETURN_FAMILIES = {"native-customer-return-originals", *PRIVATE_PARTIAL_RETURN_FAMILIES}
 
 

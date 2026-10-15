@@ -49,6 +49,8 @@ CREATE TABLE reconforge.customer_partial_return_plans (
  FOREIGN KEY(tenant_id,audit_event_id) REFERENCES reconforge.domain_audit_events(tenant_id,id),
  FOREIGN KEY(tenant_id,outbox_event_id) REFERENCES reconforge.outbox_events(tenant_id,event_id),
  CHECK((operation='Return' AND original_id IS NULL) OR(operation<>'Return' AND original_id IS NOT NULL)),
+ CHECK((operation='Return' AND id~'^CR2-') OR(operation='Refund' AND id~'^CRF2-')
+  OR(operation='ReverseReturn' AND id~'^CR2R-') OR(operation='ReverseRefund' AND id~'^CRF2R-')),
  CHECK((operation IN('Return','ReverseReturn') AND quantity_scaled>0 AND credit_minor>0 AND cogs_restored_minor>0
   AND credit_minor=receivable_released_minor+refund_entitlement_delta_minor AND amount_minor=credit_minor+cogs_restored_minor)
   OR(operation IN('Refund','ReverseRefund') AND quantity_scaled=0 AND credit_minor=0 AND cogs_restored_minor=0
@@ -443,6 +445,12 @@ BEGIN
  AND b.event_type=a.action AND b.payload=a.metadata_json||jsonb_build_object('audit_event_id',a.id)
  AND(b.workspace_id,b.organization_id,b.legal_entity_id)=(s.workspace_id,s.organization_id,s.legal_entity_id)) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Partial plan requires immutable scope intent audit and outbox'; END IF;
+ IF p.original_id IS NOT NULL THEN
+  SELECT * INTO o FROM reconforge.customer_partial_return_plans WHERE tenant_id=t AND id=p.original_id;
+  IF o IS NULL OR o.source_id<>s.id OR o.phase<>2 OR o.operation IS DISTINCT FROM
+   (CASE p.operation WHEN'Refund' THEN'Return' WHEN'ReverseReturn' THEN'Return' WHEN'ReverseRefund' THEN'Refund' ELSE NULL END) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Refund and reversal references require their exact posted original in the same native source'; END IF;
+ END IF;
  ar:=s.source_payload->'original_source'->'revenue'->'snapshot_json'->'lines'->0;
  revenue:=s.source_payload->'original_source'->'revenue'->'snapshot_json'->'lines'->1;
  cogs:=s.source_payload->'original_source'->'cogs'->'snapshot_json'->'lines'->0;
@@ -457,6 +465,8 @@ BEGIN
   SELECT * INTO e FROM reconforge.finance_entries WHERE tenant_id=t AND id=part->>'entry_id';
   SELECT * INTO f FROM reconforge.finance_posting_effects WHERE tenant_id=t AND entry_id=e.id;
   IF e IS NULL OR e.id IS DISTINCT FROM entry_identity OR e.entry_number IS DISTINCT FROM entry_number
+  OR part->>'purpose' IS DISTINCT FROM(CASE p.operation WHEN'Return' THEN CASE ordinal WHEN 0 THEN'RevenueCredit' ELSE'CostRestoration' END
+   WHEN'Refund' THEN'Refund' WHEN'ReverseReturn' THEN CASE ordinal WHEN 0 THEN'ReverseRevenueCredit' ELSE'ReverseCostRestoration' END ELSE'ReverseRefund' END)
   OR part->'snapshot' IS DISTINCT FROM reconforge.fr_snapshot(t,e.id,s.organization_id,s.legal_entity_id)
   OR part->>'validation_digest' IS DISTINCT FROM reconforge.irp_digest(part->'snapshot') OR e.preparer_actor_id IS DISTINCT FROM maker
   OR e.period_id IS DISTINCT FROM p.payload->>'period_id' OR e.posting_date IS DISTINCT FROM p.payload->>'posting_date'

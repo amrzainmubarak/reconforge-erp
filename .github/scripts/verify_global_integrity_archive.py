@@ -559,6 +559,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "reconforge/infrastructure/postgres_customer_partial_return_zero_stock_hooks.py",
         "tests/test_customer_partial_return_zero_stock.py",
         "tests/test_postgres_customer_partial_return_zero_stock.py",
+        "tests/test_postgres_customer_partial_return_zero_stock_security.py",
         "tests/test_receivables_partial_schema_compatibility.py",
         "tests/test_postgres_customer_partial_return_rounding.py",
         "tests/test_postgres_customer_partial_return_rounding_migration.py",

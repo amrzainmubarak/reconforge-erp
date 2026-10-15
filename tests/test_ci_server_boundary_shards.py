@@ -51,7 +51,10 @@ INTEGRITY_FILES = {
         "tests/test_postgres_customer_partial_return_zero_stock.py",
     ),
     "customer-partial-rounding-migration": ("tests/test_postgres_customer_partial_return_rounding_migration.py",),
-    "customer-partial-rounding-security": ("tests/test_postgres_customer_partial_return_rounding_security.py",),
+    "customer-partial-rounding-security": (
+        "tests/test_postgres_customer_partial_return_rounding_security.py",
+        "tests/test_postgres_customer_partial_return_zero_stock_security.py",
+    ),
     "supply-integrity": (
         "tests/test_postgres_landed_cost.py", "tests/test_postgres_landed_cost_api.py",
         "tests/test_postgres_landed_cost_cancellation.py",

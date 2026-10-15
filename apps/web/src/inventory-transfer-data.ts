@@ -68,8 +68,93 @@ interface CorrectionProtocols {
   history: Map<string, string>;
   events: Map<string, Map<number, { plan: string; original: string | null; direction: number }>>;
 }
+async function zeroConsumptionAdmissions(source: Record<string, unknown>, consumptions: Map<string, Record<string, unknown>>, scope: FinanceScope, tenantId: string, policy: Record<string, unknown>, v3: boolean): Promise<Map<string, Record<string, unknown>>> {
+  const zero = [...consumptions.values()].filter(row => row.value_minor === "0"), result = new Map<string, Record<string, unknown>>();
+  if (!zero.length) { if (Object.hasOwn(source, "restituted_consumption_admissions")) invalid(); return result; }
+  if (!v3 || !Array.isArray(source.restituted_consumption_admissions) || source.restituted_consumption_admissions.length !== zero.length) invalid();
+  const layer = source.layer as Record<string, unknown>;
+  for (const [index, raw] of source.restituted_consumption_admissions.entries()) {
+    boundedCorrection(raw);
+    const admission = fields(raw, ["consumption_id", "stock_order_id", "cost_admission_policy", "issue_plan", "valuation_document", "valuation_line", "posting_effect", "physical"]);
+    const consumed = zero[index];
+    if (admission.consumption_id !== consumed.id || !text(admission.stock_order_id) || admission.cost_admission_policy !== "partial-return-restituted-v1") invalid();
+    const issue = fields(admission.issue_plan, ["schema_version", "preparer_actor_id", "preparer_username", "source_digest", "request", "allocations", "total_cost_minor", "policy_id", "inventory_account_id", "cogs_account_id", "entry_id", "entry_number", "journal_id", "currency_policy", "cost_admission_policy", "restitution_cost_snapshot"]);
+    const request = fields(issue.request, ["posting_date", "period_id", "policy_code", "reason"]);
+    const captured = fields(issue.currency_policy, ["currency_code", "precision", "rounding_policy", "registry_version", "registry_digest"]);
+    if (issue.schema_version !== "stock-sales-issue-v2" || issue.cost_admission_policy !== admission.cost_admission_policy || !text(issue.preparer_actor_id) || !text(issue.preparer_username) || !digest(issue.source_digest)
+        || !exact(issue.total_cost_minor) || !text(issue.policy_id) || !text(issue.inventory_account_id) || !text(issue.cogs_account_id) || issue.inventory_account_id === issue.cogs_account_id || !text(issue.journal_id)
+        || !text(request.period_id) || !text(request.posting_date) || !text(request.policy_code) || !text(request.reason)
+        || captured.currency_code !== policy.currency_code || captured.precision !== policy.currency_precision || captured.rounding_policy !== policy.currency_rounding_policy
+        || captured.registry_version !== policy.currency_registry_version || captured.registry_digest !== policy.currency_registry_digest
+        || issue.entry_number !== `SS1-${(await transferDigest([tenantId, admission.stock_order_id], true)).slice(0, 32).toUpperCase()}`
+        || !Array.isArray(issue.allocations) || issue.allocations.length < 1 || issue.allocations.length > 32) invalid();
+    // This is retained historical cost evidence, never a re-price using current
+    // layers. The bounded original contains the earlier restitution population.
+    const before = await cost(issue.restitution_cost_snapshot, scope, tenantId);
+    if (before.schema_version !== "inventory-transfer-cost-v3" || transferCanonical(before.monetary_policy) !== transferCanonical(policy)) invalid();
+    const allocations = new Map<string, Record<string, unknown>>(); let totalQuantity = 0n, totalValue = 0n, needed = false;
+    for (const rawAllocation of issue.allocations) {
+      const allocation = fields(rawAllocation, ["cost_layer_id", "row_version", "remaining_quantity_scaled", "remaining_value_minor", "quantity_scaled", "value_minor"]);
+      if (!text(allocation.cost_layer_id) || allocations.has(allocation.cost_layer_id) || typeof allocation.row_version !== "number" || !Number.isSafeInteger(allocation.row_version) || allocation.row_version < 1
+          || !exact(allocation.remaining_quantity_scaled) || allocation.remaining_quantity_scaled === "0" || !exact(allocation.remaining_value_minor) || !exact(allocation.quantity_scaled) || allocation.quantity_scaled === "0" || !exact(allocation.value_minor)) invalid();
+      const pool = before.sources.find(row => (row.layer as Record<string, unknown>).id === allocation.cost_layer_id);
+      if (!pool || !transferObject(pool.layer)) invalid();
+      const retainedLayer = pool.layer;
+      if (["row_version", "remaining_quantity_scaled", "remaining_value_minor"].some(key => retainedLayer[key] !== allocation[key])) invalid();
+      if (retainedLayer.workspace_id !== scope.workspace_id || retainedLayer.legal_entity_id !== scope.legal_entity_id
+          || ["item_id", "uom_id", "quantity_precision"].some(key => retainedLayer[key] !== layer[key])) invalid();
+      const q = BigInt(allocation.remaining_quantity_scaled), v = BigInt(allocation.remaining_value_minor), take = BigInt(allocation.quantity_scaled);
+      if (take > q) invalid();
+      let expected = v;
+      if (take !== q) { expected = v * take / q; const rem = v * take % q; if (rem * 2n > q || rem * 2n === q && expected % 2n === 1n) expected += 1n; }
+      if (BigInt(allocation.value_minor) !== expected) invalid();
+      if (expected === 0n || take < q && expected === v) {
+        const active = (pool.partial_return_corrections as Record<string, unknown>[]).filter(row => Object.hasOwn(row, "allocation_policy"))
+          .reduce((sum, row) => sum + BigInt(String((row.restoration as Record<string, unknown>).direction)) * BigInt(String((row.restoration as Record<string, unknown>).quantity_scaled)), 0n);
+        if (active <= 0n) invalid(); needed = true;
+      }
+      allocations.set(allocation.cost_layer_id, allocation); totalQuantity += take; totalValue += expected;
+    }
+    const selected = allocations.get(String(layer.id));
+    if (!needed || totalValue !== BigInt(issue.total_cost_minor) || !selected || selected.quantity_scaled !== consumed.quantity_scaled || selected.value_minor !== "0") invalid();
+    if (!transferObject(admission.valuation_document) || !transferObject(admission.valuation_line)) invalid();
+    const document = admission.valuation_document, line = admission.valuation_line;
+    if (document.tenant_id !== tenantId || Object.entries(scope).some(([key, expected]) => document[key] !== expected) || !text(document.id) || document.status !== "Approved"
+        || document.total_value_minor !== issue.total_cost_minor || document.finance_entry_id !== issue.entry_id || document.policy_id !== issue.policy_id || document.period_id !== request.period_id || document.valuation_date !== request.posting_date || document.valuation_number !== issue.entry_number
+        || policyFields.some(key => document[key] !== policy[key]) || line.tenant_id !== tenantId || line.id !== consumed.valuation_line_id || line.valuation_document_id !== document.id || line.flow_direction !== "Outbound" || line.line_number !== 1
+        || line.item_id !== layer.item_id || line.uom_id !== layer.uom_id || line.quantity_precision !== layer.quantity_precision || !exact(line.quantity_scaled) || BigInt(line.quantity_scaled) !== totalQuantity || line.value_minor !== issue.total_cost_minor
+        || line.inventory_account_id !== issue.inventory_account_id || line.offset_account_id !== issue.cogs_account_id) invalid();
+    const physical = fields(admission.physical, ["head", "lines", "audit", "outbox"]);
+    if (!transferObject(physical.head) || !Array.isArray(physical.lines) || physical.lines.length !== 1 || !transferObject(physical.lines[0]) || !Array.isArray(physical.audit) || physical.audit.length < 1 || physical.audit.length > 8 || !Array.isArray(physical.outbox) || physical.outbox.length < 1 || physical.outbox.length > 8) invalid();
+    const movement = physical.head, detail = physical.lines[0];
+    if (movement.tenant_id !== tenantId || Object.entries(scope).some(([key, expected]) => movement[key] !== expected) || movement.id !== document.movement_id || movement.source_reference !== admission.stock_order_id || movement.movement_number !== issue.entry_number
+        || movement.status !== "Posted" || movement.source_type !== "Generated" || movement.movement_type !== "Delivery" || movement.period_id !== request.period_id || movement.movement_date !== request.posting_date
+        || detail.tenant_id !== tenantId || detail.movement_id !== movement.id || detail.id !== line.movement_line_id || detail.line_number !== 1 || detail.item_id !== layer.item_id || detail.uom_id !== layer.uom_id || detail.quantity_precision !== layer.quantity_precision
+        || detail.inventory_lot_id !== null || detail.quantity_scaled !== line.quantity_scaled || !text(detail.from_location_id) || detail.to_location_id !== null) invalid();
+    if (issue.total_cost_minor === "0") {
+      if (issue.entry_id !== null || admission.posting_effect !== null) invalid();
+    } else {
+      if (!text(issue.entry_id) || !transferObject(admission.posting_effect)) invalid();
+      const effect = admission.posting_effect;
+      if (!text(effect.id) || effect.tenant_id !== tenantId || Object.entries(scope).some(([key, expected]) => effect[key] !== expected) || effect.entry_id !== issue.entry_id || effect.source_kind !== "Manual" || effect.source_id !== issue.entry_id || effect.purpose !== "operational_posting" || effect.reverses_effect_id !== null
+          || effect.validation_contract_version !== "finance-entry-review-v1" || !digest(effect.validation_digest) || policyFields.some(key => effect[key] !== policy[key])) invalid();
+      const snapshot = fields(effect.snapshot_json, ["schema_version", "entry", "lines"]);
+      if (snapshot.schema_version !== "finance-entry-review-v1" || !transferObject(snapshot.entry) || !Array.isArray(snapshot.lines) || snapshot.lines.length !== 2) invalid();
+      const head = snapshot.entry;
+      if (head.id !== issue.entry_id || Object.entries(scope).some(([key, expected]) => head[key] !== expected) || head.journal_id !== issue.journal_id || head.period_id !== request.period_id || head.posting_date !== request.posting_date || head.entry_number !== issue.entry_number
+          || head.external_reference !== admission.stock_order_id || head.source_type !== "Manual" || head.preparer_actor_id !== issue.preparer_actor_id || head.reverses_posting_id !== null || policyFields.some(key => head[key] !== policy[key])) invalid();
+      for (const [position, rawLine] of snapshot.lines.entries()) {
+        const value = fields(rawLine, ["line_number", "account_id", "description", "debit_minor", "credit_minor", "dimensions"]);
+        if (value.line_number !== position + 1 || value.account_id !== (position === 0 ? issue.cogs_account_id : issue.inventory_account_id) || value.debit_minor !== (position === 0 ? issue.total_cost_minor : "0") || value.credit_minor !== (position === 1 ? issue.total_cost_minor : "0") || !transferObject(value.dimensions)) invalid();
+      }
+      await seal(snapshot, effect.validation_digest);
+    }
+    result.set(String(consumed.id), admission);
+  }
+  return result;
+}
 async function corrections(source: Record<string, unknown>, scope: FinanceScope, tenantId: string, policy: Record<string, unknown>, seen: Set<string>, v3: boolean, protocols: CorrectionProtocols): Promise<[bigint, bigint]> {
-  fields(source, ["layer", "valuation_document", "valuation_line", "receipt_plan", "receipt_link", "receipt_review", "finance_entry", "finance_lines", "posting_effect", "receipt_native", "valuation_input", "consumptions", "exposed_amounts_minor", "partial_return_corrections"]);
+  fields(source, ["layer", "valuation_document", "valuation_line", "receipt_plan", "receipt_link", "receipt_review", "finance_entry", "finance_lines", "posting_effect", "receipt_native", "valuation_input", "consumptions", "exposed_amounts_minor", "partial_return_corrections", ...(v3 && Object.hasOwn(source, "restituted_consumption_admissions") ? ["restituted_consumption_admissions"] : [])]);
   const layer = source.layer as Record<string, unknown>, valuation = source.valuation_line as Record<string, unknown>;
   if (!Array.isArray(source.partial_return_corrections) || source.partial_return_corrections.length > 200 || !Array.isArray(source.consumptions) || source.consumptions.length > 200
       || !exact(layer.original_quantity_scaled) || layer.original_quantity_scaled === "0" || !exact(layer.original_value_minor) || layer.original_value_minor === "0") invalid();
@@ -79,16 +164,21 @@ async function corrections(source: Record<string, unknown>, scope: FinanceScope,
   let previousSource = "";
   for (const consumed of source.consumptions) {
     if (!transferObject(consumed) || !text(consumed.id) || consumptions.has(consumed.id) || consumed.tenant_id !== tenantId || consumed.cost_layer_id !== layer.id
-        || !exact(consumed.quantity_scaled) || consumed.quantity_scaled === "0" || !exact(consumed.value_minor) || consumed.value_minor === "0") invalid();
+        || !exact(consumed.quantity_scaled) || consumed.quantity_scaled === "0" || !exact(consumed.value_minor) || !v3 && consumed.value_minor === "0") invalid();
     consumptions.set(consumed.id, consumed); consumedQuantity += BigInt(consumed.quantity_scaled); consumedValue += BigInt(consumed.value_minor);
   }
+  const zeroAdmissions = await zeroConsumptionAdmissions(source, consumptions, scope, tenantId, policy, v3);
+  if (zeroAdmissions.size) protocols.remainder = true;
   const debitExposures: string[] = [], creditExposures: string[] = [];
   for (const raw of source.partial_return_corrections) {
     boundedCorrection(raw);
     const remainder = v3 && transferObject(raw) && Object.hasOwn(raw, "allocation_policy");
     const correction = fields(raw, ["restoration", "source", "plan", "entry", "effect", "lines", "dimensions", "physical", ...(remainder ? ["history_sequence", "allocation_policy", "allocation_witness"] : [])]);
     const restored = fields(correction.restoration, ["tenant_id", "source_id", "plan_id", "position", "original_consumption_id", "original_valuation_line_id", "cost_layer_id", "offset_quantity_scaled", "quantity_scaled", "value_minor", "direction", "physical_movement_id", "original_cogs_effect_id", "correction_effect_id", "original_restoration_plan_id", "consumption_count_at_restore"]);
-    const original = fields(correction.source, ["id", "source_fingerprint", ...Object.keys(scope), "item_id", "uom_id", "quantity_precision", "location_id", "original_cogs_effect_id"]);
+    const factual = remainder && transferObject(correction.source) && Object.hasOwn(correction.source, "original_cost_minor");
+    const original = fields(correction.source, ["id", "source_fingerprint", ...Object.keys(scope), "item_id", "uom_id", "quantity_precision", "location_id", "original_cogs_effect_id", ...(factual ? ["original_cost_minor", "cost_admission_digest"] : [])]);
+    if (factual && (!exact(original.original_cost_minor) || !digest(original.cost_admission_digest))) invalid();
+    const absentOriginalCost = factual && original.original_cost_minor === "0";
     const plan = fields(correction.plan, ["id", "source_id", "operation", "phase", "plan_digest", ...(remainder ? ["cogs_restored_minor"] : [])]);
     if (!Number.isSafeInteger(restored.position) || Number(restored.position) < 1 || Number(restored.position) > 32 || ![1, -1].includes(Number(restored.direction)) || typeof restored.direction !== "number"
         || !Number.isSafeInteger(restored.consumption_count_at_restore) || Number(restored.consumption_count_at_restore) < 1 || Number(restored.consumption_count_at_restore) > 200
@@ -97,7 +187,7 @@ async function corrections(source: Record<string, unknown>, scope: FinanceScope,
         || plan.operation !== (restored.direction === 1 ? "Return" : "ReverseReturn") || !digest(plan.plan_digest) || !digest(original.source_fingerprint)
         || !text(original.id) || !/^CRS2-[a-f0-9]{32}$/.test(original.id) || Object.entries(scope).some(([key, expected]) => original[key] !== expected)
         || original.item_id !== layer.item_id || original.uom_id !== layer.uom_id || original.quantity_precision !== layer.quantity_precision || !text(original.location_id)
-        || restored.original_cogs_effect_id !== original.original_cogs_effect_id || !text(original.original_cogs_effect_id)
+        || restored.original_cogs_effect_id !== original.original_cogs_effect_id || (absentOriginalCost ? original.original_cogs_effect_id !== null : !text(original.original_cogs_effect_id))
         || !exact(restored.offset_quantity_scaled) || !exact(restored.quantity_scaled) || restored.quantity_scaled === "0" || !exact(restored.value_minor) || !remainder && restored.value_minor === "0") invalid();
     if (v3) {
       if (String(original.id) < previousSource || sourceProtocols.has(String(original.id)) && sourceProtocols.get(String(original.id)) !== remainder) invalid();
@@ -110,6 +200,11 @@ async function corrections(source: Record<string, unknown>, scope: FinanceScope,
     if (seen.has(key) || seen.size >= 200) invalid(); seen.add(key);
     const consumed = consumptions.get(String(restored.original_consumption_id));
     if (!consumed || consumed.valuation_line_id !== restored.original_valuation_line_id || BigInt(restored.offset_quantity_scaled) + BigInt(restored.quantity_scaled) > BigInt(String(consumed.quantity_scaled)) || BigInt(restored.value_minor) > BigInt(String(consumed.value_minor))) invalid();
+    if (consumed.value_minor === "0") {
+      const admission = zeroAdmissions.get(String(consumed.id));
+      if (!factual || !admission || !transferObject(admission.issue_plan) || original.original_cost_minor !== admission.issue_plan.total_cost_minor
+          || (admission.posting_effect === null ? !absentOriginalCost : !transferObject(admission.posting_effect) || admission.posting_effect.id !== original.original_cogs_effect_id)) invalid();
+    } else if (absentOriginalCost) invalid();
     const previous = net.get(String(consumed.id)) ?? [0n, 0n];
     if (remainder) {
       protocols.remainder = true;
@@ -229,6 +324,7 @@ async function cost(value: unknown, scope: FinanceScope, tenantId: string): Prom
   const ids = new Set<string>(), seenCorrections = new Set<string>(); let quantity = 0n, minor = 0n;
   const protocols: CorrectionProtocols = { remainder: false, sources: new Map(), plans: new Map(), history: new Map(), events: new Map() };
   for (const source of value.sources) {
+    if (!v2 && transferObject(source) && (Object.hasOwn(source, "partial_return_corrections") || Object.hasOwn(source, "restituted_consumption_admissions"))) invalid();
     if (!transferObject(source) || !transferObject(source.layer) || source.layer.tenant_id !== tenantId || !text(source.layer.id) || ids.has(source.layer.id)
         || !transferObject(source.receipt_plan) || source.receipt_plan.operation !== "Receipt" || !transferObject(source.receipt_plan.scope)
         || Object.entries(scope).some(([key, expected]) => (source.receipt_plan as Record<string, Record<string, unknown>>).scope[key] !== expected)

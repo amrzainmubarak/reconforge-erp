@@ -401,3 +401,86 @@ it.each(["before-quantity", "before-value", "policy", "extra-witness", "numeric-
   if (field === "source-drift") (second.source as Row).source_fingerprint = "e".repeat(64);
   await reseal(source); await expect(parseTransfer(source, transferScope, "synthetic")).rejects.toThrow("invalid");
 });
+
+async function restitutedZeroConsumptionFixture(mixed = false): Promise<TransferSource> {
+  const transfer = await remainingFixture("3", "1", [{ sequence: 1, beforeQuantity: "3", beforeValue: "1", quantity: "1", value: "0" }]);
+  const source = transfer.cost_snapshot.sources[0], layer = source.layer as Row;
+  Object.assign(layer, { row_version: 2, workspace_id: "work", legal_entity_id: "entity" });
+  const before = structuredClone(transfer.cost_snapshot);
+  if (mixed) {
+    const extra = structuredClone(source);
+    Object.assign(extra.layer as Row, { id: "extra-layer", source_valuation_line_id: "extra-inbound", original_quantity_scaled: "1", original_value_minor: "10", remaining_quantity_scaled: "1", remaining_value_minor: "10" });
+    (extra.valuation_line as Row).id = "extra-inbound"; (extra.receipt_link as Row).cost_layer_id = "extra-layer";
+    extra.consumptions = []; extra.partial_return_corrections = [];
+    before.sources.push(extra); before.remaining_quantity_scaled = "2"; before.remaining_value_minor = "10";
+  }
+  const stockId = "genuine-resale", entryNumber = "SS1-" + (await transferDigest(["synthetic", stockId], true)).slice(0, 32).toUpperCase();
+  const policy = transfer.cost_snapshot.monetary_policy as Row;
+  const allocations: Row[] = [{ cost_layer_id: layer.id, row_version: 2, remaining_quantity_scaled: "1", remaining_value_minor: "0", quantity_scaled: "1", value_minor: "0" }];
+  if (mixed) allocations.push({ cost_layer_id: "extra-layer", row_version: 2, remaining_quantity_scaled: "1", remaining_value_minor: "10", quantity_scaled: "1", value_minor: "10" });
+  const issue: Row = { schema_version: "stock-sales-issue-v2", preparer_actor_id: "maker", preparer_username: "maker-name", source_digest: "a".repeat(64),
+    request: { posting_date: "2026-10-15", period_id: "period", policy_code: "FIFO", reason: "Actual original native plan" }, allocations, total_cost_minor: mixed ? "10" : "0",
+    policy_id: "policy", inventory_account_id: "inventory-account", cogs_account_id: "cogs-account", entry_id: mixed ? "resale-entry" : null, entry_number: entryNumber, journal_id: "STOCK",
+    currency_policy: { currency_code: policy.currency_code, precision: policy.currency_precision, rounding_policy: policy.currency_rounding_policy, registry_version: policy.currency_registry_version, registry_digest: policy.currency_registry_digest },
+    cost_admission_policy: "partial-return-restituted-v1", restitution_cost_snapshot: before };
+  const document: Row = { id: "resale-valuation", tenant_id: "synthetic", ...transferScope, status: "Approved", ...policy, total_value_minor: issue.total_cost_minor, finance_entry_id: issue.entry_id,
+    policy_id: "policy", period_id: "period", valuation_date: "2026-10-15", valuation_number: entryNumber, movement_id: "resale-physical" };
+  const valuationLine: Row = { id: "zero-sale-valuation-line", tenant_id: "synthetic", valuation_document_id: document.id, flow_direction: "Outbound", line_number: 1, item_id: layer.item_id,
+    uom_id: layer.uom_id, quantity_precision: layer.quantity_precision, quantity_scaled: mixed ? "2" : "1", value_minor: issue.total_cost_minor, inventory_account_id: issue.inventory_account_id, offset_account_id: issue.cogs_account_id, movement_line_id: "resale-physical-line" };
+  let effect: Row | null = null;
+  if (mixed) {
+    const snapshot = { schema_version: "finance-entry-review-v1", entry: { id: issue.entry_id, ...transferScope, journal_id: issue.journal_id, period_id: "period", posting_date: "2026-10-15", entry_number: entryNumber,
+      external_reference: stockId, source_type: "Manual", preparer_actor_id: "maker", reverses_posting_id: null, ...policy }, lines: [
+      { line_number: 1, account_id: "cogs-account", description: "Native total COGS", debit_minor: "10", credit_minor: "0", dimensions: {} },
+      { line_number: 2, account_id: "inventory-account", description: "Native total COGS", debit_minor: "0", credit_minor: "10", dimensions: {} }] };
+    effect = { id: "resale-cost-effect", tenant_id: "synthetic", ...transferScope, entry_id: issue.entry_id, source_kind: "Manual", source_id: issue.entry_id, purpose: "operational_posting", reverses_effect_id: null,
+      validation_contract_version: "finance-entry-review-v1", validation_digest: await transferDigest(snapshot, true), snapshot_json: snapshot, ...policy };
+  }
+  const admission: Row = { consumption_id: "zero-consumption", stock_order_id: stockId, cost_admission_policy: "partial-return-restituted-v1", issue_plan: issue, valuation_document: document, valuation_line: valuationLine, posting_effect: effect,
+    physical: { head: { id: "resale-physical", tenant_id: "synthetic", ...transferScope, source_reference: stockId, movement_number: entryNumber, status: "Posted", source_type: "Generated", movement_type: "Delivery", period_id: "period", movement_date: "2026-10-15" },
+      lines: [{ id: "resale-physical-line", tenant_id: "synthetic", movement_id: "resale-physical", line_number: 1, item_id: layer.item_id, uom_id: layer.uom_id, quantity_precision: layer.quantity_precision, inventory_lot_id: null,
+        quantity_scaled: valuationLine.quantity_scaled, from_location_id: "source-location", to_location_id: null }], audit: [{}], outbox: [{}] } };
+  const correction = await restitutionCorrection(9), original = correction.source as Row, plan = correction.plan as Row, restored = correction.restoration as Row;
+  const sourceId = "CRS2-" + "c".repeat(32);
+  Object.assign(original, { id: sourceId, original_cogs_effect_id: effect?.id ?? null, original_cost_minor: issue.total_cost_minor, cost_admission_digest: "e".repeat(64) });
+  Object.assign(plan, { source_id: sourceId, cogs_restored_minor: "0" });
+  Object.assign(restored, { source_id: sourceId, original_consumption_id: "zero-consumption", original_valuation_line_id: valuationLine.id, value_minor: "0", correction_effect_id: null, original_cogs_effect_id: original.original_cogs_effect_id });
+  Object.assign(correction, { history_sequence: 1, allocation_policy: "remaining-original-v1", allocation_witness: { before_quantity_scaled: "1", before_value_minor: "0" }, entry: null, effect: null, lines: [], dimensions: [] });
+  (source.consumptions as Row[]).push({ id: "zero-consumption", tenant_id: "synthetic", cost_layer_id: layer.id, valuation_line_id: valuationLine.id, quantity_scaled: "1", value_minor: "0" });
+  source.restituted_consumption_admissions = [admission];
+  (source.partial_return_corrections as Row[]).push(correction);
+  return reseal(transfer);
+}
+it.each([false, true])("admits only explicit restituted zero-consumption ownership with mixed total=%s", async mixed => {
+  const source = await restitutedZeroConsumptionFixture(mixed);
+  expect(await parseTransfer(source, transferScope, "synthetic")).toEqual(source);
+});
+it.each(["missing", "extra", "foreign-consumption", "stock", "policy", "zero-effect", "nonzero-absence", "physical", "valuation", "valuation-amount", "original-cost", "original-effect", "admission-digest", "historical-pool", "allocation", "rounding", "policy-context", "scope", "extra-issue", "effect-seal"])("refuses resealed restituted zero-consumption %s drift", async variant => {
+  const source = await restitutedZeroConsumptionFixture(variant === "nonzero-absence" || variant === "effect-seal"), pool = source.cost_snapshot.sources[0];
+  const admission = (pool.restituted_consumption_admissions as Row[])[0], issue = admission.issue_plan as Row, corrections = pool.partial_return_corrections as Row[], correction = corrections[1];
+  if (variant === "missing") delete pool.restituted_consumption_admissions;
+  if (variant === "extra") admission.secret = "unknown";
+  if (variant === "foreign-consumption") admission.consumption_id = "foreign";
+  if (variant === "stock") admission.stock_order_id = "foreign-stock";
+  if (variant === "policy") admission.cost_admission_policy = "unproved-zero";
+  if (variant === "zero-effect") admission.posting_effect = { id: "counterfeit-zero" };
+  if (variant === "nonzero-absence") admission.posting_effect = null;
+  if (variant === "physical") (((admission.physical as Row).lines as Row[])[0]).from_location_id = null;
+  if (variant === "valuation") (admission.valuation_line as Row).id = "foreign";
+  if (variant === "valuation-amount") (admission.valuation_document as Row).total_value_minor = "1";
+  if (variant === "original-cost") (correction.source as Row).original_cost_minor = "1";
+  if (variant === "original-effect") (correction.source as Row).original_cogs_effect_id = "invented";
+  if (variant === "admission-digest") delete (correction.source as Row).cost_admission_digest;
+  if (variant === "historical-pool") (issue.restitution_cost_snapshot as Row).remaining_value_minor = "999";
+  if (variant === "allocation") (issue.allocations as Row[])[0].row_version = 77;
+  if (variant === "rounding") (issue.allocations as Row[])[0].value_minor = "1";
+  if (variant === "policy-context") (issue.currency_policy as Row).precision = 3;
+  if (variant === "scope") (admission.valuation_document as Row).legal_entity_id = "foreign";
+  if (variant === "extra-issue") issue.unknown = "extra";
+  if (variant === "effect-seal") (admission.posting_effect as Row).validation_digest = "0".repeat(64);
+  await reseal(source); await expect(parseTransfer(source, transferScope, "synthetic")).rejects.toThrow("invalid");
+});
+it.each([1, 2])("keeps cost-v%s zero-consumption refusal despite a copied new admission", async version => {
+  const source = await restitutedZeroConsumptionFixture(); source.cost_snapshot.schema_version = `inventory-transfer-cost-v${version}`;
+  await reseal(source); await expect(parseTransfer(source, transferScope, "synthetic")).rejects.toThrow("invalid");
+});

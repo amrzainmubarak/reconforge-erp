@@ -265,8 +265,10 @@ BEGIN
    'validation_digest',original->chain->>'validation_digest') THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Original typed finance evidence must match its native immutable effect'; END IF;
  END LOOP;
- IF NOT EXISTS(SELECT 1 FROM reconforge.legal_entities e JOIN reconforge.organizations o ON(o.tenant_id,o.id)=(e.tenant_id,e.organization_id)
-  WHERE e.tenant_id=t AND e.id=s.legal_entity_id AND e.organization_id=s.organization_id AND o.application_workspace_id=s.workspace_id AND e.currency_code=s.currency_code)
+ IF NOT EXISTS(SELECT 1 FROM reconforge.legal_entities entity_record JOIN reconforge.organizations organization_record
+  ON(organization_record.tenant_id,organization_record.id)=(entity_record.tenant_id,entity_record.organization_id)
+  WHERE entity_record.tenant_id=t AND entity_record.id=s.legal_entity_id AND entity_record.organization_id=s.organization_id
+  AND organization_record.application_workspace_id=s.workspace_id AND entity_record.currency_code=s.currency_code)
  OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_items WHERE tenant_id=t AND id=s.item_id AND workspace_id=s.workspace_id
   AND(organization_id IS NULL OR organization_id=s.organization_id) AND item_type='Stock' AND tracking_mode='None' AND uom_id=s.uom_id) THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='First partial scope requires functional currency untracked original base UOM'; END IF;
@@ -290,10 +292,12 @@ BEGIN
  position:=0;
  FOR cons IN SELECT * FROM jsonb_array_elements(fp->'consumptions') LOOP
   allocation:=original->'stock'->'issue_plan'->'allocations'->position;position:=position+1;
-  SELECT c.*,v.valuation_document_id,l.item_id,l.uom_id,l.legal_entity_id,l.inventory_lot_id,l.quantity_precision INTO native
-  FROM reconforge.inventory_layer_consumptions c JOIN reconforge.inventory_valuation_lines v ON(v.tenant_id,v.id)=(c.tenant_id,c.valuation_line_id)
-  JOIN reconforge.inventory_cost_layers l ON(l.tenant_id,l.id)=(c.tenant_id,c.cost_layer_id)
-  WHERE c.tenant_id=t AND c.id=cons->>'consumption_id';
+  SELECT consumed_original.*,valuation_detail.valuation_document_id,cost_layer.item_id,cost_layer.uom_id,cost_layer.legal_entity_id,
+   cost_layer.inventory_lot_id,cost_layer.quantity_precision INTO native
+  FROM reconforge.inventory_layer_consumptions consumed_original JOIN reconforge.inventory_valuation_lines valuation_detail
+  ON(valuation_detail.tenant_id,valuation_detail.id)=(consumed_original.tenant_id,consumed_original.valuation_line_id)
+  JOIN reconforge.inventory_cost_layers cost_layer ON(cost_layer.tenant_id,cost_layer.id)=(consumed_original.tenant_id,consumed_original.cost_layer_id)
+  WHERE consumed_original.tenant_id=t AND consumed_original.id=cons->>'consumption_id';
   IF native IS NULL OR cons->'scope' IS DISTINCT FROM fp->'scope' OR cons->'position' IS DISTINCT FROM to_jsonb(position)
   OR cons->>'currency_code' IS DISTINCT FROM s.currency_code OR cons->'quantity_precision' IS DISTINCT FROM to_jsonb(s.quantity_precision)
   OR(native.workspace_id,native.legal_entity_id,native.item_id,native.uom_id,native.valuation_document_id)
@@ -312,22 +316,24 @@ BEGIN
  FOR a IN SELECT x.*,to_jsonb(r) receipt FROM reconforge.ar_receipt_allocations x JOIN reconforge.ar_receipts r
  ON(r.tenant_id,r.id)=(x.tenant_id,x.receipt_id) WHERE x.tenant_id=t AND x.invoice_id=s.invoice_id LOOP
   SELECT count(*) INTO position FROM(
-   SELECT p.entry_id,l.posting_effect_id,l.posted_actor_id,p.payload->'snapshot' snapshot,p.payload->>'validation_digest' seal
-   FROM reconforge.commercial_collection_plans p JOIN reconforge.commercial_collection_links l ON(l.tenant_id,l.plan_id)=(p.tenant_id,p.id)
-   WHERE p.tenant_id=t AND p.source_id=s.invoice_id AND p.phase=2 AND l.receipt_id=a.receipt_id
-   UNION ALL SELECT p.entry_id,l.posting_effect_id,l.posted_actor_id,p.payload->'snapshot',p.validation_digest
-   FROM reconforge.operational_finance_plans p JOIN reconforge.operational_finance_links l ON(l.tenant_id,l.plan_id)=(p.tenant_id,p.id)
-   WHERE p.tenant_id=t AND p.id=original->'stock'->>'collection_plan_id' AND p.source_kind='ARReceipt' AND p.source_id=s.invoice_id
-   AND l.source_effect_id=a.receipt_id) owner JOIN reconforge.finance_posting_effects f
-   ON(f.tenant_id,f.id,f.entry_id)=(t,owner.posting_effect_id,owner.entry_id)
-   WHERE f.snapshot_json=owner.snapshot AND f.validation_digest=owner.seal AND f.posted_actor_id=owner.posted_actor_id
-   AND f.snapshot_json->'lines'->0->>'account_id'=s.cash_account_id
-   AND f.snapshot_json->'lines'->0->'dimensions'=s.source_payload->'cash_dimensions'
-   AND f.snapshot_json->'lines'->1->>'account_id'=original->'revenue'->'snapshot_json'->'lines'->0->>'account_id'
-   AND f.snapshot_json->'lines'->1->'dimensions'=original->'revenue'->'snapshot_json'->'lines'->0->'dimensions'
-   AND(f.snapshot_json->'lines'->0->>'debit_minor')::bigint=(a.receipt->>'amount_minor')::bigint
-   AND(f.snapshot_json->'lines'->1->>'credit_minor')::bigint=(a.receipt->>'amount_minor')::bigint
-   AND jsonb_array_length(f.snapshot_json->'lines')=2;
+   SELECT cash_plan.entry_id,cash_link.posting_effect_id,cash_link.posted_actor_id,cash_plan.payload->'snapshot' snapshot,cash_plan.payload->>'validation_digest' seal
+   FROM reconforge.commercial_collection_plans cash_plan JOIN reconforge.commercial_collection_links cash_link
+   ON(cash_link.tenant_id,cash_link.plan_id)=(cash_plan.tenant_id,cash_plan.id)
+   WHERE cash_plan.tenant_id=t AND cash_plan.source_id=s.invoice_id AND cash_plan.phase=2 AND cash_link.receipt_id=a.receipt_id
+   UNION ALL SELECT legacy_plan.entry_id,legacy_link.posting_effect_id,legacy_link.posted_actor_id,legacy_plan.payload->'snapshot',legacy_plan.validation_digest
+   FROM reconforge.operational_finance_plans legacy_plan JOIN reconforge.operational_finance_links legacy_link
+   ON(legacy_link.tenant_id,legacy_link.plan_id)=(legacy_plan.tenant_id,legacy_plan.id)
+   WHERE legacy_plan.tenant_id=t AND legacy_plan.id=original->'stock'->>'collection_plan_id' AND legacy_plan.source_kind='ARReceipt' AND legacy_plan.source_id=s.invoice_id
+   AND legacy_link.source_effect_id=a.receipt_id) owner JOIN reconforge.finance_posting_effects cash_effect
+   ON(cash_effect.tenant_id,cash_effect.id,cash_effect.entry_id)=(t,owner.posting_effect_id,owner.entry_id)
+   WHERE cash_effect.snapshot_json=owner.snapshot AND cash_effect.validation_digest=owner.seal AND cash_effect.posted_actor_id=owner.posted_actor_id
+   AND cash_effect.snapshot_json->'lines'->0->>'account_id'=s.cash_account_id
+   AND cash_effect.snapshot_json->'lines'->0->'dimensions'=s.source_payload->'cash_dimensions'
+   AND cash_effect.snapshot_json->'lines'->1->>'account_id'=original->'revenue'->'snapshot_json'->'lines'->0->>'account_id'
+   AND cash_effect.snapshot_json->'lines'->1->'dimensions'=original->'revenue'->'snapshot_json'->'lines'->0->'dimensions'
+   AND(cash_effect.snapshot_json->'lines'->0->>'debit_minor')::bigint=(a.receipt->>'amount_minor')::bigint
+   AND(cash_effect.snapshot_json->'lines'->1->>'credit_minor')::bigint=(a.receipt->>'amount_minor')::bigint
+   AND jsonb_array_length(cash_effect.snapshot_json->'lines')=2;
   IF position<>1 OR a.receipt->>'status'<>'Posted' OR a.receipt->>'customer_id' IS DISTINCT FROM s.customer_id
   OR(a.receipt->>'workspace_id',a.receipt->>'organization_id',a.receipt->>'legal_entity_id',a.receipt->>'currency_code',
   (a.receipt->>'currency_precision')::integer,a.receipt->>'currency_rounding_policy',a.receipt->>'currency_registry_version',a.receipt->>'currency_registry_digest')
@@ -540,7 +546,8 @@ BEGIN
   SELECT count(*) INTO restoration_count FROM reconforge.customer_partial_return_restorations WHERE tenant_id=t AND plan_id=i;
   IF restoration_count<>jsonb_array_length(p.payload->'domain_plan'->'portions')
   OR EXISTS(SELECT 1 FROM jsonb_array_elements(p.payload->'domain_plan'->'portions') x WHERE NOT EXISTS(
-   SELECT 1 FROM reconforge.customer_partial_return_restorations z JOIN reconforge.finance_posting_effects f ON(f.tenant_id,f.id)=(z.tenant_id,z.correction_effect_id)
+   SELECT 1 FROM reconforge.customer_partial_return_restorations z JOIN reconforge.finance_posting_effects owned_effect
+   ON(owned_effect.tenant_id,owned_effect.id)=(z.tenant_id,z.correction_effect_id)
    WHERE z.tenant_id=t AND z.plan_id=i AND z.source_id=s.id AND z.position=(x->>'position')::integer
    AND z.original_consumption_id=x->>'original_consumption_id' AND z.original_valuation_line_id=x->>'original_valuation_line_id'
    AND z.cost_layer_id=x->>'cost_layer_id' AND z.quantity_scaled=(x->>'quantity_scaled')::bigint AND z.value_minor=(x->>'value_minor')::bigint
@@ -550,7 +557,7 @@ BEGIN
    AND(z.direction=1 OR EXISTS(SELECT 1 FROM reconforge.customer_partial_return_restorations old
     WHERE old.tenant_id=z.tenant_id AND old.plan_id=p.original_id AND old.position=z.position
     AND old.direction=1 AND old.consumption_count_at_restore=z.consumption_count_at_restore))
-   AND f.entry_id=p.payload->'entries'->1->>'entry_id'))
+   AND owned_effect.entry_id=p.payload->'entries'->1->>'entry_id'))
   OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_movements m JOIN reconforge.inventory_movement_lines ml ON(ml.tenant_id,ml.movement_id)=(m.tenant_id,m.id)
    WHERE m.tenant_id=t AND m.id=p.payload->>'movement_id' AND m.status='Posted' AND m.source_reference=i
    AND m.movement_type=CASE p.operation WHEN'Return' THEN'Receipt' ELSE'Delivery' END

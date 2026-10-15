@@ -49,7 +49,12 @@ def retained_partial_state(runtime: ReceiptRuntime) -> dict[str, Any]:
 def create_fractional_partial_runtime(database: tuple[str, str]) -> tuple[ReceiptRuntime, str, str]:
     base = create_receipt_runtime(database)
     with PostgresTenantBoundary(base.factory).transaction(base.tenant) as connection:
-        PostgresInventoryCoreRepository(connection, base.tenant).upsert_uom(uom_code="EA", name="Each", decimal_places=3, workspace="work")
+        inventory = PostgresInventoryCoreRepository(connection, base.tenant)
+        inventory.upsert_uom(uom_code="FRACTIONAL", name="Exact fractional base unit", decimal_places=3, workspace="work")
+        # ITEM has no movement/reference history yet. Configure its base unit
+        # through the supported API; the already-referenced EA is unchanged.
+        inventory.upsert_item(item_code="ITEM", name="Fractional synthetic item", organization_code="ORG",
+                              uom_code="FRACTIONAL", inventory_account_code="INVENTORY", workspace="work")
     runtime = create_stock_runtime(database, base_runtime=base)
     configure_runtime(runtime)
     sale = create_reserved_order(runtime, "FRACTIONAL-ORIGINAL", "2.5")

@@ -1,5 +1,19 @@
 # ReconForge Execution Evidence Log
 
+## M7 native development failures retained (2026-10-15)
+
+The master matrix records implemented versus accepted scope. Frozen95c4ec2e
+native6 failed (0 skips, 429.672s); frozen6bc08a3d first-cycle failed (0 skips,
+103.609s). Both source-before/after manifests match. The latter reaches posting
+inside a transaction, then SQL replay closure fails and the transaction rolls
+back; this is not evidence of a committed cycle. Original controllers, logs,
+JUnit and manifests remain under the external recovery evidence root, in
+m7-native-cycle-95c4ec2e-v1-private and m7-native-first-cycle-6bc08a3d-v2-private.
+Hosted source-component CI38650603290 remains failed: three exact CI-inventory
+contracts, followed by missing archive report after pytest stopped the job.
+Corrected finite native file ownership passes8 local CI contracts. No historical
+failure was relabeled or removed, and no manual security run was dispatched.
+
 ## Completion inventory and bounded M7 source qualification (2026-10-15)
 
 Current closure status is recorded only in ENTERPRISE_COMPLETION_MASTER_MATRIX.md.

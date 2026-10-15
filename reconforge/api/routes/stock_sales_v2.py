@@ -50,6 +50,7 @@ class OrderRequest(legacy.OrderRequest):
 
 
 class InvoiceRequest(legacy.InvoiceRequest):
+    invoice_number: str = Field(min_length=1, max_length=60)
     cash_account_code: str = Field(min_length=1, max_length=64)
     refund_liability_account_code: str = Field(min_length=1, max_length=64)
     gain_account_code: str = Field(min_length=1, max_length=64)
@@ -68,7 +69,7 @@ class InvoiceRequest(legacy.InvoiceRequest):
 
 
 class CollectionRequest(legacy.TransitionRequest):
-    receipt_number: str = Field(min_length=1, max_length=64)
+    receipt_number: str = Field(min_length=1, max_length=60)
     receipt_date: str = Field(pattern=r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
     period_id: str = Field(min_length=1, max_length=160)
     amount_minor: str = Field(pattern=r"^[1-9][0-9]{0,18}$")

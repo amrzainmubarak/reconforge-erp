@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -301,7 +302,11 @@ def test_actual_v2_split_refunds_lost_ack_and_refund_inverse_match_independent_r
     destination = os.environ.get("RECONFORGE_PARTIAL_REMAINDER_PRIVATE_OUTPUT")
     if destination:
         root = Path(destination)
-        require(root.is_absolute() and root.is_dir() and not root.is_symlink())
+        require(root.is_absolute() and ".." not in root.parts and root.is_dir())
+        for member in (root, *root.parents):
+            metadata = member.lstat()
+            require(not member.is_symlink() and not (getattr(metadata, "st_file_attributes", 0)
+                    & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)))
         packet = {"schema_version": "customer-partial-return-remainder-native-refunds-v1", "tenant_id": runtime.tenant,
                   "source_order_id": source, "captures": captures}
         with (root / "native-v2-refund-posted-cycle-original-v1.json").open("x", encoding="utf-8", newline="\n") as stream:

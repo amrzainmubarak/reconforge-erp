@@ -2,12 +2,23 @@
 
 ## Completion first — one domain at a time (2026-10-15)
 
-Current M7 zero-leg checkpoint remains OPEN: native12c314ee16 cases execute
+Current M7 closure remains OPEN. On frozen998f7fe0 the affected zero lifecycle
+executes1 PASS/0 failure/error/skip in126.516s, and the five direct-SQL/authority
+cases execute5 PASS/0 failure/error/skip in238.657s. Both retain unchanged source,
+ordinary five-false role flags,30s statement timeout and owned-DB cleanup.
+Original ten-file closures309da3ab and4d35591b bind these specific gates;
+4355 tracked Git contents and explicit checkout line-ending policies agree.
+This is not a whole16-case rerun, HTTPS, populated-zero restore or final acceptance.
+The zero lifecycle now replays exact ACKs, posts/reverses zero effects and single
+revenue/cost legs without a zero journal. The SQL gates reject forged before-value,
+reused zero witnesses, malformed policies and revoked posting authority.
+
+The original native12c314ee16 cases execute
 10PASS/6FAIL/0skip (889.172s); the affected f2052c2c6 cases fail at a distinct
 retained-ACK empty-entry monetary projection (150.390s), after first preparation
 succeeds. Both runs have unchanged source and owned-DB cleanup. Original negative
-files are retained; the next fix preserves original monetary exposure while
-explicitly admitting only the v2 zero-leg shape. No zero journal is introduced.
+files are retained. The subsequent998 fix preserves original monetary exposure
+while explicitly admitting only the v2 zero-leg shape. No zero journal is introduced.
 An unexpected disappearance of active worktree inner directories required fresh
 managed checkouts from retained refs. Root f205 source4355/4355 byte hashes match;
 main and both primary dirty-file hashes remain unchanged. Agent uncommitted
@@ -27,11 +38,15 @@ Its full eight-event Studio HTTPS cycle and populated339-table restore pass;
 independent raw-row proofs derive17 effects/35 lines/Dr=Cr385000. Separate new
 cash-split/wait-race raw proofs derive9/18/205000 and9/19/221000. Manual image
 security5/5 passes with0 Critical/High and retained Medium/license gaps.
-Full CI is not accepted: both Python versions failed one stale phase-name
-assertion. Strict current-governance correction80cb9ba2 passes11 targeted cases;
+Full CI38685992235 is not accepted:62 successful jobs,4 failures and1 skipped.
+Both Python versions failed one stale phase-name assertion; AR restore at retained
+0099 encountered a new147 column, and the aggregate boundary job failed closed.
+Strict current-governance correction80cb9ba2 passes11 targeted cases. The AR
+compatibility fix is in progress without upgrading its old fixture to hide the bug;
 the original hosted failures remain retained. The same three agents now close
 M7.6's remaining-value and zero-leg paths under additive148/ADR0861, with preserved
-legacy versions and no new major domain. New v2 functionality is unaccepted.
+legacy versions and no new major domain. New v2 functionality lacks cohesive
+final acceptance, actual v2 HTTPS/populated restore and zero-stock reuse proof.
 The earlier component subjects below retain their original outcomes.
 
 The authoritative remaining-work inventory is

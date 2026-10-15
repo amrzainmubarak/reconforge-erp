@@ -1,5 +1,31 @@
 # ReconForge Execution Evidence Log
 
+## M7 actual zero-leg replay and SQL authority checkpoints — 2026-10-15
+
+Frozen `998f7fe0e6b294dc409c2e39a2dda6fd7ef3bf31` executes the zero lifecycle
+1 PASS/0 failure/error/skip in126.516s and the five affected SQL/security cases
+5 PASS/0 failure/error/skip in238.657s. Originals remain outside public diagnostics:
+`m7-native-zero-replay-998f7fe0-v2-private` and
+`m7-native-zero-five-security-998f7fe0-v1-private`, under the retained recovery root.
+Their ten-file closure hashes are respectively
+`309da3abda91e5077b05bfa45dec482f4d448132b332d7e986da55ad04a894b9` and
+`4d35591bfe2a57b11e18ccae4675371509d7c11516dce126599cf28db79c587c`.
+Each preserves full before/after4355-file source, actual JUnit, normal-role
+admission, stdout/stderr, executed controller and owned-DB membership. Source
+contents agree with retained Git and explicit Windows checkout line-ending policy;
+ordinary role flags remain five false, statement timeout30s, cleanup true.
+The zero lifecycle exercises exact ACK replay, review/post/reverse, zero effects
+and separate revenue/cost legs. SQL cases exercise null/malformed policy, forged
+before-value, historic-witness reuse, four parent scope boundaries and revoked
+posting authority. Neither receipt claims whole16, HTTPS/restore, financial oracle,
+benchmark or M7 acceptance. The earlier12c and f205 failures remain unchanged.
+
+Separate independent reader768 qualifies actual12c's six-event refunds from seven
+original79-table captures:8 new effects/17 lines/Dr=Cr81000. Fresh isolated normal
+and optimized readers return identical1090-byte proof, SHAab441783d5e329f5d7b54c566d902aec55bdca72d19c1d49d7b607ff48789020;
+closure238aa11f and source bridge4926cc00 bind the original3,033,331-byte capture
+and retained12c source. This is a posted-refund component, not a whole-domain claim.
+
 ## M7 executed zero-leg negatives and source recovery — 2026-10-15
 
 Native12c314ee16 executes10PASS/6FAIL/0skip in889.172s; original11-member

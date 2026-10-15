@@ -539,6 +539,8 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/test_customer_partial_return_rounding.py",
         "tests/customer_partial_return_remainder_oracle.py",
         "tests/test_customer_partial_return_remainder_oracle.py",
+        "tests/customer_partial_return_remainder_posted_oracle.py",
+        "tests/test_customer_partial_return_remainder_posted_oracle.py",
         "tests/test_postgres_customer_partial_return_rounding.py",
         "tests/test_postgres_customer_partial_return_rounding_migration.py",
         "tests/test_postgres_customer_partial_return_rounding_security.py",

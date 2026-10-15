@@ -1,5 +1,16 @@
 # ReconForge Execution Decisions Log
 
+## Explicit zero-effect authority and retained empty entries (2026-10-15)
+
+Shared Money/authorization stays positive-only by default. Only the finite native
+protocol2/remaining-original-v1 Return or ReverseReturn shape with positive exact
+quantity and all-zero monetary legs opts into amount0 and an empty entry list.
+Original captured currency policy and monetary exposure remain verified. Exact
+ACK replay must pass the same current authority projection as first preparation;
+no synthetic positive amount, missing exposure or zero journal is substituted.
+Actual998 zero lifecycle and five SQL/authority cases pass without skips; their
+source-bound receipts do not close the pending v2 Studio/restore/stock-reuse scope.
+
 ## One-domain completion contract (2026-10-15)
 
 The user's finish-to-done instruction supersedes parallel domain expansion.

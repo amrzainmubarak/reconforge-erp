@@ -11,9 +11,12 @@ later collection and partial refunds; an isolated independent reader derives
 12 effects/24 lines/Dr=Cr238000 from original rows. Nativeea457 lifecycle5 passed;
 the scope-wait expected-code failure is retained. Actual7d transfer/retry/scope
 withdrawal both pass; actual095 rounded original/Consumable both pass. Whole18
-SQL/security is running. Actual8f HTTPS first post/replay reaches a failed
+SQL/security executed15 PASS/3 FAIL/0 skips on095; the original negative closure
+53c3f697 is preserved. Three narrow harness corrections require affected reruns;
+their remaining wait/rollback assertions are not accepted. Actual8f HTTPS first post/replay reaches a failed
 observer comparison; retained originals prove only valid authorization-audit
-growth, with all76 business tables unchanged. Supplemental full78 observations,
+growth, with all76 business tables unchanged. Source545 supplemental-observation
+contracts have339 targeted passes, without an actual HTTPS acceptance. Full78 observations,
 eight-event HTTPS, populated restore and final-source acceptance remain required.
 Three agents now cooperate on this same domain: native owner/data, API/Studio,
 independent financial/security/recovery verification. Root owns shared migrations

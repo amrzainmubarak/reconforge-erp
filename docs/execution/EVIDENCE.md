@@ -6,7 +6,12 @@ Original12a migration roundtrip closesca46ef2ff918f54939b1faf8e1a752611b8fbc473b
 Actual7d transfer+scope-wait2 PASS close14c460fdc86e4eaa9bff41c3ce67c11d8cdf0d70b64c06255b0a1e739032a023;
 actual095 rounded-original+Consumable2 PASS closec8d0c2622c075db52dc72ca95681c399ddccc587c11bc89843b90999a7666fd0.
 Each is source-unchanged,0 skips and owned-fixture-clean; none is final CI.
-Whole18 security is running. HTTPS7d/8f original failures remain retained. The
+Whole18 security executed15 PASS/3 FAIL/0 errors/skips in1388.157s on unchanged095,
+with owned-fixture cleanup. Original23-file/3858766-byte negative closure
+53c3f6978a20074a5ec520783672f185b08f98edc6632031a8031a1c559a2b60
+preserves the genuine results. The private-DTO read and two double-call/exception-
+layer harness failures precede required wait/rollback assertions; no acceptance
+is borrowed from their observed guard refusals. HTTPS7d/8f original failures remain retained. The
 diagnostic8f observer preserves the complete refused78-table snapshot and still
 fails closed. Independent diffce14448ea5fce2ada305d125608ffd26e1ae2cf1137bd6fbccba3aee4df53517
 proves76 business tables byte-identical,18 new authorization.policy_decision

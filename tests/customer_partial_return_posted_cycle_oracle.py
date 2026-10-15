@@ -425,6 +425,43 @@ def decode_row(text: str, *, maximum_bytes: int = 4 * 1024 * 1024) -> dict[str, 
     return cast(dict[str, Any], row)
 
 
+def posted_ledger_totals(source: OriginalSale, tables: dict[str, tuple[dict[str, Any], ...]]) -> dict[str, Any]:
+    """Count and sum only actual effect-linked entries, excluding void/drafts."""
+    effects = row_index(tables["finance_posting_effects"])
+    entries = row_index(tables["finance_entries"])
+    lines = row_index(tables["finance_entry_lines"])
+    accounts = row_index(tables["finance_accounts"])
+    posted = {identity(row["entry_id"]) for row in effects.values()}
+    require(bool(posted) and len(posted) == len(effects) and posted <= set(entries))
+    balances: Counter[str] = Counter()
+    debit_sum = credit_sum = line_count = 0
+    for identifier in posted:
+        entry = entries[identifier]
+        require(entry["status"] == "Validated" and entry["currency_code"] == source.currency_code
+                and integer(entry["currency_precision"]) == source.currency_precision)
+        selected = sorted((row for row in lines.values() if row["entry_id"] == identifier),
+                          key=lambda row: integer(row["line_number"], positive=True))
+        require(len(selected) >= 2 and [row["line_number"] for row in selected] == list(range(1, len(selected) + 1)))
+        debit = credit = 0
+        for row in selected:
+            account = accounts.get(identity(row["account_id"]))
+            require(account is not None)
+            code = identity(cast(dict[str, Any], account)["account_code"])
+            left, right = integer(row["debit_minor"]), integer(row["credit_minor"])
+            require((left > 0) != (right > 0))
+            debit += left
+            credit += right
+            balances[code] += left - right
+        require(debit == credit == integer(entry["total_debit_minor"], positive=True) == integer(entry["total_credit_minor"], positive=True))
+        debit_sum += debit
+        credit_sum += credit
+        line_count += len(selected)
+    require(debit_sum == credit_sum and sum(balances.values()) == 0)
+    return {"final_actual_posting_effects": len(effects), "final_actual_posted_entries": len(posted), "final_actual_posted_lines": line_count,
+            "final_total_debit_minor": debit_sum, "final_total_credit_minor": credit_sum,
+            "final_account_minor_balances": dict(sorted(balances.items())), "unposted_or_void_entries_excluded": True}
+
+
 def qualify_raw_cycle(packet: dict[str, Any]) -> dict[str, Any]:
     """Read actual original SQL captures, independently deriving event amounts.
 
@@ -529,7 +566,7 @@ def qualify_raw_cycle(packet: dict[str, Any]) -> dict[str, Any]:
             "new_actual_posting_effects": effects_count, "new_actual_posted_lines": lines_count,
             "returned_quantity_scaled": final.returned_quantity_scaled, "receivable_minor": final.receivable_minor,
             "refund_liability_minor": final.refund_liability_minor, "original_consumptions_unchanged": True,
-            "incremental_gl_fifo_layer_history_equal": True,
+            "incremental_gl_fifo_layer_history_equal": True, **posted_ledger_totals(source, decoded[-1]),
             "scope": "Incremental GL amounts, original FIFO portions, layer deltas and history only; authority, RLS, recovery and API need separate native qualification."}
 
 

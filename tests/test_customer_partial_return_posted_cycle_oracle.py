@@ -18,6 +18,7 @@ from tests.customer_partial_return_posted_cycle_oracle import (
     decode_row,
     expected_cycle,
     integer,
+    posted_ledger_totals,
     prefix_portions,
     qualify_raw_cycle,
     verify_posted_gl_amount_delta,
@@ -261,6 +262,8 @@ def test_private_original_row_reader_derives_actual_effect_membership_and_fifo_a
     proof = qualify_raw_cycle(raw_packet())
     assert (proof["events"], proof["new_actual_posting_effects"], proof["new_actual_posted_lines"]) == (1, 2, 4)
     assert proof["incremental_gl_fifo_layer_history_equal"] is True
+    assert (proof["final_actual_posting_effects"], proof["final_actual_posted_lines"], proof["final_total_debit_minor"],
+            proof["final_total_credit_minor"]) == (3, 6, 137500, 137500)
 
 
 @pytest.mark.parametrize(("table", "field", "value"), [
@@ -312,3 +315,35 @@ def test_populated_restore_requires_identical_original_membership_and_bytes() ->
             candidate["capture"]["finance_entries"][0] += " "
         with pytest.raises(CycleRefusal):
             verify_raw_restore(packet, candidate)
+
+
+def test_final_posted_totals_exclude_complete_unposted_and_void_entry_lines() -> None:
+    _before, after, roles = ledger_vector()
+    after["finance_accounts"] = tuple({"id": value, "account_code": key} for key, value in roles.items())
+    for status in ("Draft", "Voided"):
+        after["finance_entries"] += ({"id": status, "status": status, "currency_code": "USD", "currency_precision": 2,
+                                     "total_debit_minor": 999, "total_credit_minor": 999},)
+        after["finance_entry_lines"] += (
+            {"id": status + "-1", "entry_id": status, "line_number": 1, "account_id": roles["AR"], "debit_minor": 999, "credit_minor": 0},
+            {"id": status + "-2", "entry_id": status, "line_number": 2, "account_id": roles["REVENUE"], "debit_minor": 0, "credit_minor": 999})
+    proof = posted_ledger_totals(original(), after)
+    assert (proof["final_actual_posting_effects"], proof["final_actual_posted_lines"], proof["final_total_debit_minor"]) == (3, 6, 137500)
+    assert proof["unposted_or_void_entries_excluded"] is True
+
+
+@pytest.mark.parametrize("attack", ["duplicate-effect-entry", "unbalanced-original-line", "original-header-total", "unposted-effect", "unknown-account"])
+def test_final_ledger_totals_refuse_invalid_posted_membership_and_balance(attack: str) -> None:
+    _before, after, roles = ledger_vector()
+    after["finance_accounts"] = tuple({"id": value, "account_code": key} for key, value in roles.items())
+    if attack == "duplicate-effect-entry":
+        after["finance_posting_effects"] += ({"id": "extra", "entry_id": "old-entry"},)
+    elif attack == "unbalanced-original-line":
+        after["finance_entry_lines"][0]["debit_minor"] = 67499
+    elif attack == "original-header-total":
+        after["finance_entries"][0]["total_credit_minor"] = 67499
+    elif attack == "unposted-effect":
+        after["finance_entries"][0]["status"] = "Draft"
+    else:
+        after["finance_entry_lines"][0]["account_id"] = "hidden-account"
+    with pytest.raises(CycleRefusal):
+        posted_ledger_totals(original(), after)

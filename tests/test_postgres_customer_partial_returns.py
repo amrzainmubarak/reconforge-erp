@@ -30,6 +30,7 @@ from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_commercial_collections import PostgresCommercialCollectionsRepository
 from reconforge.infrastructure.postgres_customer_partial_returns import PostgresCustomerPartialReturnsRepository
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
+from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
 from tests.customer_partial_return_posted_cycle_oracle import TABLES
 from tests.test_postgres_commercial_collections import complete, prepare
 from tests.test_postgres_customer_partial_return_source import create_two_layer_source, two_layer_source
@@ -345,21 +346,56 @@ def settlement_totals(runtime: ReceiptRuntime, expected_effects: int, expected_l
             expected_effects, expected_lines, expected_turnover, expected_turnover)
 
 
+def settlement_receivable_reports(runtime: ReceiptRuntime, invoice_id: str, outstanding_minor: int) -> None:
+    """Check the real scoped AR read models against the hand-derived residual."""
+    with runtime.actor("maker") as (connection, _, _actor):
+        receivables = PostgresReceivablesRepository(connection, runtime.tenant)
+        invoice = receivables.get_invoice(invoice_id)
+        assert (invoice["total_minor"], invoice["outstanding_minor"], invoice["status"]) == (
+            67500, outstanding_minor, "PartiallyPaid" if outstanding_minor else "Paid")
+        assert receivables.credit_exposure("CUSTOMER", workspace="work") == {
+            "customer_id": invoice["customer_id"], "customer_code": "CUSTOMER", "currency_code": "USD",
+            "credit_limit_minor": 1000000, "exposure_minor": outstanding_minor,
+            "available_credit_minor": 1000000 - outstanding_minor, "credit_hold": False, "status": "Active",
+        }
+        # A credit must reduce both current and overdue aging, without changing
+        # the original invoice gross/date or leaving a paid zero-valued item.
+        for as_of, days, bucket in (("2026-10-14", 0, "Current"), ("2026-11-15", 15, "1-30")):
+            items = [{
+                "invoice_id": invoice_id, "organization_id": "org", "legal_entity_id": "entity",
+                "invoice_number": "TWO-LAYER-INVOICE", "customer_code": "CUSTOMER",
+                "customer_name": "Synthetic customer", "currency_code": "USD",
+                "invoice_date": "2026-10-09", "due_date": "2026-10-31", "total_minor": 67500,
+                "outstanding_minor": outstanding_minor, "days_overdue": days, "bucket": bucket,
+            }] if outstanding_minor else []
+            bucket_totals = dict.fromkeys(("Current", "1-30", "31-60", "61-90", "90+"), 0)
+            bucket_totals[bucket] = outstanding_minor
+            report = receivables.aging_report(workspace="work", as_of_date=as_of)
+            assert report == {"as_of_date": as_of, "currency_code": "USD" if outstanding_minor else None,
+                              "items": items, "bucket_totals_minor": bucket_totals,
+                              "total_outstanding_minor": outstanding_minor}
+
+
 def test_credit_adjusted_residual_accepts_two_genuine_cash_installments_and_rolls_back_overcap(receipt_database: tuple[str, str]) -> None:
     runtime, source_id, invoice_id = create_two_layer_source(receipt_database)
+    settlement_receivable_reports(runtime, invoice_id, 57500)
     settlement_originals(runtime, "split-before-credit")
     posted(runtime, prepare_return(runtime, source_id, 12, 0, "split-credit-first"))
+    settlement_receivable_reports(runtime, invoice_id, 3500)
     settlement_originals(runtime, "split-after-credit")
     assert balance(runtime, source_id)["outstanding_minor"] == 3500
     complete(runtime, prepare(runtime, invoice_id, 2000, "SPLIT-2000"), "SPLIT-2000")
+    settlement_receivable_reports(runtime, invoice_id, 1500)
     before = settlement_originals(runtime, "split-after-2000")
     assert (balance(runtime, source_id)["outstanding_minor"], balance(runtime, source_id)["history_version"]) == (1500, 2)
     with pytest.raises(FinancePostingError) as refused:
         prepare(runtime, invoice_id, 2000, "SPLIT-OVERCAP")
     assert refused.value.code == "collection_amount_invalid"
+    settlement_receivable_reports(runtime, invoice_id, 1500)
     if settlement_originals(runtime, "split-after-refusal") != before:
         raise AssertionError("A refused overcap cash preparation changed native original rows.")
     complete(runtime, prepare(runtime, invoice_id, 1500, "SPLIT-1500"), "SPLIT-1500")
+    settlement_receivable_reports(runtime, invoice_id, 0)
     settlement_originals(runtime, "split-after-1500")
     current = balance(runtime, source_id)
     assert (current["outstanding_minor"], current["collected_minor"], current["history_version"], current["refund_due_minor"]) == (0, 13500, 3, 0)
@@ -378,6 +414,7 @@ def test_credit_post_precedes_waiting_cash_prepare_and_rechecks_the_committed_re
     runtime, source_id, invoice_id = create_two_layer_source(receipt_database)
     posted(runtime, prepare_return(runtime, source_id, 12, 0, "race-first-credit"))
     reviewed = phase(runtime, prepare_return(runtime, source_id, 3, 1, "race-remaining-credit"), "review", "checker")
+    settlement_receivable_reports(runtime, invoice_id, 3500)
     settlement_originals(runtime, "race-before-credit")
     starting: Queue[tuple[str, int]] = Queue()
     edges = []
@@ -428,6 +465,7 @@ def test_credit_post_precedes_waiting_cash_prepare_and_rechecks_the_committed_re
             assert not credit.done() and not cash.done()
         assert credit.result(timeout=60)["phase"] == 2
         assert cash.result(timeout=60) == "collection_source_changed"
+    settlement_receivable_reports(runtime, invoice_id, 0)
     settlement_originals(runtime, "race-after-refusal")
     destination = settlement_private_directory()
     if destination is not None:

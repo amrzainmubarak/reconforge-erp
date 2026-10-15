@@ -436,19 +436,18 @@ class PostgresCustomerPartialReturnsRepository:
             return self._remember(payload, "prepare_reversal", command_id, actor, digest, args)
 
     def _reversal_layers(self, plan: Mapping[str, Any]) -> None:
-        original = self._row(plan["original_id"])
         for part in sorted(plan["domain_plan"]["portions"], key=lambda item: item["cost_layer_id"]):
             self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))", (part["cost_layer_id"],))
             layer = self._one("SELECT remaining_quantity_scaled,remaining_value_minor FROM reconforge.inventory_cost_layers WHERE tenant_id=%s AND id=%s FOR UPDATE", (self.tenant_id, part["cost_layer_id"]))
             if layer["remaining_quantity_scaled"] < part["quantity_scaled"] or layer["remaining_value_minor"] < part["value_minor"]:
                 _fail("reversal_dependency", "Restored original cost portions have already been consumed.")
-            if self.connection.execute("""SELECT 1 FROM reconforge.inventory_layer_consumptions x
-                JOIN reconforge.inventory_valuation_lines v ON(v.tenant_id,v.id)=(x.tenant_id,x.valuation_line_id)
-                JOIN reconforge.inventory_valuation_documents d ON(d.tenant_id,d.id)=(v.tenant_id,v.valuation_document_id)
-                JOIN reconforge.customer_partial_return_events e ON e.tenant_id=x.tenant_id AND e.plan_id=%s AND e.operation='post'
-                WHERE x.tenant_id=%s AND x.cost_layer_id=%s AND d.created_at>=e.created_at AND d.id<>%s""",
-                (original["id"], self.tenant_id, part["cost_layer_id"], self._source_row(plan["source_id"])["original_valuation_document_id"])).fetchone():
-                _fail("reversal_dependency", "A downstream FIFO consumption depends on the restored original layer.")
+            witness = self._one("""SELECT r.consumption_count_at_restore,
+                (SELECT count(*) FROM reconforge.inventory_layer_consumptions x WHERE x.tenant_id=r.tenant_id AND x.cost_layer_id=r.cost_layer_id) current_count
+                FROM reconforge.customer_partial_return_restorations r
+                WHERE r.tenant_id=%s AND r.plan_id=%s AND r.position=%s AND r.cost_layer_id=%s AND r.direction=1""",
+                (self.tenant_id, plan["original_id"], part["position"], part["cost_layer_id"]))
+            if witness["consumption_count_at_restore"] != witness["current_count"]:
+                _fail("reversal_dependency", "A later native FIFO consumption follows the restored original layer.")
 
     def _current(self, plan: Mapping[str, Any]) -> PartialReturnHistory:
         row = self._source_row(plan["source_id"])
@@ -539,11 +538,12 @@ class PostgresCustomerPartialReturnsRepository:
         for part in plan["domain_plan"]["portions"]:
             self.connection.execute("""INSERT INTO reconforge.customer_partial_return_restorations
                 (tenant_id,source_id,plan_id,position,original_consumption_id,original_valuation_line_id,cost_layer_id,offset_quantity_scaled,
-                 quantity_scaled,value_minor,direction,physical_movement_id,original_cogs_effect_id,correction_effect_id,original_restoration_plan_id)
-                VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                 quantity_scaled,value_minor,direction,physical_movement_id,original_cogs_effect_id,correction_effect_id,original_restoration_plan_id,consumption_count_at_restore)
+                VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                 (SELECT count(*) FROM reconforge.inventory_layer_consumptions WHERE tenant_id=%s AND cost_layer_id=%s))""",
                 (self.tenant_id, row["id"], plan["id"], part["position"], part["original_consumption_id"], part["original_valuation_line_id"],
                  part["cost_layer_id"], part["offset_quantity_scaled"], part["quantity_scaled"], part["value_minor"], direction,
-                 plan["movement_id"], row["original_cogs_effect_id"], effects[1], None if direction == 1 else plan["original_id"]))
+                 plan["movement_id"], row["original_cogs_effect_id"], effects[1], None if direction == 1 else plan["original_id"], self.tenant_id, part["cost_layer_id"]))
             self.connection.execute("""UPDATE reconforge.inventory_cost_layers SET remaining_quantity_scaled=remaining_quantity_scaled+%s,
                 remaining_value_minor=remaining_value_minor+%s,row_version=row_version+1 WHERE tenant_id=%s AND id=%s""",
                 (direction*part["quantity_scaled"], direction*part["value_minor"], self.tenant_id, part["cost_layer_id"]))

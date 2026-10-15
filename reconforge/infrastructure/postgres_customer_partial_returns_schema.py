@@ -86,6 +86,7 @@ CREATE TABLE reconforge.customer_partial_return_restorations (
  offset_quantity_scaled BIGINT NOT NULL CHECK(offset_quantity_scaled>=0),quantity_scaled BIGINT NOT NULL CHECK(quantity_scaled>0),
  value_minor BIGINT NOT NULL CHECK(value_minor>0),direction INTEGER NOT NULL CHECK(direction IN(-1,1)),
  physical_movement_id TEXT NOT NULL,original_cogs_effect_id TEXT NOT NULL,correction_effect_id TEXT NOT NULL,original_restoration_plan_id TEXT,
+ consumption_count_at_restore BIGINT NOT NULL CHECK(consumption_count_at_restore>0),
  PRIMARY KEY(tenant_id,plan_id,position),FOREIGN KEY(tenant_id,source_id) REFERENCES reconforge.customer_partial_return_sources(tenant_id,id),
  FOREIGN KEY(tenant_id,plan_id) REFERENCES reconforge.customer_partial_return_plans(tenant_id,id),
  FOREIGN KEY(tenant_id,original_consumption_id) REFERENCES reconforge.inventory_layer_consumptions(tenant_id,id),
@@ -95,6 +96,7 @@ CREATE TABLE reconforge.customer_partial_return_restorations (
  FOREIGN KEY(tenant_id,original_cogs_effect_id) REFERENCES reconforge.finance_posting_effects(tenant_id,id),
  FOREIGN KEY(tenant_id,correction_effect_id) REFERENCES reconforge.finance_posting_effects(tenant_id,id),
  FOREIGN KEY(tenant_id,original_restoration_plan_id) REFERENCES reconforge.customer_partial_return_plans(tenant_id,id),
+ FOREIGN KEY(tenant_id,original_restoration_plan_id,position) REFERENCES reconforge.customer_partial_return_restorations(tenant_id,plan_id,position),
  CHECK((direction=1 AND original_restoration_plan_id IS NULL) OR(direction=-1 AND original_restoration_plan_id IS NOT NULL))
 );
 CREATE INDEX customer_partial_return_layer_history ON reconforge.customer_partial_return_restorations(tenant_id,cost_layer_id);
@@ -142,6 +144,13 @@ BEGIN
   SELECT * INTO s FROM reconforge.customer_partial_return_sources WHERE tenant_id=NEW.tenant_id AND id=NEW.source_id;
   IF s IS NULL OR NOT reconforge.customer_return_authority(NEW.tenant_id,a,'post') THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Native correction requires current post authority'; END IF;
+  IF NEW.consumption_count_at_restore IS DISTINCT FROM(SELECT count(*) FROM reconforge.inventory_layer_consumptions
+    WHERE tenant_id=NEW.tenant_id AND cost_layer_id=NEW.cost_layer_id)
+   OR(NEW.direction=-1 AND NOT EXISTS(SELECT 1 FROM reconforge.customer_partial_return_restorations original
+    WHERE original.tenant_id=NEW.tenant_id AND original.plan_id=NEW.original_restoration_plan_id AND original.position=NEW.position
+    AND original.direction=1 AND original.cost_layer_id=NEW.cost_layer_id
+    AND original.consumption_count_at_restore=NEW.consumption_count_at_restore)) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Restore witness must retain exact native consumption membership'; END IF;
  END IF;
  RETURN NEW;
 END $cr2$;
@@ -537,6 +546,10 @@ BEGIN
    AND z.cost_layer_id=x->>'cost_layer_id' AND z.quantity_scaled=(x->>'quantity_scaled')::bigint AND z.value_minor=(x->>'value_minor')::bigint
    AND z.offset_quantity_scaled=(x->>'offset_quantity_scaled')::bigint AND z.original_cogs_effect_id=s.original_cogs_effect_id
    AND z.direction=CASE p.operation WHEN'Return' THEN 1 ELSE-1 END AND z.physical_movement_id=p.payload->>'movement_id'
+   AND z.original_restoration_plan_id IS NOT DISTINCT FROM CASE p.operation WHEN'Return' THEN NULL ELSE p.original_id END
+   AND(z.direction=1 OR EXISTS(SELECT 1 FROM reconforge.customer_partial_return_restorations old
+    WHERE old.tenant_id=z.tenant_id AND old.plan_id=p.original_id AND old.position=z.position
+    AND old.direction=1 AND old.consumption_count_at_restore=z.consumption_count_at_restore))
    AND f.entry_id=p.payload->'entries'->1->>'entry_id'))
   OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_movements m JOIN reconforge.inventory_movement_lines ml ON(ml.tenant_id,ml.movement_id)=(m.tenant_id,m.id)
    WHERE m.tenant_id=t AND m.id=p.payload->>'movement_id' AND m.status='Posted' AND m.source_reference=i

@@ -167,6 +167,14 @@ def _plan_v2() -> str:
     value = value.replace("CASE ordinal WHEN 0 THEN'ReverseRevenueCredit' ELSE'ReverseCostRestoration' END",
         "CASE WHEN ordinal=0 AND p.credit_minor>0 THEN'ReverseRevenueCredit' ELSE'ReverseCostRestoration' END")
     value = _replace(value, "IF p.operation='Return' AND ordinal=0 THEN", "IF p.operation='Return' AND part->>'purpose'='RevenueCredit' THEN")
+    value = _replace(value, " ar:=s.source_payload->'original_source'", r""" IF p.operation IN('ReverseReturn','ReverseRefund') THEN
+ IF(
+ (p.amount_minor,p.quantity_scaled,p.credit_minor,p.cogs_restored_minor,p.receivable_released_minor,p.refund_entitlement_delta_minor)
+ IS DISTINCT FROM(o.amount_minor,o.quantity_scaled,o.credit_minor,o.cogs_restored_minor,o.receivable_released_minor,o.refund_entitlement_delta_minor)
+ OR(p.operation='ReverseReturn' AND p.payload->'domain_plan' IS DISTINCT FROM o.payload->'domain_plan')) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Reverse plan must preserve its exact original quantities amounts and allocation witness'; END IF;
+ END IF;
+ ar:=s.source_payload->'original_source'""")
     value = _replace(value, "  OR command.request_json->>'operation'", "  OR command.request_json->'protocol_version' IS DISTINCT FROM'2'::jsonb\n  OR command.request_json->>'operation'")
     value = _replace(value, "FROM reconforge.customer_partial_return_restorations z JOIN reconforge.finance_posting_effects owned_effect",
                            "FROM reconforge.customer_partial_return_restorations z LEFT JOIN reconforge.finance_posting_effects owned_effect")
@@ -201,7 +209,7 @@ UPGRADED_FUNCTIONS = {
     "customer_partial_return_source_close": _dispatch("customer_partial_return_source_close", "customer_partial_return_source_close_v2",
         "EXISTS(SELECT 1 FROM reconforge.customer_partial_return_sources WHERE tenant_id=t AND id=i AND source_payload ? 'allocation_policy')"),
     "customer_partial_return_close": _dispatch("customer_partial_return_close", "customer_partial_return_close_v2",
-        "EXISTS(SELECT 1 FROM reconforge.customer_partial_return_plans WHERE tenant_id=t AND id=i AND payload ? 'allocation_policy')"),
+        "EXISTS(SELECT 1 FROM reconforge.customer_partial_return_plans owned JOIN reconforge.customer_partial_return_sources source_owner ON(source_owner.tenant_id,source_owner.id)=(owned.tenant_id,owned.source_id) WHERE owned.tenant_id=t AND owned.id=i AND(owned.payload ? 'allocation_policy' OR source_owner.source_payload ? 'allocation_policy'))"),
 }
 
 

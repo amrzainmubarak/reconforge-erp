@@ -1,5 +1,6 @@
 """Genuine147-compatible originals with governed148 remaining-value returns."""
 
+from copy import deepcopy
 from dataclasses import replace
 from typing import Any
 
@@ -164,4 +165,38 @@ def test_protocol_one_cannot_list_read_mutate_or_replay_a_version_two_owner(rece
             with pytest.raises(FinancePostingError) as denied:
                 operation()
             assert denied.value.code in {"customer_partial_return_protocol_conflict", "customer_partial_return_command_conflict"}
+    assert retained_partial_state(runtime) == before
+
+
+@pytest.mark.parametrize("change", ["quantity", "cost", "domain-witness"])
+def test_native_reverse_plan_cannot_change_original_magnitudes_or_allocation_witness(
+    receipt_database: tuple[str, str], monkeypatch: pytest.MonkeyPatch, change: str,
+) -> None:
+    import psycopg
+
+    runtime, source = create_remainder_runtime(receipt_database)
+    parent = post_v2(runtime, prepare_v2(runtime, source, 1, 0, "reverse-pin-original"))
+    before = retained_partial_state(runtime)
+    original_save = PostgresCustomerPartialReturnsRepository._save
+
+    def forged_save(owner: Any, supplied: dict[str, Any], actor: Any) -> None:
+        payload = deepcopy(supplied)
+        if payload["operation"] == "ReverseReturn":
+            if change == "quantity":
+                payload["quantity_scaled"] += 1
+            elif change == "cost":
+                payload["cogs_restored_minor"] += 1
+                payload["amount_minor"] += 1
+            else:
+                payload["domain_plan"]["portions"][0]["before_value_minor"] += 1
+        original_save(owner, payload, actor)
+
+    monkeypatch.setattr(PostgresCustomerPartialReturnsRepository, "_save", forged_save)
+    with pytest.raises(psycopg.errors.CheckViolation) as refused:
+        with runtime.actor("maker") as (connection, _, actor):
+            owner = PostgresCustomerPartialReturnsRepository(connection, runtime.tenant, protocol_version=2)
+            owner.prepare_reversal(CustomerPartialReversePreparation(parent["id"], "period", "2026-10-14",
+                "Attempt to alter an original inverse magnitude", 1), command_id="forged-reverse-pin", actor=actor)
+            connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    assert refused.value.diag.constraint_name == "customer_partial_return_owner"
     assert retained_partial_state(runtime) == before

@@ -43,9 +43,9 @@ BEGIN
  PERFORM reconforge.customer_partial_return_close(t,i);
  SELECT value INTO cost_part FROM jsonb_array_elements(owned.payload->'entries')
   WHERE value->>'purpose' IN('CostRestoration','ReverseCostRestoration');
+ SELECT * INTO entry_owner FROM reconforge.finance_entries WHERE tenant_id=t AND id=cost_part->>'entry_id';
+ SELECT * INTO effect_owner FROM reconforge.finance_posting_effects WHERE tenant_id=t AND id=restoration.correction_effect_id;
  IF owned.cogs_restored_minor>0 THEN
-  SELECT * INTO entry_owner FROM reconforge.finance_entries WHERE tenant_id=t AND id=cost_part->>'entry_id';
-  SELECT * INTO effect_owner FROM reconforge.finance_posting_effects WHERE tenant_id=t AND id=restoration.correction_effect_id;
   PERFORM reconforge.it1_assert(entry_owner.id IS NOT NULL AND effect_owner.id IS NOT NULL
    AND effect_owner.entry_id=entry_owner.id AND entry_owner.entry_number=upper(i)||'-C'
    AND effect_owner.snapshot_json=reconforge.fr_snapshot(t,entry_owner.id,source_owner.organization_id,source_owner.legal_entity_id)

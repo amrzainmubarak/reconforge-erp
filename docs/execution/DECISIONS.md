@@ -1,5 +1,19 @@
 # ReconForge Execution Decisions Log
 
+## One-domain completion contract (2026-10-15)
+
+The user's finish-to-done instruction supersedes parallel domain expansion.
+Use ENTERPRISE_COMPLETION_MASTER_MATRIX.md as the sole current closure inventory;
+preserve old milestone documents as source-bound history. All three agents close
+M7 together before Advanced Manufacturing. Keep the existing GL/Money/Identity/
+FIFO engines. CR2 uses additive corrections and immutable original-consumption
+restorations, separate from the original full-inverse uniqueness contract.
+Cash allocations are capped against their historical prefix, so a later valid
+credit may create a refund obligation without invalidating earlier collections.
+An unfinished source adapter, API or screen is never a completed business cycle.
+Heavy comparative performance and production qualification follow functional
+closure; they are not inferred from development gates or local restore.
+
 ## Current money authority and private browser custody (2026-10-14)
 
 Original retained unit prices are READ exposure, independent of phase WRITE

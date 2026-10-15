@@ -1552,6 +1552,14 @@ include tests/customer_partial_return_source_oracle.py
 include tests/test_customer_partial_return_source_oracle.py
 include docs/adr/0859-native-original-partial-return-source-membership.md
 include docs/execution/ENTERPRISE_COMPLETION_M7_2026-10-15.md
+include docs/execution/ENTERPRISE_COMPLETION_MASTER_MATRIX.md
+include reconforge/domain/customer_partial_return_commands.py
+include reconforge/infrastructure/postgres_customer_partial_returns.py
+include reconforge/infrastructure/postgres_customer_partial_returns_schema.py
+include reconforge/infrastructure/postgres_customer_partial_return_shared_hooks.py
+include alembic/versions/0147_postgres_customer_partial_returns.py
+include tests/test_customer_partial_return_commands.py
+include tests/test_postgres_customer_partial_returns.py
 include tests/original_browser_download_verification.py
 include tests/api_route_registration.py
 include tests/test_original_browser_download_verification.py

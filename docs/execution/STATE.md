@@ -1,5 +1,20 @@
 # Execution State
 
+## Completion first — one domain at a time (2026-10-15)
+
+The authoritative remaining-work inventory is
+[ENTERPRISE_COMPLETION_MASTER_MATRIX.md](ENTERPRISE_COMPLETION_MASTER_MATRIX.md).
+M3/M4 original closure bytes and fresh official Draft heads were verified without
+repeating their accepted tests. M5/M6 scoped acceptance remains retained.
+M7 partial customer returns are OPEN: the original-source adapter, pure plans
+and unposted templates do not close native inventory/AR/GL effects or Studio.
+Three agents now cooperate on this same domain: native owner/data, API/Studio,
+independent financial/security/recovery verification. Root owns shared migrations
+and integration. No new domain or small successor milestone is opened.
+Functional closure precedes comparative benchmarks and production qualification.
+Main and both primary dirty files retain their original heads and SHA256 values.
+The historical checkpoints below remain original subjects, not current priorities.
+
 ## M3/M4 accepted; cohesive M5 source gate proceeds (2026-10-14)
 
 Current accepted dependency heads are M3 `18d81cc5` (CI62/62) and M4

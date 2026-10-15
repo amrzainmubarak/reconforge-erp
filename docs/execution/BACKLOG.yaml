@@ -1,7 +1,10 @@
 schema_version: 2
 updated_at: "2026-10-15"
-phase: "Phase 4 — Global Capability Expansion"
-active_sprint: "M6 f0 acceptance and PR138 publication closed; M7 native original source membership and corrected independent oracle integration; performance deferred"
+phase: "Enterprise ERP v1.0 — Functional Completion"
+active_sprint: "One-domain closure: M7 actual partial customer returns; then Advanced Manufacturing; no new fragmented milestones; comparative benchmarks deferred"
+completion_source_of_truth: "docs/execution/ENTERPRISE_COMPLETION_MASTER_MATRIX.md"
+major_domain_wip_limit: 1
+completion_status_values: [VERIFIED COMPLETE, INCOMPLETE, BLOCKED, NOT STARTED]
 snapshot:
   evidence_base_commit: "23fe490e3181eab020938c067c4f71a86521fee3"
   policy_change_commit: "the commit containing this file"

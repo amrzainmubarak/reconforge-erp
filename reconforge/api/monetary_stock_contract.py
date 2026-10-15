@@ -226,9 +226,11 @@ def project_monetary_stock(value: Any, scope: Mapping[str, Any]) -> dict[str, An
         origin = row["monetary_origin"]
         require(row["balance"]["transaction_original_gross_minor"] == origin["transaction_gross_minor"]
                 and row["balance"]["functional_original_gross_minor"] == origin["functional_gross_minor"])
+    require((row["collection"] is not None) == ("prepare-collection" in by_operation))
     if row["collection"] is not None:
         require(recognized)
         row["collection"] = _collection(row["collection"], identity)
+        require(row["collection"]["status"] == {"CollectionPrepared": "Prepared", "CollectionReviewed": "Reviewed"}.get(row["status"], "Posted"))
         require(row["collection"]["preparer_actor_id"] == by_operation["prepare-collection"]["actor_id"])
         if row["collection"]["status"] != "Prepared":
             require(row["collection"]["reviewer_actor_id"] == by_operation["review-collection"]["actor_id"])

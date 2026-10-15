@@ -174,10 +174,12 @@ export function parseMonetaryStock(value: unknown, scope: FinanceScope, id?: str
         || balance.functional_original_gross_minor !== source.functional_gross_minor) monetaryInvalid();
     row.balance = balance;
   }
+  if ((row.collection !== null) !== byOperation.has("prepare-collection")) monetaryInvalid();
   if (row.collection !== null) {
     if (!recognized) monetaryInvalid();
     const current = collection(row.collection, identity);
-    if (current.preparer_actor_id !== byOperation.get("prepare-collection")?.actor_id
+    const expectedStatus = row.status === "CollectionPrepared" ? "Prepared" : row.status === "CollectionReviewed" ? "Reviewed" : "Posted";
+    if (current.status !== expectedStatus || current.preparer_actor_id !== byOperation.get("prepare-collection")?.actor_id
         || current.status !== "Prepared" && current.reviewer_actor_id !== byOperation.get("review-collection")?.actor_id
         || current.status === "Posted" && current.posted_actor_id !== byOperation.get("collect")?.actor_id
         || current.status !== "Posted" && (row.balance as MonetaryBalanceFields).active_plan_id !== current.id) monetaryInvalid();
@@ -225,7 +227,28 @@ export function monetaryStockMatchesCommand(order: MonetaryStock, command: Prepa
   const expected: Record<string, string> = { submit: "Submitted", approve: "Approved", reserve: "Reserved", "issue/prepare": "IssuePrepared", "issue/review": "IssueReviewed", deliver: "Delivered",
     "invoice/prepare": "InvoicePrepared", "invoice/review": "InvoiceReviewed", "invoice/post": "Invoiced", "collection/prepare": "CollectionPrepared", "collection/review": "CollectionReviewed", cancel: "Cancelled" };
   if (!command.path.startsWith(`${monetaryStockRoot}/orders/${encodeURIComponent(order.id)}/`)) return false;
+  const operations: Record<string, string> = { "issue/prepare": "prepare-issue", "issue/review": "review-issue", "invoice/prepare": "prepare-invoice", "invoice/review": "review-invoice", "invoice/post": "invoice",
+    "collection/prepare": "prepare-collection", "collection/review": "review-collection", "collection/post": "collect" };
+  const event = order.events.at(-1);
+  if (!event || event.operation !== (operations[ending] ?? ending) || event.reason !== command.body.reason) return false;
+  if (ending === "invoice/prepare") {
+    const origin = order.monetary_origin, taxes = command.body.taxes;
+    if (!origin || origin.invoice_number !== "FX1-" + command.body.invoice_number
+        || (["invoice_date", "due_date", "journal_code", "period_id", "receivable_account_code", "revenue_account_code", "cash_account_code", "refund_liability_account_code", "gain_account_code", "loss_account_code", "country_code", "transaction_class"] as const).some(key => origin[key] !== command.body[key])
+        || !sameRate(origin.original_rate, command.body.original_rate) || !Array.isArray(taxes) || taxes.length !== origin.tax_components.length) return false;
+    const fields = ["policy_id", "country_code", "transaction_class", "effective_from", "effective_to", "rate", "account_code", "source", "version"] as const;
+    if (origin.tax_components.some((tax, index) => { const requested = taxes[index]; return !requested || typeof requested !== "object" || Array.isArray(requested) || fields.some(key => tax[key] !== requested[key]); })) return false;
+  }
+  if (ending === "collection/prepare") {
+    const collection = order.collection;
+    if (!collection || collection.receipt_number !== "FX1-" + command.body.receipt_number || collection.amount_minor !== command.body.amount_minor
+        || collection.receipt_date !== command.body.receipt_date || collection.period_id !== command.body.period_id || !sameRate(collection.settlement_rate, command.body.settlement_rate)) return false;
+  }
   return ending === "collection/post" ? ["Invoiced", "Paid"].includes(order.status) : Object.hasOwn(expected, ending) && order.status === expected[ending];
+}
+function sameRate(value: MonetaryRate | null, requested: unknown): boolean {
+  return value === null ? requested === null : Boolean(requested && typeof requested === "object" && !Array.isArray(requested)
+    && (["rate", "source", "effective_at"] as const).every(key => value[key] === (requested as Record<string, unknown>)[key]));
 }
 export async function executeMonetaryStockCommand(session: BrowserAdminSession, scope: FinanceScope, command: PreparedScopedCommand): Promise<MonetaryStock> {
   const result = parseMonetaryStock(await monetaryRequest(session, scope, command.path, command), scope);

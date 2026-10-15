@@ -132,6 +132,8 @@ export function monetaryPartialMatchesCommand(plan: MonetaryPartialPlan, command
   const root = monetaryPartialRoot;
   if (command.body.expected_plan_digest !== undefined && command.body.expected_plan_digest !== plan.plan_digest
       || command.body.expected_history_version !== undefined && command.body.expected_history_version !== plan.expected_history_version) return false;
+  if ((command.path === `${root}/plans` || command.path.endsWith("/refunds") || command.path.endsWith("/reversals"))
+      && (["period_id", "posting_date", "reason"] as const).some(key => plan[key] !== command.body[key])) return false;
   if (command.path === `${root}/plans`) return plan.operation === "Return" && plan.phase === 0 && plan.source_order_id === command.body.source_order_id && plan.quantity_scaled === command.body.quantity_scaled;
   if (command.path.endsWith("/refunds")) return plan.operation === "Refund" && plan.phase === 0 && plan.monetary.transaction_refund_minor === command.body.amount_minor
     && command.path === `${root}/plans/${plan.original_id}/refunds`;

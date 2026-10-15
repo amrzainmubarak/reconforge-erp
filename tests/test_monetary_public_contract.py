@@ -310,3 +310,35 @@ def test_monetary_balance_allows_refundable_credit_above_cash_residual_and_small
     assert project_monetary_partial_balance(raw, SCOPE) == raw
     raw.update(functional_refund_entitlement_minor="0", functional_refund_released_minor="0", functional_refund_due_minor="0")
     assert project_monetary_partial_balance(raw, SCOPE) == raw
+
+
+def collection_stock_fixture(phase: int) -> dict[str, Any]:
+    row = stock_fixture()
+    steps = [("prepare-collection", "CollectionPrepared", "maker"), ("review-collection", "CollectionReviewed", "checker"), ("collect", "Invoiced", "poster")]
+    row["events"] += [{"version": 11 + i, "actor_id": actor, "operation": operation, "reason": "Synthetic collection", "status": status, "audit_event_id": "cash-audit-" + str(i)}
+                      for i, (operation, status, actor) in enumerate(steps[:phase + 1])]
+    row.update(status=steps[phase][1], row_version=11 + phase)
+    row["collection"] = {"id": "collection-plan", "sequence": 1, "status": ("Prepared", "Reviewed", "Posted")[phase], "plan_digest": "d" * 64,
+        "amount_minor": "200", "functional_cash_minor": "260", "functional_receivable_released_minor": "250", "functional_fx_gain_minor": "10", "functional_fx_loss_minor": "0",
+        "settlement_rate": {**RATE, "rate": "1.3"}, "receipt_number": "FX1-SYNTHETIC-RECEIPT", "receipt_date": "2026-10-15", "period_id": "PERIOD",
+        "preparer_actor_id": "maker", "reviewer_actor_id": "checker" if phase > 0 else None, "posted_actor_id": "poster" if phase == 2 else None,
+        "entry_id": "collection-entry", "posting_effect_id": "collection-effect" if phase == 2 else None, "receipt_id": "native-receipt" if phase == 2 else None}
+    row["balance"]["active_plan_id"] = "collection-plan" if phase < 2 else None
+    if phase == 2:
+        row["balance"].update(transaction_collected_minor="200", transaction_outstanding_minor="1000", functional_outstanding_minor="1250")
+    return row
+
+
+@pytest.mark.parametrize("phase", [0, 1, 2])
+def test_current_collection_phase_and_presence_are_bound_to_actual_stock_event_history(phase: int) -> None:
+    raw = collection_stock_fixture(phase)
+    assert project_monetary_stock(raw, SCOPE) == raw
+    without_current = deepcopy(raw)
+    without_current["collection"] = None
+    with pytest.raises(MonetaryResponseError):
+        project_monetary_stock(without_current, SCOPE)
+    different = deepcopy(raw)
+    different["collection"].update(status="Prepared" if phase else "Reviewed", reviewer_actor_id=None if phase else "checker", posted_actor_id=None, posting_effect_id=None, receipt_id=None)
+    different["balance"]["active_plan_id"] = "collection-plan"
+    with pytest.raises(MonetaryResponseError):
+        project_monetary_stock(different, SCOPE)

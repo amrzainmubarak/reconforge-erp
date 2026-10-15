@@ -288,8 +288,9 @@ def _public() -> str:
 def _valuation_guard() -> str:
     value = ORIGINAL_FUNCTIONS["inventory_valuation_guard"]
     return _replace(value, "BEGIN\n", r"""BEGIN
- IF TG_TABLE_NAME='inventory_valuation_documents' AND TG_OP='UPDATE' AND OLD.status='Draft' AND NEW.status='Approved'
- AND NEW.total_value_minor=0 THEN
+ IF TG_TABLE_NAME='inventory_valuation_documents' THEN
+ IF TG_OP='UPDATE' THEN
+ IF OLD.status='Draft' AND NEW.status='Approved' AND NEW.total_value_minor=0 THEN
   PERFORM reconforge.customer_partial_return_zero_stock_active(NEW.tenant_id,NEW.id);
   IF NEW.finance_entry_id IS NOT NULL OR NEW.approved_by IS DISTINCT FROM(SELECT username FROM reconforge.identity_users
    WHERE tenant_id=NEW.tenant_id AND id=current_setting('app.stock_sales_actor_id',true))
@@ -303,6 +304,8 @@ def _valuation_guard() -> str:
     OR EXISTS(SELECT 1 FROM reconforge.inventory_layer_consumptions WHERE tenant_id=detail.tenant_id AND valuation_line_id=detail.id AND value_minor<>0))) THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Zero approved valuation requires its exact complete current native restitution issue';END IF;
   RETURN NEW;
+ END IF;
+ END IF;
  END IF;
 """)
 

@@ -51,7 +51,7 @@ MONETARY_SCHEMA_SQL = """WITH monetary_helpers AS (
         COALESCE(p.prorettype=pg_catalog.to_regtype(e.result_type) AND p.prokind='f'
           AND NOT p.proretset AND NOT p.prosecdef AND NOT p.proleakproof AND NOT p.proisstrict
           AND p.proparallel='u' AND p.pronargdefaults=0 AND p.proargnames=ARRAY['t','i']::text[]
-          AND l.lanname='plpgsql' AND p.provolatile='v' AND p.proconfig=ARRAY['search_path=pg_catalog']::text[]
+          AND l.lanname='plpgsql' AND p.provolatile='s' AND p.proconfig=ARRAY['search_path=pg_catalog']::text[]
           AND (SELECT COUNT(*) FROM monetary_helpers q WHERE q.proname=e.name)=1,FALSE)
     FROM expected_helpers e
     LEFT JOIN monetary_helpers p ON p.oid=pg_catalog.to_regprocedure('reconforge.'||e.name||'(text,text)')
@@ -61,7 +61,11 @@ MONETARY_SCHEMA_SQL = """WITH monetary_helpers AS (
 
 
 def monetary_return_schema(connection: Any) -> bool:
-    """Recheck all seven FORCE-RLS relations and both exact invoker helpers."""
+    """Recheck all seven FORCE-RLS relations and both exact STABLE invoker helpers.
+
+    Public reads share the calling statement's MVCC snapshot. Native mutation
+    closures must use their separate VOLATILE current-state implementation.
+    """
     row = connection.execute(MONETARY_SCHEMA_SQL).fetchone()
     try:
         profile = row["profile"] if isinstance(row, Mapping) else row[0]
@@ -93,8 +97,6 @@ def natural_minor_text(value: object, *, bounded: bool = True) -> int:
     if bounded and result > MAX_MINOR:
         raise PlatformError("Monetary-return evidence exceeds the original monetary bound.")
     return result
-
-
 BALANCE_MINOR_FIELDS = (
     "transaction_original_gross_minor", "functional_original_gross_minor",
     "transaction_collected_minor", "transaction_credited_minor",
@@ -131,27 +133,16 @@ def monetary_invoice_balance(value: object, *, total_minor: int, allocated_minor
     if (money["transaction_original_gross_minor"] <= 0 or money["functional_original_gross_minor"] <= 0
             or money["transaction_original_gross_minor"] != total_minor
             or money["transaction_collected_minor"] != allocated_minor
+            or allocated_minor > total_minor
             or not 0 <= credited <= total_minor
             or money["transaction_outstanding_minor"] != max(total_minor - allocated_minor - credited, 0)
             or money["transaction_refund_entitlement_minor"] != entitlement
             or money["transaction_refund_due_minor"] != entitlement - money["transaction_refunded_minor"]
             or money["functional_refund_due_minor"] != money["functional_refund_entitlement_minor"] - money["functional_refund_released_minor"]
+            or money["functional_refund_entitlement_minor"] > money["functional_original_gross_minor"]
             or (entitlement == 0 and money["functional_refund_entitlement_minor"] != 0)
             or (money["transaction_refunded_minor"] == 0 and money["functional_refund_released_minor"] != 0)
             or (money["transaction_outstanding_minor"] == 0 and money["functional_outstanding_minor"] != 0)
             or (money["transaction_refund_due_minor"] == 0 and money["functional_refund_due_minor"] != 0)):
         raise PlatformError("Original monetary invoice balance disagrees with actual AR authority or carrying conservation.")
     return result
-
-
-def read_monetary_invoice_balance(connection: Any, tenant_id: str, invoice_id: str,
-                                 *, total_minor: int, allocated_minor: int) -> dict[str, Any] | None:
-    """NULL means genuinely unowned; native helper must refuse hidden ownership."""
-    row = connection.execute("SELECT reconforge.monetary_stock_invoice_balance(%s,%s) AS value", (tenant_id, invoice_id)).fetchone()
-    if row is None:
-        raise PlatformError("Original monetary invoice balance query returned no evidence.")
-    try:
-        value = row["value"] if isinstance(row, Mapping) else row[0]
-    except (KeyError, IndexError, TypeError) as exc:
-        raise PlatformError("Original monetary invoice balance query is malformed.") from exc
-    return None if value is None else monetary_invoice_balance(value, total_minor=total_minor, allocated_minor=allocated_minor)

@@ -42,9 +42,9 @@ from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.infrastructure.postgres_monetary_receivables import (
+    monetary_invoice_balance,
     monetary_return_schema,
     natural_minor_text,
-    read_monetary_invoice_balance,
 )
 from reconforge.infrastructure.postgres_repository_scope import (
     PostgresRepositoryScopeError,
@@ -675,25 +675,37 @@ class PostgresReceivablesRepository:
             if partial else
             "SELECT id,workspace_id,organization_id,legal_entity_id,customer_id,invoice_number,invoice_date,due_date,currency_code,subtotal_minor,tax_minor,total_minor,status,created_by,approved_by,approved_at,credit_override_reason,cancelled_by,cancelled_at,cancel_reason,created_at,updated_at,row_version,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s"
         )
+        if monetary:
+            # Both additional expressions and the mutable header use ONE query
+            # snapshot. The public native projection is STABLE; a VOLATILE
+            # helper could otherwise observe a later collection than this SUM.
+            # The finite replacement operates only on the two literals above.
+            query = query.replace(" FROM reconforge.ar_invoices WHERE", ","
+                "(SELECT COALESCE(SUM(a.amount_minor),0)::text FROM reconforge.ar_receipt_allocations a WHERE a.tenant_id=ar_invoices.tenant_id AND a.invoice_id=ar_invoices.id) AS monetary_allocated_minor,"
+                "reconforge.monetary_stock_invoice_balance(ar_invoices.tenant_id,ar_invoices.id) AS monetary_owner_balance"
+                " FROM reconforge.ar_invoices WHERE")
         row = self.connection.execute(
             query,
             (self.tenant_id, invoice_id),
         ).fetchone()
         if row is None:
             raise PlatformError("Customer invoice not found.")
-        result = self._with_policy(_row(row, self._INVOICE + (("customer_partial_return_source_id",) if partial else ())))
+        columns = self._INVOICE + (("customer_partial_return_source_id",) if partial else ())
+        raw = _row(row, columns + (("monetary_allocated_minor", "monetary_owner_balance") if monetary else ()))
+        observed_allocated = raw.pop("monetary_allocated_minor", None)
+        observed_balance = raw.pop("monetary_owner_balance", None)
+        result = self._with_policy(raw)
         partial_source_id = result.pop("customer_partial_return_source_id", None)
         lines = self.connection.execute(
             "SELECT id,invoice_id,line_number,description,quantity_text,unit_price_minor,tax_minor,line_total_minor,created_at FROM reconforge.ar_invoice_lines WHERE tenant_id=%s AND invoice_id=%s ORDER BY line_number,id",
             (self.tenant_id, invoice_id),
         ).fetchall()
         result["lines"] = [_row(line, self._LINE) for line in lines]
-        result["allocated_minor"] = self._invoice_allocated(invoice_id)
+        result["allocated_minor"] = natural_minor_text(observed_allocated) if monetary else self._invoice_allocated(invoice_id)
         result["outstanding_minor"] = int(result["total_minor"]) - result["allocated_minor"]
-        balance_monetary = read_monetary_invoice_balance(
-            self.connection, self.tenant_id, invoice_id,
-            total_minor=result["total_minor"], allocated_minor=result["allocated_minor"],
-        ) if monetary else None
+        balance_monetary = monetary_invoice_balance(
+            observed_balance, total_minor=result["total_minor"], allocated_minor=result["allocated_minor"],
+        ) if observed_balance is not None else None
         if balance_monetary is not None:
             if partial_source_id is not None or result["status"] == "Cancelled":
                 raise PlatformError("Monetary invoice has conflicting original-source ownership or state.")

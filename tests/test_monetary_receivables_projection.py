@@ -142,6 +142,19 @@ def test_positive_foreign_entitlement_and_refund_may_have_zero_functional_value(
     assert monetary.monetary_invoice_balance(value, total_minor=1000, allocated_minor=800) == value
 
 
+@pytest.mark.parametrize("overcollection", [False, True])
+def test_cumulative_collection_and_functional_entitlement_cannot_exceed_original_gross(overcollection: bool) -> None:
+    value = balance()
+    collected = 800
+    if overcollection:
+        collected = 1001
+        value.update(transaction_collected_minor="1001", transaction_refund_entitlement_minor="401", transaction_refund_due_minor="351")
+    else:
+        value.update(functional_refund_entitlement_minor="1501", functional_refund_due_minor="1426")
+    with pytest.raises(PlatformError, match="carrying conservation"):
+        monetary.monetary_invoice_balance(value, total_minor=1000, allocated_minor=collected)
+
+
 @pytest.mark.parametrize("extra", [True, False])
 def test_balance_has_no_extension_or_implicit_integer_coercion(extra: bool) -> None:
     value = balance()
@@ -165,9 +178,6 @@ class MonetaryConnection(Connection):
         if query.startswith("WITH monetary_helpers AS"):
             self.calls.append((query, args))
             return Result({"profile": self.catalog})
-        if query.startswith("SELECT reconforge.monetary_stock_invoice_balance"):
-            self.calls.append((query, args))
-            return Result({"value": self.balance})
         if query.startswith("SELECT COALESCE(SUM(greatest"):
             self.calls.append((query, args))
             return Result((self.aggregate,))
@@ -178,6 +188,8 @@ class MonetaryConnection(Connection):
         result = super().execute(query, args)
         if query.startswith("SELECT id,workspace_id"):
             result.value["total_minor"] = 1000
+            if "AS monetary_owner_balance" in query:
+                result.value.update(monetary_allocated_minor="800", monetary_owner_balance=self.balance)
         if query.startswith("SELECT COALESCE(SUM(amount_minor),0)"):
             return Result((800,))
         return result
@@ -195,6 +207,14 @@ def test_actual_ar_reads_apply_credit_once_and_keep_foreign_units(monkeypatch: p
     invoice = project(repo, "invoice")
     assert (invoice["allocated_minor"], invoice["credited_minor"], invoice["refund_due_minor"], invoice["outstanding_minor"]) == (800, 400, 150, 0)
     assert "partial_return_source_id" not in invoice
+    assert not {"monetary_allocated_minor", "monetary_owner_balance"} & invoice.keys()
+    # Header/status/version, actual allocations and the STABLE public owner
+    # projection are captured by the same SQL command, with no parent UPDATE
+    # privilege or shared-lock upgrade introduced for read-only callers.
+    header = next(query for query, _ in connection.calls if query.startswith("SELECT id,workspace_id"))
+    assert "status," in header and "row_version," in header
+    assert "SUM(a.amount_minor)" in header and "reconforge.monetary_stock_invoice_balance(" in header
+    assert not any(query.startswith("SELECT COALESCE(SUM(amount_minor)") or "FOR SHARE" in query for query, _ in connection.calls)
     assert project(repo, "exposure") == 0
     assert project(repo, "aging")["items"] == []
     connection.credited = "100"
@@ -234,7 +254,7 @@ def test_native_visibility_refusal_is_never_treated_as_unowned(monkeypatch: pyte
     execute = connection.execute
 
     def deny(query: str, args: Any = None) -> Result:
-        if query.startswith("SELECT reconforge.monetary_stock_invoice_balance"):
+        if query.startswith("SELECT id,workspace_id") and "reconforge.monetary_stock_invoice_balance(" in query:
             raise RuntimeError("Native owner visibility refusal")
         return execute(query, args)
 

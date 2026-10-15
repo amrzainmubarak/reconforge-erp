@@ -392,6 +392,20 @@ def test_admin_read_audit_contract_binds_the_exact_route_permission(
         verify_audit_only_transition(before, after, tenant_id="tenant")
 
 
+@pytest.mark.parametrize("permission", [
+    "audit.read", "audit.verify", "users.manage", "roles.manage", "security.center.read", "security.policy.manage",
+])
+def test_admin_read_scoped_recheck_requires_its_exact_singleton_permission(permission: str) -> None:
+    # The GET handlers repeat central policy admission through the tenant/scoped helper.
+    before = audit_capture()
+    surface = "server.scoped:" + permission
+    after = audit_capture([policy_event(1, "0" * 64, surface=surface, permission=permission)])
+    assert verify_audit_only_transition(before, after, tenant_id="tenant")["appended_audit_events"] == 1
+    after = audit_capture([policy_event(1, "0" * 64, surface=surface, permission="finance_core.read")])
+    with pytest.raises(CycleRefusal):
+        verify_audit_only_transition(before, after, tenant_id="tenant")
+
+
 @pytest.mark.parametrize("attack", ["business-add", "business-change", "old-byte-mutation", "old-resealed-mutation", "sequence-gap",
     "forged-head", "head-sequence", "head-time", "foreign-tenant", "duplicate", "unrelated-action", "unrelated-surface",
     "wrong-permission", "unbound-actor", "wrong-actor-digest", "policy-digest", "request-digest", "bad-previous", "missing-head", "unknown-table"])

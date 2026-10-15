@@ -669,6 +669,7 @@ def _surface_contracts(tables: dict[str, tuple[str, ...]], post_plan_ids: set[st
             ("identity/sessions", "users.manage"), ("access/permissions", "roles.manage"), ("access/roles", "roles.manage"),
             ("security/integrations", "security.policy.manage"), ("security/retention-policies", "security.policy.manage")):
         surfaces["GET /api/v1/admin/" + suffix] = frozenset({permission})
+        surfaces["server.scoped:" + permission] = frozenset({permission})
     return {_text_digest("audit.surface", surface): permissions for surface, permissions in surfaces.items()}, actors
 
 

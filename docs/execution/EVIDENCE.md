@@ -1,5 +1,29 @@
 # ReconForge Execution Evidence Log
 
+## M7 actual zero-resale HTTPS and hostile SQL cohort — 2026-10-15
+
+Frozen373362a6 actual zero-resale HTTPS and populated restore pass243.031s;
+original report `m7-restituted-https-373362a6-v1/report.json`. Four captures and
+three observations each retain79 tables. Five real effects/10 lines/Dr=Cr203,
+no original resale COGS or fake zero journal, two source-owned returns and exact
+79-table/1518-row financial restore are independently verified. Fresh isolated
+proofs match596a72557c8b48d1e565442bdbe4dc4cd024b266990c56bb6eb68f72ff89128d.
+The old-return reversal is refused after actual consumption; ACK retry is safe.
+Browser1 expected/0 skipped/unexpected/flaky, source/build unchanged and owned
+runtime removed. Three tamper refusals and81 protected/81 tenant/77 workspace
+probes pass. Current authority is not inferred from this offline financial proof.
+
+The same frozen source executes new full5 hostile SQL cases plus affected mixed:
+5 PASS/1 FAIL/0 error/skip358.344s with unchanged source and owned-DB cleanup.
+Mixed and first4 security cases pass; fifth fails at observation SQL reserved
+alias day, before its intended backdate guard. Narrow test-only alias correction
+is unaccepted until its affected rerun. Original XML/logs remain in
+`m7-zero-stock-five-security-and-mixed-373362a6-v1-private`. The previous5f1
+negative remains separately retained. Full Ruff, mypy809 and Bandit succeed on
+373362a6; CI38749652508 is pending, not green. Ordinary9af independent original
+peer closes951737e5f81497dac9c833b981ce8c83e8d27c2be9fdd7e43b392d185ba50e5d.
+All of M7 remains open pending final cohesive acceptance and remaining cases.
+
 ## M7 actual v2 HTTPS and independently read zero resale — 2026-10-15
 
 Frozen9af22802 ordinary HTTPS/populated restore report passes in139.953s with

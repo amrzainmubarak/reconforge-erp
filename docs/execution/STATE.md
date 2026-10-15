@@ -2,6 +2,22 @@
 
 ## Completion first — one domain at a time (2026-10-15)
 
+Frozen373362a6 actual zero-resale HTTPS/populated restore passes243.031s:
+4 checkpoints/79 tables/2 sources,5 actual effects/10 lines/Dr=Cr203,
+3 later observations/76 valid audit appends and79 restored tables/1518 rows.
+The actual old-return dependency refusal, lost ACK, bilingual/RTL/Axe assertions,
+three tamper refusals and source/build/runtime cleanup pass. Isolated proof
+596a7255 is byte equal. Native full new5-security plus affected mixed executes
+5 PASS/1 FAIL/0 skips358.344s; mixed and first4 hostile cases pass. The fifth
+observation stops at reserved SQL alias day before the intended backdate check;
+its two-name test-only correction still needs execution. Root's full Ruff,
+mypy809 and Bandit pass. Draft139 now holds373362a6 and CI38749652508 is pending;
+this is not final acceptance. Remaining zero/refund HTTPS and final-head gates
+remain OPEN. Ordinary9af independent custody closes951737e5, preserving the
+original340-table restore and the distinct later identity_users probe checkpoint.
+
+Earlier scoped checkpoints follow without changing their original outcomes.
+
 Latest scoped evidence: ordinary-v2 HTTPS on frozen9af22802 passes3 posted
 returns, lost-response replay, bilingual/RTL/accessibility assertions and populated
 restore. Independent isolated readers agree on6 new effects/12 lines/Dr=Cr4001;

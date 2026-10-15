@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from tests.customer_partial_return_restituted_source_oracle import digest, verify_restituted_original
+from tests.customer_partial_return_restituted_source_oracle import OUTBOX_FIELDS, digest, verify_restituted_original
 
 
 def fixture() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
@@ -86,7 +86,8 @@ def fixture() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
         "head": {**scope, "id": "old-movement", "status": "Posted", "source_reference": "old-plan"},
         "lines": [{"tenant_id": "tenant", "movement_id": "old-movement", "quantity_scaled": 1}],
         "audit": [{"tenant_id": "tenant", "id": "audit"}],
-        "outbox": [{"tenant_id": "tenant", "event_id": "outbox"}],
+        "outbox": [{**scope, "event_id": "outbox", "event_type": "inventory.posted", "aggregate_type": "movement", "aggregate_id": "old-movement",
+                    "payload": {"movement_id": "old-movement"}, "created_at": "2026-10-14T00:00:00Z"}],
     }
     prior.update(
         customer_partial_return_sources=[old_source],
@@ -279,6 +280,8 @@ def test_resealed_boolean_before_value_is_not_an_integer_witness() -> None:
         "legacy-fingerprint",
         "proof-digest",
         "foreign-source",
+        "outbox-payload",
+        "outbox-extra-field",
     ],
 )
 def test_even_coherently_resealed_factual_admission_cannot_replace_actual_native_rows(attack: str) -> None:
@@ -319,6 +322,10 @@ def test_even_coherently_resealed_factual_admission_cannot_replace_actual_native
         payload["fingerprint_payload"]["contract"] = "customer-partial-return-domain-v1"
     elif attack == "foreign-source":
         proof["stock_order_id"] = "foreign-stock"
+    elif attack in {"outbox-payload", "outbox-extra-field"}:
+        native = proof["issue_plan"]["restitution_cost_snapshot"]["sources"][0]["partial_return_corrections"][0]["physical"]
+        native["outbox"] = [{**native["outbox"][0], **({"payload": {"forged": True}} if attack == "outbox-payload" else {"status": "Pending"})}]
+        issued["stock_sales_orders"][0]["issue_plan"] = copy.deepcopy(proof["issue_plan"])
     if attack == "proof-digest":
         payload["typed_source"]["original_cost_admission"]["evidence_digest"] = "e" * 64
     else:
@@ -327,3 +334,19 @@ def test_even_coherently_resealed_factual_admission_cannot_replace_actual_native
     source["source_fingerprint"] = digest(payload["fingerprint_payload"])
     with pytest.raises(ValueError):
         verify(prior, issued, source)
+
+
+def test_factual_outbox_projection_binds_all_ten_immutable_fields_to_full_original_row() -> None:
+    prior, issued, source = fixture()
+    captured = source["source_payload"]["original_source"]["cost_admission"]["issue_plan"]["restitution_cost_snapshot"]["sources"][0]["partial_return_corrections"][0]["physical"]
+    event = {**prior["outbox_events"][0],
+             "status": "Pending", "attempt_count": 0, "available_at": "2026-10-14T00:00:00Z", "claimed_at": None, "claimed_by": None,
+             "published_at": None, "last_error": None, "dead_lettered_at": None, "lease_generation": 0, "lease_generation_floor": 0}
+    prior["outbox_events"] = [event]
+    captured["outbox"] = [{key: event[key] for key in OUTBOX_FIELDS}]
+    proof = source["source_payload"]["original_source"]["cost_admission"]
+    issued["stock_sales_orders"][0]["issue_plan"] = copy.deepcopy(proof["issue_plan"])
+    source["source_payload"]["typed_source"]["original_cost_admission"] = {"evidence_digest": digest(proof)}
+    source["source_payload"]["fingerprint_payload"]["original_cost_admission"][1] = digest(proof)
+    source["source_fingerprint"] = digest(source["source_payload"]["fingerprint_payload"])
+    assert verify(prior, issued, source)["explicit_original_cost_admission"] is True

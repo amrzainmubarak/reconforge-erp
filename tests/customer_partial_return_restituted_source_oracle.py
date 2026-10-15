@@ -13,6 +13,8 @@ import json
 from typing import Any
 
 POLICY = "partial-return-restituted-v1"
+OUTBOX_FIELDS = frozenset({"tenant_id", "event_id", "event_type", "aggregate_type", "aggregate_id", "workspace_id",
+                           "organization_id", "legal_entity_id", "payload", "created_at"})
 
 
 def require(value: bool) -> None:
@@ -259,10 +261,14 @@ def verify_restituted_original(
     )
     require(
         all(row in prior["domain_audit_events"] for row in native["audit"])
-        and all(row in prior["outbox_events"] for row in native["outbox"])
         and native["audit"]
         and native["outbox"]
     )
+    # Native IT1 snapshots deliberately capture this closed immutable projection.
+    # The all-table original still retains the complete delivery row separately.
+    for captured in native["outbox"]:
+        retained = one(prior["outbox_events"], tenant_id=tenant_id, event_id=captured["event_id"])
+        require(set(captured) == OUTBOX_FIELDS and captured == {key: retained[key] for key in OUTBOX_FIELDS})
     typed = payload["typed_source"]
     require(
         typed["original_cogs"] is None

@@ -122,5 +122,5 @@ def test_actual_mixed_zero_original_consumption_keeps_one_real_total_cogs_effect
     assert [part["purpose"] for part in second["entries"]] == ["RevenueCredit", "CostRestoration"]
     with runtime.actor("maker") as (connection, _, actor):
         assert PostgresCustomerPartialReturnsRepository(connection, runtime.tenant, protocol_version=2).balance(sale["id"], SCOPE, actor=actor)["remaining_quantity_scaled"] == 0
-        originals = connection.execute("SELECT value_minor FROM reconforge.inventory_layer_consumptions consumed JOIN reconforge.inventory_valuation_lines detail ON(detail.tenant_id,detail.id)=(consumed.tenant_id,consumed.valuation_line_id) WHERE consumed.tenant_id=%s AND detail.valuation_document_id=%s ORDER BY consumed.value_minor", (runtime.tenant, sale["valuation_id"])).fetchall()
+        originals = connection.execute("SELECT consumed.value_minor FROM reconforge.inventory_layer_consumptions consumed JOIN reconforge.inventory_valuation_lines detail ON(detail.tenant_id,detail.id)=(consumed.tenant_id,consumed.valuation_line_id) WHERE consumed.tenant_id=%s AND detail.valuation_document_id=%s ORDER BY consumed.value_minor", (runtime.tenant, sale["valuation_id"])).fetchall()
         assert [row["value_minor"] for row in originals] == [0, 10]

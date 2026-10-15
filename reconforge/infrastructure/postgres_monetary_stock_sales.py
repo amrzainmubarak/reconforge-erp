@@ -128,6 +128,18 @@ class PostgresMonetaryStockSalesRepository(PostgresStockSalesRepository):
     def _issue_money(self, row: Mapping[str, Any]) -> tuple[str, Mapping[str, Any]]:
         return row["source"]["functional_policy"]["currency_code"], row["source"]["functional_policy"]
 
+    def _restituted_cost(self, row: Mapping[str, Any], allocations: list[dict[str, Any]]) -> Any:
+        return self._one("SELECT reconforge.monetary_stock_zero_cost(%s,%s,%s,%s,%s,%s::jsonb) value",
+            (self.tenant_id, row["workspace_id"], row["organization_id"], row["legal_entity_id"], row["item_id"], canonical_json(allocations)))["value"]
+
+    def _issue_authority(self, row: Mapping[str, Any], total: int, cost_snapshot: Any, actor: PostingActor) -> None:
+        if type(total) is not int or total < 0 or (total == 0 and cost_snapshot is None):
+            _fail("evidence_invalid", "Zero functional issue cost requires its actual owned restitution evidence.")
+        issue: dict[str, Any] = {"total_cost_minor": total}
+        if cost_snapshot is not None:
+            issue["cost_admission_policy"] = "partial-return-restituted-v1"
+        self._actor(actor, "prepare-issue", {**row, "issue_plan": issue})
+
     def _request(self, identifier: str, operation: str, parameters: Mapping[str, Any], actor: PostingActor) -> dict[str, Any]:
         return {**super()._request(identifier, operation, parameters, actor), "protocol_version": 2}
 

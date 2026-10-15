@@ -294,6 +294,13 @@ class PostgresStockSalesRepository:
         """Default single-currency interpretation; fixed new owners override it."""
         return str(row["currency_code"]), row["source"]["monetary_policy"]
 
+    def _restituted_cost(self, row: Mapping[str, Any], allocations: list[dict[str, Any]]) -> Any:
+        return self._one("SELECT reconforge.customer_partial_return_zero_stock_cost(%s,%s,%s,%s,%s,%s::jsonb) value",
+            (self.tenant_id, row["workspace_id"], row["organization_id"], row["legal_entity_id"], row["item_id"], canonical_json(allocations)))["value"]
+
+    def _issue_authority(self, row: Mapping[str, Any], total: int, cost_snapshot: Any, actor: PostingActor) -> None:
+        self._actor(actor, "prepare-issue", {**row, "total_minor": max(row["total_minor"], total)})
+
     def _prepare_issue(self, row: Mapping[str, Any], parameters: Mapping[str, Any], actor: PostingActor) -> dict[str, Any]:
         request = StockIssuePreparation(**dict(parameters)).payload()
         valuation_currency, quoted = self._issue_money(row)
@@ -337,9 +344,8 @@ class PostgresStockSalesRepository:
                          and part["value_minor"] == part["remaining_value_minor"]) for part in allocations)
         cost_snapshot = None
         if restituted:
-            cost_snapshot = self._one("SELECT reconforge.customer_partial_return_zero_stock_cost(%s,%s,%s,%s,%s,%s::jsonb) value",
-                (self.tenant_id, row["workspace_id"], row["organization_id"], row["legal_entity_id"], row["item_id"], canonical_json(allocations)))["value"]
-        self._actor(actor, "prepare-issue", {**row, "total_minor": max(row["total_minor"], total)})
+            cost_snapshot = self._restituted_cost(row, allocations)
+        self._issue_authority(row, total, cost_snapshot, actor)
         number = "SS1-" + digest_payload([self.tenant_id, row["id"]])[:32].upper()
         entry_id = platform_id("GLE", row["workspace_id"], number) if total > 0 else None
         plan = {"schema_version": "stock-sales-issue-v2" if restituted else "stock-sales-issue-v1", "preparer_actor_id": actor.user_id, "preparer_username": actor.username,

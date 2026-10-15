@@ -239,3 +239,26 @@ def test_pending_native_fx_plan_publishes_only_existing_origin_pending_identity(
     assert len(calls) == int(origin_exists)
     if origin_exists:
         assert "monetary_stock_refresh_balance" in calls[0][0] and calls[0][1] == ("tenant", "stock")
+
+
+@pytest.mark.parametrize("total", [7, 7000])
+def test_prospective_issue_authorizes_actual_functional_cost_separately_before_claim_birth(total: int, monkeypatch: pytest.MonkeyPatch) -> None:
+    owner = object.__new__(PostgresMonetaryStockSalesRepository)
+    owner.scope = {"workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity"}
+    calls = []
+    owner.ops = SimpleNamespace(_actor=lambda actor, permission, scope, **kwargs: calls.append((scope["amount_minor"], scope["currency_precision"])))  # type: ignore[assignment]
+    owner.connection = SimpleNamespace(execute=lambda *args: None)
+    monkeypatch.setattr(owner, "_authority_locks", lambda *args: None)
+    monkeypatch.setattr(owner, "_origin", lambda identifier: None)
+    row = source_row()
+    row["issue_plan"] = None
+    owner._issue_authority(row, total, None, PostingActor("actor", "human", frozenset()))
+    assert set(calls) == {(1000, 2), (500, 2), (total, 3)}
+
+
+@pytest.mark.parametrize("cost", [False, -1, 0])
+def test_prospective_zero_issue_has_no_missing_native_evidence_or_boolean_cost_fallback(cost: Any) -> None:
+    owner = object.__new__(PostgresMonetaryStockSalesRepository)
+    with pytest.raises(FinancePostingError) as caught:
+        owner._issue_authority(source_row(), cost, None, PostingActor("actor", "human", frozenset()))
+    assert caught.value.code == "stock_monetary_evidence_invalid"

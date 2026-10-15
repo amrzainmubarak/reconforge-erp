@@ -26,9 +26,10 @@ def add_gl(rows: dict[str, list[dict[str, Any]]], number: str, lines: tuple[tupl
     header = {"tenant_id": "tenant", "id": number, "entry_number": number, "workspace_id": "work", "journal_id": "journal", "period_id": "period",
               "currency_code": "USD", "currency_precision": 2, "currency_rounding_policy": "ROUND_HALF_UP", "currency_registry_version": "captured",
               "currency_registry_digest": "d" * 64, "preparer_actor_id": "maker", "source_type": "Manual", "external_reference": number,
-              "reverses_posting_id": None, "status": "Validated", "total_debit_minor": sum(d for _, d, _c in lines), "total_credit_minor": sum(c for _, _d, c in lines)}
+              "reverses_posting_id": None, "posting_date": "2026-10-14", "description": number, "status": "Validated", "total_debit_minor": sum(d for _, d, _c in lines), "total_credit_minor": sum(c for _, _d, c in lines)}
     sealed = {"entry": {key: value for key, value in header.items() if key not in {"tenant_id", "status", "total_debit_minor", "total_credit_minor"}},
               "schema_version": "finance-entry-review-v1", "lines": []}
+    sealed["entry"].update(organization_id="org", legal_entity_id="entity")
     for index, (code, debit, credit) in enumerate(lines, 1):
         row = {"tenant_id": "tenant", "id": number + "-line-" + str(index), "entry_id": number, "line_number": index,
                "account_id": code, "debit_minor": debit, "credit_minor": credit}
@@ -37,7 +38,9 @@ def add_gl(rows: dict[str, list[dict[str, Any]]], number: str, lines: tuple[tupl
     digest = reader.base._digest(sealed)
     header["validation_digest"] = digest
     rows["finance_entries"].append(header)
-    rows["finance_posting_effects"].append({"tenant_id": "tenant", "id": number + "-effect", "entry_id": number, "snapshot_json": sealed, "validation_digest": digest})
+    rows["finance_posting_effects"].append({"tenant_id": "tenant", "id": number + "-effect", "entry_id": number, "snapshot_json": sealed, "validation_digest": digest,
+                                            "workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity",
+                                            **{key: header[key] for key in ("currency_code", "currency_precision", "currency_rounding_policy", "currency_registry_version", "currency_registry_digest")}})
     return {"entry_id": number, "purpose": "RevenueCredit", "snapshot": sealed, "validation_digest": digest}
 
 
@@ -63,6 +66,7 @@ def fixture() -> dict[str, Any]:
     old_source = prior["customer_partial_return_sources"][0]
     old_source["original_cogs_effect_id"] = "old-cogs-effect"
     old_source.update(original_quantity_scaled=3, gross_minor=1, initial_collected_minor=0)
+    old_source.update(currency_code="USD", currency_precision=2, currency_rounding_policy="ROUND_HALF_UP", currency_registry_version="captured", currency_registry_digest="d" * 64)
     fingerprint = {"contract": "customer-partial-return-domain-v1"}
     old_source.update(source_fingerprint=reader.base._digest(fingerprint), source_payload={"allocation_policy": "remaining-original-v1", "typed_source": {}, "fingerprint_payload": fingerprint})
     plan = prior["customer_partial_return_plans"][0]
@@ -169,6 +173,24 @@ def test_balanced_hundred_minor_effect_cannot_replace_the_real_resale_invoice_ow
     value = fixture()
     tables = value["captures"][2]["tables"]
     tables["operational_finance_links"] = [json.dumps({"tenant_id": "tenant", "plan_id": "resale-invoice-plan", "posting_effect_id": "old-cogs-effect"})]
+    with pytest.raises(ValueError):
+        reader.qualify_raw_cycle(value)
+
+
+def test_coherently_resealed_foreign_currency_receipt_cannot_enter_single_currency_totals() -> None:
+    value = fixture()
+    for capture in value["captures"]:
+        tables = capture["tables"]
+        effects = [json.loads(text) for text in tables["finance_posting_effects"]]
+        receipt = next(row for row in effects if row["entry_id"] == "receipt")
+        receipt["currency_code"] = "EUR"
+        receipt["snapshot_json"]["entry"]["currency_code"] = "EUR"
+        receipt["validation_digest"] = reader.base._digest(receipt["snapshot_json"])
+        entries = [json.loads(text) for text in tables["finance_entries"]]
+        entry = next(row for row in entries if row["id"] == "receipt")
+        entry.update(currency_code="EUR", validation_digest=receipt["validation_digest"])
+        tables["finance_posting_effects"] = sorted(json.dumps(row, sort_keys=True) for row in effects)
+        tables["finance_entries"] = sorted(json.dumps(row, sort_keys=True) for row in entries)
     with pytest.raises(ValueError):
         reader.qualify_raw_cycle(value)
 

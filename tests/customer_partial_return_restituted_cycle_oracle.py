@@ -45,7 +45,7 @@ def _unchanged_rows(before: dict[str, tuple[str, ...]], after: dict[str, tuple[s
         require(set(before[name]).issubset(after[name]))
 
 
-def _ledger(rows: dict[str, list[dict[str, Any]]]) -> tuple[int, int, int, dict[str, int]]:
+def _ledger(rows: dict[str, list[dict[str, Any]]], source: dict[str, Any]) -> tuple[int, int, int, dict[str, int]]:
     accounts = {row["id"]: row["account_code"] for row in rows["finance_accounts"]}
     require(len(accounts) == len(rows["finance_accounts"]))
     balances = dict.fromkeys(ACCOUNT_BALANCES, 0)
@@ -54,6 +54,9 @@ def _ledger(rows: dict[str, list[dict[str, Any]]]) -> tuple[int, int, int, dict[
     require(len(rows["finance_entries"]) == len(effects))
     count = debit = 0
     for effect in effects:
+        for key in ("workspace_id", "organization_id", "legal_entity_id", "currency_code", "currency_precision", "currency_rounding_policy",
+                    "currency_registry_version", "currency_registry_digest"):
+            require(effect[key] == source[key])
         entry = base._one(rows["finance_entries"], id=effect["entry_id"])
         lines = sorted((row for row in rows["finance_entry_lines"] if row["entry_id"] == entry["id"]), key=lambda row: integer(row["line_number"]))
         snapshot = effect["snapshot_json"]
@@ -63,8 +66,11 @@ def _ledger(rows: dict[str, list[dict[str, Any]]]) -> tuple[int, int, int, dict[
                 and type(snapshot["lines"]) is list and len(snapshot["lines"]) == len(lines) > 0
                 and [row["line_number"] for row in lines] == list(range(1, len(lines) + 1)))
         require(snapshot["entry"]["id"] == entry["id"])
+        require(all(snapshot["entry"][key] == source[key] for key in ("organization_id", "legal_entity_id")))
+        require(all(entry[key] == source[key] for key in ("workspace_id", "currency_code", "currency_precision", "currency_rounding_policy",
+                                                         "currency_registry_version", "currency_registry_digest")))
         for key in ("entry_number", "workspace_id", "journal_id", "period_id", "currency_code", "currency_precision", "currency_rounding_policy",
-                    "currency_registry_version", "currency_registry_digest", "preparer_actor_id", "source_type", "external_reference", "reverses_posting_id"):
+                    "currency_registry_version", "currency_registry_digest", "posting_date", "description", "preparer_actor_id", "source_type", "external_reference", "reverses_posting_id"):
             require(snapshot["entry"][key] == entry[key])
         left = right = 0
         for observed, sealed in zip(lines, snapshot["lines"], strict=True):
@@ -169,7 +175,7 @@ def qualify_raw_cycle(packet: dict[str, Any]) -> dict[str, Any]:
         {**ACCOUNT_BALANCES, "AR": 101, "REVENUE": -101}, {**ACCOUNT_BALANCES},
     ]
     for index, rows in enumerate(stages):
-        effects, lines, debit, balances = _ledger(rows)
+        effects, lines, debit, balances = _ledger(rows, old_source)
         require((effects, lines, debit) == ((3, 6, 3), (3, 6, 3), (4, 8, 103), (5, 10, 203))[index]
                 and balances == expected_balances[index])
         layer = base._one(rows["inventory_cost_layers"], id=old_consumptions[0]["cost_layer_id"])

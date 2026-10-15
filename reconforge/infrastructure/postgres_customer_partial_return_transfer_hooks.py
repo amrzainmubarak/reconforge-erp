@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Mapping
 from typing import Any
 
 from reconforge.infrastructure.postgres_inventory_transfer_schema import OWNER_SQL
@@ -256,6 +257,7 @@ def install_postgres_customer_partial_return_transfer_hooks(connection: Any) -> 
     row = connection.execute("SELECT to_regclass('reconforge.customer_partial_return_restorations') owner_relation").fetchone()
     if row is None:
         raise RuntimeError("Native partial-return installation lookup failed")
-    if row["owner_relation"] is None:
+    owner_relation = row["owner_relation"] if isinstance(row, Mapping) else row[0]
+    if owner_relation is None:
         return
     connection.execute(UPGRADE_SQL)

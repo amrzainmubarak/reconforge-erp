@@ -86,6 +86,15 @@ def policy(value: Any) -> dict[str, Any]:
     return row
 
 
+def paired_policies(transaction: Any, functional: Any) -> tuple[dict[str, Any], dict[str, Any]]:
+    first, second = policy(transaction), policy(functional)
+    require(first["currency_registry_version"] == second["currency_registry_version"]
+            and first["currency_registry_digest"] == second["currency_registry_digest"])
+    if first["currency_code"] == second["currency_code"]:
+        require(first == second)
+    return first, second
+
+
 def rate(value: Any, *, day: str, identity: bool) -> dict[str, Any] | None:
     if identity:
         require(value is None)
@@ -98,7 +107,7 @@ def rate(value: Any, *, day: str, identity: bool) -> dict[str, Any] | None:
     return row
 
 
-def balance_fields(row: Mapping[str, Any]) -> None:
+def balance_fields(row: Mapping[str, Any], *, identity: bool = False) -> None:
     integer(row["history_version"], maximum=256)
     digest(row["history_fingerprint"])
     amounts = {name: minor(value) for name, value in row.items() if name.endswith("_minor")}
@@ -106,9 +115,21 @@ def balance_fields(row: Mapping[str, Any]) -> None:
         text(row[key], nullable=True)
     require(amounts["transaction_original_gross_minor"] > 0 and amounts["functional_original_gross_minor"] > 0)
     require(amounts["transaction_credited_minor"] <= amounts["transaction_original_gross_minor"])
+    residual = amounts["transaction_original_gross_minor"] - amounts["transaction_collected_minor"] - amounts["transaction_credited_minor"]
+    require(amounts["transaction_outstanding_minor"] == max(residual, 0)
+            and amounts["transaction_refund_entitlement_minor"] == max(-residual, 0))
     require(amounts["transaction_refunded_minor"] <= amounts["transaction_refund_entitlement_minor"]
             and amounts["functional_refund_released_minor"] <= amounts["functional_refund_entitlement_minor"])
     require(amounts["transaction_refund_due_minor"] == amounts["transaction_refund_entitlement_minor"] - amounts["transaction_refunded_minor"]
             and amounts["functional_refund_due_minor"] == amounts["functional_refund_entitlement_minor"] - amounts["functional_refund_released_minor"])
+    require((amounts["transaction_outstanding_minor"] != 0 or amounts["functional_outstanding_minor"] == 0)
+            and (amounts["transaction_refund_due_minor"] != 0 or amounts["functional_refund_due_minor"] == 0))
+    if identity:
+        for first, second in (("transaction_original_gross_minor", "functional_original_gross_minor"),
+                              ("transaction_outstanding_minor", "functional_outstanding_minor"),
+                              ("transaction_refund_entitlement_minor", "functional_refund_entitlement_minor"),
+                              ("transaction_refund_due_minor", "functional_refund_due_minor"),
+                              ("transaction_refunded_minor", "functional_refund_released_minor")):
+            require(amounts[first] == amounts[second])
     # Collection admission is prefix-time and native-owned. Do not impose the
     # incorrect final-state C <= G predicate after governed credit/refund history.

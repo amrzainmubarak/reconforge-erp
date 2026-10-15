@@ -12,7 +12,7 @@ from reconforge.api.monetary_public_contract import (
     digest,
     integer,
     minor,
-    policy,
+    paired_policies,
     require,
     scope_of,
     text,
@@ -66,8 +66,8 @@ def project_monetary_partial_plan(value: Any, scope: Mapping[str, Any]) -> dict[
     integer(row["phase"], maximum=3)
     phase = row["phase"]
     require(row["status"] == ("Prepared", "Reviewed", "Posted", "Cancelled")[phase])
-    row["transaction_policy"] = policy(row["transaction_policy"])
-    row["functional_policy"] = policy(row["functional_policy"])
+    row["transaction_policy"], row["functional_policy"] = paired_policies(row["transaction_policy"], row["functional_policy"])
+    identity = row["transaction_policy"]["currency_code"] == row["functional_policy"]["currency_code"]
     is_return = operation in {"Return", "ReverseReturn"}
     quantity = minor(row["quantity_scaled"], positive=is_return)
     if not is_return:
@@ -98,6 +98,9 @@ def project_monetary_partial_plan(value: Any, scope: Mapping[str, Any]) -> dict[
         for prefix in ("transaction", "functional"):
             require(numbers[prefix + "_credit_minor"] == numbers[prefix + "_net_minor"] + numbers[prefix + "_tax_minor"])
         require(numbers["transaction_credit_minor"] == numbers["transaction_receivable_released_minor"] + numbers["transaction_refund_delta_minor"])
+        for first, second in (("transaction_receivable_released_minor", "functional_receivable_released_minor"),
+                              ("transaction_refund_delta_minor", "functional_refund_delta_minor")):
+            require(numbers[first] != 0 or numbers[second] == 0)
         turnover = numbers["functional_credit_minor"] + numbers["functional_alignment_loss_minor"]
         require(turnover == numbers["functional_receivable_released_minor"] + numbers["functional_refund_delta_minor"] + numbers["functional_alignment_gain_minor"])
         require(numbers["functional_turnover_minor"] == turnover + numbers["functional_cost_minor"])
@@ -111,6 +114,14 @@ def project_monetary_partial_plan(value: Any, scope: Mapping[str, Any]) -> dict[
         require(turnover == numbers["functional_cash_minor"] + numbers["functional_fx_gain_minor"]
                 and numbers["functional_turnover_minor"] == turnover)
         purposes = (["ReverseRefund" if operation == "ReverseRefund" else "Refund"] if turnover else [])
+    if identity:
+        pairs = (("transaction_net_minor", "functional_net_minor"), ("transaction_tax_minor", "functional_tax_minor"),
+                 ("transaction_credit_minor", "functional_credit_minor"), ("transaction_receivable_released_minor", "functional_receivable_released_minor"),
+                 ("transaction_refund_delta_minor", "functional_refund_delta_minor"), ("transaction_refund_minor", "functional_refund_released_minor"))
+        require(all(numbers[first] == numbers[second] for first, second in pairs))
+        require(all(numbers[key] == 0 for key in ("functional_fx_gain_minor", "functional_fx_loss_minor", "functional_alignment_gain_minor", "functional_alignment_loss_minor")))
+        if not is_return:
+            require(numbers["functional_cash_minor"] == numbers["transaction_refund_minor"])
     entries = row["entries"]
     require(type(entries) is list and len(entries) == len(purposes))
     checked = []
@@ -139,8 +150,8 @@ def project_monetary_partial_balance(value: Any, scope: Mapping[str, Any]) -> di
     original = minor(row["original_quantity_scaled"], positive=True)
     returned, remaining = minor(row["returned_quantity_scaled"]), minor(row["remaining_quantity_scaled"])
     require(returned + remaining == original)
-    row["transaction_policy"], row["functional_policy"] = policy(row["transaction_policy"]), policy(row["functional_policy"])
-    balance_fields(row)
+    row["transaction_policy"], row["functional_policy"] = paired_policies(row["transaction_policy"], row["functional_policy"])
+    balance_fields(row, identity=row["transaction_policy"]["currency_code"] == row["functional_policy"]["currency_code"])
     return row
 
 

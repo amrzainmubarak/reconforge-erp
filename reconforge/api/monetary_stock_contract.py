@@ -13,7 +13,7 @@ from reconforge.api.monetary_public_contract import (
     digest,
     integer,
     minor,
-    policy,
+    paired_policies,
     rate,
     require,
     scope_of,
@@ -118,6 +118,10 @@ def _collection(value: Any, identity: bool) -> dict[str, Any]:
     require(amounts["functional_fx_gain_minor"] == 0 or amounts["functional_fx_loss_minor"] == 0)
     turnover = amounts["functional_cash_minor"] + amounts["functional_fx_loss_minor"]
     require(turnover == amounts["functional_receivable_released_minor"] + amounts["functional_fx_gain_minor"])
+    if identity:
+        require(amounts["functional_cash_minor"] == amounts["amount_minor"]
+                and amounts["functional_receivable_released_minor"] == amounts["amount_minor"]
+                and amounts["functional_fx_gain_minor"] == amounts["functional_fx_loss_minor"] == 0)
     require((row["entry_id"] is None) == (turnover == 0))
     require(row["status"] in ("Prepared", "Reviewed", "Posted"))
     reviewed, posted = row["status"] != "Prepared", row["status"] == "Posted"
@@ -153,7 +157,7 @@ def project_monetary_stock(value: Any, scope: Mapping[str, Any]) -> dict[str, An
                 and str(quote["line_total_minor"]) == row["transaction_net_minor"])
     except (FinancePostingError, TypeError, ValueError) as exc:
         raise MonetaryResponseError("The original stock quantity could not be verified.") from exc
-    row["transaction_policy"], row["functional_policy"] = policy(row["transaction_policy"]), policy(row["functional_policy"])
+    row["transaction_policy"], row["functional_policy"] = paired_policies(row["transaction_policy"], row["functional_policy"])
     identity = row["transaction_policy"]["currency_code"] == row["functional_policy"]["currency_code"]
     for key in ("approved_by", "issue_preparer_id", "issue_reviewer_id", "cogs_entry_id", "cogs_effect_id", "movement_id", "valuation_id"):
         text(row[key], nullable=True)
@@ -218,7 +222,7 @@ def project_monetary_stock(value: Any, scope: Mapping[str, Any]) -> dict[str, An
     if recognized:
         row["balance"] = closed(row["balance"], BALANCE)
         require(row["balance"]["schema_version"] == "stock-monetary-balance-v1")
-        balance_fields(row["balance"])
+        balance_fields(row["balance"], identity=identity)
         origin = row["monetary_origin"]
         require(row["balance"]["transaction_original_gross_minor"] == origin["transaction_gross_minor"]
                 and row["balance"]["functional_original_gross_minor"] == origin["functional_gross_minor"])

@@ -2,9 +2,9 @@
 
 from collections.abc import Callable
 from datetime import date
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from pydantic import Field, field_validator
 
 from reconforge.api.errors import APIError
@@ -21,11 +21,16 @@ from reconforge.application.stock_sales import StockSalesApplicationService
 from reconforge.auth.models import LocalUser
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor
 from reconforge.domain.stock_sales import StockOrder
-from reconforge.infrastructure.postgres_monetary_stock_sales import PostgresMonetaryStockSalesRepository
-from reconforge.infrastructure.postgres_stock_sales import OPERATION_PERMISSIONS, READ
+from reconforge.infrastructure.postgres_monetary_stock_sales import (
+    OPERATION_PERMISSIONS,
+    READ,
+    PostgresMonetaryStockSalesRepository,
+)
 from reconforge.platform.common import current_server_principal
 
 router = APIRouter(prefix="/stock-sales", tags=["stock-sales-monetary"])
+CollectionMaker = Annotated[LocalUser, Depends(legacy._required(OPERATION_PERMISSIONS["prepare-collection"]))]
+CollectionReviewer = Annotated[LocalUser, Depends(legacy._required(OPERATION_PERMISSIONS["review-collection"]))]
 
 
 class OrderRequest(legacy.OrderRequest):
@@ -197,12 +202,12 @@ def invoice(identifier: str, request: Request, body: legacy.TransitionRequest, u
 
 
 @router.post("/orders/{identifier}/collection/prepare")
-def prepare_collection(identifier: str, request: Request, body: CollectionRequest, user: legacy.CollectionMaker) -> dict[str, Any]:
+def prepare_collection(identifier: str, request: Request, body: CollectionRequest, user: CollectionMaker) -> dict[str, Any]:
     return _transition(request, user, identifier, "prepare-collection", body)
 
 
 @router.post("/orders/{identifier}/collection/review")
-def review_collection(identifier: str, request: Request, body: legacy.TransitionRequest, user: legacy.CollectionReviewer) -> dict[str, Any]:
+def review_collection(identifier: str, request: Request, body: legacy.TransitionRequest, user: CollectionReviewer) -> dict[str, Any]:
     return _transition(request, user, identifier, "review-collection", body)
 
 

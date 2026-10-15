@@ -216,3 +216,66 @@ def test_public_page_projection_is_closed_and_duplicate_ids_cannot_hide_commands
     for raw in ({"plans": [partial_fixture(), partial_fixture()]}, {"plan": partial_fixture(), "private": {}}, {"plans": [stock_fixture()]}):
         with pytest.raises(MonetaryResponseError):
             project_monetary_partial_response(raw, SCOPE)
+
+
+def partial_balance_fixture() -> dict[str, Any]:
+    return {**monetary_balance(), **SCOPE, "schema_version": "customer-partial-return-monetary-balance-v3", "source_id": "origin",
+        "source_order_id": "monetary-stock", "invoice_id": "invoice", "source_fingerprint": "c" * 64,
+        "transaction_policy": captured_policy("EUR"), "functional_policy": captured_policy("USD"), "quantity_precision": 0,
+        "original_quantity_scaled": "10", "returned_quantity_scaled": "2", "remaining_quantity_scaled": "8"}
+
+
+@pytest.mark.parametrize("field,value", [("transaction_outstanding_minor", "1199"), ("transaction_refund_entitlement_minor", "1"),
+                                         ("functional_outstanding_minor", "1"), ("functional_refund_due_minor", "1")])
+def test_balance_checks_foreign_equations_and_zero_residual_carrying_money(field: str, value: str) -> None:
+    raw = partial_balance_fixture()
+    if field.startswith("functional"):
+        raw.update(transaction_credited_minor="1200", transaction_outstanding_minor="0", functional_outstanding_minor="0")
+        if field == "functional_refund_due_minor":
+            raw["functional_refund_entitlement_minor"] = "1"
+    raw[field] = value
+    with pytest.raises(MonetaryResponseError):
+        project_monetary_partial_balance(raw, SCOPE)
+
+
+def test_same_currency_balances_cannot_publish_different_carrying_amounts() -> None:
+    raw = partial_balance_fixture()
+    raw["transaction_policy"] = captured_policy("USD")
+    # Every foreign equation remains coherent. The retained policies instead
+    # prove identity currency, where 1200 cannot be carried as 1500.
+    with pytest.raises(MonetaryResponseError):
+        project_monetary_partial_balance(raw, SCOPE)
+    raw.update(functional_original_gross_minor="1200", functional_outstanding_minor="1200")
+    assert project_monetary_partial_balance(raw, SCOPE) == raw
+    raw.update(transaction_collected_minor="1200", transaction_credited_minor="600", transaction_outstanding_minor="0", functional_outstanding_minor="0",
+        transaction_refund_entitlement_minor="600", functional_refund_entitlement_minor="601", transaction_refunded_minor="100", functional_refund_released_minor="101",
+        transaction_refund_due_minor="500", functional_refund_due_minor="500")
+    with pytest.raises(MonetaryResponseError):
+        project_monetary_partial_balance(raw, SCOPE)
+    raw.update(functional_refund_entitlement_minor="600", functional_refund_released_minor="100")
+    assert project_monetary_partial_balance(raw, SCOPE) == raw
+
+
+def test_source_captured_policies_cannot_mix_registry_versions_or_identity_precision() -> None:
+    raw = stock_fixture(0)
+    raw["functional_policy"]["currency_registry_version"] = "other"
+    with pytest.raises(MonetaryResponseError):
+        project_monetary_stock(raw, SCOPE)
+    raw = stock_fixture(0)
+    raw["transaction_policy"] = captured_policy("USD")
+    raw["functional_policy"]["currency_precision"] = 3
+    with pytest.raises(MonetaryResponseError):
+        project_monetary_stock(raw, SCOPE)
+
+
+def test_identity_merchandise_credit_cannot_report_fx_or_mismatched_currency_amounts() -> None:
+    raw = partial_fixture()
+    raw["transaction_policy"] = captured_policy("USD")
+    with pytest.raises(MonetaryResponseError):
+        project_monetary_partial_plan(raw, SCOPE)
+    raw["monetary"].update(functional_net_minor="500", functional_tax_minor="100", functional_credit_minor="600", functional_receivable_released_minor="400",
+        functional_refund_delta_minor="200", functional_turnover_minor="800")
+    assert project_monetary_partial_plan(raw, SCOPE) == raw
+    raw["monetary"].update(functional_alignment_loss_minor="1", functional_alignment_gain_minor="0", functional_receivable_released_minor="401", functional_turnover_minor="801")
+    with pytest.raises(MonetaryResponseError):
+        project_monetary_partial_plan(raw, SCOPE)

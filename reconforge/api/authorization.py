@@ -247,6 +247,25 @@ for _path, _permissions in {
     "/{identifier}/cancel": ("sales.manage", "finance_core.manage"),
 }.items():
     _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/stock-sales/orders" + _path)] = _erp_contract(_STOCK_READ, *_permissions)
+
+# New fixed monetary sources keep their own wire contracts. Pin their complete
+# permission surfaces without changing any legacy route or public exemption.
+for (_method, _path), _contract in tuple(_CRITICAL_ROUTE_CONTRACTS.items()):
+    if _path.startswith("/api/v1/customer-partial-returns/"):
+        _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v3" + _path[len("/api/v1"):])] = _contract
+    if _path == "/api/v1/stock-sales/orders" or _path.startswith("/api/v1/stock-sales/orders/"):
+        _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v2" + _path[len("/api/v1"):])] = _contract
+for _path in ("/options", "/orders", "/orders/{identifier}"):
+    _CRITICAL_ROUTE_CONTRACTS[("GET", "/api/v2/stock-sales" + _path)] = _erp_contract(_STOCK_READ)
+
+# The delegated monetary collection owner needs AR preparation/review rights.
+# These stricter unions apply only to the new source version.
+for _phase, _permission in (("prepare", "receivables.manage"), ("review", "receivables.approve")):
+    _route = ("POST", "/api/v2/stock-sales/orders/{identifier}/collection/" + _phase)
+    _CRITICAL_ROUTE_CONTRACTS[_route] = _erp_contract(
+        frozenset(_CRITICAL_ROUTE_CONTRACTS[_route][1]), _permission
+    )
+
 _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/stock-sales/commerce/orders")] = _erp_contract(_STOCK_READ, "sales.manage")
 for _operation, _permissions in {
     "submit": ("sales.manage",), "approve": ("sales.approve",),

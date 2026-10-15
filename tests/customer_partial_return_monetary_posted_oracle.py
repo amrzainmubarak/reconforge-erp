@@ -357,7 +357,8 @@ def _rate(value: Any, *, day: str) -> Fraction:
 
 
 def _effect(capture: Capture, effect_id: str, *, scope: dict[str, str], policy: dict[str, Any],
-            expected: list[tuple[str, int, int]], external_reference: str) -> dict[str, Any]:
+            expected: list[tuple[str, int, int]], external_reference: str,
+            expected_dimensions: dict[str, dict[str, str]] | None = None) -> dict[str, Any]:
     """Join a real sealed effect to all its actual lines and dimensions."""
     effect = _one(capture, "finance_posting_effects", id=effect_id)
     _scope(effect, scope)
@@ -400,6 +401,8 @@ def _effect(capture: Capture, effect_id: str, *, scope: dict[str, str], policy: 
         dimensions = [item for item in capture.rows("finance_entry_line_dimensions") if item["entry_line_id"] == row["id"]]
         require(type(sealed["dimensions"]) is dict and len({item["dimension_id"] for item in dimensions}) == len(dimensions)
                 and sealed["dimensions"] == {item["dimension_id"]: item["dimension_value_id"] for item in dimensions})
+        if expected_dimensions is not None:
+            require(account in expected_dimensions and sealed["dimensions"] == expected_dimensions[account])
         debit += dr
         credit += cr
     require(debit == credit == _minor(entry["total_debit_minor"], positive=True) == _minor(entry["total_credit_minor"], positive=True))
@@ -739,3 +742,190 @@ def verify_history_rows(capture: Capture, original: OriginalFinancial) -> tuple[
         _scope(native, original.scope)
         events.append(expected)
     return tuple(events)
+
+
+def _journals(original: OriginalFinancial, event: dict[str, Any]) -> list[tuple[str, list[tuple[str, int, int]]]]:
+    """Finite original-account templates from independently derived magnitudes."""
+    kind, movement, roles = event["kind"], event["monetary"], original.roles
+    inverse = kind.startswith("Reverse")
+    if inverse:
+        kind = kind.removeprefix("Reverse")
+    lines: list[tuple[str, int, int]] = []
+
+    def leg(account: str, debit: int, credit: int) -> None:
+        if debit or credit:
+            require(min(_minor(debit), _minor(credit)) == 0 < max(debit, credit))
+            lines.append((account, debit, credit))
+
+    result: list[tuple[str, list[tuple[str, int, int]]]] = []
+    if kind == "Return":
+        for component, cut in zip(original.source["components"], event["components"], strict=True):
+            leg(component["account_id"], cut["functional_minor"], 0)
+        leg(roles["loss_account_id"], movement["functional_alignment_loss_minor"], 0)
+        leg(roles["receivable_account_id"], 0, movement["functional_receivable_released_minor"])
+        leg(roles["refund_liability_account_id"], 0, movement["functional_refund_delta_minor"])
+        leg(roles["gain_account_id"], 0, movement["functional_alignment_gain_minor"])
+        if lines:
+            result.append(("MerchandiseCredit", lines))
+        cost = movement["functional_cost_minor"]
+        if cost:
+            result.append(("CostRestoration", [(roles["inventory_account_id"], cost, 0), (roles["cogs_account_id"], 0, cost)]))
+    elif kind == "Refund":
+        leg(roles["refund_liability_account_id"], movement["functional_refund_released_minor"], 0)
+        leg(roles["loss_account_id"], movement["functional_fx_loss_minor"], 0)
+        leg(roles["cash_account_id"], 0, movement["functional_cash_minor"])
+        leg(roles["gain_account_id"], 0, movement["functional_fx_gain_minor"])
+        if lines:
+            result.append(("Refund", lines))
+    else:
+        require(kind == "Collection")
+        leg(roles["cash_account_id"], movement["functional_cash_minor"], 0)
+        leg(roles["receivable_account_id"], 0, movement["functional_receivable_released_minor"])
+        leg(roles["gain_account_id"], 0, movement["functional_fx_gain_minor"])
+        leg(roles["loss_account_id"], movement["functional_fx_loss_minor"], 0)
+        if lines:
+            result.append(("Collection", lines))
+    if inverse:
+        result = [("Reverse" + purpose, [(account, cr, dr) for account, dr, cr in members]) for purpose, members in result]
+    for _purpose, members in result:
+        require(len(members) >= 2 and sum(dr for _, dr, _ in members) == sum(cr for _, _, cr in members) > 0)
+    return result
+
+
+def verify_posted_journal_rows(capture: Capture, original: OriginalFinancial,
+                               events: tuple[dict[str, Any], ...]) -> tuple[str, ...]:
+    """Bind each derived cash/correction journal to native posted memberships.
+
+    Raw physical, global ledger deltas, observations and restore remain separate
+    required gates; this function does not emit a complete-cycle proof.
+    """
+    origin = _one(capture, "stock_sales_monetary_origins", id=original.origin_id)
+    dimensions, policy = origin["payload"]["dimensions"], _full_policy(original.source["functional_policy"])
+    effect_ids: list[str] = []
+    for event in events:
+        history = _one(capture, "customer_partial_return_monetary_history", origin_id=original.origin_id, sequence=event["sequence"])
+        vectors = _journals(original, event)
+        if event["kind"] == "Collection":
+            plan = _one(capture, "operational_fx_plans", id=history["stock_fx_plan_id"])
+            link = _one(capture, "operational_fx_links", plan_id=plan["id"])
+            receipt = _one(capture, "ar_receipts", id=link["receipt_id"])
+            _scope(receipt, original.scope)
+            require(receipt["status"] == "Posted" and receipt["currency_code"] == original.source["transaction_policy"]["currency_code"]
+                    and _minor(receipt["amount_minor"], positive=True) == event["amount_minor"])
+            allocations = [row for row in capture.rows("ar_receipt_allocations") if row["receipt_id"] == receipt["id"]]
+            require(len(allocations) == 1 and allocations[0]["invoice_id"] == origin["invoice_id"]
+                    and _minor(allocations[0]["amount_minor"], positive=True) == event["amount_minor"])
+            if not vectors:
+                require(event["monetary"]["functional_turnover_minor"] == 0 and plan["entry_id"] is None and link["posting_effect_id"] is None
+                        and plan["payload"]["snapshot"] is None and plan["payload"]["validation_digest"] is None)
+                continue
+            require(len(vectors) == 1)
+            effect = _effect(capture, link["posting_effect_id"], scope=original.scope, policy=policy, expected=vectors[0][1],
+                             external_reference=plan["id"], expected_dimensions=dimensions)
+            require(effect["entry_id"] == plan["entry_id"] and link["posted_actor_id"] == effect["posted_actor_id"])
+            effect_ids.append(effect["id"])
+            continue
+        plan = _one(capture, "customer_partial_return_monetary_plans", id=history["partial_plan_id"])
+        payload = plan["payload"]
+        members = [row for row in capture.rows("customer_partial_return_monetary_entries") if row["plan_id"] == plan["id"]]
+        require(len(members) == len(vectors) and {row["purpose"] for row in members} == {purpose for purpose, _ in vectors})
+        retained_members = payload["entries"]
+        require(type(retained_members) is list and len(retained_members) == len(members)
+                and {part["purpose"] for part in retained_members} == {purpose for purpose, _ in vectors})
+        people = [_one(capture, "customer_partial_return_monetary_events", plan_id=plan["id"], operation=op)["actor_id"] for op in ("prepare", "review", "post")]
+        require(len(set(people)) == 3 and payload["preparer_actor_id"] == people[0])
+        for purpose, lines in vectors:
+            member = _one(capture, "customer_partial_return_monetary_entries", plan_id=plan["id"], purpose=purpose)
+            _scope(member, original.scope)
+            retained = [part for part in retained_members if part["purpose"] == purpose]
+            require(len(retained) == 1 and all(retained[0][key] == member[key] for key in
+                    ("purpose", "entry_id", "snapshot", "validation_digest", "original_effect_id")))
+            original_effect = member["original_effect_id"]
+            if event["kind"].startswith("Reverse"):
+                parent_history = _one(capture, "customer_partial_return_monetary_history", origin_id=original.origin_id, sequence=event["original_sequence"])
+                parent = _one(capture, "customer_partial_return_monetary_entries", plan_id=parent_history["partial_plan_id"], purpose=purpose.removeprefix("Reverse"))
+                require(plan["original_id"] == parent["plan_id"] and original_effect == parent["posting_effect_id"])
+            else:
+                require(original_effect is None)
+            suffix = "C" if purpose.endswith("CostRestoration") else "F" if purpose.endswith("Refund") else "R"
+            number = plan["id"].upper() + "-" + suffix
+            identifier = "GLE-" + hashlib.sha256((original.scope["workspace_id"] + "|" + number).encode()).hexdigest()[:16]
+            require(member["entry_id"] == identifier)
+            effect = _effect(capture, member["posting_effect_id"], scope=original.scope, policy=policy, expected=lines,
+                             external_reference=original_effect if original_effect is not None else plan["id"], expected_dimensions=dimensions)
+            entry = _one(capture, "finance_entries", id=identifier)
+            require(entry["entry_number"] == number and effect["entry_id"] == identifier and member["snapshot"] == effect["snapshot_json"]
+                    and member["validation_digest"] == effect["validation_digest"] and effect["reverses_effect_id"] == original_effect
+                    and entry["preparer_actor_id"] == people[0] and entry["validator_actor_id"] == people[1] and effect["posted_actor_id"] == people[2])
+            effect_ids.append(effect["id"])
+    require(len(effect_ids) == len(set(effect_ids)))
+    return tuple(effect_ids)
+
+
+def verify_physical_rows(capture: Capture, original: OriginalFinancial,
+                         events: tuple[dict[str, Any], ...]) -> tuple[str, ...]:
+    """All actual CR3 movement/restoration memberships, including zero cost."""
+    stock = _one(capture, "stock_sales_orders", id=original.source["source_order_id"])
+    movement_ids: list[str] = []
+    for event in events:
+        history = _one(capture, "customer_partial_return_monetary_history", origin_id=original.origin_id, sequence=event["sequence"])
+        if event["kind"] == "Collection":
+            continue
+        plan = _one(capture, "customer_partial_return_monetary_plans", id=history["partial_plan_id"])
+        payload = plan["payload"]
+        restorations = [row for row in capture.rows("customer_partial_return_monetary_restorations") if row["plan_id"] == plan["id"]]
+        if event["kind"] in {"Refund", "ReverseRefund"}:
+            require(not restorations and payload["movement_id"] is None)
+            continue
+        reverse = event["kind"] == "ReverseReturn"
+        require(event["kind"] in {"Return", "ReverseReturn"})
+        number = plan["id"].upper()
+        identifier = "MOV-" + hashlib.sha256((original.scope["workspace_id"] + "|" + number).encode()).hexdigest()[:16]
+        require(payload["movement_id"] == identifier and payload["quantity_scaled"] == event["quantity_scaled"])
+        movement = _one(capture, "inventory_movements", id=identifier)
+        _scope(movement, original.scope)
+        require(movement["movement_number"] == number and movement["source_reference"] == plan["id"]
+                and movement["source_type"] == "Generated" and movement["status"] == "Posted"
+                and movement["movement_type"] == ("Delivery" if reverse else "Receipt")
+                and movement["movement_date"] == payload["posting_date"] == event["posting_date"]
+                and movement["period_id"] == payload["period_id"])
+        line = _one(capture, "inventory_movement_lines", movement_id=identifier)
+        require(line["item_id"] == stock["item_id"] and line["uom_id"] == stock["uom_id"]
+                and _minor(line["quantity_scaled"], positive=True) == event["quantity_scaled"]
+                and type(line["quantity_precision"]) is int and line["quantity_precision"] == original.source["quantity_precision"]
+                and line["from_location_id"] == (stock["location_id"] if reverse else None)
+                and line["to_location_id"] == (None if reverse else stock["location_id"]) and line["inventory_lot_id"] is None)
+        require(len(restorations) == len(event["portions"]))
+        cost_purpose = "ReverseCostRestoration" if reverse else "CostRestoration"
+        cost_entries = [row for row in capture.rows("customer_partial_return_monetary_entries") if row["plan_id"] == plan["id"] and row["purpose"] == cost_purpose]
+        require(len(cost_entries) == (1 if event["monetary"]["functional_cost_minor"] > 0 else 0))
+        cost_effect = cost_entries[0]["posting_effect_id"] if cost_entries else None
+        for portion in event["portions"]:
+            restored = _one(capture, "customer_partial_return_monetary_restorations", plan_id=plan["id"], position=portion["position"])
+            _scope(restored, original.scope)
+            require(all(type(restored[key]) is type(value) and restored[key] == value for key, value in portion.items())
+                    and restored["origin_id"] == original.origin_id and restored["direction"] == (-1 if reverse else 1)
+                    and restored["physical_movement_id"] == identifier and restored["correction_effect_id"] == cost_effect
+                    and restored["original_restoration_plan_id"] == (plan["original_id"] if reverse else None))
+            consumed = [row for row in capture.rows("inventory_layer_consumptions") if row["cost_layer_id"] == restored["cost_layer_id"]]
+            require(0 < _minor(restored["consumption_count_at_restore"], positive=True) <= len(consumed))
+            if reverse:
+                parent = _one(capture, "customer_partial_return_monetary_restorations", plan_id=plan["original_id"], position=portion["position"])
+                require(parent["origin_id"] == original.origin_id and parent["consumption_count_at_restore"] == len(consumed))
+        movement_ids.append(identifier)
+    require(len(movement_ids) == len(set(movement_ids)))
+    for native in original.source["consumptions"]:
+        layer_id = native["cost_layer_id"]
+        layer = _one(capture, "inventory_cost_layers", id=layer_id)
+        consumed = [row for row in capture.rows("inventory_layer_consumptions") if row["cost_layer_id"] == layer_id]
+        corrections = [row for table in ("customer_partial_return_restorations", "customer_partial_return_monetary_restorations")
+                       for row in capture.rows(table) if row["cost_layer_id"] == layer_id]
+        quantity = _minor(layer["original_quantity_scaled"], positive=True) - sum(_minor(row["quantity_scaled"], positive=True) for row in consumed)
+        value = _minor(layer["original_value_minor"], positive=True) - sum(_minor(row["value_minor"]) for row in consumed)
+        for row in corrections:
+            require(type(row["direction"]) is int and row["direction"] in {-1, 1})
+            quantity += row["direction"] * _minor(row["quantity_scaled"], positive=True)
+            value += row["direction"] * _minor(row["value_minor"])
+        require((_minor(layer["remaining_quantity_scaled"]), _minor(layer["remaining_value_minor"])) == (quantity, value)
+                and 0 <= quantity <= layer["original_quantity_scaled"] and 0 <= value <= layer["original_value_minor"])
+    return tuple(movement_ids)

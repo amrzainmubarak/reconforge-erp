@@ -319,6 +319,165 @@ def test_coherently_resealed_history_cannot_replace_independent_original_math(fi
         reader.verify_history_rows(capture, source)
 
 
+LITERAL_JOURNALS = [
+    [("Collection", [("cash", 5200, 0), ("receivable", 0, 5000), ("gain", 0, 200)])],
+    [("MerchandiseCredit", [("revenue", 7500, 0), ("tax", 1050, 0), ("receivable", 0, 8550)]), ("CostRestoration", [("inventory", 7200, 0), ("cogs", 0, 7200)])],
+    [("MerchandiseCredit", [("revenue", 5000, 0), ("tax", 700, 0), ("receivable", 0, 700), ("refund_liability", 0, 5000)]), ("CostRestoration", [("inventory", 4800, 0), ("cogs", 0, 4800)])],
+    [("Refund", [("refund_liability", 1875, 0), ("cash", 0, 1800), ("gain", 0, 75)])],
+    [("Refund", [("refund_liability", 3125, 0), ("loss", 125, 0), ("cash", 0, 3250)])],
+    [("ReverseRefund", [("refund_liability", 0, 3125), ("loss", 0, 125), ("cash", 3250, 0)])],
+    [("Refund", [("refund_liability", 3125, 0), ("loss", 125, 0), ("cash", 0, 3250)])],
+]
+
+
+def test_journal_templates_equal_literal_tax_cost_cash_and_full_inverse_lines() -> None:
+    source = reader.verify_original_rows(original_capture(original_tables()), source_order_id="stock")
+    for event, expected in zip(literal_foreign_events(source), LITERAL_JOURNALS, strict=True):
+        assert reader._journals(source, event) == expected
+    assert sum(len(lines) for entries in LITERAL_JOURNALS for _, lines in entries) == 26
+    assert sum(dr for entries in LITERAL_JOURNALS for _, lines in entries for _, dr, _ in lines) == 43075
+
+
+def posted_tables() -> dict[str, list[str]]:
+    raw, events = history_tables()
+    tables = {name: [json.loads(text) for text in values] for name, values in raw.items()}
+    template = tables["finance_posting_effects"][0]
+    header_template = template["snapshot_json"]["entry"]
+    history = sorted(tables["customer_partial_return_monetary_history"], key=lambda row: row["sequence"])
+    for event, retained, entries in zip(events, history, LITERAL_JOURNALS, strict=True):
+        plan_id = retained["stock_fx_plan_id"] or retained["partial_plan_id"]
+        plan_table = "operational_fx_plans" if event["kind"] == "Collection" else "customer_partial_return_monetary_plans"
+        plan = next(row for row in tables[plan_table] if row["id"] == plan_id)
+        if event["kind"] != "Collection":
+            plan["payload"]["preparer_actor_id"] = "maker"
+            plan["payload"]["entries"] = []
+            plan["payload"].update(movement_id=None, quantity_scaled=event["quantity_scaled"], period_id="period", posting_date="2026-10-15")
+            if event["kind"] == "ReverseRefund":
+                plan["original_id"] = "CRF3-" + "5" * 32
+            for op, actor in (("prepare", "maker"), ("review", "checker"), ("post", "poster")):
+                native = storage_row("customer_partial_return_monetary_events")
+                native.update(workspace_id="work", organization_id="org", legal_entity_id="entity", plan_id=plan_id, operation=op, actor_id=actor)
+                tables["customer_partial_return_monetary_events"].append(native)
+        for purpose, vectors in entries:
+            inverse = purpose.startswith("Reverse")
+            original_effect = "effect-5-Refund" if inverse else None
+            suffix = "C" if purpose.endswith("CostRestoration") else "F" if purpose.endswith("Refund") else "R"
+            number = plan_id.upper() + "-" + suffix
+            entry_id = "collection-entry" if event["kind"] == "Collection" else "GLE-" + hashlib.sha256(("work|" + number).encode()).hexdigest()[:16]
+            effect_id = "effect-" + str(event["sequence"]) + "-" + purpose
+            header = {**header_template, "id": entry_id, "entry_number": number, "external_reference": original_effect if inverse else plan_id,
+                      "source_type": "Generated" if inverse else "Manual", "reverses_posting_id": original_effect}
+            lines = [{"line_number": n, "account_id": a, "description": "", "debit_minor": dr, "credit_minor": cr, "dimensions": {}}
+                     for n, (a, dr, cr) in enumerate(vectors, 1)]
+            snapshot = {"schema_version": "finance-entry-review-v1", "entry": header, "lines": lines}
+            digest = reader._digest(snapshot)
+            effect = {**template, "id": effect_id, "entry_id": entry_id, "source_id": original_effect if inverse else entry_id, "source_kind": "Reversal" if inverse else "Manual", "reverses_effect_id": original_effect,
+                      "snapshot_json": snapshot, "validation_digest": digest, "audit_event_id": effect_id + "-audit", "outbox_event_id": effect_id + "-outbox"}
+            tables["finance_posting_effects"].append(effect)
+            tables["domain_audit_events"].append({"tenant_id": "tenant", "id": effect["audit_event_id"]})
+            tables["outbox_events"].append({"tenant_id": "tenant", "event_id": effect["outbox_event_id"]})
+            entry = {key: value for key, value in header.items() if key not in {"organization_id", "legal_entity_id"}}
+            tables["finance_entries"].append({**entry, "tenant_id": "tenant", "status": "Validated", "validator_actor_id": "checker", "validation_digest": digest, "validation_contract_version": "finance-entry-review-v1",
+                                             "total_debit_minor": sum(dr for _, dr, _ in vectors), "total_credit_minor": sum(cr for _, _, cr in vectors)})
+            for n, item in enumerate(lines, 1):
+                tables["finance_entry_lines"].append({key: value for key, value in {**item, "tenant_id": "tenant", "id": entry_id + "-" + str(n), "entry_id": entry_id, "currency_code": "USD"}.items() if key != "dimensions"})
+            if event["kind"] == "Collection":
+                plan["entry_id"] = entry_id
+                tables["operational_fx_links"].append({"tenant_id": "tenant", "plan_id": plan_id, "receipt_id": "receipt", "posting_effect_id": effect_id, "posted_actor_id": "poster"})
+                tables["ar_receipts"].append({"tenant_id": "tenant", "workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity", "id": "receipt", "currency_code": "EUR", "status": "Posted", "amount_minor": 4000})
+                tables["ar_receipt_allocations"].append({"tenant_id": "tenant", "id": "allocation", "receipt_id": "receipt", "invoice_id": "invoice", "amount_minor": 4000})
+            else:
+                member = storage_row("customer_partial_return_monetary_entries")
+                member.update(workspace_id="work", organization_id="org", legal_entity_id="entity", plan_id=plan_id, purpose=purpose, entry_id=entry_id,
+                              original_effect_id=original_effect, posting_effect_id=effect_id, snapshot=snapshot, validation_digest=digest)
+                tables["customer_partial_return_monetary_entries"].append(member)
+                plan["payload"]["entries"].append({key: member[key] for key in ("purpose", "entry_id", "snapshot", "validation_digest", "original_effect_id")})
+        if event["kind"] != "Collection":
+            plan["plan_digest"] = reader._digest({key: value for key, value in plan["payload"].items() if key != "plan_digest"})
+            plan["payload"]["plan_digest"] = plan["plan_digest"]
+    return {name: sorted(json.dumps(row, sort_keys=True) for row in rows) for name, rows in tables.items()}
+
+
+def test_posted_native_journal_membership_requires_real_ar_cash_and_exact_inverse_owner() -> None:
+    capture = original_capture(posted_tables())
+    original = reader.verify_original_rows(capture, source_order_id="stock")
+    events = reader.verify_history_rows(capture, original)
+    effects = reader.verify_posted_journal_rows(capture, original, events)
+    assert len(effects) == len(set(effects)) == 9
+
+
+@pytest.mark.parametrize("table,field,bad", [
+    ("ar_receipts", "amount_minor", 4001), ("ar_receipt_allocations", "invoice_id", "foreign-invoice"),
+    ("customer_partial_return_monetary_events", "actor_id", "same-human"),
+    ("customer_partial_return_monetary_entries", "posting_effect_id", "revenue-effect"),
+    ("customer_partial_return_monetary_entries", "entry_id", "revenue-entry"),
+])
+def test_native_posted_membership_does_not_accept_sealed_but_unowned_finance(table: str, field: str, bad: str | int) -> None:
+    tables = posted_tables()
+    records = [json.loads(text) for text in tables[table]]
+    records[0][field] = bad
+    tables[table] = sorted(json.dumps(row, sort_keys=True) for row in records)
+    capture = original_capture(tables)
+    original = reader.verify_original_rows(capture, source_order_id="stock")
+    events = reader.verify_history_rows(capture, original)
+    with pytest.raises(reader.MonetaryRawRefusal):
+        reader.verify_posted_journal_rows(capture, original, events)
+
+
+def physical_tables() -> dict[str, list[str]]:
+    tables = {name: [json.loads(text) for text in values] for name, values in posted_tables().items()}
+    tables["inventory_cost_layers"][0].update(original_quantity_scaled=10, original_value_minor=12000, remaining_quantity_scaled=10, remaining_value_minor=12000)
+    for plan in tables["customer_partial_return_monetary_plans"]:
+        if plan["operation"] != "Return":
+            continue
+        payload = plan["payload"]
+        event = payload["monetary_event"]
+        movement_id = "MOV-" + hashlib.sha256(("work|" + plan["id"].upper()).encode()).hexdigest()[:16]
+        payload["movement_id"] = movement_id
+        scope = {key: plan[key] for key in ("tenant_id", "workspace_id", "organization_id", "legal_entity_id")}
+        tables["inventory_movements"].append({**scope, "id": movement_id, "movement_number": plan["id"].upper(), "movement_type": "Receipt", "movement_date": "2026-10-15",
+                                               "source_reference": plan["id"], "source_type": "Generated", "status": "Posted", "period_id": "period"})
+        tables["inventory_movement_lines"].append({"tenant_id": "tenant", "id": movement_id + "-line", "movement_id": movement_id, "item_id": "item", "uom_id": "EA", "quantity_scaled": event["quantity_scaled"],
+                                                   "quantity_precision": 0, "from_location_id": None, "to_location_id": "location", "inventory_lot_id": None})
+        cost = next(row for row in tables["customer_partial_return_monetary_entries"] if row["plan_id"] == plan["id"] and row["purpose"] == "CostRestoration")
+        for part in event["portions"]:
+            record = {**scope, "origin_id": "origin", "plan_id": plan["id"], **part, "direction": 1, "physical_movement_id": movement_id, "correction_effect_id": cost["posting_effect_id"],
+                      "original_restoration_plan_id": None, "consumption_count_at_restore": 1}
+            tables["customer_partial_return_monetary_restorations"].append(record)
+        plan["plan_digest"] = reader._digest({key: value for key, value in payload.items() if key != "plan_digest"})
+        payload["plan_digest"] = plan["plan_digest"]
+    tables["stock_sales_orders"][0]["location_id"] = "location"
+    return {name: sorted(json.dumps(row, sort_keys=True) for row in rows) for name, rows in tables.items()}
+
+
+def test_physical_original_layer_and_signed_restoration_equation_are_independent() -> None:
+    capture = original_capture(physical_tables())
+    source = reader.verify_original_rows(capture, source_order_id="stock")
+    events = reader.verify_history_rows(capture, source)
+    assert len(reader.verify_posted_journal_rows(capture, source, events)) == 9
+    assert len(reader.verify_physical_rows(capture, source, events)) == 2
+
+
+@pytest.mark.parametrize("table,field,bad", [
+    ("inventory_cost_layers", "remaining_quantity_scaled", 9), ("inventory_cost_layers", "remaining_value_minor", 11999),
+    ("inventory_movements", "source_reference", "foreign-plan"), ("inventory_movement_lines", "to_location_id", "foreign-location"),
+    ("customer_partial_return_monetary_restorations", "origin_id", "foreign-origin"),
+    ("customer_partial_return_monetary_restorations", "correction_effect_id", "revenue-effect"),
+    ("customer_partial_return_monetary_restorations", "consumption_count_at_restore", 2),
+])
+def test_balanced_finance_cannot_hide_a_wrong_physical_or_original_fifo_owner(table: str, field: str, bad: Any) -> None:
+    tables = physical_tables()
+    records = [json.loads(text) for text in tables[table]]
+    records[0][field] = bad
+    tables[table] = sorted(json.dumps(row, sort_keys=True) for row in records)
+    capture = original_capture(tables)
+    original = reader.verify_original_rows(capture, source_order_id="stock")
+    events = reader.verify_history_rows(capture, original)
+    assert len(reader.verify_posted_journal_rows(capture, original, events)) == 9
+    with pytest.raises(reader.MonetaryRawRefusal):
+        reader.verify_physical_rows(capture, original, events)
+
+
 def test_inventory_is_exact_old79_plus_five_fx_and_seven_monetary_tables() -> None:
     tree = ast.parse(Path(__file__).with_name("customer_partial_return_posted_cycle_oracle.py").read_text(encoding="utf-8"))
     original = next(ast.literal_eval(item.value) for item in tree.body if isinstance(item, ast.Assign)

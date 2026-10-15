@@ -39,6 +39,7 @@ INTEGRITY_FILES = {
     "commercial-integrity": (
         "tests/test_postgres_commercial_collections.py", "tests/test_postgres_commercial_collection_cancellation.py",
         "tests/test_postgres_customer_returns.py", "tests/test_postgres_customer_return_read_authority.py",
+        "tests/test_postgres_customer_partial_return_source.py", "tests/test_postgres_customer_partial_returns.py",
     ),
     "supply-integrity": (
         "tests/test_postgres_landed_cost.py", "tests/test_postgres_landed_cost_api.py",
@@ -156,7 +157,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 65  # Retain the transfer owner and split three complete sourcing files into three commands.
+    assert len(commands) == 67  # Retain every owner, including both complete partial-return native files.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)

@@ -17,6 +17,10 @@ from reconforge.domain.customer_partial_return_commands import (
     CustomerPartialReturnPreparation,
     CustomerPartialReversePreparation,
 )
+from reconforge.domain.customer_partial_return_cost_evidence import (
+    OriginalRestitutedCostEvidence,
+    restituted_source_money_context,
+)
 from reconforge.domain.customer_partial_return_posting import (
     PartialReturnAccountRoles,
     PartialReturnPostingIntent,
@@ -43,6 +47,7 @@ from reconforge.domain.customer_partial_returns import (
     PartialReturnEvent,
     PartialReturnHistory,
     PartialReturnScope,
+    RestitutedOriginalConsumption,
     _ReturnValues,
     apply_partial_return,
     partial_return_balance,
@@ -81,10 +86,12 @@ def _fail(code: str, message: str) -> None:
 
 def _source_payload(source: OriginalPartialReturnSource, original: dict[str, Any], collections: list[dict[str, Any]]) -> dict[str, Any]:
     typed = {field.name: getattr(source, field.name) for field in fields(source)
-             if field.name not in {"scope", "currency_policy", "registry_context", "original_cogs", "original_revenue", "consumptions"}}
+             if field.name not in {"scope", "currency_policy", "registry_context", "original_cogs", "original_revenue", "consumptions", "original_cost_admission"}}
     typed.update(scope=asdict(source.scope), currency_policy=asdict(source.currency_policy),
-        original_cogs=asdict(source.original_cogs), original_revenue=asdict(source.original_revenue),
+        original_cogs=asdict(source.original_cogs) if source.original_cogs is not None else None, original_revenue=asdict(source.original_revenue),
         consumptions=[asdict(row) for row in source.consumptions])
+    if source.original_cost_admission is not None:
+        typed["original_cost_admission"] = {"evidence_digest": source.original_cost_admission.evidence_digest}
     return {"typed_source": typed, "registry_snapshot": source.registry_context.snapshot(), "original_source": original,
             "original_collections": collections, "fingerprint_payload": source.fingerprint_payload}
 
@@ -94,14 +101,21 @@ def _hydrate_source(payload: Mapping[str, Any]) -> OriginalPartialReturnSource:
         typed = dict(payload["typed_source"])
         scope = PartialReturnScope(**typed.pop("scope"))
         policy = FinanceCurrencyPolicy(**typed.pop("currency_policy"))
-        def evidence(value: dict[str, Any]) -> OriginalPostingEvidence:
+        admitted = typed.pop("original_cost_admission", None)
+        cost_admission = OriginalRestitutedCostEvidence(canonical_json(payload["original_source"]["cost_admission"]), admitted["evidence_digest"]) if admitted is not None else None
+        def evidence(value: dict[str, Any] | None) -> OriginalPostingEvidence | None:
+            if value is None:
+                return None
             return OriginalPostingEvidence(value["posting_effect_id"], PartialReturnScope(**value["scope"]),
                                             value["snapshot_json"], value["validation_digest"])
         cogs, revenue = evidence(typed.pop("original_cogs")), evidence(typed.pop("original_revenue"))
-        consumptions = tuple(OriginalConsumption(**{**row, "scope": PartialReturnScope(**row["scope"])}) for row in typed.pop("consumptions"))
+        consumption_type = RestitutedOriginalConsumption if cost_admission is not None else OriginalConsumption
+        consumptions = tuple(consumption_type(**{**row, "scope": PartialReturnScope(**row["scope"])}) for row in typed.pop("consumptions"))
+        if revenue is None:
+            raise FinancePostingError("customer_partial_return_source_invalid", "Original revenue evidence is required.")
         source = OriginalPartialReturnSource(**typed, scope=scope, currency_policy=policy,
             registry_context=CurrencyRegistryContext.from_snapshot(payload["registry_snapshot"]), original_cogs=cogs,
-            original_revenue=revenue, consumptions=consumptions)
+            original_revenue=revenue, consumptions=consumptions, original_cost_admission=cost_admission)
         if canonical_json(source.fingerprint_payload) != canonical_json(payload["fingerprint_payload"]):
             _fail("source_invalid", "The original typed source fingerprint basis differs.")
         return source
@@ -199,15 +213,12 @@ class PostgresCustomerPartialReturnsRepository:
             and type(context.get("quantity_scaled")) is int and context["quantity_scaled"] > 0
             and all(type(context.get(key)) is int and context[key] == 0
                     for key in ("amount_minor", "credit_minor", "cogs_restored_minor"))
-            # prepare authorizes the validated contract before materializing its
-            # empty entries. Persisted lifecycle commands retain that exact [] .
             and context.get("entries", []) == []
         ) else {}
-        governed = dict(context)
-        if "source_snapshot" in context:
-            money_context = {**context, "operation": "Return"}
-            governed = (customer_return_money_context(money_context, allow_empty_entries=True) if zero_options
-                        else customer_return_money_context(money_context))
+        if "source_snapshot" in context and "cost_admission" in context["source_snapshot"]:
+            governed = restituted_source_money_context(context)
+        else:
+            governed = customer_return_money_context({**context, "operation": "Return"}, allow_empty_entries=bool(zero_options)) if "source_snapshot" in context else dict(context)
         for permission in sorted(READ):
             self.owner._actor(actor, permission, governed, mutation=operation != "read", **zero_options)
         for permission in sorted(PERMISSIONS.get(operation, READ) - READ):
@@ -268,7 +279,8 @@ class PostgresCustomerPartialReturnsRepository:
         return result
 
     def _native_source(self, source_order_id: str) -> dict[str, Any]:
-        row = self._one("SELECT reconforge.customer_partial_return_native_source(%s,%s) value", (self.tenant_id, source_order_id))
+        getter = "SELECT reconforge.customer_partial_return_source_dispatch(%s,%s) value" if self.protocol_version == 2 else "SELECT reconforge.customer_partial_return_native_source(%s,%s) value"
+        row = self._one(getter, (self.tenant_id, source_order_id))
         if row["value"] is None:
             _fail("source_invalid", "Complete original native source membership is required.")
         return row["value"]
@@ -300,7 +312,14 @@ class PostgresCustomerPartialReturnsRepository:
 
     def _roles(self, source: OriginalPartialReturnSource, args: Mapping[str, Any]) -> tuple[PartialReturnAccountRoles, dict[str, Any]]:
         ar, revenue = source.original_revenue.snapshot()["lines"]
-        cogs, inventory = source.original_cogs.snapshot()["lines"]
+        if source.original_cogs is not None:
+            cogs, inventory = source.original_cogs.snapshot()["lines"]
+            cogs_account, inventory_account = cogs["account_id"], inventory["account_id"]
+        elif source.original_cost_admission is not None:
+            admission = source.original_cost_admission.snapshot()["issue_plan"]
+            cogs_account, inventory_account = admission["cogs_account_id"], admission["inventory_account_id"]
+        else:
+            _fail("source_invalid", "Original cost account evidence is required.")
         # Account selection is chart-owned, while journals and dimensions of
         # merchandise effects remain those of the immutable original entries.
         native = self._one("""SELECT l.id liability,l.account_type liability_type,c.id cash,j.id journal
@@ -312,12 +331,14 @@ class PostgresCustomerPartialReturnsRepository:
             AND j.currency_code=%s""", (self.tenant_id, args["workspace_id"], args["organization_code"], args["journal_code"],
                                       args["refund_liability_account_code"], args["cash_account_code"], source.currency_policy.currency_code))
         roles = PartialReturnAccountRoles(source.scope, source.fingerprint, source.currency_policy, ar["account_id"], revenue["account_id"],
-            inventory["account_id"], cogs["account_id"], native["liability"], native["liability_type"])
+            inventory_account, cogs_account, native["liability"], native["liability_type"])
         return roles, native
 
     def _new_source(self, original: dict[str, Any], args: Mapping[str, Any], actor: PostingActor) -> dict[str, Any]:
         mapped = map_customer_partial_return_source(self.connection, self.tenant_id, original)
         source = mapped.source
+        if self.protocol_version == 1 and source.original_cost_admission is not None:
+            _fail("protocol_conflict", "Legacy returns do not admit a new restituted-cost original.")
         roles, accounts = self._roles(source, args)
         collections = mapped.collection_evidence()
         cash_dimensions: dict[str, str] = {}
@@ -342,7 +363,7 @@ class PostgresCustomerPartialReturnsRepository:
             (self.tenant_id, identifier, source.scope.workspace_id, source.scope.organization_id, source.scope.legal_entity_id,
              source.source_order_id, source.invoice_id, original["stock"]["customer_id"], source.scope.item_id, source.scope.location_id,
              source.scope.uom_id, source.fingerprint, canonical_json(payload), source.collected_minor, source.gross_minor, source.quantity_scaled,
-             source.quantity_precision, source.original_cogs.posting_effect_id, source.original_revenue.posting_effect_id, source.valuation_document_id,
+             source.quantity_precision, source.original_cogs.posting_effect_id if source.original_cogs is not None else None, source.original_revenue.posting_effect_id, source.valuation_document_id,
              accounts["liability"], accounts["cash"], actor.user_id, source.currency_policy.currency_code, source.currency_policy.precision,
              source.currency_policy.rounding_policy, source.currency_policy.registry_version, source.currency_policy.registry_digest))
         self.connection.execute("UPDATE reconforge.ar_invoices SET customer_partial_return_source_id=%s WHERE tenant_id=%s AND id=%s",

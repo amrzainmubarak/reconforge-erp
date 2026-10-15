@@ -63,7 +63,10 @@ BEGIN
   'source',jsonb_build_object('id',source_owner.id,'source_fingerprint',source_owner.source_fingerprint,
    'workspace_id',source_owner.workspace_id,'organization_id',source_owner.organization_id,'legal_entity_id',source_owner.legal_entity_id,
    'item_id',source_owner.item_id,'uom_id',source_owner.uom_id,'quantity_precision',source_owner.quantity_precision,
-   'location_id',source_owner.location_id,'original_cogs_effect_id',source_owner.original_cogs_effect_id),
+   'location_id',source_owner.location_id,'original_cogs_effect_id',source_owner.original_cogs_effect_id)
+    ||CASE WHEN source_owner.source_payload#>'{original_source,cost_admission}' IS NOT NULL THEN jsonb_build_object(
+     'original_cost_minor',(source_owner.source_payload#>>'{original_source,cost_admission,issue_plan,total_cost_minor}')::bigint,
+     'cost_admission_digest',reconforge.irp_digest(source_owner.source_payload#>'{original_source,cost_admission}')) ELSE'{}'::jsonb END,
   'plan',jsonb_build_object('id',owned.id,'source_id',owned.source_id,'operation',owned.operation,'phase',owned.phase,
    'plan_digest',owned.plan_digest,'cogs_restored_minor',owned.cogs_restored_minor),
   'entry',CASE WHEN owned.cogs_restored_minor>0 THEN to_jsonb(entry_owner) ELSE NULL END,
@@ -107,6 +110,13 @@ def _snapshot() -> str:
     value = _replace(value, "AND values_minor BETWEEN 1 AND 9000000000000000000", "AND values_minor BETWEEN 0 AND 9000000000000000000 AND(values_minor>0 OR has_rounding)")
     value = _replace(value, "CASE WHEN has_restitution THEN'inventory-transfer-cost-v2' ELSE'inventory-transfer-cost-v1' END",
         "CASE WHEN has_rounding THEN'inventory-transfer-cost-v3' WHEN has_restitution THEN'inventory-transfer-cost-v2' ELSE'inventory-transfer-cost-v1' END")
+    value = _replace(value, "  sources:=sources||jsonb_build_array(original);", r"""  IF EXISTS(SELECT 1 FROM jsonb_array_elements(consumptions) consumed_value WHERE consumed_value->>'value_minor'='0') THEN
+   original:=original||jsonb_build_object('restituted_consumption_admissions',(SELECT jsonb_agg(
+    reconforge.customer_partial_return_zero_consumption(t,consumed_value->>'id') ORDER BY ordinal)
+    FROM jsonb_array_elements(consumptions) WITH ORDINALITY history(consumed_value,ordinal) WHERE consumed_value->>'value_minor'='0'));
+   has_rounding:=TRUE;
+  END IF;
+  sources:=sources||jsonb_build_array(original);""")
     return value
 
 
@@ -123,7 +133,18 @@ def _originals_v3() -> str:
     value = CORRECTION_SQL[start:]
     value = _replace(value, "customer_partial_return_transfer_originals(", "customer_partial_return_transfer_originals_v3(")
     value = _replace(value, "cost->>'schema_version'='inventory-transfer-cost-v2'", "cost->>'schema_version'='inventory-transfer-cost-v3'")
-    return _replace(value, "correction=reconforge.customer_partial_return_transfer_correction(", "correction=reconforge.customer_partial_return_transfer_correction_dispatch(")
+    value = _replace(value, "correction=reconforge.customer_partial_return_transfer_correction(", "correction=reconforge.customer_partial_return_transfer_correction_dispatch(")
+    value = _replace(value, "  quantity_delta:=0;value_delta:=0;", r"""  IF EXISTS(SELECT 1 FROM jsonb_array_elements(original->'consumptions') consumed WHERE consumed->>'value_minor'='0') THEN
+   PERFORM reconforge.it1_assert(original->'restituted_consumption_admissions'=(SELECT jsonb_agg(
+    reconforge.customer_partial_return_zero_consumption(t,consumed->>'id') ORDER BY ordinal)
+    FROM jsonb_array_elements(original->'consumptions') WITH ORDINALITY history(consumed,ordinal) WHERE consumed->>'value_minor'='0'),
+    'Every captured zero consumption retains one exact native restituted Stock admission');
+  ELSE
+   PERFORM reconforge.it1_assert(NOT(original ? 'restituted_consumption_admissions'),
+    'Ordinary positive consumption history cannot invent a zero-cost admission');
+  END IF;
+  quantity_delta:=0;value_delta:=0;""")
+    return _replace(value, "normalized:=(original-'partial_return_corrections')", "normalized:=(original-ARRAY['partial_return_corrections','restituted_consumption_admissions'])")
 
 
 def _snapshot_dispatch() -> str:

@@ -10,6 +10,7 @@ from reconforge.domain.customer_partial_return_posting import (
     PartialReturnPostingIntent,
     _line,
     _policy_payload,
+    _refuse,
     _require,
     _role_lines,
     _scope_payload,
@@ -41,13 +42,25 @@ class RemainingPostingContract:
         role_payload, requested = roles.payload(), intent.payload()
         _require(roles.scope == source.scope and roles.source_fingerprint == source.fingerprint)
         _require(canonical_json(_policy_payload(roles.currency_policy)) == canonical_json(_policy_payload(source.currency_policy)))
-        revenue_snapshot, cogs_snapshot = source.original_revenue.snapshot(), source.original_cogs.snapshot()
+        revenue_snapshot = source.original_revenue.snapshot()
+        cogs_snapshot = source.original_cogs.snapshot() if source.original_cogs is not None else None
         ar, revenue = _role_lines(revenue_snapshot, debit_account=roles.receivable_account_id, credit_account=roles.revenue_account_id)
-        cogs, inventory = _role_lines(cogs_snapshot, debit_account=roles.cogs_account_id, credit_account=roles.inventory_account_id)
+        cogs: dict[str, Any] = {}
+        inventory: dict[str, Any] = {}
+        if cogs_snapshot is not None:
+            cogs, inventory = _role_lines(cogs_snapshot, debit_account=roles.cogs_account_id, credit_account=roles.inventory_account_id)
+        else:
+            if source.original_cost_admission is None:
+                _refuse()
+            admission = source.original_cost_admission.snapshot()["issue_plan"]
+            _require(roles.cogs_account_id == admission["cogs_account_id"] and roles.inventory_account_id == admission["inventory_account_id"]
+                and plan.cogs_restored_minor == 0)
         _require(ar["debit_minor"] == source.gross_minor and plan.credit_minor <= source.gross_minor
-            and plan.cogs_restored_minor <= cogs["debit_minor"]
+            and plan.cogs_restored_minor <= (cogs["debit_minor"] if cogs_snapshot is not None else 0)
             and plan.receivable_released_minor + plan.refund_entitlement_delta_minor == plan.credit_minor)
         for snapshot in (revenue_snapshot, cogs_snapshot):
+            if snapshot is None:
+                continue
             _require(canonical_json({key: snapshot["entry"][key] for key in _policy_payload(source.currency_policy)})
                 == canonical_json(_policy_payload(source.currency_policy)))
             _require(all(snapshot["entry"][key] == getattr(source.scope, key)
@@ -78,6 +91,8 @@ class RemainingPostingContract:
         ):
             if not lines:
                 continue
+            if evidence is None or snapshot is None:
+                _refuse()
             templates.append({**common, "purpose": purpose, "original_posting_effect_id": evidence.posting_effect_id,
                 "original_entry_id": evidence.entry_id, "original_validation_digest": evidence.validation_digest,
                 "journal_id": snapshot["entry"]["journal_id"], "lines": lines})

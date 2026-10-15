@@ -10,12 +10,14 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, cast
 
+from reconforge.domain.customer_partial_return_cost_evidence import OriginalRestitutedCostEvidence
 from reconforge.domain.customer_partial_returns import (
     MAX_CONSUMPTIONS,
     OriginalConsumption,
     OriginalPartialReturnSource,
     OriginalPostingEvidence,
     PartialReturnScope,
+    RestitutedOriginalConsumption,
 )
 from reconforge.domain.finance_posting import (
     FinancePostingError,
@@ -30,6 +32,8 @@ from reconforge.io.structured import StructuredDocumentError, StructuredDocument
 from reconforge.platform.inventory_values import quantity_to_scaled
 
 _ENVELOPE = {"stock", "invoice", "invoice_status", "invoice_version", "allocated_minor", "cogs", "revenue", "consumptions"}
+_EXTENDED_OBSERVATION_POLICY = StructuredDocumentPolicy(max_file_bytes=8_388_608, max_nodes=200_000, max_depth=56,
+    max_collection_items=4096, max_scalar_characters=6_291_456, max_yaml_aliases=1)
 _OBSERVATION_POLICY = StructuredDocumentPolicy(max_file_bytes=2_097_152, max_nodes=50_000, max_depth=32,
     max_collection_items=1000, max_scalar_characters=131_072, max_yaml_aliases=1)
 
@@ -45,10 +49,10 @@ def _one(connection: Any, query: str, args: tuple[Any, ...]) -> dict[str, Any]:
     return rows[0]
 
 
-def _observation(value: str, expected: type) -> Any:
+def _observation(value: str, expected: type, *, extended: bool = False) -> Any:
     _require(type(value) is str)
     try:
-        parsed = parse_json_document(value, reject_fractional_numbers=True, policy=_OBSERVATION_POLICY)
+        parsed = parse_json_document(value, reject_fractional_numbers=True, policy=_EXTENDED_OBSERVATION_POLICY if extended else _OBSERVATION_POLICY)
     except StructuredDocumentError as exc:
         raise FinancePostingError("customer_partial_return_source_invalid", "Original native partial-return source refused.") from exc
     _require(type(parsed) is expected)
@@ -97,13 +101,13 @@ class NativePartialReturnSourceEvidence:
     def __post_init__(self) -> None:
         _require(type(self.source) is OriginalPartialReturnSource)
         original, collections = self.original_source(), self.collection_evidence()
-        _require(type(original) is dict and set(original) == _ENVELOPE
+        _require(type(original) is dict and set(original) == (_ENVELOPE | {"cost_admission"} if self.source.original_cost_admission is not None else _ENVELOPE)
                  and canonical_json(original) == self.original_source_json
                  and type(collections) is list and len(collections) <= 200
                  and canonical_json(collections) == self.collection_evidence_json)
 
     def original_source(self) -> dict[str, Any]:
-        return cast(dict[str, Any], _observation(self.original_source_json, dict))
+        return cast(dict[str, Any], _observation(self.original_source_json, dict, extended=self.source.original_cost_admission is not None))
 
     def collection_evidence(self) -> list[dict[str, Any]]:
         return cast(list[dict[str, Any]], _observation(self.collection_evidence_json, list))
@@ -175,7 +179,7 @@ def map_customer_partial_return_source(connection: Any, tenant_id: str,
     """
     try:
         _require(type(tenant_id) is str and text(tenant_id, "tenant") == tenant_id)
-        _require(isinstance(authorized_source, Mapping) and set(authorized_source) == _ENVELOPE)
+        _require(isinstance(authorized_source, Mapping) and set(authorized_source) in (_ENVELOPE, _ENVELOPE | {"cost_admission"}))
         stock = authorized_source["stock"]
         _require(type(stock) is dict and type(stock["id"]) is str)
         selected = _one(connection, """SELECT current_setting('app.tenant_id',true) tenant_id,
@@ -185,11 +189,14 @@ def map_customer_partial_return_source(connection: Any, tenant_id: str,
                                    stock["item_id"], stock["location_id"], stock["uom_id"])
         _same_scope(selected, scope)
         _require(selected["entity_id"] == scope.legal_entity_id)
-        fresh = _one(connection, "SELECT reconforge.customer_return_source(%s,%s) source", (tenant_id, stock["id"]))["source"]
+        extended = "cost_admission" in authorized_source
+        getter = "SELECT reconforge.customer_partial_return_zero_stock_source(%s,%s) source" if extended else "SELECT reconforge.customer_return_source(%s,%s) source"
+        fresh = _one(connection, getter, (tenant_id, stock["id"]))["source"]
         _require(type(fresh) is dict and canonical_json(fresh) == canonical_json(authorized_source))
         stock = fresh["stock"]
         invoice, cogs, revenue = fresh["invoice"], fresh["cogs"], fresh["revenue"]
-        _require(all(type(row) is dict for row in (invoice, cogs, revenue)))
+        _require(all(type(row) is dict for row in (invoice, revenue)) and (type(cogs) is dict or (extended and cogs is None)))
+        cost_admission = OriginalRestitutedCostEvidence(canonical_json(fresh["cost_admission"]), digest_payload(fresh["cost_admission"])) if extended else None
         _same_scope(stock, scope)
         _same_scope(invoice, scope)
         _require(stock["status"] in {"Invoiced", "Paid"} and fresh["invoice_status"] in {"Approved", "PartiallyPaid", "Paid"})
@@ -199,7 +206,7 @@ def map_customer_partial_return_source(connection: Any, tenant_id: str,
         # ownership and pending installment ambiguity. It performs no writes.
         connection.execute("SELECT reconforge.customer_return_source_available(%s,%s)", (tenant_id, stock["id"]))
         issue = stock["issue_plan"]
-        _require(type(issue) is dict and issue["schema_version"] == "stock-sales-issue-v1"
+        _require(type(issue) is dict and issue["schema_version"] == ("stock-sales-issue-v2" if extended else "stock-sales-issue-v1")
                  and issue["source_digest"] == stock["source_digest"] and issue["entry_id"] == stock["cogs_entry_id"]
                  and digest_payload(stock["source"]) == stock["source_digest"])
         linked = _one(connection, """SELECT to_jsonb(p) plan,to_jsonb(l) link FROM reconforge.operational_finance_plans p
@@ -211,10 +218,11 @@ def map_customer_partial_return_source(connection: Any, tenant_id: str,
                  and plan["amount_minor"] == invoice["total_minor"] and plan["entry_id"] == revenue["entry_id"]
                  and link["posting_effect_id"] == revenue["id"] and link["source_effect_id"] == invoice["id"]
                  and link["posted_actor_id"] == revenue["posted_actor_id"]
-                 and plan["validation_digest"] == revenue["validation_digest"] and stock["cogs_effect_id"] == cogs["id"])
-        original_cogs = _effect(connection, tenant_id, cogs, scope, stock["cogs_entry_id"])
+                 and plan["validation_digest"] == revenue["validation_digest"] and stock["cogs_effect_id"] == (cogs["id"] if cogs is not None else None))
+        original_cogs = _effect(connection, tenant_id, cogs, scope, stock["cogs_entry_id"]) if cogs is not None else None
         original_revenue = _effect(connection, tenant_id, revenue, scope, plan["entry_id"])
-        policy, context = FinancePolicyStore(connection, tenant_id=tenant_id).entry(original_cogs.snapshot()["entry"])
+        policy, context = FinancePolicyStore(connection, tenant_id=tenant_id).entry(
+            original_cogs.snapshot()["entry"] if original_cogs is not None else original_revenue.snapshot()["entry"])
         policy.require_compatible(FinancePolicyStore(connection, tenant_id=tenant_id).entry(original_revenue.snapshot()["entry"])[0])
         _require(canonical_json(issue["currency_policy"]) == canonical_json({
             "currency_code": policy.currency_code, "precision": policy.precision, "rounding_policy": policy.rounding_policy,
@@ -232,7 +240,7 @@ def map_customer_partial_return_source(connection: Any, tenant_id: str,
         valuation, detail, movement, movement_line = (native[key] for key in ("valuation", "valuation_line", "movement", "movement_line"))
         for row in (valuation, movement):
             _same_scope(row, scope)
-        _require(valuation["status"] == "Approved" and valuation["finance_entry_id"] == original_cogs.entry_id
+        _require(valuation["status"] == "Approved" and valuation["finance_entry_id"] == (original_cogs.entry_id if original_cogs is not None else None)
                  and valuation["total_value_minor"] == issue["total_cost_minor"] and valuation["movement_id"] == stock["movement_id"]
                  and detail["value_minor"] == issue["total_cost_minor"]
                  and movement["status"] == "Posted" and movement["movement_type"] == "Delivery"
@@ -247,7 +255,7 @@ def map_customer_partial_return_source(connection: Any, tenant_id: str,
                  and native["item"]["organization_id"] in (None, scope.organization_id)
                  and native["entity"]["organization_id"] == scope.organization_id
                  and native["entity"]["currency_code"] == policy.currency_code
-                 and native["claim"]["state"] == "Consumed" and native["claim"]["entry_id"] == original_cogs.entry_id
+                 and native["claim"]["state"] == "Consumed" and native["claim"]["entry_id"] == (original_cogs.entry_id if original_cogs is not None else None)
                  and all(native["claim"][key] == getattr(scope, key)
                          for key in ("tenant_id", "workspace_id", "legal_entity_id", "item_id"))
                  and native["claim"]["order_id"] == stock["id"] and native["claim"]["plan_digest"] == digest_payload(issue)
@@ -286,13 +294,14 @@ def map_customer_partial_return_source(connection: Any, tenant_id: str,
             # The original inbound valuation carries retained policy. A cost
             # layer has no policy columns; never invent them or consult master.
             policy.require_compatible(FinancePolicyStore(connection, tenant_id=tenant_id).entry(original_document)[0])
-            original_consumptions.append(OriginalConsumption(position, consumption["id"], consumption["valuation_line_id"],
+            consumption_type = RestitutedOriginalConsumption if extended else OriginalConsumption
+            original_consumptions.append(consumption_type(position, consumption["id"], consumption["valuation_line_id"],
                 consumption["cost_layer_id"], scope, stock["quantity_precision"], consumption["quantity_scaled"], consumption["value_minor"], policy.currency_code))
         typed = OriginalPartialReturnSource(scope, stock["id"], invoice["id"], stock["valuation_id"], plan["id"],
             stock["quantity_precision"], stock["quantity_scaled"], invoice["total_minor"], line["unit_price_minor"], fresh["allocated_minor"],
             policy, context, original_cogs, original_revenue, tuple(original_consumptions), native["entity"]["currency_code"],
             native["item"]["uom_id"], tax_minor=invoice["tax_minor"], inventory_lot_id=detail["inventory_lot_id"],
-            serial_tracked=native["item"]["tracking_mode"] == "Serial")
+            serial_tracked=native["item"]["tracking_mode"] == "Serial", original_cost_admission=cost_admission)
         collections = _collections(connection, tenant_id, stock, invoice, typed)
         return NativePartialReturnSourceEvidence(typed, canonical_json(fresh), canonical_json(collections))
     except (KeyError, TypeError, AttributeError, ValueError) as exc:

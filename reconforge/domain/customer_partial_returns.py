@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, fields
 from typing import Any, Literal
 
+from reconforge.domain.customer_partial_return_cost_evidence import OriginalRestitutedCostEvidence
 from reconforge.domain.customer_returns import MAX_MINOR, minor
 from reconforge.domain.finance_policy import FinanceCurrencyPolicy
 from reconforge.domain.finance_posting import (
@@ -122,15 +123,26 @@ class OriginalConsumption:
     currency_code: str
 
     def __post_init__(self) -> None:
+        self._validate(allow_zero=False)
+
+    def _validate(self, *, allow_zero: bool) -> None:
         _integer(self.position, "original position", maximum=MAX_CONSUMPTIONS)
         _integer(self.quantity_precision, "original quantity precision", zero=True, maximum=6)
         _integer(self.quantity_scaled, "original consumed quantity")
-        _integer(self.value_minor, "original consumed cost")
+        _integer(self.value_minor, "original consumed cost", zero=allow_zero)
         for field in ("consumption_id", "valuation_line_id", "cost_layer_id", "currency_code"):
             _ref(getattr(self, field), field)
         if type(self.scope) is not PartialReturnScope:
             raise FinancePostingError("partial_return_invalid", "Original consumption requires an immutable scope.")
         self.scope.__post_init__()
+
+
+@dataclass(frozen=True, slots=True)
+class RestitutedOriginalConsumption(OriginalConsumption):
+    """Explicit new factual scope; the original positive-only constructor stays strict."""
+
+    def __post_init__(self) -> None:
+        self._validate(allow_zero=True)
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,7 +159,7 @@ class OriginalPartialReturnSource:
     collected_minor: int
     currency_policy: FinanceCurrencyPolicy
     registry_context: CurrencyRegistryContext
-    original_cogs: OriginalPostingEvidence
+    original_cogs: OriginalPostingEvidence | None
     original_revenue: OriginalPostingEvidence
     consumptions: tuple[OriginalConsumption, ...]
     functional_currency: str
@@ -155,6 +167,7 @@ class OriginalPartialReturnSource:
     tax_minor: int
     inventory_lot_id: str | None
     serial_tracked: bool
+    original_cost_admission: OriginalRestitutedCostEvidence | None = None
 
     def __post_init__(self) -> None:
         if type(self.scope) is not PartialReturnScope:
@@ -190,7 +203,8 @@ class OriginalPartialReturnSource:
         identities: set[str] = set()
         layers: set[str] = set()
         for position, row in enumerate(self.consumptions, 1):
-            if type(row) is not OriginalConsumption:
+            expected_type = OriginalConsumption if self.original_cost_admission is None else RestitutedOriginalConsumption
+            if type(row) is not expected_type:
                 raise FinancePostingError("partial_return_invalid", "Typed original consumption evidence is required.")
             row.__post_init__()
             if (row.position != position or row.consumption_id in identities or row.cost_layer_id in layers or
@@ -198,15 +212,22 @@ class OriginalPartialReturnSource:
                 raise FinancePostingError("partial_return_source_mismatch", "Original consumption order, identity or source affinity differs.")
             identities.add(row.consumption_id)
             layers.add(row.cost_layer_id)
-        total_cost = _integer(sum(row.value_minor for row in self.consumptions), "total original cost")
+        admitted = self.original_cost_admission
+        if admitted is not None and type(admitted) is not OriginalRestitutedCostEvidence:
+            raise FinancePostingError("partial_return_source_mismatch", "Original restituted cost requires explicit immutable evidence.")
+        total_cost = _integer(sum(row.value_minor for row in self.consumptions), "total original cost", zero=admitted is not None)
+        if admitted is None and any(row.value_minor == 0 for row in self.consumptions):
+            raise FinancePostingError("partial_return_source_mismatch", "Original legacy consumption cost must remain positive.")
         if sum(row.quantity_scaled for row in self.consumptions) != self.quantity_scaled:
             raise FinancePostingError("partial_return_source_mismatch", "Original consumed quantities do not match the delivered source.")
-        if type(self.original_cogs) is not OriginalPostingEvidence or type(self.original_revenue) is not OriginalPostingEvidence:
+        if (type(self.original_revenue) is not OriginalPostingEvidence
+            or (total_cost > 0 and type(self.original_cogs) is not OriginalPostingEvidence)
+            or (total_cost == 0 and self.original_cogs is not None)):
             raise FinancePostingError("partial_return_invalid", "Typed original financial evidence is required.")
-        for evidence, amount, reference in (
-            (self.original_cogs, total_cost, self.source_order_id),
-            (self.original_revenue, self.gross_minor, self.original_revenue_plan_id),
-        ):
+        evidences = [(self.original_revenue, self.gross_minor, self.original_revenue_plan_id)]
+        if self.original_cogs is not None:
+            evidences.append((self.original_cogs, total_cost, self.source_order_id))
+        for evidence, amount, reference in evidences:
             evidence.__post_init__()
             snapshot = evidence.snapshot()
             entry, lines = snapshot["entry"], snapshot["lines"]
@@ -216,13 +237,25 @@ class OriginalPartialReturnSource:
                 entry["external_reference"] != reference or len(lines) != 2 or
                 sum(line["debit_minor"] for line in lines) != amount or len({line["account_id"] for line in lines}) != 2):
                 raise FinancePostingError("partial_return_source_mismatch", "Original financial amounts, references or source affinity differ.")
-        if self.original_cogs.posting_effect_id == self.original_revenue.posting_effect_id or self.original_cogs.entry_id == self.original_revenue.entry_id:
+        if self.original_cogs is not None and (self.original_cogs.posting_effect_id == self.original_revenue.posting_effect_id or self.original_cogs.entry_id == self.original_revenue.entry_id):
             raise FinancePostingError("partial_return_source_mismatch", "Distinct original cost and revenue evidence is required.")
+        if admitted is not None:
+            proof = admitted.snapshot()
+            document, line = proof["valuation_document"], proof["valuation_lines"][0]
+            if (proof["stock_order_id"] != self.source_order_id or document["id"] != self.valuation_document_id
+                or document["total_value_minor"] != total_cost
+                or any(document[key] != getattr(self.scope, key) for key in ("workspace_id", "organization_id", "legal_entity_id"))
+                or any(line[key] != getattr(self.scope, key) for key in ("item_id", "uom_id"))
+                or line["quantity_scaled"] != self.quantity_scaled or line["quantity_precision"] != self.quantity_precision
+                or [(row["id"], row["valuation_line_id"], row["cost_layer_id"], row["quantity_scaled"], row["value_minor"]) for row in proof["consumptions"]]
+                != [(row.consumption_id, row.valuation_line_id, row.cost_layer_id, row.quantity_scaled, row.value_minor) for row in self.consumptions]
+                or (self.original_cogs is not None and proof["posting_effect"]["id"] != self.original_cogs.posting_effect_id)):
+                raise FinancePostingError("partial_return_source_mismatch", "Original restituted-cost evidence differs from native source facts.")
 
     @property
     def fingerprint_payload(self) -> dict[str, Any]:
         return {
-            "contract": CONTRACT_VERSION, "scope": asdict(self.scope),
+            "contract": CONTRACT_VERSION if self.original_cost_admission is None else "customer-partial-return-original-v2", "scope": asdict(self.scope),
             "source_order_id": self.source_order_id, "invoice_id": self.invoice_id,
             "valuation_document_id": self.valuation_document_id, "quantity_precision": self.quantity_precision,
             "original_revenue_plan_id": self.original_revenue_plan_id,
@@ -232,8 +265,10 @@ class OriginalPartialReturnSource:
             "functional_currency": self.functional_currency, "base_uom_id": self.base_uom_id,
             "tax_minor": self.tax_minor, "inventory_lot_id": self.inventory_lot_id, "serial_tracked": self.serial_tracked,
             "consumptions": [asdict(row) for row in self.consumptions],
-            "original_cogs": [self.original_cogs.posting_effect_id, self.original_cogs.validation_digest],
+            "original_cogs": [self.original_cogs.posting_effect_id, self.original_cogs.validation_digest] if self.original_cogs is not None else None,
             "original_revenue": [self.original_revenue.posting_effect_id, self.original_revenue.validation_digest],
+            **({"original_cost_admission": ["stock-sales-restituted-cost-v1", self.original_cost_admission.evidence_digest]}
+               if self.original_cost_admission is not None else {}),
         }
 
     @property
@@ -418,6 +453,8 @@ def partial_return_balance(history: PartialReturnHistory) -> PartialReturnBalanc
     history.__post_init__()
     source = history.source
     source.__post_init__()
+    if source.original_cost_admission is not None:
+        raise FinancePostingError("partial_return_scope_unsupported", "Legacy history does not admit a new restituted-cost original.")
     source_digest = source.fingerprint
     chain = digest_payload({"contract": CONTRACT_VERSION, "source": source_digest})
     returned = credited = cost = released = liability = refunded = 0

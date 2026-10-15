@@ -22,6 +22,18 @@ from reconforge.infrastructure.postgres_customer_partial_return_rounding_transfe
 from reconforge.infrastructure.postgres_customer_partial_return_rounding_transfer_hooks import (
     _preflight as transfer_preflight,
 )
+from reconforge.infrastructure.postgres_customer_partial_return_zero_stock_hooks import (
+    DOWNGRADE_PREFLIGHT_SQL as ZERO_STOCK_DOWNGRADE_PREFLIGHT_SQL,
+)
+from reconforge.infrastructure.postgres_customer_partial_return_zero_stock_hooks import (
+    DOWNGRADE_SQL as ZERO_STOCK_DOWNGRADE_SQL,
+)
+from reconforge.infrastructure.postgres_customer_partial_return_zero_stock_hooks import (
+    UPGRADE_SQL as ZERO_STOCK_UPGRADE_SQL,
+)
+from reconforge.infrastructure.postgres_customer_partial_return_zero_stock_hooks import (
+    verify_zero_stock_functions,
+)
 from reconforge.infrastructure.postgres_customer_partial_returns_schema import (
     CLOSURE_SQL,
     COLLECTION_SQL,
@@ -137,6 +149,30 @@ def _source_v2() -> str:
     value = ORIGINAL_FUNCTIONS["customer_partial_return_source_close"].replace(
         "customer_partial_return_source_close(", "customer_partial_return_source_close_v2(", 1)
     value = _replace(value, " IF s IS NULL THEN", " IF s IS NULL OR s.source_payload->>'allocation_policy' IS DISTINCT FROM'remaining-original-v1' THEN")
+    value = _replace(value, "current_source:=reconforge.customer_partial_return_native_source(t,s.source_order_id);",
+        "current_source:=reconforge.customer_partial_return_source_dispatch(t,s.source_order_id);")
+    value = _replace(value, " FOREACH chain IN ARRAY ARRAY['cogs','revenue'] LOOP", r""" IF original ? 'cost_admission' THEN
+  IF original->'cost_admission' IS DISTINCT FROM reconforge.customer_partial_return_zero_stock_facts(t,s.source_order_id)
+   OR s.source_payload#>'{typed_source,original_cost_admission}' IS DISTINCT FROM jsonb_build_object(
+    'evidence_digest',reconforge.irp_digest(original->'cost_admission'))
+   OR fp->'original_cost_admission' IS DISTINCT FROM jsonb_build_array('stock-sales-restituted-cost-v1',reconforge.irp_digest(original->'cost_admission')) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='New original cost requires its exact native factual admission and retained digest';END IF;
+ ELSE
+  IF s.original_cogs_effect_id IS NULL OR s.source_payload->'typed_source' ? 'original_cost_admission'
+   OR fp ? 'original_cost_admission' THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Legacy original cost admission cannot be inferred or upgraded';END IF;
+ END IF;
+ FOREACH chain IN ARRAY ARRAY['cogs','revenue'] LOOP
+  IF chain='cogs' AND original->'cogs'='null'::jsonb THEN
+   IF s.original_cogs_effect_id IS NOT NULL OR s.source_payload#>'{typed_source,original_cogs}' IS DISTINCT FROM'null'::jsonb
+    OR NOT(original ? 'cost_admission') OR original#>'{cost_admission,issue_plan,total_cost_minor}' IS DISTINCT FROM'0'::jsonb THEN
+    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_owner',MESSAGE='Absent original COGS requires exact explicit zero native cost';END IF;
+   CONTINUE;
+  END IF;""")
+    value = _replace(value, "fp->>'contract' IS DISTINCT FROM'customer-partial-return-domain-v1'",
+        "fp->>'contract' IS DISTINCT FROM CASE WHEN original ? 'cost_admission' THEN'customer-partial-return-original-v2' ELSE'customer-partial-return-domain-v1' END")
+    value = _replace(value, "fp->'original_cogs' IS DISTINCT FROM jsonb_build_array(s.original_cogs_effect_id,original->'cogs'->>'validation_digest')",
+        "fp->'original_cogs' IS DISTINCT FROM CASE WHEN original->'cogs'='null'::jsonb THEN'null'::jsonb ELSE jsonb_build_array(s.original_cogs_effect_id,original->'cogs'->>'validation_digest') END")
     value = _replace(value,
         "chain:=reconforge.irp_digest(jsonb_build_object('contract','customer-partial-return-domain-v1','source',s.source_fingerprint));cash:=s.initial_collected_minor;",
         "chain:=reconforge.irp_digest(jsonb_build_object('contract','customer-partial-return-domain-v2','source',s.source_fingerprint,'allocation_policy','remaining-original-v1'));cash:=s.initial_collected_minor;")
@@ -198,6 +234,7 @@ def _plan_v2() -> str:
    AND ((p.cogs_restored_minor=0 AND z.correction_effect_id IS NULL) OR(p.cogs_restored_minor>0 AND EXISTS(
     SELECT 1 FROM jsonb_array_elements(p.payload->'entries') cost_part
     WHERE cost_part->>'purpose' IN('CostRestoration','ReverseCostRestoration') AND owned_effect.entry_id=cost_part->>'entry_id')))""")
+    value = _replace(value, "z.original_cogs_effect_id=s.original_cogs_effect_id", "z.original_cogs_effect_id IS NOT DISTINCT FROM s.original_cogs_effect_id")
     return value
 
 
@@ -261,8 +298,26 @@ CREATE TRIGGER immutable BEFORE INSERT OR UPDATE OR DELETE ON reconforge.custome
 CREATE CONSTRAINT TRIGGER native_close AFTER INSERT ON reconforge.customer_partial_return_allocation_witnesses
  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.customer_partial_return_deferred_close();
 CREATE FUNCTION reconforge.customer_partial_return_zero_layer_guard() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $cr148$
+DECLARE zero_consumption RECORD;zero_owner JSONB;
 BEGIN
  IF NEW.remaining_quantity_scaled>0 AND NEW.remaining_value_minor=0 THEN
+  IF TG_OP='UPDATE' AND NEW.remaining_quantity_scaled<OLD.remaining_quantity_scaled
+   AND NEW.remaining_value_minor<=OLD.remaining_value_minor THEN
+   SELECT consumed.*,detail.valuation_document_id INTO zero_consumption
+    FROM reconforge.inventory_layer_consumptions consumed JOIN reconforge.inventory_valuation_lines detail
+    ON(detail.tenant_id,detail.id)=(consumed.tenant_id,consumed.valuation_line_id)
+    JOIN reconforge.inventory_valuation_documents document ON(document.tenant_id,document.id)=(detail.tenant_id,detail.valuation_document_id)
+    JOIN reconforge.inventory_movements movement ON(movement.tenant_id,movement.id)=(document.tenant_id,document.movement_id)
+    JOIN reconforge.stock_sales_orders stock_owner ON(stock_owner.tenant_id,stock_owner.id)=(movement.tenant_id,movement.source_reference)
+    WHERE consumed.tenant_id=NEW.tenant_id AND consumed.cost_layer_id=NEW.id AND document.status='Draft'
+    AND stock_owner.issue_plan->>'cost_admission_policy'='partial-return-restituted-v1'
+    AND consumed.quantity_scaled=OLD.remaining_quantity_scaled-NEW.remaining_quantity_scaled
+    AND consumed.value_minor=OLD.remaining_value_minor-NEW.remaining_value_minor;
+   IF zero_consumption.id IS NOT NULL THEN
+    zero_owner:=reconforge.customer_partial_return_zero_stock_active(NEW.tenant_id,zero_consumption.valuation_document_id);
+    IF zero_owner IS NOT NULL THEN RETURN NEW;END IF;
+   END IF;
+  END IF;
   IF TG_OP='INSERT' OR NOT EXISTS(SELECT 1 FROM reconforge.customer_partial_return_restorations restoration
    JOIN reconforge.customer_partial_return_allocation_witnesses witness ON(witness.tenant_id,witness.plan_id,witness.position)
     =(restoration.tenant_id,restoration.plan_id,restoration.position)
@@ -320,6 +375,41 @@ def _constraints(*, upgraded: bool) -> str:
     result += _check("inventory_cost_layers", ("remaining_quantity_scaled", "remaining_value_minor"),
         "(remaining_quantity_scaled=0 AND remaining_value_minor=0) OR(remaining_quantity_scaled>0 AND remaining_value_minor>=0)" if upgraded
         else "(remaining_quantity_scaled=0 AND remaining_value_minor=0) OR(remaining_quantity_scaled>0 AND remaining_value_minor>0)")
+    result += _check("inventory_valuation_lines", ("value_minor",), "value_minor>=0" if upgraded else "value_minor>0")
+    result += _check("inventory_layer_consumptions", ("value_minor",), "value_minor>=0" if upgraded else "value_minor>0")
+    result += _check("inventory_valuation_documents", ("status", "total_value_minor", "finance_entry_id"),
+        "status='Draft' OR(status='Approved' AND((total_value_minor>0 AND finance_entry_id IS NOT NULL) OR(total_value_minor=0 AND finance_entry_id IS NULL))) OR status='Cancelled'" if upgraded else
+        "status='Draft' OR(status='Approved' AND total_value_minor>0 AND finance_entry_id IS NOT NULL) OR status='Cancelled'")
+    if upgraded:
+        result += r"""
+ALTER TABLE reconforge.customer_partial_return_sources ALTER COLUMN original_cogs_effect_id DROP NOT NULL;
+ALTER TABLE reconforge.customer_partial_return_restorations ALTER COLUMN original_cogs_effect_id DROP NOT NULL;
+ALTER TABLE reconforge.stock_sales_issue_claims ALTER COLUMN entry_id DROP NOT NULL;
+ALTER TABLE reconforge.customer_partial_return_sources ADD CONSTRAINT customer_partial_return_original_cost_evidence CHECK(
+ original_cogs_effect_id IS NOT NULL OR(
+ source_payload->>'allocation_policy' IS NOT DISTINCT FROM'remaining-original-v1'
+ AND source_payload#>>'{fingerprint_payload,contract}' IS NOT DISTINCT FROM'customer-partial-return-original-v2'
+ AND source_payload#>>'{original_source,cost_admission,schema_version}' IS NOT DISTINCT FROM'stock-sales-restituted-cost-v1'
+ AND source_payload#>>'{original_source,cost_admission,issue_plan,schema_version}' IS NOT DISTINCT FROM'stock-sales-issue-v2'
+ AND source_payload#>>'{original_source,cost_admission,issue_plan,cost_admission_policy}' IS NOT DISTINCT FROM'partial-return-restituted-v1'
+ AND source_payload#>'{original_source,cost_admission,issue_plan,total_cost_minor}' IS NOT DISTINCT FROM'0'::jsonb
+ AND source_payload#>'{original_source,cost_admission,posting_effect}' IS NOT DISTINCT FROM'null'::jsonb
+ AND source_payload#>'{original_source,cogs}' IS NOT DISTINCT FROM'null'::jsonb
+ AND source_payload#>'{typed_source,original_cogs}' IS NOT DISTINCT FROM'null'::jsonb
+ AND source_payload#>'{fingerprint_payload,original_cogs}' IS NOT DISTINCT FROM'null'::jsonb));
+ALTER TABLE reconforge.stock_sales_issue_claims ADD CONSTRAINT stock_sales_restituted_empty_entry CHECK(
+ entry_id IS NOT NULL OR(payload->>'schema_version' IS NOT DISTINCT FROM'stock-sales-issue-v2'
+ AND payload->>'cost_admission_policy' IS NOT DISTINCT FROM'partial-return-restituted-v1'
+ AND payload->'total_cost_minor' IS NOT DISTINCT FROM'0'::jsonb AND payload->'entry_id' IS NOT DISTINCT FROM'null'::jsonb));
+"""
+    else:
+        result += r"""
+ALTER TABLE reconforge.customer_partial_return_sources DROP CONSTRAINT customer_partial_return_original_cost_evidence;
+ALTER TABLE reconforge.stock_sales_issue_claims DROP CONSTRAINT stock_sales_restituted_empty_entry;
+ALTER TABLE reconforge.customer_partial_return_sources ALTER COLUMN original_cogs_effect_id SET NOT NULL;
+ALTER TABLE reconforge.customer_partial_return_restorations ALTER COLUMN original_cogs_effect_id SET NOT NULL;
+ALTER TABLE reconforge.stock_sales_issue_claims ALTER COLUMN entry_id SET NOT NULL;
+"""
     return result + ("ALTER TABLE reconforge.customer_partial_return_restorations ALTER COLUMN correction_effect_id DROP NOT NULL;" if upgraded else
                      "ALTER TABLE reconforge.customer_partial_return_restorations ALTER COLUMN correction_effect_id SET NOT NULL;")
 
@@ -349,7 +439,8 @@ def _preflight(*, upgraded_only: bool = False) -> str:
     return "DO $cr148$ DECLARE native RECORD;BEGIN\n" + "\n".join(clauses) + "\nEND $cr148$;"
 
 
-UPGRADE_SQL = _preflight() + VALUES_SQL + WITNESS_SQL + _constraints(upgraded=True) + _source_v2() + _plan_v2() + "\n".join(UPGRADED_FUNCTIONS.values()) + TRANSFER_UPGRADE_SQL
+_ROUNDING_SQL = _preflight() + VALUES_SQL + WITNESS_SQL + _constraints(upgraded=True) + _source_v2() + _plan_v2() + "\n".join(UPGRADED_FUNCTIONS.values()) + TRANSFER_UPGRADE_SQL
+UPGRADE_SQL = _ROUNDING_SQL + ZERO_STOCK_UPGRADE_SQL
 DOWNGRADE_PREFLIGHT_SQL = r"""
 DO $cr148$ BEGIN
  IF EXISTS(SELECT 1 FROM reconforge.customer_partial_return_sources WHERE source_payload ? 'allocation_policy')
@@ -358,7 +449,7 @@ DO $cr148$ BEGIN
   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Remaining-original downgrade refuses retained v2 evidence; restore the verified backup'; END IF;
 END $cr148$;
 """
-DOWNGRADE_SQL = DOWNGRADE_PREFLIGHT_SQL + TRANSFER_DOWNGRADE_PREFLIGHT_SQL + _preflight(upgraded_only=True) + TRANSFER_DOWNGRADE_SQL + _constraints(upgraded=False) + "\n".join(
+DOWNGRADE_SQL = DOWNGRADE_PREFLIGHT_SQL + TRANSFER_DOWNGRADE_PREFLIGHT_SQL + ZERO_STOCK_DOWNGRADE_PREFLIGHT_SQL + _preflight(upgraded_only=True) + ZERO_STOCK_DOWNGRADE_SQL + TRANSFER_DOWNGRADE_SQL + _constraints(upgraded=False) + "\n".join(
     value.replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1) for value in ORIGINAL_FUNCTIONS.values()) + r"""
 DROP TRIGGER customer_partial_return_zero_layer ON reconforge.inventory_cost_layers;
 DROP FUNCTION reconforge.customer_partial_return_zero_layer_guard();
@@ -377,7 +468,7 @@ def _new_helpers_preflight() -> str:
     """Pin all additional148 executable bodies and their declared metadata."""
     originals = set(ORIGINAL_FUNCTIONS) | {"it1_cost_snapshot", "it1_cost_originals"}
     statements = re.findall(r"CREATE(?: OR REPLACE)? FUNCTION reconforge\.([a-z0-9_]+)\(([^)]*)\) RETURNS ([A-Za-z]+)\s+"
-        r"LANGUAGE (plpgsql|sql)([^$]+)AS (\$[a-z0-9]+\$)(.*?)\6;", UPGRADE_SQL, re.S)
+        r"LANGUAGE (plpgsql|sql)([^$]+)AS (\$[a-z0-9]+\$)(.*?)\6;", _ROUNDING_SQL, re.S)
     clauses = []
     for name, arguments, returns, language, attributes, _delimiter, body in statements:
         if name in originals:
@@ -411,3 +502,4 @@ def install_customer_partial_return_rounding(connection: Any) -> None:
     connection.execute(_preflight(upgraded_only=True))
     connection.execute(transfer_preflight(upgraded_only=True))
     connection.execute(_new_helpers_preflight())
+    verify_zero_stock_functions(connection)

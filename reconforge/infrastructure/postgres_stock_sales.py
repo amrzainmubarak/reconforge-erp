@@ -6,6 +6,7 @@ from dataclasses import asdict
 from typing import Any, NoReturn
 
 from reconforge.application.receivables import ReceiptAllocationInput, ReceivableInvoiceLineInput
+from reconforge.domain.customer_partial_return_cost_evidence import STOCK_RESTITUTED_COST_POLICY
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor, canonical_json, digest_payload, text
 from reconforge.domain.operational_finance import OperationalFinancePreparation
 from reconforge.domain.sales_revenue import MAX_MINOR, SalesInvoicePreparation, require_sales_monetary_affinity
@@ -85,7 +86,13 @@ def stock_sales_money_context(row: Mapping[str, Any]) -> tuple[int, int]:
         captured = tuple(issue["currency_policy"].get(field) for field in fields)
         if any(type(actual) is not type(expected) or actual != expected for actual, expected in zip(captured, policy, strict=True)):
             invalid()
-        cost = minor(issue.get("total_cost_minor"))
+        retained_cost = issue.get("total_cost_minor")
+        if (issue.get("schema_version") == "stock-sales-issue-v2"
+                and issue.get("cost_admission_policy") == STOCK_RESTITUTED_COST_POLICY
+                and type(retained_cost) is int and retained_cost == 0):
+            cost = 0
+        else:
+            cost = minor(retained_cost)
     effect = max(minor(row.get("total_minor")), minor(source.get("total_minor")), cost)
     exposed = max(effect, minor(source.get("unit_price_minor")), minor(source.get("net_unit_price_minor")))
     return exposed, effect
@@ -312,19 +319,32 @@ class PostgresStockSalesRepository:
             currency_policy.require_compatible(source_policy)
             if layer["uom_id"] != row["uom_id"] or layer["quantity_precision"] != row["quantity_precision"]:
                 raise FinancePostingError("stock_sales_fifo_invalid", "Layer quantity interpretation differs from the order.")
-        allocations, total = freeze_fifo(layers, row["quantity_scaled"])
-        self._actor(actor, "prepare-issue", {**row, "total_minor": total})
+        # Compute through the existing allocator. Only a genuinely problematic
+        # zero/value-exhausting slice may enter the separately proved native
+        # restitution contract; ordinary positive plans retain their v1 bytes.
+        allocations, total = freeze_fifo(layers, row["quantity_scaled"], allow_zero=True)
+        restituted = any(part["value_minor"] == 0 or (part["quantity_scaled"] < part["remaining_quantity_scaled"]
+                         and part["value_minor"] == part["remaining_value_minor"]) for part in allocations)
+        cost_snapshot = None
+        if restituted:
+            cost_snapshot = self._one("SELECT reconforge.customer_partial_return_zero_stock_cost(%s,%s,%s,%s,%s,%s::jsonb) value",
+                (self.tenant_id, row["workspace_id"], row["organization_id"], row["legal_entity_id"], row["item_id"], canonical_json(allocations)))["value"]
+        self._actor(actor, "prepare-issue", {**row, "total_minor": max(row["total_minor"], total)})
         number = "SS1-" + digest_payload([self.tenant_id, row["id"]])[:32].upper()
-        entry_id = platform_id("GLE", row["workspace_id"], number)
-        plan = {"schema_version": "stock-sales-issue-v1", "preparer_actor_id": actor.user_id, "preparer_username": actor.username,
+        entry_id = platform_id("GLE", row["workspace_id"], number) if total > 0 else None
+        plan = {"schema_version": "stock-sales-issue-v2" if restituted else "stock-sales-issue-v1", "preparer_actor_id": actor.user_id, "preparer_username": actor.username,
             "source_digest": row["source_digest"], "request": request, "allocations": allocations, "total_cost_minor": total,
             "policy_id": policy["id"], "inventory_account_id": policy["inventory_account_id"], "cogs_account_id": policy["cogs_account_id"],
             "entry_id": entry_id, "entry_number": number, "journal_id": policy["finance_journal_id"],
             "currency_policy": asdict(currency_policy)}
+        if restituted:
+            plan.update(cost_admission_policy=STOCK_RESTITUTED_COST_POLICY, restitution_cost_snapshot=cost_snapshot)
         self.connection.execute("""INSERT INTO reconforge.stock_sales_issue_claims
             (tenant_id,order_id,workspace_id,legal_entity_id,item_id,entry_id,payload,plan_digest)
             VALUES(%s,%s,%s,%s,%s,%s,%s::jsonb,%s)""", (self.tenant_id, row["id"], row["workspace_id"], row["legal_entity_id"],
                 row["item_id"], entry_id, canonical_json(plan), digest_payload(plan)))
+        if total == 0:
+            return {"issue_plan": plan, "cogs_entry_id": None}
         precision = currency_policy.precision
         entry = self.finance.create_entry(entry_number=number, organization_code=self.scope["organization_code"],
             entity_code=self.scope["entity_code"], period_id=request["period_id"], journal_code=policy["journal_code"],
@@ -381,13 +401,15 @@ class PostgresStockSalesRepository:
         self.connection.execute("""UPDATE reconforge.inventory_valuation_documents SET status='Approved',total_value_minor=%s,
             finance_entry_id=%s,approved_by=%s,approved_at=now(),approval_reason=%s,row_version=row_version+1 WHERE tenant_id=%s AND id=%s""",
             (plan["total_cost_minor"], row["cogs_entry_id"], actor.username, reason, self.tenant_id, valuation_id))
-        entry = self._one("SELECT validation_digest FROM reconforge.finance_entries WHERE tenant_id=%s AND id=%s",
-                          (self.tenant_id, row["cogs_entry_id"]))
-        effect = self.postings.post(row["cogs_entry_id"], command_id="stock-issue:" + command,
-            expected_validation_digest=entry["validation_digest"], reason=reason, actor=actor)
+        effect_id = None
+        if plan["total_cost_minor"] > 0:
+            entry = self._one("SELECT validation_digest FROM reconforge.finance_entries WHERE tenant_id=%s AND id=%s",
+                              (self.tenant_id, row["cogs_entry_id"]))
+            effect_id = self.postings.post(row["cogs_entry_id"], command_id="stock-issue:" + command,
+                expected_validation_digest=entry["validation_digest"], reason=reason, actor=actor)["id"]
         self.connection.execute("UPDATE reconforge.stock_sales_reservations SET state='Consumed' WHERE tenant_id=%s AND order_id=%s", (self.tenant_id, row["id"]))
         self.connection.execute("UPDATE reconforge.stock_sales_issue_claims SET state='Consumed' WHERE tenant_id=%s AND order_id=%s", (self.tenant_id, row["id"]))
-        return {"movement_id": movement["id"], "valuation_id": valuation_id, "cogs_effect_id": effect["id"]}
+        return {"movement_id": movement["id"], "valuation_id": valuation_id, "cogs_effect_id": effect_id}
 
     def act(self, identifier: str, operation: str, *, expected_version: int, command_id: str, reason: str,
             parameters: Mapping[str, Any], actor: PostingActor) -> dict[str, Any]:
@@ -446,11 +468,12 @@ class PostgresStockSalesRepository:
             elif operation == "review-issue":
                 if row["issue_plan"]["preparer_actor_id"] == actor.user_id:
                     raise FinancePostingError("stock_sales_sod_denied", "Issue preparer cannot review their own COGS.")
-                self._actor(actor, operation, {**row, "total_minor": row["issue_plan"]["total_cost_minor"]})
-                self.finance.validate_entry(row["cogs_entry_id"], reason=reason, actor_label=actor.username)
+                self._actor(actor, operation, {**row, "total_minor": max(row["total_minor"], row["issue_plan"]["total_cost_minor"])})
+                if row["issue_plan"]["total_cost_minor"] > 0:
+                    self.finance.validate_entry(row["cogs_entry_id"], reason=reason, actor_label=actor.username)
                 changes["issue_reviewer_id"] = actor.user_id
             elif operation == "deliver":
-                self._actor(actor, operation, {**row, "total_minor": row["issue_plan"]["total_cost_minor"]})
+                self._actor(actor, operation, {**row, "total_minor": max(row["total_minor"], row["issue_plan"]["total_cost_minor"])})
                 changes.update(self._deliver(row, actor, command_id, reason))
             elif operation == "cancel":
                 if stage >= STOCK_STAGES.index("Delivered"):

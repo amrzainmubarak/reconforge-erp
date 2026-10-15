@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from reconforge.api import create_api_app
 from reconforge.api.routes import customer_partial_returns_v3 as partial
 from reconforge.api.routes import stock_sales_v2 as stock
+from reconforge.db import run_migrations
 from tests.api_route_registration import registered_http_operations
 
 HISTORY = {"command_id": "synthetic-command", "expected_history_version": 0, "period_id": "period", "posting_date": "2026-10-15", "reason": "Explicit actual intent"}
@@ -34,15 +35,16 @@ def test_real_app_registers_exactly_26_fixed_monetary_routes_and_preserves_legac
     assert not any("/api/v2/stock-sales/commerce/" in path for _method, path in operations)
 
 
-def test_real_registered_monetary_surfaces_refuse_local_fallback_before_native_execution(tmp_path: Path) -> None:
-    app = create_api_app(tmp_path / "auth.db")
+def test_real_registered_monetary_surfaces_require_identity_before_native_execution(tmp_path: Path) -> None:
+    db_path = tmp_path / "auth.db"
+    run_migrations(db_path)
+    app = create_api_app(db_path)
     with TestClient(app) as client:
         for path in ("/api/v2/stock-sales/options", "/api/v2/stock-sales/orders", "/api/v3/customer-partial-returns/plans"):
             response = client.get(path)
-            assert response.status_code == 503
-            assert response.json()["error"]["code"] in {"stock_monetary_backend_unavailable", "monetary_partial_return_backend_unavailable"}
+            assert response.status_code == 401 and response.json()["error"]["code"] == "auth_required"
         response = client.post("/api/v3/customer-partial-returns/plans", json=RETURN)
-        assert response.status_code == 503 and response.json()["error"]["code"] == "monetary_partial_return_backend_unavailable"
+        assert response.status_code == 401 and response.json()["error"]["code"] == "auth_required"
 
 
 @pytest.mark.parametrize("model,payload,field", [(partial.ReturnRequest, RETURN, "quantity_scaled"), (partial.RefundRequest, {**HISTORY, "amount_minor": "1", "settlement_rate": None}, "amount_minor"), (stock.CollectionRequest, COLLECTION, "amount_minor")])

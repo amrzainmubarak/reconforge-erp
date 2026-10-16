@@ -30,7 +30,8 @@ def _business_digest(runtime):
     result = hashlib.sha256()
     with runtime.actor("maker") as (connection, _, _actor):
         flags = connection.execute("SELECT rolsuper,rolbypassrls,rolcreatedb,rolcreaterole,rolreplication FROM pg_roles WHERE rolname=current_user").fetchone()
-        assert all(type(value) is bool and not value for value in flags.values())
+        assert flags is not None and all(type(flags[name]) is bool and not flags[name]
+            for name in ("rolsuper", "rolbypassrls", "rolcreatedb", "rolcreaterole", "rolreplication"))
         for name in TABLES:
             if name in {"domain_audit_events", "domain_audit_ledger_state"}:
                 continue

@@ -14,6 +14,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 MONETARY_REQUIRED = (
+    'alembic/versions/0149_postgres_monetary_customer_partial_returns.py',
     'apps/web/live/customer-partial-return-monetary-cycles.spec.ts',
     'apps/web/live/customer-partial-return-monetary.playwright.config.ts',
     'apps/web/src/components/MonetaryCustomerReturns.tsx',
@@ -891,8 +892,8 @@ def main() -> int:
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--index-count", type=int, default=22)
-    parser.add_argument("--migration-count", type=int, default=147)
-    parser.add_argument("--migration-head", default="0148_pg_partial_return_rounding")
+    parser.add_argument("--migration-count", type=int, default=148)
+    parser.add_argument("--migration-head", default="0149_pg_monetary_partial_returns")
     parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
     parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
     parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")

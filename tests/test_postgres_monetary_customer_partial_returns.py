@@ -156,7 +156,8 @@ def test_actual_credit_second_collection_partial_refund_inverse_and_final_settle
         assert balance[field] == "0"
     assert balance["active_plan_id"] is balance["active_revaluation_plan_id"] is None
     with runtime.actor("poster") as (connection, _, _actor):
-        invoice = PostgresReceivablesRepository(connection, runtime.tenant).get_invoice(order["invoice_id"])
+        assert order["monetary_origin"]["invoice_id"]
+        invoice = PostgresReceivablesRepository(connection, runtime.tenant).get_invoice(order["monetary_origin"]["invoice_id"])
         assert invoice["outstanding_minor"] == 0 and invoice["status"] == "Paid"
         layer = connection.execute("SELECT remaining_quantity_scaled,remaining_value_minor FROM reconforge.inventory_cost_layers WHERE tenant_id=%s", (runtime.tenant,)).fetchone()
         assert dict(layer) == {"remaining_quantity_scaled": 10, "remaining_value_minor": 12000}
@@ -176,10 +177,11 @@ def test_actual_zero_functional_collection_keeps_positive_transaction_cash_witho
         before = connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"]
     order = _collect(runtime, order, 1, rate="0.01", number="ZERO-FUNCTIONAL-CASH")
     with runtime.actor("poster") as (connection, _, _actor):
-        plan = connection.execute("SELECT entry_id,payload FROM reconforge.operational_fx_plans WHERE tenant_id=%s AND id=%s", (runtime.tenant, order["collection_plan_id"])).fetchone()
+        plan = connection.execute("SELECT source_id,entry_id,payload FROM reconforge.operational_fx_plans WHERE tenant_id=%s AND id=%s", (runtime.tenant, order["collection"]["id"])).fetchone()
+        assert plan["source_id"] == order["monetary_origin"]["fx_source_id"]
         assert plan["entry_id"] is None and plan["payload"]["snapshot"] is None and plan["payload"]["validation_digest"] is None
         assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == before
-        receipt = connection.execute("SELECT amount_minor,status FROM reconforge.ar_receipts WHERE tenant_id=%s AND id=%s", (runtime.tenant, order["receipt_id"])).fetchone()
+        receipt = connection.execute("SELECT amount_minor,status FROM reconforge.ar_receipts WHERE tenant_id=%s AND id=%s", (runtime.tenant, order["collection"]["receipt_id"])).fetchone()
         assert dict(receipt) == {"amount_minor": 1, "status": "Posted"}
     balance = _balance(runtime, order)
     assert balance["transaction_collected_minor"] == "1" and balance["history_version"] == 1

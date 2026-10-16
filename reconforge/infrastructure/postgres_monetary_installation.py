@@ -14,7 +14,7 @@ from typing import Any
 
 from reconforge.infrastructure.postgres_finance_posting import records
 from reconforge.infrastructure.postgres_monetary_inventory_shared_hooks import preflight as physical_preflight
-from reconforge.infrastructure.postgres_monetary_receivables import monetary_return_schema
+from reconforge.infrastructure.postgres_monetary_receivables import MONETARY_SCHEMA_SQL, monetary_return_schema
 from reconforge.infrastructure.postgres_monetary_stock_shared_hooks import preflight as stock_preflight
 
 _FUNCTION = re.compile(
@@ -64,6 +64,45 @@ def function_preflight(source: str) -> str:
     return "DO $cr149verify$ DECLARE native RECORD;BEGIN\n" + "".join(checks) + "END $cr149verify$;\n"
 
 
+def installation_preflight_sql() -> str:
+    """Emit the same complete verifier for online installs and offline migrations."""
+    from reconforge.infrastructure.postgres_monetary_customer_returns_schema import (
+        NATIVE_FUNCTION_SQL,
+        NATIVE_TRIGGER_CONTRACTS,
+    )
+
+    statements = [function_preflight(NATIVE_FUNCTION_SQL), stock_preflight(upgraded=True), physical_preflight(upgraded=True)]
+    statements.append("DO $cr149catalog$ DECLARE profile JSONB;BEGIN SELECT catalog.profile INTO profile FROM ("
+        + MONETARY_SCHEMA_SQL + ") catalog; IF profile IS NULL OR (SELECT count(*) FROM jsonb_object_keys(profile))<>18 OR EXISTS("
+        "SELECT 1 FROM jsonb_each(profile) flag WHERE flag.value IS DISTINCT FROM 'true'::jsonb) THEN "
+        "RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_monetary_owner',"
+        "MESSAGE='Monetary native storage or report execution contract drift'; END IF; END $cr149catalog$;\n")
+    names: set[tuple[str, str]] = set()
+    for table, name, signature, kind, deferred, initially_deferred, enabled in NATIVE_TRIGGER_CONTRACTS:
+        if (re.fullmatch(r"[a-z][a-z0-9_]*", table) is None or re.fullmatch(r"[a-z][a-z0-9_]*", name) is None
+                or re.fullmatch(r"[a-z][a-z0-9_]*\((?:text(?:,text)*)?\)", signature) is None
+                or type(kind) is not int or not 0 < kind < 128 or type(deferred) is not bool
+                or type(initially_deferred) is not bool or enabled != "O" or (table, name) in names):
+            raise ValueError("The monetary native trigger inventory is malformed or duplicated.")
+        names.add((table, name))
+        statement = """DO $cr149trigger$ BEGIN IF (SELECT count(*) FROM pg_catalog.pg_trigger trigger
+            WHERE trigger.tgrelid=to_regclass('reconforge.@@TABLE@@') AND trigger.tgname='@@NAME@@'
+              AND trigger.tgtype::integer=@@KIND@@ AND trigger.tgdeferrable=@@DEFERRED@@
+              AND trigger.tginitdeferred=@@INITIAL@@ AND trigger.tgenabled='O'
+              AND trigger.tgfoid=to_regprocedure('reconforge.@@SIGNATURE@@') AND NOT trigger.tgisinternal
+              AND trigger.tgnargs=0 AND trigger.tgqual IS NULL)<>1 THEN
+             RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_monetary_owner',
+              MESSAGE='Monetary native trigger binding or execution profile drift';
+            END IF; END $cr149trigger$;\n"""
+        for key, value in {"TABLE": table, "NAME": name, "SIGNATURE": signature, "KIND": str(kind),
+                           "DEFERRED": str(deferred).upper(), "INITIAL": str(initially_deferred).upper()}.items():
+            statement = statement.replace("@@" + key + "@@", value)
+        statements.append(statement)
+    if not names:
+        raise ValueError("The monetary native trigger inventory is empty.")
+    return "\n".join(statements)
+
+
 def verify_monetary_installation_if_present(connection: Any) -> bool:
     """Return False only for a genuinely absent149 namespace, without caching."""
     rows = records(connection.execute("""SELECT
@@ -85,27 +124,7 @@ def verify_monetary_installation_if_present(connection: Any) -> bool:
         return False
     if not all(profile[name] for name in ("marker", "credit", "balance", "helpers")) or profile["relations"] != 7:
         raise ValueError("A partial monetary native installation cannot fall back to legacy behavior.")
-    # Import only after the complete namespace is present. The original148
-    # installer remains independent of149 native capabilities when truly absent.
-    from reconforge.infrastructure.postgres_monetary_customer_returns_schema import (
-        NATIVE_FUNCTION_SQL,
-        NATIVE_TRIGGER_CONTRACTS,
-    )
-
     if not monetary_return_schema(connection):
         raise ValueError("The installed monetary owner has no verified native storage.")
-    connection.execute(function_preflight(NATIVE_FUNCTION_SQL))
-    connection.execute(stock_preflight(upgraded=True))
-    connection.execute(physical_preflight(upgraded=True))
-    for table, name, signature, kind, deferred, initially_deferred, enabled in NATIVE_TRIGGER_CONTRACTS:
-        actual = records(connection.execute("""SELECT trigger.tgtype::integer AS kind,trigger.tgdeferrable AS deferred,
-            trigger.tginitdeferred AS initially_deferred,trigger.tgenabled::text AS enabled,
-            trigger.tgfoid=to_regprocedure(%s) AS function_matches,trigger.tgisinternal AS internal,
-            trigger.tgnargs::integer AS arguments,trigger.tgqual IS NULL AS no_predicate
-            FROM pg_catalog.pg_trigger trigger WHERE trigger.tgrelid=to_regclass(%s) AND trigger.tgname=%s""",
-            ("reconforge." + signature, "reconforge." + table, name)))
-        expected = {"kind": kind, "deferred": deferred, "initially_deferred": initially_deferred, "enabled": enabled,
-                    "function_matches": True, "internal": False, "arguments": 0, "no_predicate": True}
-        if actual != [expected]:
-            raise ValueError("The native monetary trigger binding or execution profile differs.")
+    connection.execute(installation_preflight_sql())
     return True

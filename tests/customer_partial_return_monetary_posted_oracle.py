@@ -9,6 +9,7 @@ No production code or older financial reader is imported.
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
@@ -1119,7 +1120,8 @@ def _policy_append(row: dict[str, Any], capture: Capture, *, scope_refusal: bool
     policy = metadata["policy_decision_evidence"]
     require(type(policy) is dict and set(policy) == _POLICY_FIELDS and type(policy["schema_version"]) is int and policy["schema_version"] == 1
             and policy["policy_version"] == "central-policy-v3" and policy["principal_type"] == "user" and policy["context_binding"] == "bound"
-            and type(policy["allowed"]) is bool)
+            and type(policy["allowed"]) is bool and type(policy["evaluator"]) is str and 0 < len(policy["evaluator"]) <= 160
+            and type(policy["reason_code"]) is str and re.fullmatch(r"[a-z][a-z0-9_]{0,119}", policy["reason_code"]) is not None)
     for key in _POLICY_FIELDS - {"schema_version", "allowed", "policy_version", "principal_type", "context_binding", "evaluator", "reason_code", "granted_permission_digest"}:
         _hex(policy[key])
     require(policy["decision_digest"] == _audit_digest({key: value for key, value in policy.items() if key != "decision_digest"})
@@ -1130,9 +1132,10 @@ def _policy_append(row: dict[str, Any], capture: Capture, *, scope_refusal: bool
     permissions = surfaces.get(policy["surface_digest"])
     require(permissions is not None)
     permissions = cast(frozenset[str], permissions)
-    require(any(policy["required_permission_digest"] == _audit_digest({"namespace": "permission.contract", "values": [permission]}) for permission in permissions))
+    required = {permission for permission in permissions if policy["required_permission_digest"] == _audit_digest({"namespace": "permission.contract", "values": [permission]})}
+    require(len(required) == 1)
     if policy["allowed"]:
-        require(any(policy["granted_permission_digest"] == _text_digest("permission.granted", permission) for permission in permissions))
+        require(policy["granted_permission_digest"] == _text_digest("permission.granted", next(iter(required))))
     else:
         orders = capture.rows("stock_sales_orders")
         require(scope_refusal and policy["reason_code"] in {"entity_scope_denied", "organization_scope_denied", "workspace_scope_denied", "tenant_scope_denied"}
@@ -1269,6 +1272,13 @@ def _immutable_transition(before: Capture, after: Capture) -> None:
         require(set(old[name]) <= set(new[name]))
     for effect in before.rows("finance_posting_effects"):
         require(_one(before, "finance_entries", id=effect["entry_id"]) == _one(after, "finance_entries", id=effect["entry_id"]))
+    for table in ("operational_fx_plans", "customer_partial_return_monetary_plans"):
+        for plan in before.rows(table):
+            if plan["phase"] in {2, 3}:
+                require(plan == _one(after, table, id=plan["id"]))
+                if table == "customer_partial_return_monetary_plans":
+                    require([row for row in before.rows("customer_partial_return_monetary_entries") if row["plan_id"] == plan["id"]]
+                            == [row for row in after.rows("customer_partial_return_monetary_entries") if row["plan_id"] == plan["id"]])
     for layer in before.rows("inventory_cost_layers"):
         current = _one(after, "inventory_cost_layers", id=layer["id"])
         mutable = {"remaining_quantity_scaled", "remaining_value_minor", "updated_at", "row_version"}
@@ -1332,3 +1342,138 @@ def qualify_raw_cycle(packet: RawPacket) -> dict[str, Any]:
             "observation_business_original_rows_equal": False, "observation_audit_actions_bound": False, "observation_chronology_bound": False,
             "populated_restore_original_rows_equal": False, "restored_tables": 0, "restored_rows": 0,
             "current_authorization_proven": False, "input_sha256": packet.sha256}
+
+
+OBSERVATIONS_SCHEMA = "customer-partial-return-monetary-posted-observations-input-v1"
+OBSERVATION_SCHEMA = "customer-partial-return-monetary-browser-observation-v1"
+RESTORE_SCHEMA = "customer-partial-return-monetary-posted-restored-input-v1"
+_OBSERVATION_FIELDS = {"schema_version", "kind", "tenant_id", "source_order_id", "capture", "history_version", "plan_id", "plan_digest", "tables", "refusal"}
+_SCOPE_CODES = {"entity_scope_denied", "organization_scope_denied", "workspace_scope_denied", "tenant_scope_denied"}
+
+
+def verify_observations(packet: RawPacket, proof: dict[str, Any], original: bytes) -> Capture:
+    """Join manual replay/refusals/final read to economic originals in order.
+
+    HTTP receipts are bounded observed metadata. Current authorization remains
+    outside this offline proof. The separate refused-request body is pinned by
+    the browser custody adapter; it is not an input to financial arithmetic.
+    """
+    value = _decode(original)
+    require(type(value) is dict and set(value) == {"schema_version", "tenant_id", "source_order_id", "observations"}
+            and value["schema_version"] == OBSERVATIONS_SCHEMA and value["tenant_id"] == packet.tenant_id and value["source_order_id"] == packet.source_order_id)
+    foreign = proof["case"] == "foreign"
+    versions = (0, 0, 0, 1, 2, 2, 2, 3, 4, 5, 6, 7) if foreign else (0, 0, 0, 1, 2, 3, 4, 5, 6, 7)
+    require(len(packet.captures) == len(versions) and all(len(capture.rows("customer_partial_return_monetary_history")) == version for capture, version in zip(packet.captures, versions, strict=True)))
+    kinds: tuple[tuple[str, int], ...] = (("ActiveValuationRefusal", 5),) if foreign else ()
+    kinds += (("RetainedReplay", len(versions) - 3), ("ScopeRefusal", len(versions) - 1), ("FinalRead", len(versions) - 1))
+    require(type(value["observations"]) is list and len(value["observations"]) == len(kinds))
+    previous: Capture | None = None
+    previous_index: int | None = None
+    for row, (kind, index) in zip(value["observations"], kinds, strict=True):
+        require(type(row) is dict and set(row) == _OBSERVATION_FIELDS and row["schema_version"] == OBSERVATION_SCHEMA
+                and row["kind"] == kind and row["tenant_id"] == packet.tenant_id and row["source_order_id"] == packet.source_order_id
+                and type(row["capture"]) is int and row["capture"] == index and type(row["history_version"]) is int and row["history_version"] == versions[index])
+        observation = decode_capture({"capture": index, "tables": row["tables"]}, index=index, tenant_id=packet.tenant_id)
+        baseline = previous if previous_index == index else packet.captures[index]
+        baseline = cast(Capture, baseline)
+        transition = verify_audit_only_transition({name: list(rows) for name, rows in baseline.raw_tables}, row["tables"], tenant_id=packet.tenant_id, scope_refusal=kind == "ScopeRefusal")
+        if kind in {"ActiveValuationRefusal", "RetainedReplay"}:
+            _hex(row["plan_digest"])
+            if kind == "RetainedReplay":
+                plan = _one(observation, "customer_partial_return_monetary_plans", id=row["plan_id"])
+                history = _one(observation, "customer_partial_return_monetary_history", sequence=5)
+                require(history["partial_plan_id"] == plan["id"] and plan["phase"] == 2 and plan["operation"] == "Refund" and plan["plan_digest"] == row["plan_digest"])
+            else:
+                plan = _one(observation, "operational_fx_plans", id=row["plan_id"])
+                require(plan["phase"] == 2 and plan["kind"] == "revalue" and plan["payload"]["plan_digest"] == row["plan_digest"])
+                source = verify_original_rows(observation, source_order_id=packet.source_order_id)
+                events = verify_history_rows(observation, source)
+                _effects, active = verify_valuation_rows(observation, source, events)
+                require(active == plan["id"])
+            require(transition["appended_audit_events"] > 0)
+        else:
+            require(row["plan_id"] is None and row["plan_digest"] is None)
+        if kind in {"ScopeRefusal", "ActiveValuationRefusal"}:
+            refusal = row["refusal"]
+            require(type(refusal) is dict and set(refusal) == {"operation", "status", "code"} and type(refusal["status"]) is int)
+            if kind == "ScopeRefusal":
+                require(refusal["operation"] == "ReadSource" and refusal["status"] == 403 and refusal["code"] in _SCOPE_CODES)
+                old = _audit_chain(baseline, packet.tenant_id)
+                added = [_decode(raw) for raw in _audit_chain(observation, packet.tenant_id)[len(old):]]
+                require(any(event["metadata_json"]["policy_decision_evidence"]["allowed"] is False
+                            and event["metadata_json"]["policy_decision_evidence"]["reason_code"] == refusal["code"] for event in added))
+            else:
+                require(refusal == {"operation": "PrepareReturn", "status": 409, "code": "monetary_return_state_conflict"})
+        else:
+            require(row["refusal"] is None)
+        if index + 1 < len(packet.captures):
+            observed_chain = _audit_chain(observation, packet.tenant_id)
+            following = _audit_chain(packet.captures[index + 1], packet.tenant_id)
+            require(following[:len(observed_chain)] == observed_chain)
+        previous, previous_index = observation, index
+    require(previous is not None)
+    proof.update(observations=len(kinds), observation_business_original_rows_equal=True, observation_audit_actions_bound=True, observation_chronology_bound=True)
+    return cast(Capture, previous)
+
+
+def verify_restore(packet: RawPacket, final: Capture, original: bytes, proof: dict[str, Any]) -> None:
+    value = _decode(original)
+    require(type(value) is dict and set(value) == {"schema_version", "tenant_id", "source_order_id", "tables"}
+            and value["schema_version"] == RESTORE_SCHEMA and value["tenant_id"] == packet.tenant_id and value["source_order_id"] == packet.source_order_id)
+    restored = decode_capture({"capture": final.index, "tables": value["tables"]}, index=final.index, tenant_id=packet.tenant_id)
+    require(restored.raw_tables == final.raw_tables)
+    proof.update(populated_restore_original_rows_equal=True, restored_tables=91, restored_rows=sum(len(rows) for _, rows in restored.raw_tables))
+
+
+def qualify_files(input_path: Path, *, observations_path: Path | None = None, restore_path: Path | None = None) -> dict[str, Any]:
+    """Read originals twice; never replace source custody with caller totals."""
+    sources = {path: read_original(path) for path in (input_path, observations_path, restore_path) if path is not None}
+    require(len(sources) == 1 + (observations_path is not None) + (restore_path is not None))
+    source_path = Path(__file__).absolute()
+    source = read_original(source_path)
+    packet = decode_packet(sources[input_path])
+    proof = qualify_raw_cycle(packet)
+    final = packet.captures[-1]
+    if observations_path is not None:
+        final = verify_observations(packet, proof, sources[observations_path])
+    if restore_path is not None:
+        verify_restore(packet, final, sources[restore_path], proof)
+    proof.update(observations_input_sha256=hashlib.sha256(sources[observations_path]).hexdigest() if observations_path is not None else None,
+                 restore_input_sha256=hashlib.sha256(sources[restore_path]).hexdigest() if restore_path is not None else None,
+                 oracle_source_sha256=hashlib.sha256(source).hexdigest())
+    for path, original in sources.items():
+        require_original_unchanged(path, original)
+    require_original_unchanged(source_path, source)
+    return proof
+
+
+def _write_new(path: Path, proof: dict[str, Any]) -> None:
+    require(path.is_absolute() and ".." not in path.parts and not path.exists())
+    for candidate in (*reversed(path.parent.parents), path.parent):
+        info = candidate.lstat()
+        require(stat.S_ISDIR(info.st_mode) and not stat.S_ISLNK(info.st_mode) and not getattr(info, "st_file_attributes", 0) & 0x400)
+    original = (_audit_json(proof) + "\n").encode()
+    with path.open("xb") as stream:
+        stream.write(original)
+        stream.flush()
+        os.fsync(stream.fileno())
+    require(read_original(path) == original)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Independently verify private monetary original rows.")
+    parser.add_argument("--input", required=True, type=Path)
+    parser.add_argument("--observations-input", type=Path)
+    parser.add_argument("--restore-input", type=Path)
+    parser.add_argument("--output", required=True, type=Path)
+    args = parser.parse_args()
+    try:
+        proof = qualify_files(args.input, observations_path=args.observations_input, restore_path=args.restore_input)
+        _write_new(args.output, proof)
+    except (MonetaryRawRefusal, OSError, ValueError, TypeError, KeyError, IndexError, OverflowError):
+        parser.exit(2, "Independent monetary raw input refused.\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

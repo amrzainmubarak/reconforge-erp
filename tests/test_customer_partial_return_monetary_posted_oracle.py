@@ -4,6 +4,8 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import subprocess
+import sys
 from copy import deepcopy
 from fractions import Fraction
 from pathlib import Path
@@ -123,7 +125,7 @@ def original_tables(*, foreign: bool = True) -> dict[str, list[str]]:
     revenue = effect("revenue-effect", "revenue-entry", [("receivable", gross, 0), ("revenue", 0, local_net), ("tax", 0, local_tax)], "FX:fx-source:recognize")
     consumed = {"tenant_id": "tenant", "id": "consumed", "workspace_id": "work", "valuation_line_id": "valuation-line", "cost_layer_id": "layer", "quantity_scaled": 10, "value_minor": 12000}
     typed_consumed = {"position": 1, "original_consumption_id": "consumed", "original_valuation_line_id": "valuation-line", "cost_layer_id": "layer", "quantity_scaled": 10, "value_minor": 12000}
-    dimensions = {account: {} for account in (*roles.values(), "tax")}
+    dimensions: dict[str, dict[str, str]] = {account: {} for account in (*roles.values(), "tax")}
     evidence = {"stock_order_id": "stock", "stock_source": declared, "stock_source_digest": stock["source_digest"],
                 **{key: stock[key] for key in ("issue_plan", "movement_id", "valuation_id", "cogs_entry_id", "cogs_effect_id", "invoice_id")},
                 "cogs_snapshot": cogs["snapshot_json"], "fx_source": fx, "recognition_plan_id": "recognition", "recognition_snapshot": revenue["snapshot_json"],
@@ -264,7 +266,7 @@ def history_tables() -> tuple[dict[str, list[str]], list[dict[str, Any]]]:
             identifier = prefixes[event["kind"]] + "-" + str(event["sequence"]) * 32
             record.update(stock_fx_plan_id=None, partial_plan_id=identifier)
             plan = storage_row("customer_partial_return_monetary_plans")
-            payload = {"monetary_event": event}
+            payload: dict[str, Any] = {"monetary_event": event}
             payload["plan_digest"] = reader._digest(payload)
             plan.update(workspace_id="work", organization_id="org", legal_entity_id="entity", origin_id="origin", operation=event["kind"], id=identifier, phase=2,
                         expected_history_version=event["sequence"] - 1, original_id=None if event["kind"] == "Return" else "CR3-" + "2" * 32,
@@ -669,6 +671,206 @@ def test_complete_financial_trace_rederives_every_effect_and_retains_no_native_c
     proof = reader.qualify_raw_cycle(reader.decode_packet(encoded(value)))
     assert (proof["final_posting_effects"], proof["final_posted_lines"], proof["final_debits_minor"]) == (14, 37, "81605")
     assert proof["current_authorization_proven"] is False and proof["observations"] == 0 and proof["populated_restore_original_rows_equal"] is False
+
+
+def complete_browser_fixture() -> tuple[bytes, bytes, bytes]:
+    """Closed foreign chronology with literal amounts, synthetic row custody."""
+    full = {name: [json.loads(text) for text in rows] for name, rows in complete_final_tables().items()}
+    source = reader.verify_original_rows(original_capture(complete_final_tables()), source_order_id="stock")
+    events = literal_foreign_events(source)
+    versions = (0, 0, 0, 1, 2, 2, 2, 3, 4, 5, 6, 7)
+    audits: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    observations: list[dict[str, Any]] = []
+    captures: list[dict[str, Any]] = []
+
+    def append_audit(row: dict[str, Any]) -> None:
+        require_new = row["id"] not in seen
+        assert require_new
+        selected = deepcopy(row)
+        selected.update(sequence=len(audits) + 1, previous_hash=audits[-1]["event_hash"] if audits else "0" * 64)
+        selected.pop("event_hash", None)
+        signed = {key: value for key, value in selected.items() if key != "tenant_id"}
+        signed["metadata_json"] = reader._audit_json(selected["metadata_json"])
+        selected["event_hash"] = reader._audit_digest(signed)
+        audits.append(selected)
+        seen.add(selected["id"])
+
+    def rows(tables: dict[str, list[dict[str, Any]]]) -> dict[str, list[str]]:
+        tables["domain_audit_events"] = deepcopy(audits)
+        tables["domain_audit_ledger_state"] = [{"tenant_id": "tenant", "last_sequence": len(audits), "last_event_hash": audits[-1]["event_hash"], "updated_at": audits[-1]["created_at"]}]
+        return {name: sorted(json.dumps(row, sort_keys=True) for row in values) for name, values in tables.items()}
+
+    for index, version in enumerate(versions):
+        current = deepcopy(full)
+        allowed_history = [row for row in current["customer_partial_return_monetary_history"] if row["sequence"] <= version]
+        allowed_plans = {row["partial_plan_id"] for row in allowed_history if row["partial_plan_id"]}
+        for table in ("customer_partial_return_monetary_plans", "customer_partial_return_monetary_entries", "customer_partial_return_monetary_events", "customer_partial_return_monetary_commands", "customer_partial_return_monetary_restorations"):
+            current[table] = [row for row in current[table] if row["id"] in allowed_plans] if table.endswith("_plans") else [row for row in current[table] if row["plan_id"] in allowed_plans]
+        current["customer_partial_return_monetary_history"] = allowed_history
+        maximum_fx = 3 if index >= 6 else 2 if index == 5 else 1 if index >= 3 else 0
+        current["operational_fx_plans"] = [row for row in current["operational_fx_plans"] if row["sequence"] <= maximum_fx]
+        allowed_fx = {row["id"] for row in current["operational_fx_plans"]}
+        current["operational_fx_links"] = [row for row in current["operational_fx_links"] if row["plan_id"] in allowed_fx]
+        current["operational_fx_reviews"] = [row for row in current["operational_fx_reviews"] if row["plan_id"] in allowed_fx]
+        allowed_effects = {"receipt-effect", "cogs-effect", "revenue-effect"} | {row["posting_effect_id"] for row in current["customer_partial_return_monetary_entries"]} | {row["posting_effect_id"] for row in current["operational_fx_links"]}
+        if index < 2:
+            for table in (*reader.MONETARY_COLUMNS, "operational_fx_sources", "operational_fx_plans", "operational_fx_links", "operational_fx_reviews", "operational_fx_commands", "ar_invoices", "ar_invoice_lines"):
+                current[table] = []
+            current["stock_sales_orders"][0].update(status="Draft" if index == 0 else "Delivered", invoice_id=None, invoice_plan_id=None)
+            allowed_effects = {"receipt-effect"} if index == 0 else {"receipt-effect", "cogs-effect"}
+            if index == 0:
+                current["inventory_layer_consumptions"] = []
+        else:
+            state = events[version - 1]["after"] if version else events[0]["before"]
+            seed = {"contract": "customer-partial-return-monetary-original-v3", "source_fingerprint": source.fingerprint, "allocation_policy": "remaining-dual-currency-v1", "alignment_policy": "historical-carrying-component-alignment-v1"}
+            projection = current["stock_sales_monetary_origins"][0]["ar_balance"]
+            projection.update(history_version=version, history_fingerprint=reader._digest(events[version - 1] if version else seed),
+                              active_revaluation_plan_id="FX1-" + "a" * 32 if index == 5 else None)
+            for key in ("transaction_collected_minor", "transaction_credited_minor", "transaction_outstanding_minor", "functional_outstanding_minor", "transaction_refunded_minor", "functional_refund_released_minor", "transaction_refund_due_minor", "functional_refund_due_minor"):
+                projection[key] = str(state[key])
+            projection["functional_outstanding_minor"] = "840" if index == 5 else str(state["functional_outstanding_minor"])
+            projection["transaction_refund_entitlement_minor"] = str(max(state["transaction_collected_minor"] + state["transaction_credited_minor"] - 11400, 0))
+            projection["functional_refund_entitlement_minor"] = str(state["functional_refund_due_minor"] + state["functional_refund_released_minor"])
+            current["ar_invoices"][0]["status"] = "Paid" if state["transaction_outstanding_minor"] == 0 else "Approved" if version == 0 else "PartiallyPaid"
+        if version == 0:
+            current["ar_receipts"] = current["ar_receipt_allocations"] = []
+        current["finance_posting_effects"] = [row for row in current["finance_posting_effects"] if row["id"] in allowed_effects]
+        entries = {row["entry_id"] for row in current["finance_posting_effects"]}
+        current["finance_entries"] = [row for row in current["finance_entries"] if row["id"] in entries]
+        current["finance_entry_lines"] = [row for row in current["finance_entry_lines"] if row["entry_id"] in entries]
+        movements = {row["physical_movement_id"] for row in current["customer_partial_return_monetary_restorations"]}
+        current["inventory_movements"] = [row for row in current["inventory_movements"] if row["id"] in movements]
+        current["inventory_movement_lines"] = [row for row in current["inventory_movement_lines"] if row["movement_id"] in movements]
+        restored_q = sum(row["direction"] * row["quantity_scaled"] for row in current["customer_partial_return_monetary_restorations"])
+        restored_v = sum(row["direction"] * row["value_minor"] for row in current["customer_partial_return_monetary_restorations"])
+        current["inventory_cost_layers"][0].update(remaining_quantity_scaled=10 if index == 0 else restored_q, remaining_value_minor=12000 if index == 0 else restored_v)
+        evidence_ids = {row["audit_event_id"] for row in current["finance_posting_effects"]} | {row["audit_event_id"] for row in current["customer_partial_return_monetary_events"]}
+        for event in full["domain_audit_events"]:
+            if event["id"] in evidence_ids and event["id"] not in seen:
+                append_audit(event)
+        capture = {"capture": index, "tables": rows(current)}
+        captures.append(capture)
+        kind = "ActiveValuationRefusal" if index == 5 else "RetainedReplay" if index == 9 else None
+        kinds = [kind] if kind else ["ScopeRefusal", "FinalRead"] if index == 11 else []
+        for observed in kinds:
+            # The list is raw-text sorted, so select the actual policy row.
+            policy = next(json.loads(raw) for raw in audit_tables(append=True, allowed=observed != "ScopeRefusal", surface="server.scoped:finance_core.read" if observed == "ScopeRefusal" else "GET /api/v3/customer-partial-returns/plans")["domain_audit_events"] if json.loads(raw)["object_type"] == "authorization.policy_decision")
+            policy["id"] = "observation-" + str(observed)
+            append_audit(policy)
+            plan = next(row for row in current["operational_fx_plans"] if row["kind"] == "revalue") if observed == "ActiveValuationRefusal" else next(row for row in current["customer_partial_return_monetary_plans"] if row["id"] == "CRF3-" + "5" * 32) if observed == "RetainedReplay" else None
+            refusal = {"operation": "ReadSource", "status": 403, "code": "entity_scope_denied"} if observed == "ScopeRefusal" else {"operation": "PrepareReturn", "status": 409, "code": "monetary_return_state_conflict"} if observed == "ActiveValuationRefusal" else None
+            observations.append({"schema_version": reader.OBSERVATION_SCHEMA, "kind": observed, "tenant_id": "tenant", "source_order_id": "stock", "capture": index,
+                                 "history_version": version, "plan_id": plan["id"] if plan else None, "plan_digest": plan["payload"]["plan_digest"] if plan else None, "tables": rows(current), "refusal": refusal})
+    packet = {"schema_version": reader.SCHEMA, "tenant_id": "tenant", "source_order_id": "stock", "captures": captures}
+    observed_packet = {"schema_version": reader.OBSERVATIONS_SCHEMA, "tenant_id": "tenant", "source_order_id": "stock", "observations": observations}
+    restored = {"schema_version": reader.RESTORE_SCHEMA, "tenant_id": "tenant", "source_order_id": "stock", "tables": observations[-1]["tables"]}
+    return encoded(packet), encoded(observed_packet), encoded(restored)
+
+
+def test_complete_browser_observations_are_chronological_and_restore_all91() -> None:
+    raw, observed, restored = complete_browser_fixture()
+    packet = reader.decode_packet(raw)
+    proof = reader.qualify_raw_cycle(packet)
+    final = reader.verify_observations(packet, proof, observed)
+    reader.verify_restore(packet, final, restored, proof)
+    assert proof["observations"] == 4 and proof["observation_chronology_bound"] is True and proof["restored_tables"] == 91
+    assert proof["final_debits_minor"] == "81605" and proof["current_authorization_proven"] is False
+
+
+@pytest.mark.parametrize("mutation", ["extra", "missing", "kind", "index-bool", "index", "version-bool", "version", "tenant", "source", "replay-plan", "replay-digest", "active-plan", "active-code", "scope-code", "final-plan", "business", "reorder"])
+def test_full_observation_envelope_cannot_substitute_caller_affinity_or_business_rows(mutation: str) -> None:
+    raw, observed, _restore = complete_browser_fixture()
+    value = json.loads(observed)
+    row = value["observations"][1]
+    if mutation == "extra":
+        row["trusted"] = True
+    elif mutation == "missing":
+        row.pop("refusal")
+    elif mutation == "kind":
+        row["kind"] = "FinalRead"
+    elif mutation.startswith("index"):
+        row["capture"] = True if mutation.endswith("bool") else 8
+    elif mutation.startswith("version"):
+        row["history_version"] = True if mutation.endswith("bool") else 4
+    elif mutation == "tenant":
+        row["tenant_id"] = "other"
+    elif mutation == "source":
+        row["source_order_id"] = "other-stock"
+    elif mutation == "replay-plan":
+        row["plan_id"] = "CR3-" + "2" * 32
+    elif mutation == "replay-digest":
+        row["plan_digest"] = "f" * 64
+    elif mutation == "active-plan":
+        value["observations"][0]["plan_id"] = "FX1-" + "b" * 32
+    elif mutation == "active-code":
+        value["observations"][0]["refusal"]["code"] = "unrelated_conflict"
+    elif mutation == "scope-code":
+        value["observations"][2]["refusal"]["code"] = "workspace_scope_denied"
+    elif mutation == "final-plan":
+        value["observations"][-1]["plan_id"] = row["plan_id"]
+    elif mutation == "business":
+        lines = [json.loads(text) for text in row["tables"]["finance_entry_lines"]]
+        lines[0]["debit_minor"] += 1
+        row["tables"]["finance_entry_lines"] = sorted(json.dumps(line, sort_keys=True) for line in lines)
+    else:
+        value["observations"].reverse()
+    packet = reader.decode_packet(raw)
+    with pytest.raises(reader.MonetaryRawRefusal):
+        reader.verify_observations(packet, {"case": "foreign"}, encoded(value))
+
+
+@pytest.mark.parametrize("mutation", ["header", "layer", "phase", "entry-member", "effect", "command"])
+def test_committed_native_originals_are_not_replaced_by_later_resealed_rows(mutation: str) -> None:
+    before = complete_final_tables()
+    after = deepcopy(before)
+    table = {"header": "finance_entries", "layer": "inventory_cost_layers", "phase": "customer_partial_return_monetary_plans",
+             "entry-member": "customer_partial_return_monetary_entries", "effect": "finance_posting_effects", "command": "customer_partial_return_monetary_commands"}[mutation]
+    rows = [json.loads(text) for text in after[table]]
+    key = {"header": "description", "layer": "item_id", "phase": "plan_digest", "entry-member": "posting_effect_id", "effect": "source_id", "command": "command_id"}[mutation]
+    rows[0][key] = "forged-original"
+    after[table] = sorted(json.dumps(row, sort_keys=True) for row in rows)
+    with pytest.raises(reader.MonetaryRawRefusal):
+        reader._immutable_transition(original_capture(before), original_capture(after))
+
+
+def test_restore_target_is_final_observation_including_all_actual_audit_appends() -> None:
+    raw, observed, restored = complete_browser_fixture()
+    packet = reader.decode_packet(raw)
+    final = reader.verify_observations(packet, {"case": "foreign"}, observed)
+    value = json.loads(restored)
+    value["tables"] = json.loads(raw)["captures"][-1]["tables"]
+    with pytest.raises(reader.MonetaryRawRefusal):
+        reader.verify_restore(packet, final, encoded(value), {})
+    value = json.loads(restored)
+    value["tables"].pop("customer_partial_return_monetary_commands")
+    with pytest.raises(reader.MonetaryRawRefusal):
+        reader.verify_restore(packet, final, encoded(value), {})
+
+
+def test_complete_cli_isolated_and_optimized_modes_reproduce_exact_proof_bytes(tmp_path: Path) -> None:
+    original = complete_browser_fixture()
+    paths = [tmp_path / name for name in ("posted-cycle-input.json", "observations-input.json", "posted-cycle-restored-input.json")]
+    for path, data in zip(paths, original, strict=True):
+        path.write_bytes(data)
+    script = Path(reader.__file__).absolute()
+    proofs = []
+    for mode, flags in (("I", ["-I"]), ("IO", ["-I", "-O"])):
+        output = tmp_path / (mode + ".json")
+        command = [sys.executable, *flags, str(script), "--input", str(paths[0]), "--observations-input", str(paths[1]), "--restore-input", str(paths[2]), "--output", str(output)]
+        result = subprocess.run(command, capture_output=True, check=False, timeout=60)
+        assert result.returncode == 0 and result.stdout == result.stderr == b""
+        proofs.append(output.read_bytes())
+    assert proofs[0] == proofs[1]
+    proof = json.loads(proofs[0])
+    assert proof["oracle_source_sha256"] == hashlib.sha256(script.read_bytes()).hexdigest()
+    assert proof["observations_input_sha256"] == hashlib.sha256(original[1]).hexdigest()
+    assert proof["restore_input_sha256"] == hashlib.sha256(original[2]).hexdigest()
+    assert proof["restored_tables"] == 91 and proof["populated_restore_original_rows_equal"] is True and proof["current_authorization_proven"] is False
+    for path, data in zip(paths, original, strict=True):
+        assert path.read_bytes() == data
+    with pytest.raises(reader.MonetaryRawRefusal):
+        reader._write_new(tmp_path / "I.json", proof)
 
 
 def test_scope_refusal_permits_only_the_known_denied_current_read_surface() -> None:

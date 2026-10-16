@@ -556,6 +556,160 @@ def test_resealed_valuation_must_use_actual_component_credit_adjusted_carrying(f
         reader.verify_valuation_rows(capture, original, events)
 
 
+def audit_tables(*, append: bool, allowed: bool = True, surface: str = "GET /api/v3/customer-partial-returns/plans") -> dict[str, list[str]]:
+    tables = original_tables()
+    native: list[dict[str, Any]] = []
+    previous = "0" * 64
+    identifiers = ["cogs-effect-audit", "revenue-effect-audit"] + (["policy-event"] if append else [])
+    for sequence, identifier in enumerate(identifiers, 1):
+        metadata: dict[str, Any] = {}
+        policy: dict[str, Any] = {}
+        if identifier == "policy-event":
+            policy = {"schema_version": 1, "policy_version": "central-policy-v3", "allowed": allowed, "reason_code": "allowed" if allowed else "entity_scope_denied", "evaluator": "central-policy",
+                      "principal_type": "user", "actor_digest": reader._text_digest("principal.actor", "poster"),
+                      "required_permission_digest": reader._audit_digest({"namespace": "permission.contract", "values": ["finance_core.read"]}),
+                      "granted_permission_digest": reader._text_digest("permission.granted", "finance_core.read") if allowed else None,
+                      "context_binding": "bound", "context_digest": "a" * 64, "scope_digest": "b" * 64,
+                      "surface_digest": reader._text_digest("audit.surface", surface), "request_id_digest": "c" * 64}
+            policy["decision_digest"] = reader._audit_digest(policy)
+            metadata = {"policy_decision_evidence": policy, "request_id_digest": policy["request_id_digest"]}
+        event = {"tenant_id": "tenant", "id": identifier, "sequence": sequence, "previous_hash": previous,
+                 "actor_user_id": "poster", "actor_label": "policy-engine" if policy else "Synthetic poster",
+                 "object_type": "authorization.policy_decision" if policy else "finance_posting", "object_id": policy["decision_digest"] if policy else "posting",
+                 "action": "evaluated" if policy else "finance_entry_posted", "before_hash": None,
+                 "after_hash": policy["decision_digest"] if policy else None, "metadata_json": metadata, "created_at": "2026-10-15T12:00:0" + str(sequence) + "Z"}
+        unsigned = {key: value for key, value in event.items() if key != "tenant_id"}
+        unsigned["metadata_json"] = reader._audit_json(metadata)
+        previous = reader._audit_digest(unsigned)
+        event["event_hash"] = previous
+        native.append(event)
+    tables["domain_audit_events"] = sorted(json.dumps(row, sort_keys=True) for row in native)
+    tables["domain_audit_ledger_state"] = [json.dumps({"tenant_id": "tenant", "last_sequence": len(native), "last_event_hash": previous, "updated_at": native[-1]["created_at"]}, sort_keys=True)]
+    return tables
+
+
+def test_new_monetary_audit_only_transition_retains_all89_business_tables() -> None:
+    result = reader.verify_audit_only_transition(audit_tables(append=False), audit_tables(append=True), tenant_id="tenant")
+    assert result == {"business_tables": 89, "business_original_rows_equal": True, "audit_original_prefix_equal": True,
+                      "audit_chain_valid": True, "audit_actions_bound": True, "appended_audit_events": 1}
+
+
+def complete_final_tables() -> dict[str, list[str]]:
+    """Finite synthetic native rows, never a claimed actual database capture."""
+    tables = {name: [json.loads(text) for text in values] for name, values in valuation_tables().items()}
+    scope = {key: "tenant" if key == "tenant_id" else "work" if key == "workspace_id" else "org" if key == "organization_id" else "entity"
+             for key in ("tenant_id", "workspace_id", "organization_id", "legal_entity_id")}
+    template = tables["finance_posting_effects"][0]
+    full = {key: value for key, value in template.items() if key.startswith("currency_")}
+    header = {**template["snapshot_json"]["entry"], "id": "receipt-entry", "entry_number": "IRP-SYNTHETIC", "external_reference": "receipt-plan", "source_type": "Generated"}
+    lines = [{"line_number": n, "account_id": account, "description": "", "debit_minor": dr, "credit_minor": cr, "dimensions": {}}
+             for n, (account, dr, cr) in enumerate((("inventory", 12000, 0), ("clearing", 0, 12000)), 1)]
+    snapshot = {"schema_version": "finance-entry-review-v1", "entry": header, "lines": lines}
+    digest = reader._digest(snapshot)
+    tables["finance_accounts"].append({"tenant_id": "tenant", "workspace_id": "work", "id": "clearing", "account_code": "CLEARING", "account_type": "Liability"})
+    tables["finance_posting_effects"].append({**template, "id": "receipt-effect", "entry_id": "receipt-entry", "source_kind": "InventoryReceipt", "source_id": "receipt-plan",
+                                             "snapshot_json": snapshot, "validation_digest": digest, "audit_event_id": "receipt-audit", "outbox_event_id": "receipt-outbox"})
+    tables["finance_entries"].append({**{key: value for key, value in header.items() if key not in {"organization_id", "legal_entity_id"}}, "tenant_id": "tenant", "status": "Validated",
+                                    "validator_actor_id": "checker", "validation_digest": digest, "validation_contract_version": "finance-entry-review-v1", "total_debit_minor": 12000, "total_credit_minor": 12000})
+    tables["finance_entry_lines"].extend({key: value for key, value in {**line, "tenant_id": "tenant", "entry_id": "receipt-entry", "id": "receipt-line-" + str(line["line_number"]), "currency_code": "USD"}.items() if key != "dimensions"} for line in lines)
+    tables["inventory_receipt_plans"] = [{**scope, **full, "id": "receipt-plan", "operation": "Receipt", "total_value_minor": 12000, "finance_entry_id": "receipt-entry", "posting_effect_id": "receipt-effect",
+                                         "inventory_account_id": "inventory", "receipt_clearing_account_id": "clearing", "preparer_actor_id": "maker", "plan_digest": "a" * 64}]
+    tables["inventory_receipt_links"] = [{**scope, "plan_id": "receipt-plan", "posting_effect_id": "receipt-effect", "posted_actor_id": "poster", "plan_digest": "a" * 64}]
+    tables["inventory_receipt_reviews"] = [{"tenant_id": "tenant", "plan_id": "receipt-plan", "reviewer_actor_id": "checker", "plan_digest": "a" * 64}]
+    for plan in tables["customer_partial_return_monetary_plans"]:
+        body = plan["payload"]
+        body.update(id=plan["id"], source_id="origin", source_order_id="stock", operation=plan["operation"], original_id=plan["original_id"])
+        body["plan_digest"] = reader._digest({key: value for key, value in body.items() if key != "plan_digest"})
+        plan["plan_digest"] = body["plan_digest"]
+        for event in [row for row in tables["customer_partial_return_monetary_events"] if row["plan_id"] == plan["id"]]:
+            event["audit_event_id"] = plan["id"] + "-audit-" + event["operation"]
+            event["outbox_event_id"] = plan["id"] + "-outbox-" + event["operation"]
+            command = storage_row("customer_partial_return_monetary_commands")
+            request = {"protocol_version": 3, "actor_id": event["actor_id"], "operation": event["operation"], "request": {"plan_id": plan["id"]}}
+            command.update(**scope, plan_id=plan["id"], command_id=plan["id"] + "-" + event["operation"], actor_id=event["actor_id"], operation=event["operation"],
+                           request_json=request, request_digest=reader._digest(request), response_json={"id": plan["id"], "plan_digest": plan["plan_digest"]})
+            tables["customer_partial_return_monetary_commands"].append(command)
+    metadata: dict[str, tuple[str, str, str, dict[str, Any]]] = {}
+    for effect in tables["finance_posting_effects"]:
+        metadata[effect["audit_event_id"]] = ("poster", "finance_posting", effect["id"], {})
+        if not any(row.get("event_id") == effect["outbox_event_id"] for row in tables["outbox_events"]):
+            tables["outbox_events"].append({"tenant_id": "tenant", "event_id": effect["outbox_event_id"]})
+    for event in tables["customer_partial_return_monetary_events"]:
+        plan = next(row for row in tables["customer_partial_return_monetary_plans"] if row["id"] == event["plan_id"])
+        payload = {"plan_digest": plan["plan_digest"], "reason": event["reason"]}
+        metadata[event["audit_event_id"]] = (event["actor_id"], "operational_finance", plan["id"], payload)
+        tables["outbox_events"].append({**scope, "event_id": event["outbox_event_id"], "event_type": "customer_partial_return_monetary_" + event["operation"],
+                                         "aggregate_type": "operational_finance", "aggregate_id": plan["id"], "payload": {**payload, "audit_event_id": event["audit_event_id"]}})
+    audits: list[dict[str, Any]] = []
+    previous = "0" * 64
+    for sequence, (identifier, (actor, object_type, object_id, payload)) in enumerate(metadata.items(), 1):
+        native_event = next((row for row in tables["customer_partial_return_monetary_events"] if row["audit_event_id"] == identifier), None)
+        action = "customer_partial_return_monetary_" + native_event["operation"] if native_event else "finance_entry_posted"
+        event = {"tenant_id": "tenant", "id": identifier, "sequence": sequence, "previous_hash": previous, "actor_user_id": actor, "actor_label": actor,
+                 "object_type": object_type, "object_id": object_id, "action": action, "before_hash": None, "after_hash": None, "metadata_json": payload, "created_at": "2026-10-15T12:00:00Z"}
+        signed = {key: value for key, value in event.items() if key != "tenant_id"}
+        signed["metadata_json"] = reader._audit_json(payload)
+        previous = reader._audit_digest(signed)
+        event["event_hash"] = previous
+        audits.append(event)
+    tables["domain_audit_events"] = audits
+    tables["domain_audit_ledger_state"] = [{"tenant_id": "tenant", "last_sequence": len(audits), "last_event_hash": previous, "updated_at": audits[-1]["created_at"]}]
+    history = sorted(tables["customer_partial_return_monetary_history"], key=lambda row: row["sequence"])
+    tables["stock_sales_monetary_origins"][0]["ar_balance"] = {"schema_version": "stock-monetary-balance-v1", "history_version": 7, "history_fingerprint": reader._digest(history[-1]["payload"]),
+        "transaction_original_gross_minor": "11400", "functional_original_gross_minor": "14250", "transaction_collected_minor": "4000", "transaction_credited_minor": "11400",
+        "transaction_outstanding_minor": "0", "functional_outstanding_minor": "0", "transaction_refund_entitlement_minor": "4000", "functional_refund_entitlement_minor": "5000",
+        "transaction_refunded_minor": "4000", "functional_refund_released_minor": "5000", "transaction_refund_due_minor": "0", "functional_refund_due_minor": "0", "active_plan_id": None, "active_revaluation_plan_id": None}
+    tables["ar_invoices"][0]["status"] = "Paid"
+    return {name: sorted(json.dumps(row, sort_keys=True) for row in rows) for name, rows in tables.items()}
+
+
+def test_complete_financial_trace_rederives_every_effect_and_retains_no_native_claim() -> None:
+    tables = complete_final_tables()
+    value = {"schema_version": reader.SCHEMA, "tenant_id": "tenant", "source_order_id": "stock", "captures": [{"capture": index, "tables": tables} for index in range(2)]}
+    proof = reader.qualify_raw_cycle(reader.decode_packet(encoded(value)))
+    assert (proof["final_posting_effects"], proof["final_posted_lines"], proof["final_debits_minor"]) == (14, 37, "81605")
+    assert proof["current_authorization_proven"] is False and proof["observations"] == 0 and proof["populated_restore_original_rows_equal"] is False
+
+
+def test_scope_refusal_permits_only_the_known_denied_current_read_surface() -> None:
+    before = audit_tables(append=False)
+    after = audit_tables(append=True, allowed=False, surface="server.scoped:finance_core.read")
+    assert reader.verify_audit_only_transition(before, after, tenant_id="tenant", scope_refusal=True)["appended_audit_events"] == 1
+    with pytest.raises(reader.MonetaryRawRefusal):
+        reader.verify_audit_only_transition(before, after, tenant_id="tenant")
+
+
+@pytest.mark.parametrize("mutation", ["business", "hash", "gap", "head", "audit-mutation", "unrelated-action", "unknown-actor", "unknown-field"])
+def test_audit_chain_and_action_affinity_do_not_hide_financial_or_earlier_original_changes(mutation: str) -> None:
+    before, after = audit_tables(append=False), audit_tables(append=True)
+    if mutation == "business":
+        rows = [json.loads(text) for text in after["finance_entry_lines"]]
+        rows[0]["debit_minor"] += 1
+        after["finance_entry_lines"] = sorted(json.dumps(row, sort_keys=True) for row in rows)
+    elif mutation == "head":
+        head = json.loads(after["domain_audit_ledger_state"][0])
+        head["last_event_hash"] = "f" * 64
+        after["domain_audit_ledger_state"] = [json.dumps(head, sort_keys=True)]
+    else:
+        events = sorted((json.loads(text) for text in after["domain_audit_events"]), key=lambda row: row["sequence"])
+        if mutation == "hash":
+            events[-1]["event_hash"] = "f" * 64
+        elif mutation == "gap":
+            events[-1]["sequence"] = 4
+        elif mutation == "audit-mutation":
+            events[0]["actor_label"] = "Rewritten old actor"
+        elif mutation == "unrelated-action":
+            after = audit_tables(append=True, surface="POST /api/v1/admin/access/roles")
+            events = [json.loads(text) for text in after["domain_audit_events"]]
+        elif mutation == "unknown-actor":
+            events[-1]["actor_user_id"] = "foreign-human"
+        else:
+            events[-1]["unknown"] = "future"
+        after["domain_audit_events"] = sorted(json.dumps(row, sort_keys=True) for row in events)
+    with pytest.raises(reader.MonetaryRawRefusal):
+        reader.verify_audit_only_transition(before, after, tenant_id="tenant", scope_refusal=True)
+
+
 def test_inventory_is_exact_old79_plus_five_fx_and_seven_monetary_tables() -> None:
     tree = ast.parse(Path(__file__).with_name("customer_partial_return_posted_cycle_oracle.py").read_text(encoding="utf-8"))
     original = next(ast.literal_eval(item.value) for item in tree.body if isinstance(item, ast.Assign)

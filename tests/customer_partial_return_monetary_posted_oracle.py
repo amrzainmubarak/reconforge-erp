@@ -385,10 +385,21 @@ def _effect(capture: Capture, effect_id: str, *, scope: dict[str, str], policy: 
     people = (entry["preparer_actor_id"], entry["validator_actor_id"], effect["posted_actor_id"])
     require(all(type(person) is str and bool(person) for person in people) and len(set(people)) == 3)
     inverse = effect["reverses_effect_id"]
-    require(effect["source_kind"] == ("Reversal" if inverse else "Manual")
-            and effect["source_id"] == (inverse if inverse else entry["id"])
-            and header["source_type"] == ("Generated" if inverse else "Manual")
-            and header["reverses_posting_id"] == inverse)
+    if effect["source_kind"] == "InventoryReceipt":
+        receipt = _one(capture, "inventory_receipt_plans", id=effect["source_id"])
+        link = _one(capture, "inventory_receipt_links", plan_id=receipt["id"])
+        review = _one(capture, "inventory_receipt_reviews", plan_id=receipt["id"])
+        _scope(receipt, scope)
+        _scope(link, scope)
+        require(receipt["operation"] == "Receipt" and receipt["finance_entry_id"] == entry["id"] and receipt["posting_effect_id"] == effect["id"] == link["posting_effect_id"]
+                and header["source_type"] == "Generated" and inverse is None and header["reverses_posting_id"] is None
+                and header["external_reference"] == receipt["id"] and receipt["plan_digest"] == link["plan_digest"] == review["plan_digest"]
+                and people == (receipt["preparer_actor_id"], review["reviewer_actor_id"], link["posted_actor_id"]))
+    else:
+        require(effect["source_kind"] == ("Reversal" if inverse else "Manual")
+                and effect["source_id"] == (inverse if inverse else entry["id"])
+                and header["source_type"] == ("Generated" if inverse else "Manual")
+                and header["reverses_posting_id"] == inverse)
     lines = sorted((row for row in capture.rows("finance_entry_lines") if row["entry_id"] == entry["id"]), key=lambda row: _minor(row["line_number"], positive=True))
     require(len(lines) == len(expected) == len(snapshot["lines"]) >= 2)
     debit = credit = 0
@@ -1015,3 +1026,309 @@ def verify_valuation_rows(capture: Capture, original: OriginalFinancial,
                 and effect["posted_actor_id"] == link["posted_actor_id"])
         effects.append(effect["id"])
     return tuple(effects), active
+
+
+AUDIT_TABLES = frozenset({"domain_audit_events", "domain_audit_ledger_state"})
+_AUDIT_FIELDS = frozenset({"tenant_id", "id", "sequence", "previous_hash", "event_hash", "actor_user_id", "actor_label", "object_type", "object_id", "action", "before_hash", "after_hash", "metadata_json", "created_at"})
+_POLICY_FIELDS = frozenset({"actor_digest", "allowed", "context_binding", "context_digest", "decision_digest", "evaluator", "granted_permission_digest", "policy_version", "principal_type", "reason_code", "request_id_digest", "required_permission_digest", "schema_version", "scope_digest", "surface_digest"})
+_READ = frozenset({"sales.read", "receivables.read", "inventory.read", "finance_core.read"})
+_POST = _READ | {"sales.manage", "receivables.manage", "inventory.post", "inventory.valuation.approve", "finance_core.post", "finance_core.reverse"}
+_PREPARE = _READ | {"sales.manage", "receivables.manage", "inventory.valuation.manage", "finance_core.manage", "finance_core.reverse"}
+
+
+def _audit_json(value: Any) -> str:
+    try:
+        return json.dumps(value, sort_keys=True, ensure_ascii=True, separators=(",", ":"), allow_nan=False)
+    except (ValueError, TypeError, UnicodeError):
+        raise MonetaryRawRefusal("Independent monetary raw input refused.") from None
+
+
+def _audit_digest(value: Any) -> str:
+    return hashlib.sha256(_audit_json(value).encode()).hexdigest()
+
+
+def _text_digest(namespace: str, value: str) -> str:
+    return _audit_digest({"namespace": namespace, "value": value})
+
+
+def _hex(value: Any) -> str:
+    require(type(value) is str and re.fullmatch(r"[a-f0-9]{64}", value) is not None)
+    return cast(str, value)
+
+
+def _audit_chain(capture: Capture, tenant: str) -> tuple[str, ...]:
+    originals = dict(capture.raw_tables)["domain_audit_events"]
+    rows = sorted(((_decode(raw), raw) for raw in originals), key=lambda pair: _minor(pair[0]["sequence"], positive=True))
+    seen: set[str] = set()
+    previous = "0" * 64
+    for sequence, (row, _raw) in enumerate(rows, 1):
+        require(set(row) == _AUDIT_FIELDS and row["tenant_id"] == tenant and _minor(row["sequence"], positive=True) == sequence
+                and row["previous_hash"] == previous and _identity(row["id"]) not in seen)
+        seen.add(row["id"])
+        require(all(type(row[key]) is str and 0 < len(row[key]) <= 500 for key in ("actor_label", "object_type", "object_id", "action", "created_at"))
+                and (row["actor_user_id"] is None or type(row["actor_user_id"]) is str)
+                and all(row[key] is None or type(row[key]) is str for key in ("before_hash", "after_hash"))
+                and type(row["metadata_json"]) is dict)
+        signed = {key: row[key] for key in _AUDIT_FIELDS - {"tenant_id", "event_hash"}}
+        signed["metadata_json"] = _audit_json(row["metadata_json"])
+        previous = _audit_digest(signed)
+        require(_hex(row["event_hash"]) == previous)
+    heads = capture.rows("domain_audit_ledger_state")
+    require(len(heads) == 1 or not rows and not heads)
+    if heads:
+        require(set(heads[0]) == {"tenant_id", "last_sequence", "last_event_hash", "updated_at"}
+                and heads[0]["tenant_id"] == tenant and _minor(heads[0]["last_sequence"]) == len(rows)
+                and _hex(heads[0]["last_event_hash"]) == previous
+                and (not rows or heads[0]["updated_at"] == rows[-1][0]["created_at"]))
+    return tuple(raw for _, raw in rows)
+
+
+def _policy_surfaces(capture: Capture) -> tuple[dict[str, frozenset[str]], set[str]]:
+    orders = capture.rows("stock_sales_orders")
+    require(len(orders) == 1)
+    order = orders[0]["id"]
+    surfaces = {"GET /api/v1/stock-sales/orders": _READ, "GET /api/v1/stock-sales/options": _READ,
+                "GET /api/v2/stock-sales/orders": _READ, "GET /api/v2/stock-sales/options": _READ,
+                "GET /api/v2/stock-sales/orders/" + order: _READ,
+                "GET /api/v1/customer-returns/plans": _READ, "GET /api/v3/customer-partial-returns/plans": _READ,
+                "GET /api/v3/customer-partial-returns/sources/" + order + "/balance": _READ,
+                "POST /api/v3/customer-partial-returns/plans": _PREPARE,
+                "server.scoped:finance_core.read": frozenset({"finance_core.read"})}
+    actors = {value for row in capture.rows("finance_posting_effects") for value in
+              (row["posted_actor_id"], row["snapshot_json"]["entry"]["preparer_actor_id"])}
+    actors.update(row["validator_actor_id"] for row in capture.rows("finance_entries") if row.get("validator_actor_id"))
+    actors.update(row["actor_id"] for row in capture.rows("customer_partial_return_monetary_events"))
+    for plan in capture.rows("customer_partial_return_monetary_plans"):
+        surfaces["GET /api/v3/customer-partial-returns/plans/" + plan["id"]] = _READ
+        if plan["phase"] == 2:
+            surfaces["POST /api/v3/customer-partial-returns/plans/" + plan["id"] + "/post"] = _POST
+    for plan in capture.rows("operational_fx_plans"):
+        surfaces["GET /api/v2/stock-sales/orders/" + order + "/fx-plans/" + plan["id"]] = _READ
+    for suffix, permission in (("audit/events", "audit.read"), ("audit/verify", "audit.verify"), ("security/overview", "security.center.read"),
+                               ("identity/users", "users.manage"), ("identity/sessions", "users.manage"), ("access/permissions", "roles.manage"),
+                               ("access/roles", "roles.manage"), ("security/integrations", "security.policy.manage"), ("security/retention-policies", "security.policy.manage")):
+        surfaces["GET /api/v1/admin/" + suffix] = frozenset({permission})
+        surfaces["server.scoped:" + permission] = frozenset({permission})
+    return {_text_digest("audit.surface", key): value for key, value in surfaces.items()}, actors
+
+
+def _policy_append(row: dict[str, Any], capture: Capture, *, scope_refusal: bool = False) -> None:
+    require(row["actor_label"] == "policy-engine" and row["object_type"] == "authorization.policy_decision" and row["action"] == "evaluated" and row["before_hash"] is None)
+    metadata = row["metadata_json"]
+    require(set(metadata) == {"policy_decision_evidence", "request_id_digest"})
+    policy = metadata["policy_decision_evidence"]
+    require(type(policy) is dict and set(policy) == _POLICY_FIELDS and type(policy["schema_version"]) is int and policy["schema_version"] == 1
+            and policy["policy_version"] == "central-policy-v3" and policy["principal_type"] == "user" and policy["context_binding"] == "bound"
+            and type(policy["allowed"]) is bool)
+    for key in _POLICY_FIELDS - {"schema_version", "allowed", "policy_version", "principal_type", "context_binding", "evaluator", "reason_code", "granted_permission_digest"}:
+        _hex(policy[key])
+    require(policy["decision_digest"] == _audit_digest({key: value for key, value in policy.items() if key != "decision_digest"})
+            == row["object_id"] == row["after_hash"] and metadata["request_id_digest"] == policy["request_id_digest"])
+    surfaces, actors = _policy_surfaces(capture)
+    actor = row["actor_user_id"]
+    require(actor in actors and policy["actor_digest"] == _text_digest("principal.actor", actor.strip().casefold()))
+    permissions = surfaces.get(policy["surface_digest"])
+    require(permissions is not None)
+    permissions = cast(frozenset[str], permissions)
+    require(any(policy["required_permission_digest"] == _audit_digest({"namespace": "permission.contract", "values": [permission]}) for permission in permissions))
+    if policy["allowed"]:
+        require(any(policy["granted_permission_digest"] == _text_digest("permission.granted", permission) for permission in permissions))
+    else:
+        orders = capture.rows("stock_sales_orders")
+        require(scope_refusal and policy["reason_code"] in {"entity_scope_denied", "organization_scope_denied", "workspace_scope_denied", "tenant_scope_denied"}
+                and policy["surface_digest"] in {_text_digest("audit.surface", "server.scoped:finance_core.read"),
+                                                  _text_digest("audit.surface", "GET /api/v3/customer-partial-returns/sources/" + orders[0]["id"] + "/balance")}
+                and policy["granted_permission_digest"] is None)
+
+
+def verify_audit_only_transition(before_tables: dict[str, Any], after_tables: dict[str, Any], *, tenant_id: str,
+                                 scope_refusal: bool = False) -> dict[str, Any]:
+    before = decode_capture({"capture": 0, "tables": before_tables}, index=0, tenant_id=tenant_id)
+    after = decode_capture({"capture": 0, "tables": after_tables}, index=0, tenant_id=tenant_id)
+    old_tables, new_tables = dict(before.raw_tables), dict(after.raw_tables)
+    require(all(old_tables[name] == new_tables[name] for name in TABLES if name not in AUDIT_TABLES))
+    old, new = _audit_chain(before, tenant_id), _audit_chain(after, tenant_id)
+    require(new[:len(old)] == old)
+    for raw in new[len(old):]:
+        _policy_append(_decode(raw), after, scope_refusal=scope_refusal)
+    return {"business_tables": 89, "business_original_rows_equal": True, "audit_original_prefix_equal": True,
+            "audit_chain_valid": True, "audit_actions_bound": True, "appended_audit_events": len(new) - len(old)}
+
+
+def _ledger(capture: Capture, original: OriginalFinancial, allowed: set[str]) -> tuple[int, int, int]:
+    effects = capture.rows("finance_posting_effects")
+    require(len({row["id"] for row in effects}) == len(effects) and {row["id"] for row in effects} == allowed)
+    lines = count = debit = credit = 0
+    for effect in effects:
+        entry = _one(capture, "finance_entries", id=effect["entry_id"])
+        observed = sorted((row for row in capture.rows("finance_entry_lines") if row["entry_id"] == entry["id"]), key=lambda row: _minor(row["line_number"], positive=True))
+        left = sum(_minor(row["debit_minor"]) for row in observed)
+        right = sum(_minor(row["credit_minor"]) for row in observed)
+        require(left == right == _minor(entry["total_debit_minor"], positive=True) == _minor(entry["total_credit_minor"], positive=True))
+        lines += len(observed)
+        count += 1
+        debit += left
+        credit += right
+    require(debit == credit)
+    for entry in capture.rows("finance_entries"):
+        if any(effect["entry_id"] == entry["id"] for effect in effects):
+            continue
+        member = _one(capture, "customer_partial_return_monetary_entries", entry_id=entry["id"])
+        owner = _one(capture, "customer_partial_return_monetary_plans", id=member["plan_id"])
+        require(owner["origin_id"] == original.origin_id and owner["phase"] == 3 and entry["status"] == "Voided" and member["posting_effect_id"] is None)
+    return count, lines, debit
+
+
+def _receipt_effects(capture: Capture, original: OriginalFinancial) -> set[str]:
+    result: set[str] = set()
+    for link in capture.rows("inventory_receipt_links"):
+        plan = _one(capture, "inventory_receipt_plans", id=link["plan_id"])
+        value = _minor(plan["total_value_minor"], positive=True)
+        _effect(capture, link["posting_effect_id"], scope=original.scope, policy=_full_policy(original.source["functional_policy"]),
+                expected=[(plan["inventory_account_id"], value, 0), (plan["receipt_clearing_account_id"], 0, value)], external_reference=plan["id"])
+        result.add(link["posting_effect_id"])
+    return result
+
+
+def _projection(capture: Capture, original: OriginalFinancial, events: tuple[dict[str, Any], ...], active: str | None) -> None:
+    origin = _one(capture, "stock_sales_monetary_origins", id=original.origin_id)
+    state = events[-1]["after"] if events else _initial(original)
+    gf, gl = sum(f for f, _ in original.components), sum(v for _, v in original.components)
+    ef = max(state["transaction_collected_minor"] + state["transaction_credited_minor"] - gf, 0)
+    el = state["functional_refund_due_minor"] + state["functional_refund_released_minor"]
+    seed = {"contract": "customer-partial-return-monetary-original-v3", "source_fingerprint": original.fingerprint,
+            "allocation_policy": "remaining-dual-currency-v1", "alignment_policy": "historical-carrying-component-alignment-v1"}
+    book = state["functional_outstanding_minor"]
+    if active is not None:
+        book = _one(capture, "operational_fx_plans", id=active)["payload"]["equation"]["valued_outstanding_minor"]
+    expected: dict[str, Any] = {"schema_version": "stock-monetary-balance-v1", "history_version": len(events),
+        "history_fingerprint": _digest(events[-1] if events else seed), "transaction_original_gross_minor": str(gf), "functional_original_gross_minor": str(gl),
+        "transaction_collected_minor": str(state["transaction_collected_minor"]), "transaction_credited_minor": str(state["transaction_credited_minor"]),
+        "transaction_outstanding_minor": str(state["transaction_outstanding_minor"]), "functional_outstanding_minor": str(book),
+        "transaction_refund_entitlement_minor": str(ef), "functional_refund_entitlement_minor": str(el),
+        "transaction_refunded_minor": str(state["transaction_refunded_minor"]), "functional_refund_released_minor": str(state["functional_refund_released_minor"]),
+        "transaction_refund_due_minor": str(state["transaction_refund_due_minor"]), "functional_refund_due_minor": str(state["functional_refund_due_minor"]),
+        "active_plan_id": None, "active_revaluation_plan_id": active}
+    require(_digest(origin["ar_balance"]) == _digest(expected))
+    invoice = _one(capture, "ar_invoices", id=origin["invoice_id"])
+    allocations = [row for row in capture.rows("ar_receipt_allocations") if row["invoice_id"] == invoice["id"]]
+    require(sum(_minor(row["amount_minor"], positive=True) for row in allocations) == state["transaction_collected_minor"]
+            and invoice["status"] == ("Paid" if state["transaction_outstanding_minor"] == 0 else "Approved" if state["transaction_collected_minor"] == 0 else "PartiallyPaid"))
+
+
+def _native_memberships(capture: Capture, original: OriginalFinancial) -> None:
+    """Bind new owner rows to their native parents and immutable evidence IDs."""
+    require(len(capture.rows("stock_sales_monetary_origins")) == 1)
+    plans = capture.rows("customer_partial_return_monetary_plans")
+    for plan in plans:
+        _scope(plan, original.scope)
+        require(plan["origin_id"] == original.origin_id)
+        body = plan["payload"]
+        require(body["id"] == plan["id"] and body["source_id"] == original.origin_id
+                and body["source_order_id"] == original.source["source_order_id"]
+                and body["operation"] == plan["operation"] and body["original_id"] == plan["original_id"]
+                and body["plan_digest"] == plan["plan_digest"]
+                and plan["plan_digest"] == _digest({key: value for key, value in body.items() if key != "plan_digest"}))
+        operations = {row["operation"] for row in capture.rows("customer_partial_return_monetary_events") if row["plan_id"] == plan["id"]}
+        permitted = [{"prepare", "review", "post"}] if plan["phase"] == 2 else [{"prepare", "cancel"}, {"prepare", "review", "cancel"}] if plan["phase"] == 3 else [{"prepare", "review"}] if plan["phase"] == 1 else [{"prepare"}]
+        require(operations in permitted)
+        commands = {"prepare" if row["operation"].startswith("prepare") else row["operation"] for row in capture.rows("customer_partial_return_monetary_commands") if row["plan_id"] == plan["id"]}
+        require(commands == operations)
+    for row in capture.rows("customer_partial_return_monetary_events"):
+        _scope(row, original.scope)
+        plan = _one(capture, "customer_partial_return_monetary_plans", id=row["plan_id"])
+        action = "customer_partial_return_monetary_" + row["operation"]
+        audit = _one(capture, "domain_audit_events", id=row["audit_event_id"])
+        outbox = _one(capture, "outbox_events", event_id=row["outbox_event_id"])
+        _scope(outbox, original.scope)
+        metadata = {"plan_digest": plan["plan_digest"], "reason": row["reason"]}
+        require(audit["actor_user_id"] == row["actor_id"] and audit["object_type"] == "operational_finance"
+                and audit["object_id"] == plan["id"] and audit["action"] == action and audit["metadata_json"] == metadata
+                and outbox["aggregate_type"] == "operational_finance" and outbox["aggregate_id"] == plan["id"]
+                and outbox["event_type"] == action and outbox["payload"] == {**metadata, "audit_event_id": audit["id"]})
+    for table in ("customer_partial_return_monetary_entries", "customer_partial_return_monetary_restorations", "customer_partial_return_monetary_commands"):
+        for row in capture.rows(table):
+            _scope(row, original.scope)
+            plan = _one(capture, "customer_partial_return_monetary_plans", id=row["plan_id"])
+            if table.endswith("_commands"):
+                intent = row["request_json"]
+                require(set(intent) == {"protocol_version", "operation", "actor_id", "request"}
+                        and type(intent["protocol_version"]) is int and intent["protocol_version"] == 3
+                        and intent["operation"] == row["operation"] and intent["actor_id"] == row["actor_id"]
+                        and type(intent["request"]) is dict and row["request_digest"] == _digest(intent)
+                        and row["response_json"]["id"] == plan["id"] and row["response_json"]["plan_digest"] == plan["plan_digest"])
+
+
+def _immutable_transition(before: Capture, after: Capture) -> None:
+    """Append-only rows and already posted headers stay byte-for-byte original."""
+    old, new = dict(before.raw_tables), dict(after.raw_tables)
+    fixed = ("finance_posting_effects", "finance_entry_lines", "finance_entry_line_dimensions", "inventory_layer_consumptions", "operational_fx_sources",
+             "operational_fx_reviews", "operational_fx_links", "operational_fx_commands", "customer_partial_return_monetary_history",
+             "customer_partial_return_monetary_restorations", "customer_partial_return_monetary_events", "customer_partial_return_monetary_commands")
+    for name in fixed:
+        require(set(old[name]) <= set(new[name]))
+    for effect in before.rows("finance_posting_effects"):
+        require(_one(before, "finance_entries", id=effect["entry_id"]) == _one(after, "finance_entries", id=effect["entry_id"]))
+    for layer in before.rows("inventory_cost_layers"):
+        current = _one(after, "inventory_cost_layers", id=layer["id"])
+        mutable = {"remaining_quantity_scaled", "remaining_value_minor", "updated_at", "row_version"}
+        require({key: value for key, value in layer.items() if key not in mutable} == {key: value for key, value in current.items() if key not in mutable})
+
+
+def qualify_raw_cycle(packet: RawPacket) -> dict[str, Any]:
+    """Closed raw financial trace, with no current-authority or browser claim."""
+    first = next((index for index, capture in enumerate(packet.captures) if capture.rows("stock_sales_monetary_origins")), None)
+    require(first in {0, 2})
+    first = cast(int, first)
+    original = verify_original_rows(packet.captures[first], source_order_id=packet.source_order_id)
+    initial_stock = _one(packet.captures[0], "stock_sales_orders", id=packet.source_order_id)
+    if first == 2:
+        require(initial_stock["status"] == "Draft" and _one(packet.captures[1], "stock_sales_orders", id=packet.source_order_id)["status"] == "Delivered")
+        for capture in packet.captures[:first]:
+            require(not capture.rows("stock_sales_monetary_origins") and all(not capture.rows(name) for name in MONETARY_COLUMNS if name != "stock_sales_monetary_origins")
+                    and all(not capture.rows("operational_fx_" + name) for name in ("sources", "plans", "reviews", "links", "commands")))
+    prior_audit: tuple[str, ...] = ()
+    final_events: tuple[dict[str, Any], ...] = ()
+    final_totals = (0, 0, 0)
+    immutable_source = _one(packet.captures[first], "stock_sales_monetary_origins", id=original.origin_id)
+    for index, capture in enumerate(packet.captures):
+        chain = _audit_chain(capture, packet.tenant_id)
+        require(chain[:len(prior_audit)] == prior_audit)
+        prior_audit = chain
+        if index:
+            _immutable_transition(packet.captures[index - 1], capture)
+        stock = _one(capture, "stock_sales_orders", id=packet.source_order_id)
+        require(all(stock[key] == initial_stock[key] for key in ("tenant_id", "workspace_id", "organization_id", "legal_entity_id", "item_id", "uom_id", "location_id", "quantity_scaled", "quantity_precision", "source", "source_digest")))
+        if index < first:
+            continue
+        check = verify_original_rows(capture, source_order_id=packet.source_order_id)
+        require(check.fingerprint == original.fingerprint)
+        retained = _one(capture, "stock_sales_monetary_origins", id=original.origin_id)
+        require({key: value for key, value in retained.items() if key != "ar_balance"} == {key: value for key, value in immutable_source.items() if key != "ar_balance"})
+        final_events = verify_history_rows(capture, original)
+        posted = verify_posted_journal_rows(capture, original, final_events)
+        verify_physical_rows(capture, original, final_events)
+        closing, active = verify_valuation_rows(capture, original, final_events)
+        _projection(capture, original, final_events, active)
+        _native_memberships(capture, original)
+        allowed = _receipt_effects(capture, original) | set(posted) | set(closing)
+        allowed.add(stock["cogs_effect_id"])
+        recognition = _one(capture, "operational_fx_links", plan_id=stock["invoice_plan_id"])
+        allowed.add(recognition["posting_effect_id"])
+        final_totals = _ledger(capture, original, allowed)
+        if index == len(packet.captures) - 1:
+            require(active is None)
+    require(bool(final_events))
+    terminal = final_events[-1]["after"]
+    require(terminal["remaining_quantity_scaled"] == terminal["transaction_outstanding_minor"] == terminal["functional_outstanding_minor"]
+            == terminal["transaction_refund_due_minor"] == terminal["functional_refund_due_minor"] == 0)
+    return {"schema_version": "independent-monetary-posted-cycle-proof-v1", "status": "passed",
+            "case": "identity" if original.source["transaction_policy"]["currency_code"] == original.source["functional_policy"]["currency_code"] else "foreign",
+            "captures": len(packet.captures), "tables": 91, "monetary_events": len(final_events),
+            "final_posting_effects": final_totals[0], "final_posted_lines": final_totals[1], "final_debits_minor": str(final_totals[2]), "final_credits_minor": str(final_totals[2]),
+            "zero_financial_entries_omitted": True, "original_rows_immutable": True, "active_prefix_witnesses": True,
+            "posted_journals_bound": True, "physical_restorations_bound": True, "closing_valuations_bound": True,
+            "audit_chain_valid": True, "audit_original_prefix_equal": True, "observations": 0, "observation_business_tables": 89,
+            "observation_business_original_rows_equal": False, "observation_audit_actions_bound": False, "observation_chronology_bound": False,
+            "populated_restore_original_rows_equal": False, "restored_tables": 0, "restored_rows": 0,
+            "current_authorization_proven": False, "input_sha256": packet.sha256}

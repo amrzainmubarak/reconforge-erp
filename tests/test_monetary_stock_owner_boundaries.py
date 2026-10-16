@@ -15,6 +15,8 @@ from reconforge.infrastructure.postgres_monetary_stock_sales import (
     OPERATION_PERMISSIONS,
     PostgresMonetaryStockSalesRepository,
     _StockFxOwner,
+    book_carrying,
+    native_child_command,
 )
 from reconforge.infrastructure.postgres_operational_fx_tax import PostgresOperationalFxTaxRepository
 from reconforge.infrastructure.postgres_stock_sales import OPERATION_PERMISSIONS as LEGACY_PERMISSIONS
@@ -70,9 +72,26 @@ def test_known_original_gross_is_authorized_in_each_currency_before_later_phases
     owner.ops = SimpleNamespace(_actor=lambda actor, permission, scope, **kwargs: calls.append((scope["amount_minor"], scope["currency_precision"])))  # type: ignore[assignment]
     owner.connection = SimpleNamespace(execute=lambda *args: None)
     monkeypatch.setattr(owner, "_authority_locks", lambda *args, **kwargs: None)
-    monkeypatch.setattr(owner, "_origin", lambda identifier: {"payload": {"equation": {"foreign_gross_minor": 570, "functional_gross_minor": 7777}}})
+    monkeypatch.setattr(owner, "_origin", lambda identifier: {"payload": {"equation": {"foreign_gross_minor": 570, "functional_gross_minor": 7777}},
+        "ar_balance": {"functional_outstanding_minor": "10000"}})
     owner._actor(PostingActor("actor", "human", frozenset()), "prepare-invoice", source_row())
-    assert set(calls) == {(1000, 2), (570, 2), (7777, 3), (7, 3)}
+    assert set(calls) == {(1000, 2), (570, 2), (10000, 3), (7, 3)}
+
+
+@pytest.mark.parametrize("value", [None, True, 1, "01", "1.0", "1e3", "-1", "١", "9" * 5000, "9000000000000000001"])
+def test_book_carrying_refuses_noncanonical_or_unbounded_exposure(value: Any) -> None:
+    with pytest.raises(FinancePostingError):
+        book_carrying({"ar_balance": {"functional_outstanding_minor": value}})
+
+
+def test_book_carrying_and_child_keys_preserve_zero_and_full_public_command_range() -> None:
+    assert book_carrying({"ar_balance": {"functional_outstanding_minor": "0"}}) == 0
+    assert book_carrying({"ar_balance": {"functional_outstanding_minor": "9000000000000000000"}}) == 9000000000000000000
+    command = "a" * 140
+    first = native_child_command("stock-invoice", command)
+    assert len(first) <= 140 and first == native_child_command("stock-invoice", command)
+    assert first != native_child_command("stock-cash", command)
+    assert first != native_child_command("stock-invoice", command[:-1] + "b")
 
 
 @pytest.mark.parametrize("share", [False, True])

@@ -37,7 +37,12 @@ from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.postgres_customer_returns import PERMISSIONS, READ, PostgresCustomerReturnsRepository
 from reconforge.infrastructure.postgres_finance_posting import posting_entry, posting_snapshot, records
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
-from reconforge.infrastructure.postgres_monetary_stock_sales import SOURCE_SCHEMA, PostgresMonetaryStockSalesRepository
+from reconforge.infrastructure.postgres_monetary_stock_sales import (
+    SOURCE_SCHEMA,
+    PostgresMonetaryStockSalesRepository,
+    book_carrying,
+    native_child_command,
+)
 from reconforge.platform.common import platform_id
 from reconforge.platform.inventory_values import scaled_to_text
 from reconforge.utils.time import utc_now_text
@@ -161,6 +166,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
         foreign = sum(part["transaction_minor"] for part in source["components"])
         local = sum(part["functional_minor"] for part in source["components"])
         original_cost = sum(part["value_minor"] for part in source["consumptions"])
+        read_local = max(local, original_cost, book_carrying(origin))
         if event is None:
             exposures = (foreign, max(local, original_cost))
         else:
@@ -168,7 +174,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
             exposures = (max(movement.transaction_credit_minor, movement.transaction_refund_minor), movement.functional_turnover_minor)
         for permission in sorted(PERMISSIONS.get(operation, READ)):
             for index, policy in enumerate((source["transaction_policy"], source["functional_policy"])):
-                amount = (foreign if index == 0 else max(local, original_cost)) if permission in READ else exposures[index]
+                amount = (foreign if index == 0 else read_local) if permission in READ else exposures[index]
                 if type(amount) is not int or amount < 0:
                     _fail("evidence_invalid", "Both captured currency exposures require exact native minor units.")
                 self.owner._actor(actor, permission, {**{key: origin[key] for key in ("workspace_id", "organization_id", "legal_entity_id")},
@@ -327,7 +333,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
                 self._reversal_admission = (part["entry_id"], effect["id"], number)
                 self._participant = _MonetaryCustomerReturnPostingParticipant(self, entry_id)
                 try:
-                    created = self.owner.posting.prepare_reversal(effect["id"], command_id="CR3:inverse:" + command_id + ":" + suffix,
+                    created = self.owner.posting.prepare_reversal(effect["id"], command_id=native_child_command("cr3-inverse-" + suffix, command_id),
                         entry_number=number, period_id=args["period_id"], posting_date=args["posting_date"], reason=args["reason"],
                         actor=actor, _source_owner=self._participant)
                 finally:
@@ -479,7 +485,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
                 else:
                     self._participant = _MonetaryCustomerReturnPostingParticipant(self, part["entry_id"])
                     try:
-                        effect = self.owner.posting.post(part["entry_id"], command_id="CR3:" + command + ":" + part["purpose"],
+                        effect = self.owner.posting.post(part["entry_id"], command_id=native_child_command("cr3-" + part["purpose"], command),
                             expected_validation_digest=part["validation_digest"], reason=reason, actor=actor, _source_owner=self._participant)
                     finally:
                         self._participant = None

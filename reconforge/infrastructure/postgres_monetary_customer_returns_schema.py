@@ -5,9 +5,16 @@ outer SELECT snapshot; authoritative mutation/history functions are VOLATILE.
 The seven relations and reversible legacy-function installation are separate.
 """
 
+import re
+
 from reconforge.infrastructure.postgres_customer_partial_return_zero_stock_hooks import (
     _stock_close as _retained_zero_stock_close,
 )
+from reconforge.infrastructure.postgres_monetary_inventory_native import NATIVE_FUNCTION_SQL as PHYSICAL_FUNCTION_SQL
+from reconforge.infrastructure.postgres_monetary_inventory_transfer_schema import (
+    NATIVE_FUNCTION_SQL as TRANSFER_FUNCTION_SQL,
+)
+from reconforge.infrastructure.postgres_monetary_stock_schema import DOWNGRADE_PREFLIGHT_SQL, TABLES
 from reconforge.infrastructure.postgres_operational_fx_tax_schema import UPGRADE_SQL as ORIGINAL_FX_SQL
 from reconforge.infrastructure.postgres_stock_sales_schema import POSTGRES_STOCK_SALES_SCHEMA_SQL as ORIGINAL_STOCK_SQL
 
@@ -39,7 +46,7 @@ def _original_equation() -> str:
     return value
 
 
-ORIGINAL_EQUATION_SQL = r"""
+_ORIGINAL_EQUATION_PREFIX = r"""
 CREATE FUNCTION reconforge.monetary_fx_original_equation(t TEXT,i TEXT) RETURNS JSONB
  LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
 DECLARE s RECORD;stock_owner RECORD;inv RECORD;customer RECORD;a JSONB;q JSONB;tax JSONB;field TEXT;
@@ -73,10 +80,11 @@ BEGIN
  FOREACH field IN ARRAY ARRAY['foreign_net_minor','foreign_tax_minor','foreign_gross_minor','functional_net_minor','functional_gross_minor'] LOOP
   PERFORM reconforge.monetary_return_assert(reconforge.fx_minor(a->field),'Original foreign and functional monetary totals must be exact bounded integers');
  END LOOP;
-""" + _original_equation() + r"""
+"""
+ORIGINAL_EQUATION_SQL = "".join((_ORIGINAL_EQUATION_PREFIX, _original_equation(), r"""
  RETURN a-ARRAY['schema_version','id','workspace_id','organization_id','legal_entity_id','preparer_actor_id','invoice_id','source_digest','stock_order_id','stock_source_digest'];
 END $mr149$;
-"""
+"""))
 
 
 def _stock_body(name: str, following: str) -> str:
@@ -106,6 +114,9 @@ def _stock_physical() -> str:
     body = body.replace("r IS NULL", "r.order_id IS NULL").replace("r IS NOT NULL", "r.order_id IS NOT NULL")
     body = body.replace("claim IS NULL", "claim.order_id IS NULL").replace("claim IS NOT NULL", "claim.order_id IS NOT NULL")
     body = body.replace("entry IS NULL", "entry.id IS NULL")
+    body += """
+ IF d.cogs_effect_id IS NOT NULL THEN PERFORM reconforge.monetary_posted_close(t,d.cogs_entry_id,d.cogs_effect_id,d.organization_id,d.legal_entity_id);END IF;
+"""
     return "CREATE FUNCTION reconforge.monetary_stock_physical_close(t TEXT,target TEXT) RETURNS VOID LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$\n" + body + "END $mr149$;\n"
 
 
@@ -187,6 +198,7 @@ CREATE FUNCTION reconforge.monetary_full_policy(compact JSONB) RETURNS JSONB
  SELECT jsonb_build_object('currency_code',compact->'currency_code','currency_precision',compact->'precision',
   'currency_rounding_policy',compact->'rounding_policy','currency_registry_version',compact->'registry_version',
   'currency_registry_digest',compact->'registry_digest')
+ WHERE reconforge.fx_object(compact,ARRAY['currency_code','precision','rounding_policy','registry_version','registry_digest'])
 $mr149$;
 CREATE FUNCTION reconforge.monetary_return_ratio(v NUMERIC,q NUMERIC,selected NUMERIC) RETURNS BIGINT
  LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog AS $mr149$
@@ -443,7 +455,10 @@ BEGIN
  RETURN jsonb_build_object('schema_version','stock-monetary-balance-v1','history_version',version,'history_fingerprint',chain,
   'transaction_original_gross_minor',fg::text,'functional_original_gross_minor',lg::text,
   'transaction_collected_minor',collected::text,'transaction_credited_minor',credited::text,
-  'transaction_outstanding_minor',position->>'transaction_outstanding_minor','functional_outstanding_minor',position->>'functional_outstanding_minor',
+  'transaction_outstanding_minor',position->>'transaction_outstanding_minor','functional_outstanding_minor',
+   CASE WHEN fx_state->>'active_revaluation_plan_id' IS NULL THEN position->>'functional_outstanding_minor'
+    ELSE(SELECT payload#>>'{equation,valued_outstanding_minor}' FROM reconforge.operational_fx_plans
+     WHERE tenant_id=t AND id=fx_state->>'active_revaluation_plan_id' AND phase=2 AND kind='revalue') END,
   'transaction_refund_entitlement_minor',(due_f+refunded)::text,'functional_refund_entitlement_minor',(due_l+released)::text,
   'transaction_refunded_minor',refunded::text,'functional_refund_released_minor',released::text,
   'transaction_refund_due_minor',due_f::text,'functional_refund_due_minor',due_l::text,
@@ -648,10 +663,15 @@ BEGIN
   PERFORM reconforge.monetary_return_assert(effect_owner.id IS NOT NULL AND effect_owner.entry_id=member.entry_id
    AND effect_owner.snapshot_json=snapshot AND effect_owner.validation_digest=member.validation_digest
    AND effect_owner.posted_actor_id=poster AND poster<>reviewer AND poster<>entry_owner.preparer_actor_id
+   AND effect_owner.source_id=entry_owner.id AND effect_owner.purpose='operational_posting'
+   AND effect_owner.source_kind=(CASE WHEN member.original_effect_id IS NULL THEN'Manual' ELSE'Reversal' END)
+   AND effect_owner.validation_contract_version='finance-entry-review-v1' AND entry_owner.validation_contract_version='finance-entry-review-v1'
+   AND(effect_owner.workspace_id,effect_owner.organization_id,effect_owner.legal_entity_id)=(origin_owner.workspace_id,origin_owner.organization_id,origin_owner.legal_entity_id)
    AND effect_owner.reverses_effect_id IS NOT DISTINCT FROM member.original_effect_id
    AND(effect_owner.currency_code,effect_owner.currency_precision,effect_owner.currency_rounding_policy,effect_owner.currency_registry_version,effect_owner.currency_registry_digest)
     =(entry_owner.currency_code,entry_owner.currency_precision,entry_owner.currency_rounding_policy,entry_owner.currency_registry_version,entry_owner.currency_registry_digest),
    'Posted correction effects require exact seals, all three humans and original inverse affinity');
+  PERFORM reconforge.monetary_posted_close(t,member.entry_id,member.posting_effect_id,origin_owner.organization_id,origin_owner.legal_entity_id);
   PERFORM reconforge.monetary_return_assert(NOT EXISTS(SELECT 1 FROM reconforge.finance_posting_effects inverse
    WHERE inverse.tenant_id=t AND inverse.reverses_effect_id=effect_owner.id AND NOT EXISTS(
     SELECT 1 FROM reconforge.customer_partial_return_monetary_entries inverse_member
@@ -820,7 +840,7 @@ def _origin_functions(template: str) -> str:
         "monetary_stock_origin_payload(t TEXT,stock_id TEXT,fx_id TEXT,recognition_id TEXT,declared JSONB,birth BOOLEAN) RETURNS JSONB")
     first = assembler.index(" PERFORM reconforge.monetary_return_assert(stock_owner.id")
     last = assembler.index(" equation:=reconforge.monetary_fx_original_equation", first)
-    assembler = assembler[:first] + r"""
+    birth_assertion = r"""
  PERFORM reconforge.monetary_return_assert(stock_owner.id IS NOT NULL AND fx_source.id IS NOT NULL AND recognition.id IS NOT NULL
   AND reconforge.fx_object(declared,ARRAY['refund_liability_account_code'])
   AND stock_owner.source->>'schema_version'='stock-sales-monetary-order-v2'
@@ -838,7 +858,8 @@ def _origin_functions(template: str) -> str:
     AND(existing.stock_order_id=stock_id OR existing.invoice_id=fx_source.invoice_id OR existing.fx_source_id=fx_id OR existing.recognition_plan_id=recognition_id)),
    'Only the current native maker may atomically create a monetary origin before invoice review; legacy retrofit is forbidden');
  END IF;
-""" + assembler[last:]
+"""
+    assembler = "".join((assembler[:first], birth_assertion, assembler[last:]))
     assembler = _replace_once(assembler,
         "AND chart_id=journal_owner.chart_id AND account_code=code AND account_type=kind AND active AND allow_posting AND allow_manual_posting;",
         "AND chart_id=journal_owner.chart_id AND account_code=code AND account_type=kind AND(NOT birth OR(active AND allow_posting AND allow_manual_posting));")
@@ -1022,7 +1043,7 @@ BEGIN
   AND(v->>'id',v->>'source_id',v->>'kind',v->>'workspace_id',v->>'organization_id',v->>'legal_entity_id')=
    (i,source_owner.id,plan_owner.kind,origin_owner.workspace_id,origin_owner.organization_id,origin_owner.legal_entity_id)
   AND(plan_owner.workspace_id,plan_owner.organization_id,plan_owner.legal_entity_id)=(origin_owner.workspace_id,origin_owner.organization_id,origin_owner.legal_entity_id)
-  AND v->'entry_id' IS NOT DISTINCT FROM to_jsonb(plan_owner.entry_id) AND reconforge.fx_minor(v->'amount_minor')
+  AND v->'entry_id' IS NOT DISTINCT FROM COALESCE(to_jsonb(plan_owner.entry_id),'null'::jsonb) AND reconforge.fx_minor(v->'amount_minor')
   AND reconforge.fx_minor(v->'sequence') AND(v->>'sequence')::integer=plan_owner.sequence
   AND v->>'currency_code'=policy->>'currency_code' AND v->'currency_precision'=policy->'currency_precision',
   'The reused FX plan must preserve its exact fixed source, scope, identity and immutable financial seal');
@@ -1089,6 +1110,12 @@ BEGIN
    SELECT * INTO effect_owner FROM reconforge.finance_posting_effects WHERE tenant_id=t AND id=link_owner.posting_effect_id;
    PERFORM reconforge.monetary_return_assert(effect_owner.id IS NOT NULL AND effect_owner.entry_id=entry_owner.id AND effect_owner.snapshot_json=snapshot
     AND effect_owner.validation_digest=v->>'validation_digest' AND effect_owner.posted_actor_id=link_owner.posted_actor_id
+    AND(effect_owner.workspace_id,effect_owner.organization_id,effect_owner.legal_entity_id)=(origin_owner.workspace_id,origin_owner.organization_id,origin_owner.legal_entity_id)
+    AND effect_owner.source_id=entry_owner.id AND effect_owner.purpose='operational_posting'
+    AND effect_owner.source_kind=(CASE WHEN inverse_effect IS NULL THEN'Manual' ELSE'Reversal' END)
+    AND effect_owner.validation_contract_version='finance-entry-review-v1' AND entry_owner.validation_contract_version='finance-entry-review-v1'
+    AND(effect_owner.currency_code,effect_owner.currency_precision,effect_owner.currency_rounding_policy,effect_owner.currency_registry_version,effect_owner.currency_registry_digest)=
+     (entry_owner.currency_code,entry_owner.currency_precision,entry_owner.currency_rounding_policy,entry_owner.currency_registry_version,entry_owner.currency_registry_digest)
     AND effect_owner.reverses_effect_id IS NOT DISTINCT FROM inverse_effect
     AND NOT EXISTS(SELECT 1 FROM reconforge.finance_posting_effects inverse WHERE inverse.tenant_id=t AND inverse.reverses_effect_id=effect_owner.id
      AND NOT EXISTS(SELECT 1 FROM reconforge.operational_fx_plans inverse_plan JOIN reconforge.operational_fx_links inverse_link
@@ -1096,6 +1123,7 @@ BEGIN
       WHERE inverse_plan.tenant_id=t AND inverse_plan.source_id=source_owner.id AND inverse_plan.kind='reverse_revaluation' AND inverse_plan.phase=2
       AND inverse_plan.payload#>>'{equation,original_revaluation_id}'=i AND inverse_link.posting_effect_id=inverse.id)),
     'Posted FX must retain its exact real sealed effect; generic inverse ownership is forbidden');
+   PERFORM reconforge.monetary_posted_close(t,entry_owner.id,effect_owner.id,origin_owner.organization_id,origin_owner.legal_entity_id);
   END IF;
   IF plan_owner.kind='settle' THEN
    SELECT * INTO receipt_owner FROM reconforge.ar_receipts WHERE tenant_id=t AND id=link_owner.receipt_id;
@@ -1183,7 +1211,7 @@ CREATE FUNCTION reconforge.monetary_partial_close(t TEXT,i TEXT) RETURNS VOID
  LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
 DECLARE plan_owner RECORD;origin_owner RECORD;original_owner RECORD;event_owner RECORD;command_owner RECORD;entry_member RECORD;
  v JSONB;source JSONB;prefix JSONB;event JSONB;expected_event JSONB;journals JSONB;part JSONB;lines JSONB;original_event JSONB;
- reviewer TEXT;poster TEXT;preparer TEXT;cancelled TEXT;expected_command TEXT;expected_request JSONB;expected_response JSONB;stage INTEGER;
+ reviewer TEXT;poster TEXT;preparer TEXT;cancelled TEXT;expected_command TEXT;expected_request JSONB;expected_response JSONB;stage INTEGER;ordinal INTEGER:=0;
 BEGIN
  SELECT * INTO plan_owner FROM reconforge.customer_partial_return_monetary_plans WHERE tenant_id=t AND id=i;v:=plan_owner.payload;
  SELECT * INTO origin_owner FROM reconforge.stock_sales_monetary_origins WHERE tenant_id=t AND id=plan_owner.origin_id;
@@ -1209,6 +1237,14 @@ BEGIN
   AND v->>'history_fingerprint'=event->>'previous_history_fingerprint' AND v->'transaction_policy'=source->'transaction_policy'
   AND v->'functional_policy'=source->'functional_policy' AND v->'quantity_precision'=source->'quantity_precision'
   AND reconforge.irp_text(v->>'reason',500),'Every component, carrying release, entitlement, alignment and FIFO witness must independently replay');
+ PERFORM reconforge.monetary_return_assert(v#>>'{request,period_id}'=v->>'period_id' AND v#>>'{request,posting_date}'=v->>'posting_date'
+  AND v#>>'{request,reason}'=v->>'reason' AND v#>'{request,expected_history_version}'=v->'expected_history_version'
+  AND((plan_owner.operation='Return' AND v#>'{request,quantity_scaled}'=v->'quantity_scaled' AND v#>>'{request,source_order_id}'=origin_owner.stock_order_id
+    AND(v#>>'{request,workspace_id}',v#>>'{request,organization_id}',v#>>'{request,legal_entity_id}')=(origin_owner.workspace_id,origin_owner.organization_id,origin_owner.legal_entity_id))
+   OR(plan_owner.operation='Refund' AND v#>>'{request,return_id}'=plan_owner.original_id AND v#>'{request,amount_minor}'=event->'amount_minor'
+    AND v#>'{request,settlement_rate}'=event->'settlement_rate')
+   OR(plan_owner.operation LIKE'Reverse%' AND v#>>'{request,original_id}'=plan_owner.original_id)),
+  'The immutable preparation intent must bind its exact source, quantity or cash amount, period and date');
  IF plan_owner.original_id IS NOT NULL THEN
   SELECT * INTO original_owner FROM reconforge.customer_partial_return_monetary_plans WHERE tenant_id=t AND id=plan_owner.original_id;
   PERFORM reconforge.monetary_return_assert(original_owner.id IS NOT NULL AND original_owner.origin_id=origin_owner.id AND original_owner.phase=2
@@ -1231,6 +1267,11 @@ BEGIN
   AND(SELECT count(*) FROM reconforge.customer_partial_return_monetary_entries WHERE tenant_id=t AND plan_id=i)=jsonb_array_length(journals),
   'Only the complete nonzero original-account correction journal set may exist');
  FOR part IN SELECT member.value FROM jsonb_array_elements(journals) WITH ORDINALITY member(value,ordinal) ORDER BY member.ordinal LOOP
+  SELECT * INTO entry_member FROM reconforge.customer_partial_return_monetary_entries native
+   WHERE native.tenant_id=t AND native.plan_id=i AND native.purpose=part->>'purpose';
+  PERFORM reconforge.monetary_return_assert(v->'entries'->ordinal=jsonb_build_object('purpose',entry_member.purpose,'entry_id',entry_member.entry_id,
+   'snapshot',entry_member.snapshot,'validation_digest',entry_member.validation_digest,'original_effect_id',entry_member.original_effect_id),
+   'The exact ordered plan journal evidence must equal every persisted native member');ordinal:=ordinal+1;
   PERFORM reconforge.monetary_partial_entry_close(t,i,part->>'purpose',part->'lines');
  END LOOP;
  FOR event_owner IN SELECT * FROM reconforge.customer_partial_return_monetary_events WHERE tenant_id=t AND plan_id=i LOOP
@@ -1260,7 +1301,30 @@ BEGIN
   PERFORM reconforge.monetary_return_assert(EXISTS(SELECT 1 FROM reconforge.customer_partial_return_monetary_history history_owner
    WHERE history_owner.tenant_id=t AND history_owner.origin_id=origin_owner.id AND history_owner.partial_plan_id=i
    AND history_owner.kind=plan_owner.operation AND history_owner.payload=event),'Posted partials require exact immutable chronological history');
-  IF plan_owner.operation IN('Return','ReverseReturn') THEN PERFORM reconforge.monetary_return_physical(t,i,FALSE);END IF;
+  IF plan_owner.operation IN('Return','ReverseReturn') THEN
+   PERFORM reconforge.monetary_return_physical(t,i,FALSE);
+   PERFORM reconforge.monetary_return_assert((SELECT count(*) FROM reconforge.customer_partial_return_monetary_restorations WHERE tenant_id=t AND plan_id=i)=jsonb_array_length(event->'portions'),
+    'Every physical portion must have exactly one immutable native signed restoration');
+   FOR part IN SELECT value FROM jsonb_array_elements(event->'portions') LOOP
+    PERFORM reconforge.monetary_return_assert(EXISTS(SELECT 1 FROM reconforge.customer_partial_return_monetary_restorations restored
+     WHERE restored.tenant_id=t AND restored.plan_id=i AND restored.position=(part->>'position')::integer AND restored.origin_id=origin_owner.id
+     AND(restored.workspace_id,restored.organization_id,restored.legal_entity_id)=(origin_owner.workspace_id,origin_owner.organization_id,origin_owner.legal_entity_id)
+     AND(restored.original_consumption_id,restored.original_valuation_line_id,restored.cost_layer_id,restored.before_quantity_scaled,restored.before_value_minor,restored.quantity_scaled,restored.value_minor)=
+      (part->>'original_consumption_id',part->>'original_valuation_line_id',part->>'cost_layer_id',(part->>'before_quantity_scaled')::bigint,
+       (part->>'before_value_minor')::bigint,(part->>'quantity_scaled')::bigint,(part->>'value_minor')::bigint)
+     AND restored.direction=(CASE plan_owner.operation WHEN'Return' THEN 1 ELSE -1 END) AND restored.physical_movement_id=v->>'movement_id'
+     AND restored.original_restoration_plan_id IS NOT DISTINCT FROM(CASE WHEN plan_owner.operation='ReverseReturn' THEN plan_owner.original_id ELSE NULL END)
+     AND restored.correction_effect_id IS NOT DISTINCT FROM(SELECT posting_effect_id FROM reconforge.customer_partial_return_monetary_entries
+      WHERE tenant_id=t AND plan_id=i AND purpose IN('CostRestoration','ReverseCostRestoration'))
+     AND(plan_owner.operation='Return' OR EXISTS(SELECT 1 FROM reconforge.customer_partial_return_monetary_restorations original_restoration
+      WHERE original_restoration.tenant_id=t AND original_restoration.plan_id=plan_owner.original_id AND original_restoration.position=restored.position
+      AND original_restoration.consumption_count_at_restore=restored.consumption_count_at_restore))),
+     'Actual restoration identity, before-value, signed history, native movement and total-cost effect must remain exact');
+   END LOOP;
+  ELSE
+   PERFORM reconforge.monetary_return_assert(NOT EXISTS(SELECT 1 FROM reconforge.customer_partial_return_monetary_restorations WHERE tenant_id=t AND plan_id=i)
+    AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_movements WHERE tenant_id=t AND source_reference=i),'Cash operations cannot invent physical movements');
+  END IF;
  ELSE
   PERFORM reconforge.monetary_return_assert(NOT EXISTS(SELECT 1 FROM reconforge.customer_partial_return_monetary_history WHERE tenant_id=t AND partial_plan_id=i)
    AND NOT EXISTS(SELECT 1 FROM reconforge.customer_partial_return_monetary_restorations WHERE tenant_id=t AND plan_id=i)
@@ -1274,6 +1338,7 @@ BEGIN
   stage:=CASE expected_command WHEN'prepare' THEN 0 WHEN'review' THEN 1 WHEN'post' THEN 2 ELSE 3 END;
   expected_request:=CASE WHEN expected_command='prepare' THEN v->'request' ELSE jsonb_build_object('plan_id',i,'expected_plan_digest',plan_owner.plan_digest,'reason',event_owner.reason) END;
   PERFORM reconforge.monetary_return_assert(command_owner.actor_id=event_owner.actor_id
+   AND(expected_command<>'prepare' OR command_owner.operation=(CASE plan_owner.operation WHEN'Return' THEN'prepare' WHEN'Refund' THEN'prepare_refund' ELSE'prepare_reversal' END))
    AND command_owner.request_json=jsonb_build_object('protocol_version',3,'operation',command_owner.operation,'actor_id',command_owner.actor_id,'request',expected_request)
    AND command_owner.request_digest=reconforge.irp_digest(command_owner.request_json)
    AND command_owner.response_json=reconforge.monetary_partial_public_at(t,i,stage),
@@ -1396,7 +1461,8 @@ END $mr149$;
 CREATE FUNCTION reconforge.monetary_stock_close(t TEXT,target TEXT) RETURNS VOID
  LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
 DECLARE stock_owner RECORD;origin_owner RECORD;invoice_owner RECORD;member RECORD;command_owner RECORD;prior_event RECORD;
- source JSONB;actual JSONB;balance JSONB;history JSONB;recognition RECORD;initial_review RECORD;expected_status TEXT;next_status TEXT;version INTEGER:=0;
+ source JSONB;actual JSONB;balance JSONB;history JSONB;recognition RECORD;initial_review RECORD;collection_owner RECORD;
+ expected_status TEXT;next_status TEXT;version INTEGER:=0;stage INTEGER;
 BEGIN
  SELECT * INTO stock_owner FROM reconforge.stock_sales_orders WHERE tenant_id=t AND id=target;source:=stock_owner.source;
  PERFORM reconforge.monetary_return_assert(stock_owner.id IS NOT NULL AND reconforge.irp_scope(t,stock_owner.workspace_id,stock_owner.organization_id,stock_owner.legal_entity_id)
@@ -1412,6 +1478,15 @@ BEGIN
   AND round((source->>'unit_price_minor')::numeric*(10000-(source->>'discount_basis_points')::integer)/10000,0)=(source->>'net_unit_price_minor')::numeric
   AND round((source->>'quantity')::numeric*(source->>'net_unit_price_minor')::numeric,0)=stock_owner.total_minor,
   'The fixed original Stock source must reproduce its actual exact transaction quantity, discounted price and net');
+ stage:=reconforge.stock_sales_stage(stock_owner.status);
+ IF stock_owner.status<>'Cancelled' THEN
+  PERFORM reconforge.monetary_return_assert((stage>=2)=(stock_owner.approved_by IS NOT NULL)
+   AND(stage>=4)=(stock_owner.issue_plan IS NOT NULL) AND(stage>=5)=(stock_owner.issue_reviewer_id IS NOT NULL)
+   AND(stage>=6)=(stock_owner.movement_id IS NOT NULL AND stock_owner.valuation_id IS NOT NULL)
+   AND(stage>=7)=(stock_owner.invoice_id IS NOT NULL AND stock_owner.invoice_plan_id IS NOT NULL AND stock_owner.invoice_parameters IS NOT NULL)
+   AND(stage<10 OR(stock_owner.collection_plan_id IS NOT NULL AND stock_owner.collection_parameters IS NOT NULL)),
+   'Actual native Stock links must exist exactly at their governed source stage');
+ END IF;
  PERFORM reconforge.monetary_stock_physical_close(t,target);
  FOR member IN SELECT * FROM reconforge.stock_sales_events WHERE tenant_id=t AND order_id=target ORDER BY version LOOP
   version:=version+1;SELECT * INTO command_owner FROM reconforge.stock_sales_commands WHERE tenant_id=t AND order_id=target AND stock_sales_commands.version=member.version;
@@ -1467,6 +1542,17 @@ BEGIN
  SELECT * INTO recognition FROM reconforge.operational_fx_plans WHERE tenant_id=t AND id=origin_owner.recognition_plan_id;
  SELECT * INTO initial_review FROM reconforge.operational_fx_reviews WHERE tenant_id=t AND plan_id=recognition.id;
  SELECT * INTO invoice_owner FROM reconforge.ar_invoices WHERE tenant_id=t AND id=origin_owner.invoice_id;
+ PERFORM reconforge.monetary_return_assert(recognition.phase=(CASE stock_owner.status WHEN'InvoicePrepared' THEN 0 WHEN'InvoiceReviewed' THEN 1 ELSE 2 END)
+  AND stock_owner.status IN('InvoicePrepared','InvoiceReviewed','Invoiced','CollectionPrepared','CollectionReviewed','Paid'),
+  'The real original recognition phase must agree with the immutable Stock event lifecycle');
+ IF stock_owner.collection_plan_id IS NOT NULL THEN
+  SELECT * INTO collection_owner FROM reconforge.operational_fx_plans WHERE tenant_id=t AND id=stock_owner.collection_plan_id;
+  PERFORM reconforge.monetary_return_assert(collection_owner.source_id=origin_owner.fx_source_id AND collection_owner.kind='settle'
+   AND collection_owner.sequence=(SELECT max(sequence) FROM reconforge.operational_fx_plans WHERE tenant_id=t AND source_id=origin_owner.fx_source_id AND kind='settle')
+   AND collection_owner.phase=(CASE stock_owner.status WHEN'CollectionPrepared' THEN 0 WHEN'CollectionReviewed' THEN 1 ELSE 2 END)
+   AND(collection_owner.payload->'command_request'-ARRAY['kind','source_id','reason'])=stock_owner.collection_parameters,
+   'Repeated Stock cash must retain its exact latest native collection owner and request');
+ END IF;
  expected_status:=CASE WHEN recognition.phase=0 THEN'Submitted' WHEN balance->>'transaction_outstanding_minor'='0' THEN'Paid'
   WHEN balance->>'transaction_collected_minor'='0' THEN'Approved' ELSE'PartiallyPaid' END;
  PERFORM reconforge.monetary_return_assert(invoice_owner.customer_partial_return_source_id IS NULL AND invoice_owner.customer_return_owner_id IS NULL
@@ -1531,12 +1617,12 @@ BEGIN
 END $mr149$;
 CREATE FUNCTION reconforge.monetary_return_protect() RETURNS TRIGGER
  LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
-DECLARE changed JSONB:=to_jsonb(NEW);previous JSONB;plan_owner RECORD;origin_owner RECORD;stock_owner RECORD;part JSONB;
+DECLARE changed JSONB;previous JSONB;plan_owner RECORD;origin_owner RECORD;stock_owner RECORD;part JSONB;
  actor TEXT:=current_setting('app.customer_partial_return_monetary_actor_id',true);stock_actor TEXT:=current_setting('app.stock_sales_actor_id',true);
  kind TEXT;operation TEXT;expected JSONB;prefix JSONB;poster TEXT;reviewer TEXT;
 BEGIN
  IF TG_OP='DELETE' THEN PERFORM reconforge.monetary_return_assert(FALSE,'Monetary original, command, financial and physical history is immutable');END IF;
- IF TG_OP='UPDATE' THEN previous:=to_jsonb(OLD);END IF;
+ changed:=to_jsonb(NEW);IF TG_OP='UPDATE' THEN previous:=to_jsonb(OLD);END IF;
  IF TG_TABLE_NAME='stock_sales_monetary_origins' THEN
   IF TG_OP='INSERT' THEN
    expected:=reconforge.monetary_stock_origin_payload(NEW.tenant_id,NEW.stock_order_id,NEW.fx_source_id,NEW.recognition_plan_id,
@@ -1641,4 +1727,284 @@ BEGIN
  PERFORM reconforge.monetary_return_authority(plan_owner.tenant_id,actor,operation,plan_owner.payload->>'period_id',plan_owner.payload->>'posting_date');
  RETURN NEW;
 END $mr149$;
+"""
+
+NAMESPACE_SQL = r"""
+CREATE FUNCTION reconforge.monetary_namespace() RETURNS TRIGGER
+ LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
+DECLARE changed JSONB;origin_owner RECORD;source_owner RECORD;plan_owner RECORD;stock_owner RECORD;review_owner RECORD;invoice_owner RECORD;
+ actor TEXT:=current_setting('app.stock_sales_actor_id',true);partial_actor TEXT:=current_setting('app.customer_partial_return_monetary_actor_id',true);
+ expected JSONB;prefix JSONB;amount NUMERIC;
+BEGIN
+ IF TG_OP='DELETE' THEN RETURN OLD;END IF;changed:=to_jsonb(NEW);
+ IF TG_TABLE_NAME IN('ar_invoices','ar_invoice_lines','ar_receipts','ar_receipt_allocations') THEN
+  IF TG_TABLE_NAME='ar_invoices' THEN SELECT * INTO invoice_owner FROM reconforge.ar_invoices WHERE tenant_id=NEW.tenant_id AND id=NEW.id;
+  ELSIF TG_TABLE_NAME IN('ar_invoice_lines','ar_receipt_allocations') THEN SELECT * INTO invoice_owner FROM reconforge.ar_invoices WHERE tenant_id=NEW.tenant_id AND id=NEW.invoice_id;
+  END IF;
+  IF TG_TABLE_NAME='ar_receipts' THEN
+   IF NEW.organization_id IS NOT NULL AND NEW.legal_entity_id IS NOT NULL THEN
+    PERFORM reconforge.monetary_return_assert(reconforge.irp_scope(NEW.tenant_id,NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id),
+     'A fully scoped native receipt cannot conceal source ownership under another child scope');
+   END IF;
+  ELSIF TG_TABLE_NAME='ar_invoices' THEN
+   IF NEW.organization_id IS NOT NULL AND NEW.legal_entity_id IS NOT NULL THEN
+    PERFORM reconforge.monetary_return_assert(reconforge.irp_scope(NEW.tenant_id,NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id),
+     'A fully scoped native invoice cannot conceal source ownership under another child scope');
+   END IF;
+  ELSE
+   IF invoice_owner.organization_id IS NOT NULL AND invoice_owner.legal_entity_id IS NOT NULL THEN
+    PERFORM reconforge.monetary_return_assert(reconforge.irp_scope(invoice_owner.tenant_id,invoice_owner.workspace_id,invoice_owner.organization_id,invoice_owner.legal_entity_id),
+     'A native invoice child cannot hide monetary ownership by choosing another current scope');
+   END IF;
+  END IF;
+ END IF;
+ IF TG_TABLE_NAME='finance_entries' THEN
+  IF upper(NEW.entry_number)~'^(CR3|CRF3|CR3R|CRF3R)-[A-F0-9]{32}-[RCF]$' THEN
+   PERFORM reconforge.monetary_return_assert(partial_actor IS NOT NULL
+    AND((TG_OP='INSERT' AND reconforge.sales_revenue_actor(NEW.tenant_id,partial_actor,'finance_core.manage'))
+     OR(TG_OP='UPDATE' AND(reconforge.sales_revenue_actor(NEW.tenant_id,partial_actor,'finance_core.manage')
+      OR reconforge.sales_revenue_actor(NEW.tenant_id,partial_actor,'finance_core.validate') OR reconforge.sales_revenue_actor(NEW.tenant_id,partial_actor,'finance_core.post')))),
+    'Reserved monetary correction journals require their current governed source actor');
+  END IF;
+ ELSIF TG_TABLE_NAME='operational_fx_sources' THEN
+  IF NEW.payload->>'schema_version'='operational-fx-stock-source-v2' THEN
+   SELECT * INTO stock_owner FROM reconforge.stock_sales_orders WHERE tenant_id=NEW.tenant_id AND id=NEW.payload->>'stock_order_id';
+   PERFORM reconforge.monetary_return_assert(TG_OP='INSERT' AND stock_owner.id IS NOT NULL
+    AND stock_owner.source->>'schema_version'='stock-sales-monetary-order-v2' AND stock_owner.status='Delivered'
+    AND NEW.payload->>'stock_source_digest'=stock_owner.source_digest AND actor=NEW.payload->>'preparer_actor_id'
+    AND reconforge.sales_revenue_actor(NEW.tenant_id,actor,'sales.manage') AND reconforge.sales_revenue_actor(NEW.tenant_id,actor,'finance_core.manage')
+    AND reconforge.sales_revenue_actor(NEW.tenant_id,actor,'receivables.manage'),
+    'Monetary FX source birth cannot retrofit or bypass the actual fixed delivered Stock owner');
+  END IF;
+ ELSIF TG_TABLE_NAME='operational_fx_plans' THEN
+  IF NEW.entry_id IS NULL THEN
+   SELECT * INTO source_owner FROM reconforge.operational_fx_sources WHERE tenant_id=NEW.tenant_id AND id=NEW.source_id;
+   SELECT * INTO origin_owner FROM reconforge.stock_sales_monetary_origins WHERE tenant_id=NEW.tenant_id AND fx_source_id=NEW.source_id;
+   PERFORM reconforge.monetary_return_assert(source_owner.payload->>'schema_version'='operational-fx-stock-source-v2'
+    AND origin_owner.id IS NOT NULL AND NEW.kind='settle' AND NEW.payload->>'schema_version'='operational-fx-stock-plan-v2'
+    AND NEW.payload->'amount_minor'='0'::jsonb AND NEW.payload#>'{equation,lines}'='[]'::jsonb,
+    'Legacy or nonzero FX plans cannot omit their native functional journal');
+   prefix:=reconforge.monetary_stock_prefix(NEW.tenant_id,origin_owner.stock_order_id,(NEW.payload#>>'{equation,monetary_event,sequence}')::integer-1);
+   expected:=reconforge.monetary_return_next(origin_owner.payload->'source',prefix,'Collection',0,
+    (NEW.payload#>>'{command_request,amount_minor}')::bigint,NEW.payload->>'posting_date',
+    NULLIF(NEW.payload#>'{command_request,settlement_rate}','null'::jsonb),NULL);
+   PERFORM reconforge.monetary_return_assert(expected=NEW.payload#>'{equation,monetary_event}'
+    AND expected#>'{monetary,functional_turnover_minor}'='0'::jsonb,'Absent journal admission must retain the exact actual zero-turnover prefix');
+  END IF;
+ ELSIF TG_TABLE_NAME='operational_fx_links' THEN
+  IF NEW.posting_effect_id IS NULL THEN
+   SELECT * INTO plan_owner FROM reconforge.operational_fx_plans WHERE tenant_id=NEW.tenant_id AND id=NEW.plan_id;
+   SELECT * INTO source_owner FROM reconforge.operational_fx_sources WHERE tenant_id=NEW.tenant_id AND id=plan_owner.source_id;
+   PERFORM reconforge.monetary_return_assert(source_owner.payload->>'schema_version'='operational-fx-stock-source-v2'
+    AND plan_owner.entry_id IS NULL AND plan_owner.kind='settle' AND plan_owner.phase=1
+    AND plan_owner.payload->'amount_minor'='0'::jsonb AND NEW.receipt_id IS NOT NULL
+    AND NEW.posted_actor_id=actor AND reconforge.sales_revenue_actor(NEW.tenant_id,actor,'finance_core.post'),
+    'A missing FX effect requires the exact actual zero-turnover collection and current posting human');
+  END IF;
+ ELSIF TG_TABLE_NAME='ar_receipt_allocations' THEN
+  SELECT * INTO origin_owner FROM reconforge.stock_sales_monetary_origins WHERE tenant_id=NEW.tenant_id AND invoice_id=NEW.invoice_id;
+  IF origin_owner.id IS NOT NULL THEN
+   PERFORM reconforge.monetary_return_assert(TG_OP='INSERT','Owned monetary receipt allocations cannot be changed after original posting');
+   SELECT * INTO plan_owner FROM reconforge.operational_fx_plans WHERE tenant_id=NEW.tenant_id AND source_id=origin_owner.fx_source_id AND kind='settle' AND phase=1;
+   SELECT * INTO review_owner FROM reconforge.operational_fx_reviews WHERE tenant_id=NEW.tenant_id AND plan_id=plan_owner.id;
+   PERFORM reconforge.monetary_return_assert(plan_owner.id IS NOT NULL AND NEW.amount_minor=(plan_owner.payload#>>'{equation,foreign_minor}')::numeric
+    AND actor<>plan_owner.payload->>'preparer_actor_id' AND actor<>review_owner.reviewer_actor_id
+    AND reconforge.sales_revenue_actor(NEW.tenant_id,actor,'finance_core.post') AND reconforge.sales_revenue_actor(NEW.tenant_id,actor,'receivables.manage'),
+    'Generic AR allocation cannot bypass the exact reviewed monetary Stock collection and its third human');
+  END IF;
+ END IF;
+ RETURN NEW;
+END $mr149$;
+CREATE FUNCTION reconforge.monetary_return_native_close() RETURNS TRIGGER
+ LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
+DECLARE changed JSONB;previous JSONB;current_row JSONB;tenant TEXT;stock_id TEXT;entry_id TEXT;movement_id TEXT;invoice_id TEXT;plan_id TEXT;origin_id TEXT;
+ member RECORD;origin_owner RECORD;candidate RECORD;reference TEXT;
+BEGIN
+ IF TG_OP<>'INSERT' THEN previous:=to_jsonb(OLD);END IF;IF TG_OP<>'DELETE' THEN current_row:=to_jsonb(NEW);END IF;
+ FOR changed IN SELECT previous WHERE previous IS NOT NULL UNION SELECT current_row WHERE current_row IS NOT NULL LOOP
+  tenant:=changed->>'tenant_id';entry_id:=NULL;movement_id:=NULL;invoice_id:=NULL;plan_id:=NULL;origin_id:=NULL;stock_id:=NULL;
+  IF TG_TABLE_NAME='stock_sales_monetary_origins' THEN stock_id:=changed->>'stock_order_id';
+  ELSIF TG_TABLE_NAME='customer_partial_return_monetary_plans' THEN origin_id:=changed->>'origin_id';
+  ELSIF TG_TABLE_NAME IN('customer_partial_return_monetary_history','customer_partial_return_monetary_restorations') THEN origin_id:=changed->>'origin_id';
+  ELSIF TG_TABLE_NAME LIKE'customer_partial_return_monetary_%' THEN plan_id:=changed->>'plan_id';
+  ELSIF TG_TABLE_NAME='operational_fx_sources' THEN
+   SELECT fixed.stock_order_id INTO stock_id FROM reconforge.stock_sales_monetary_origins fixed WHERE fixed.tenant_id=tenant AND fixed.fx_source_id=changed->>'id';
+  ELSIF TG_TABLE_NAME IN('operational_fx_plans','operational_fx_reviews','operational_fx_links','operational_fx_commands') THEN
+   SELECT fixed.stock_order_id INTO stock_id FROM reconforge.stock_sales_monetary_origins fixed
+    JOIN reconforge.operational_fx_plans fx_plan ON(fx_plan.tenant_id,fx_plan.source_id)=(fixed.tenant_id,fixed.fx_source_id)
+    WHERE fixed.tenant_id=tenant AND fx_plan.id=(CASE WHEN TG_TABLE_NAME='operational_fx_plans' THEN changed->>'id' ELSE changed->>'plan_id' END);
+  ELSIF TG_TABLE_NAME='finance_entries' THEN entry_id:=changed->>'id';
+  ELSIF TG_TABLE_NAME IN('finance_entry_lines','finance_posting_effects') THEN entry_id:=changed->>'entry_id';
+  ELSIF TG_TABLE_NAME='finance_entry_line_dimensions' THEN
+   SELECT entry_line.entry_id INTO entry_id FROM reconforge.finance_entry_lines entry_line WHERE entry_line.tenant_id=tenant AND entry_line.id=changed->>'entry_line_id';
+  ELSIF TG_TABLE_NAME='inventory_movements' THEN movement_id:=changed->>'id';
+  ELSIF TG_TABLE_NAME='inventory_movement_lines' THEN movement_id:=changed->>'movement_id';
+  ELSIF TG_TABLE_NAME='inventory_valuation_documents' THEN movement_id:=changed->>'movement_id';
+  ELSIF TG_TABLE_NAME='inventory_valuation_lines' THEN
+   SELECT document.movement_id INTO movement_id FROM reconforge.inventory_valuation_documents document WHERE document.tenant_id=tenant AND document.id=changed->>'valuation_document_id';
+  ELSIF TG_TABLE_NAME='inventory_layer_consumptions' THEN
+   SELECT document.movement_id INTO movement_id FROM reconforge.inventory_valuation_lines detail JOIN reconforge.inventory_valuation_documents document
+    ON(document.tenant_id,document.id)=(detail.tenant_id,detail.valuation_document_id) WHERE detail.tenant_id=tenant AND detail.id=changed->>'valuation_line_id';
+  ELSIF TG_TABLE_NAME='ar_invoices' THEN invoice_id:=changed->>'id';
+  ELSIF TG_TABLE_NAME IN('ar_invoice_lines','ar_receipt_allocations') THEN invoice_id:=changed->>'invoice_id';
+  ELSIF TG_TABLE_NAME='ar_receipts' THEN
+   SELECT fixed.stock_order_id INTO stock_id FROM reconforge.stock_sales_monetary_origins fixed
+    JOIN reconforge.operational_fx_plans fx_plan ON(fx_plan.tenant_id,fx_plan.source_id)=(fixed.tenant_id,fixed.fx_source_id)
+    JOIN reconforge.operational_fx_links fx_link ON(fx_link.tenant_id,fx_link.plan_id)=(fx_plan.tenant_id,fx_plan.id)
+    WHERE fixed.tenant_id=tenant AND fx_link.receipt_id=changed->>'id';
+  ELSIF TG_TABLE_NAME IN('domain_audit_events','outbox_events') THEN
+   FOR candidate IN SELECT fixed.stock_order_id FROM reconforge.stock_sales_monetary_origins fixed
+    JOIN reconforge.customer_partial_return_monetary_plans partial_plan ON(partial_plan.tenant_id,partial_plan.origin_id)=(fixed.tenant_id,fixed.id)
+    JOIN reconforge.customer_partial_return_monetary_events event_owner ON(event_owner.tenant_id,event_owner.plan_id)=(partial_plan.tenant_id,partial_plan.id)
+    WHERE fixed.tenant_id=tenant AND(event_owner.audit_event_id=changed->>'id' OR event_owner.outbox_event_id=changed->>'event_id')
+    UNION SELECT fixed.stock_order_id FROM reconforge.stock_sales_monetary_origins fixed
+    JOIN reconforge.operational_fx_plans fx_plan ON(fx_plan.tenant_id,fx_plan.source_id)=(fixed.tenant_id,fixed.fx_source_id)
+    LEFT JOIN reconforge.operational_fx_reviews fx_review ON(fx_review.tenant_id,fx_review.plan_id)=(fx_plan.tenant_id,fx_plan.id)
+    LEFT JOIN reconforge.operational_fx_links fx_link ON(fx_link.tenant_id,fx_link.plan_id)=(fx_plan.tenant_id,fx_plan.id)
+    WHERE fixed.tenant_id=tenant AND(changed->>'id' IN(fx_plan.audit_event_id,fx_review.audit_event_id,fx_link.audit_event_id)
+     OR changed->>'event_id' IN(fx_plan.outbox_event_id,fx_review.outbox_event_id,fx_link.outbox_event_id)) LOOP
+    PERFORM reconforge.monetary_stock_close(tenant,candidate.stock_order_id);
+   END LOOP;
+  END IF;
+  IF plan_id IS NOT NULL THEN SELECT owned.origin_id INTO origin_id FROM reconforge.customer_partial_return_monetary_plans owned WHERE owned.tenant_id=tenant AND owned.id=plan_id;END IF;
+  IF origin_id IS NOT NULL THEN SELECT owned.stock_order_id INTO stock_id FROM reconforge.stock_sales_monetary_origins owned WHERE owned.tenant_id=tenant AND owned.id=origin_id;END IF;
+  IF invoice_id IS NOT NULL THEN SELECT owned.stock_order_id INTO stock_id FROM reconforge.stock_sales_monetary_origins owned WHERE owned.tenant_id=tenant AND owned.invoice_id=invoice_id;END IF;
+  IF entry_id IS NOT NULL THEN
+   FOR candidate IN SELECT fixed.stock_order_id FROM reconforge.stock_sales_monetary_origins fixed
+    JOIN reconforge.customer_partial_return_monetary_plans partial_plan ON(partial_plan.tenant_id,partial_plan.origin_id)=(fixed.tenant_id,fixed.id)
+    JOIN reconforge.customer_partial_return_monetary_entries journal ON(journal.tenant_id,journal.plan_id)=(partial_plan.tenant_id,partial_plan.id)
+    WHERE fixed.tenant_id=tenant AND journal.entry_id=monetary_return_native_close.entry_id
+    UNION SELECT fixed.stock_order_id FROM reconforge.stock_sales_monetary_origins fixed
+    JOIN reconforge.operational_fx_plans fx_plan ON(fx_plan.tenant_id,fx_plan.source_id)=(fixed.tenant_id,fixed.fx_source_id)
+    WHERE fixed.tenant_id=tenant AND fx_plan.entry_id=monetary_return_native_close.entry_id
+    UNION SELECT fixed.id FROM reconforge.stock_sales_orders fixed WHERE fixed.tenant_id=tenant AND fixed.cogs_entry_id=monetary_return_native_close.entry_id
+     AND fixed.source->>'schema_version'='stock-sales-monetary-order-v2' LOOP
+    PERFORM reconforge.monetary_stock_close(tenant,candidate.stock_order_id);
+   END LOOP;
+   SELECT entry.external_reference INTO reference FROM reconforge.finance_entries entry WHERE entry.tenant_id=tenant AND entry.id=monetary_return_native_close.entry_id;
+   IF reference~'^(CR3|CRF3|CR3R|CRF3R)-[0-9a-f]{32}$' THEN
+    PERFORM reconforge.monetary_return_assert(EXISTS(SELECT 1 FROM reconforge.customer_partial_return_monetary_entries journal
+     WHERE journal.tenant_id=tenant AND journal.plan_id=reference AND journal.entry_id=monetary_return_native_close.entry_id),
+     'A correction reference cannot be borrowed by an unreserved extra native entry');
+   END IF;
+   IF TG_TABLE_NAME='finance_entries' AND upper(changed->>'entry_number')~'^(CR3|CRF3|CR3R|CRF3R)-[A-F0-9]{32}-[RCF]$' THEN
+    PERFORM reconforge.monetary_return_assert(EXISTS(SELECT 1 FROM reconforge.customer_partial_return_monetary_entries journal
+     WHERE journal.tenant_id=tenant AND journal.entry_id=monetary_return_native_close.entry_id),'Reserved correction entry numbers require exact native financial membership');
+   END IF;
+  END IF;
+  IF movement_id IS NOT NULL THEN
+   SELECT physical.source_reference INTO reference FROM reconforge.inventory_movements physical WHERE physical.tenant_id=tenant AND physical.id=monetary_return_native_close.movement_id;
+   IF reference~'^(CR3|CR3R)-[0-9a-f]{32}$' THEN
+    SELECT * INTO member FROM reconforge.customer_partial_return_monetary_plans owned WHERE owned.tenant_id=tenant AND owned.id=reference;
+    PERFORM reconforge.monetary_return_assert(member.id IS NOT NULL AND member.payload->>'movement_id'=monetary_return_native_close.movement_id,
+     'A correction source cannot be borrowed by an extra or renamed physical movement');
+    SELECT fixed.stock_order_id INTO stock_id FROM reconforge.stock_sales_monetary_origins fixed WHERE fixed.tenant_id=tenant AND fixed.id=member.origin_id;
+   ELSE
+    SELECT fixed.id INTO stock_id FROM reconforge.stock_sales_orders fixed WHERE fixed.tenant_id=tenant AND fixed.id=reference
+     AND fixed.source->>'schema_version'='stock-sales-monetary-order-v2';
+   END IF;
+  END IF;
+  IF stock_id IS NOT NULL THEN PERFORM reconforge.monetary_stock_close(tenant,stock_id);END IF;
+ END LOOP;
+ IF TG_OP='DELETE' THEN RETURN OLD;END IF;RETURN NEW;
+END $mr149$;
+"""
+
+EFFECT_SQL = r"""
+CREATE FUNCTION reconforge.monetary_posted_close(t TEXT,i TEXT,f TEXT,o TEXT,e TEXT) RETURNS VOID
+ LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
+DECLARE entry_owner RECORD;effect_owner RECORD;snapshot JSONB;
+BEGIN
+ SELECT * INTO entry_owner FROM reconforge.finance_entries WHERE tenant_id=t AND id=i;
+ SELECT * INTO effect_owner FROM reconforge.finance_posting_effects WHERE tenant_id=t AND id=f;
+ snapshot:=reconforge.fr_snapshot(t,i,o,e);
+ PERFORM reconforge.monetary_return_assert(entry_owner.id IS NOT NULL AND effect_owner.id IS NOT NULL
+  AND entry_owner.status='Validated' AND entry_owner.validation_contract_version='finance-entry-review-v1'
+  AND effect_owner.entry_id=i AND effect_owner.source_id=i AND effect_owner.purpose='operational_posting'
+  AND effect_owner.source_kind=(CASE WHEN entry_owner.reverses_posting_id IS NULL THEN'Manual' ELSE'Reversal' END)
+  AND effect_owner.reverses_effect_id IS NOT DISTINCT FROM entry_owner.reverses_posting_id
+  AND effect_owner.validation_contract_version='finance-entry-review-v1' AND effect_owner.snapshot_json=snapshot
+  AND effect_owner.validation_digest=reconforge.irp_digest(snapshot) AND effect_owner.validation_digest=entry_owner.validation_digest
+  AND(effect_owner.workspace_id,effect_owner.organization_id,effect_owner.legal_entity_id)=(entry_owner.workspace_id,o,e)
+  AND(effect_owner.currency_code,effect_owner.currency_precision,effect_owner.currency_rounding_policy,effect_owner.currency_registry_version,effect_owner.currency_registry_digest)=
+   (entry_owner.currency_code,entry_owner.currency_precision,entry_owner.currency_rounding_policy,entry_owner.currency_registry_version,entry_owner.currency_registry_digest)
+  AND entry_owner.validator_actor_id<>entry_owner.preparer_actor_id AND effect_owner.posted_actor_id<>entry_owner.validator_actor_id
+  AND effect_owner.posted_actor_id<>entry_owner.preparer_actor_id
+  AND EXISTS(SELECT 1 FROM reconforge.domain_audit_events audit_owner JOIN reconforge.outbox_events outbox_owner ON outbox_owner.tenant_id=audit_owner.tenant_id
+   WHERE audit_owner.tenant_id=t AND audit_owner.id=effect_owner.audit_event_id AND outbox_owner.event_id=effect_owner.outbox_event_id
+   AND audit_owner.actor_user_id=effect_owner.posted_actor_id AND audit_owner.object_type='finance_posting' AND audit_owner.object_id=f
+   AND audit_owner.action='finance_entry_posted' AND audit_owner.metadata_json=jsonb_build_object('entry_id',i,'content_digest',effect_owner.validation_digest)
+   AND outbox_owner.event_type='finance_entry_posted' AND outbox_owner.aggregate_type='finance_posting' AND outbox_owner.aggregate_id=f
+   AND outbox_owner.payload=audit_owner.metadata_json||jsonb_build_object('audit_event_id',audit_owner.id)
+   AND(outbox_owner.workspace_id,outbox_owner.organization_id,outbox_owner.legal_entity_id)=(entry_owner.workspace_id,o,e)),
+  'Actual FinancePosting ownership requires the complete native reviewed seal, captured policy, all three humans and original audit/outbox');
+END $mr149$;
+"""
+
+MARKER_SQL = r"""
+CREATE FUNCTION reconforge.monetary_stock_version() RETURNS INTEGER
+ LANGUAGE sql IMMUTABLE SET search_path=pg_catalog AS $cr149$ SELECT 149 $cr149$;
+"""
+
+NATIVE_FUNCTION_SQL = "\n".join((HISTORY_SQL, EFFECT_SQL, ORIGINAL_EQUATION_SQL, STOCK_ADMISSION_SQL, STOCK_PHYSICAL_SQL,
+    ORIGIN_SQL, BALANCE_SQL, POSTING_SQL, FX_SQL, PARTIAL_SQL, PUBLIC_SQL, GUARD_SQL, NAMESPACE_SQL,
+    PHYSICAL_FUNCTION_SQL, TRANSFER_FUNCTION_SQL, MARKER_SQL))
+
+_NATIVE_TABLES = (
+    "operational_fx_sources", "operational_fx_plans", "operational_fx_reviews", "operational_fx_links", "operational_fx_commands",
+    "finance_entries", "finance_entry_lines", "finance_entry_line_dimensions", "finance_posting_effects",
+    "inventory_movements", "inventory_movement_lines", "inventory_valuation_documents", "inventory_valuation_lines", "inventory_layer_consumptions",
+    "ar_invoices", "ar_invoice_lines", "ar_receipts", "ar_receipt_allocations", "domain_audit_events", "outbox_events",
+)
+_NAMESPACE_TABLES = ("finance_entries", "operational_fx_sources", "operational_fx_plans", "operational_fx_links",
+    "ar_invoices", "ar_invoice_lines", "ar_receipts", "ar_receipt_allocations")
+
+NATIVE_TRIGGER_CONTRACTS = tuple(
+    [(table, "monetary_immutable", "monetary_return_protect()", 31, False, False, "O") for table in TABLES]
+    + [(table, "monetary_owner_complete", "monetary_return_native_close()", 29, True, True, "O") for table in (*TABLES, *_NATIVE_TABLES)]
+    + [(table, "monetary_namespace", "monetary_namespace()", 23, False, False, "O") for table in _NAMESPACE_TABLES]
+)
+
+
+def _trigger_sql() -> str:
+    statements = []
+    for table, name, function, trigger_type, deferred, _, _ in NATIVE_TRIGGER_CONTRACTS:
+        if deferred:
+            statements.append(f"CREATE CONSTRAINT TRIGGER {name} AFTER INSERT OR UPDATE OR DELETE ON reconforge.{table} "
+                f"DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.{function};")
+        else:
+            events = "INSERT OR UPDATE OR DELETE" if trigger_type == 31 else "INSERT OR UPDATE"
+            statements.append(f"CREATE TRIGGER {name} BEFORE {events} ON reconforge.{table} FOR EACH ROW EXECUTE FUNCTION reconforge.{function};")
+    return "\n".join(statements)
+
+
+NULLABLE_SQL = r"""
+ALTER TABLE reconforge.operational_fx_plans ALTER COLUMN entry_id DROP NOT NULL;
+ALTER TABLE reconforge.operational_fx_links ALTER COLUMN posting_effect_id DROP NOT NULL;
+ALTER TABLE reconforge.operational_fx_plans ADD CONSTRAINT monetary_fx_journal_presence CHECK(
+ entry_id IS NOT NULL OR(
+  payload->>'schema_version' IS NOT DISTINCT FROM'operational-fx-stock-plan-v2' AND kind='settle'
+  AND payload->'amount_minor' IS NOT DISTINCT FROM'0'::jsonb AND payload->'entry_id' IS NOT DISTINCT FROM'null'::jsonb
+  AND payload->'snapshot' IS NOT DISTINCT FROM'null'::jsonb AND payload->'validation_digest' IS NOT DISTINCT FROM'null'::jsonb
+  AND payload#>'{equation,lines}' IS NOT DISTINCT FROM'[]'::jsonb));
+"""
+
+UPGRADE_SQL = NATIVE_FUNCTION_SQL + NULLABLE_SQL + _trigger_sql()
+
+
+def _drop_native() -> str:
+    statements = [f"DROP TRIGGER {name} ON reconforge.{table};" for table, name, *_ in reversed(NATIVE_TRIGGER_CONTRACTS)]
+    definitions = re.findall(r"CREATE FUNCTION reconforge\.([a-z_]+)\(([^)]*)\)\s+RETURNS", NATIVE_FUNCTION_SQL)
+    if not definitions or len({name for name, _ in definitions}) != len(definitions):
+        raise ValueError("The complete native monetary function inventory must be unique.")
+    for name, arguments in reversed(definitions):
+        types = ",".join(argument.strip().split()[-1] for argument in arguments.split(",") if argument.strip())
+        statements.append(f"DROP FUNCTION reconforge.{name}({types});")
+    return "\n".join(statements)
+
+
+DOWNGRADE_SQL = DOWNGRADE_PREFLIGHT_SQL + _drop_native() + r"""
+ALTER TABLE reconforge.operational_fx_plans DROP CONSTRAINT monetary_fx_journal_presence;
+ALTER TABLE reconforge.operational_fx_plans ALTER COLUMN entry_id SET NOT NULL;
+ALTER TABLE reconforge.operational_fx_links ALTER COLUMN posting_effect_id SET NOT NULL;
 """

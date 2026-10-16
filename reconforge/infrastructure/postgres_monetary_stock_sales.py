@@ -77,6 +77,25 @@ def _full_policy(compact: Mapping[str, Any]) -> dict[str, Any]:
         "currency_registry_digest": compact["registry_digest"]}
 
 
+def book_carrying(origin: Mapping[str, Any]) -> int:
+    """Authorize the actual exposed book balance, including an active closing."""
+    try:
+        balance = origin["ar_balance"]
+        value = balance["functional_outstanding_minor"]
+    except (KeyError, TypeError) as exc:
+        raise FinancePostingError("stock_monetary_evidence_invalid", "The exact native book carrying projection is required.") from exc
+    if (type(balance) is not dict or type(value) is not str or len(value) > 19 or not value.isascii() or not value.isdecimal()
+            or (len(value) > 1 and value[0] == "0")):
+        _fail("evidence_invalid", "The book carrying projection requires canonical exact minor text.")
+    return exact_minor(int(value), "actual functional book carrying", zero=True)
+
+
+def native_child_command(kind: str, command: str) -> str:
+    """Bound internal owner keys while retaining the exact public command."""
+    text(command, "command_id", maximum=140)
+    return "M7:" + kind + ":" + digest_payload({"command_id": command})
+
+
 class PostgresMonetaryStockSalesRepository(PostgresStockSalesRepository):
     _source_schema = SOURCE_SCHEMA
 
@@ -116,7 +135,8 @@ class PostgresMonetaryStockSalesRepository(PostgresStockSalesRepository):
             origin = self._origin(str(row["id"])) if "id" in row else None
             if origin is not None:
                 payload = origin["payload"]
-                foreign, local = payload["equation"]["foreign_gross_minor"], payload["equation"]["functional_gross_minor"]
+                foreign = payload["equation"]["foreign_gross_minor"]
+                local = max(payload["equation"]["functional_gross_minor"], book_carrying(origin))
                 policies = ((source["monetary_policy"], foreign, max(foreign, policies[0][2])),
                             (source["functional_policy"], local, local))
             issue = row.get("issue_plan")
@@ -263,10 +283,10 @@ class PostgresMonetaryStockSalesRepository(PostgresStockSalesRepository):
         plan = self.fx._peek("plan", plan_id)
         if operation in {"review-invoice", "review-collection"}:
             self.fx.review(plan_id, expected_plan_digest=plan["plan_digest"], reason=reason,
-                           command_id="stock-monetary-review:" + command, actor=actor)
+                           command_id=native_child_command("stock-review", command), actor=actor)
             return {}
         result = self.fx.post(plan_id, expected_plan_digest=plan["plan_digest"], reason=reason,
-                              command_id="stock-monetary-post:" + command, actor=actor)
+                              command_id=native_child_command("stock-post", command), actor=actor)
         if operation == "invoice":
             return {}
         balance = self._one("SELECT reconforge.monetary_stock_balance(%s,%s) value", (self.tenant_id, row["id"]))["value"]
@@ -617,12 +637,13 @@ class _StockFxOwner(PostgresOperationalFxTaxRepository):
                 lines.append({"account_code": account, "debit_minor": debit, "credit_minor": credit})
         equation = {"foreign_minor": parameters["amount_minor"], "monetary_event": asdict(event), "lines": lines}
         request = {"kind": "settle", "source_id": source["id"], **dict(parameters), "reason": reason}
-        digest, replay = self._command(source, "prepare", "stock-monetary-cash:" + command, actor, request)
+        child_command = native_child_command("stock-cash", command)
+        digest, replay = self._command(source, "prepare", child_command, actor, request)
         if replay is not None:
             _fail("command_conflict", "Stock command replay must own its exact saved collection acknowledgement.")
         plan = self._prepare(source, kind="settle", equation=equation, period_id=parameters["period_id"],
             posting_date=parameters["receipt_date"], reason=reason, sequence=state["sequence"], request=request,
-            command_id="stock-monetary-cash:" + command, digest=digest, actor=actor)
+            command_id=child_command, digest=digest, actor=actor)
         return {"collection_plan_id": plan["id"], "collection_parameters": dict(parameters)}
 
     def prepare_stock_invoice(self, row: Mapping[str, Any], parameters: Mapping[str, Any], command: str,
@@ -662,7 +683,7 @@ class _StockFxOwner(PostgresOperationalFxTaxRepository):
                 quantity=row["source"]["quantity"], unit_price_minor=row["source"]["net_unit_price_minor"],
                 tax_minor=equation["foreign_tax_minor"], line_total_minor=row["total_minor"])], workspace=row["workspace_id"],
             organization_code=self.stock.scope["organization_code"], entity_code=self.stock.scope["entity_code"],
-            idempotency_key="stock-monetary-invoice:" + command, actor_label=actor.username)
+            idempotency_key=native_child_command("stock-invoice", command), actor_label=actor.username)
         invoice = self.ar.submit_invoice(invoice["id"], expected_version=invoice["row_version"], actor_label=actor.username)
         source["invoice_id"] = invoice["id"]
         source["source_digest"] = digest_payload(source)
@@ -670,12 +691,13 @@ class _StockFxOwner(PostgresOperationalFxTaxRepository):
             (tenant_id,id,workspace_id,organization_id,legal_entity_id,invoice_id,payload) VALUES(%s,%s,%s,%s,%s,%s,%s::jsonb)""",
             (self.tenant_id, source["id"], row["workspace_id"], row["organization_id"], row["legal_entity_id"], invoice["id"], canonical_json(source)))
         fx_request = {"kind": "recognize", **args}
-        digest, replay = self._command(source, "prepare", "stock-monetary-invoice:" + command, actor, fx_request)
+        child_command = native_child_command("stock-invoice", command)
+        digest, replay = self._command(source, "prepare", child_command, actor, fx_request)
         if replay is not None:
             _fail("command_conflict", "An atomic new origin cannot reuse a detached FX command.")
         plan = self._prepare(source, kind="recognize", equation={"lines": equation["lines"]}, period_id=request.period_id,
             posting_date=request.posting_date, reason=reason, sequence=0, request=fx_request,
-            command_id="stock-monetary-invoice:" + command, digest=digest, actor=actor)
+            command_id=child_command, digest=digest, actor=actor)
         # Native birth captures immutable original consumption order, account
         # classifications and reviewed snapshots, binding the actual AR quantity.
         self.connection.execute("SELECT reconforge.monetary_stock_origin_birth(%s,%s,%s,%s,%s::jsonb)",

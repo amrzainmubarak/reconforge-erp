@@ -8,13 +8,14 @@ from typing import Any
 import pytest
 
 from tests import customer_partial_return_monetary_browser_reader as reader
+from tests.test_customer_partial_return_monetary_posted_oracle import complete_browser_fixture
 
 
 def family(private: Path, *, case: str = "identity", restore: bool = True) -> tuple[Path, Path]:
     data, observations = private / reader.FAMILY / case, private / reader.OBSERVATIONS / case
     data.mkdir(parents=True)
     observations.mkdir(parents=True)
-    tables = {name: [] for name in reader.TABLES}
+    tables: dict[str, list[str]] = {name: [] for name in reader.TABLES}
     captures = [{"capture": index, "tables": deepcopy(tables)} for index in range(len(reader.VERSIONS[case]))]
     for capture in captures:
         (data / f"committed-capture-{capture['capture']}.json").write_bytes(reader._encode(capture))
@@ -123,3 +124,76 @@ def test_empty_raw_foundation_can_never_become_financial_success_and_originals_s
 def test_partial_or_metadata_only_core_proof_has_no_acceptance_path() -> None:
     with pytest.raises(ValueError):
         reader._proof(reader._encode({"status": "passed", "tables": 91, "captures": 10}), {})
+
+
+def complete_family(private: Path, *, restore: bool = True) -> tuple[Path, Path]:
+    """Join C's independently authored originals; never patch its verifier."""
+    data, observations = family(private, case="foreign", restore=restore)
+    raw, observed, restored = complete_browser_fixture()
+    packet, envelope = reader._decode(raw), reader._decode(observed)
+    (data / reader.PACKET).write_bytes(raw)
+    for capture in packet["captures"]:
+        (data / f"committed-capture-{capture['capture']}.json").write_bytes(reader._encode(capture))
+    filenames = {"ActiveValuationRefusal": "active-valuation-refusal.json", "RetainedReplay": "retained-replay.json",
+                 "ScopeRefusal": "scope-refusal.json", "FinalRead": "final-observation.json"}
+    for row in envelope["observations"]:
+        (observations / filenames[row["kind"]]).write_bytes(reader._encode(row))
+    (observations / reader.OBSERVATION_PACKET).write_bytes(observed)
+    request = reader._decode((observations / reader.REFUSED_REQUEST).read_bytes())
+    request["body"]["source_order_id"] = packet["source_order_id"]
+    (observations / reader.REFUSED_REQUEST).write_bytes(reader._encode(request))
+    if restore:
+        (data / reader.RESTORE).write_bytes(restored)
+    return data, observations
+
+
+@pytest.mark.parametrize("restore", [False, True])
+def test_actual_isolated_c_reader_modes_bind_complete_synthetic_financial_originals(tmp_path: Path, restore: bool) -> None:
+    complete_family(tmp_path, restore=restore)
+    before = {str(path.relative_to(tmp_path)): path.read_bytes() for path in tmp_path.rglob("*.json")}
+    proof = reader.verify_monetary_original_rows(tmp_path, case="foreign", require_restore=restore)
+    reader.require_monetary_original_binding(tmp_path, proof, case="foreign", require_restore=restore)
+    assert (proof["final_posting_effects"], proof["final_posted_lines"], proof["final_debits_minor"]) == (14, 37, "81605")
+    assert proof["I_proof_sha256"] == proof["IO_proof_sha256"]
+    assert proof["current_authorization_proven"] is proof["raw_financial_rows_published"] is False
+    assert proof["populated_restore_original_rows_equal"] is restore
+    assert not any(key in proof for key in ("tenant_id", "source_order_id", "tables_original", "path"))
+    assert all((tmp_path / name).read_bytes() == value for name, value in before.items())
+
+
+@pytest.mark.parametrize("damage", ["input-bytes", "request-bytes", "observation-bytes", "restore-bytes", "I-proof", "IO-proof", "IO-outcome", "stream", "source-pin", "public-extra"])
+def test_completed_original_binding_refuses_late_input_proof_execution_or_source_drift(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, damage: str) -> None:
+    data, observations = complete_family(tmp_path)
+    proof = reader.verify_monetary_original_rows(tmp_path, case="foreign", require_restore=True)
+    execution = next((tmp_path / reader.EXECUTIONS).iterdir())
+    paths = {"input-bytes": data / reader.PACKET, "request-bytes": observations / reader.REFUSED_REQUEST,
+             "observation-bytes": observations / reader.OBSERVATION_PACKET, "restore-bytes": data / reader.RESTORE,
+             "I-proof": execution / "I.json", "IO-proof": execution / "IO.json"}
+    if damage in paths:
+        path = paths[damage]
+        path.write_bytes(path.read_bytes() + b"\n")  # Equivalent JSON still has different original bytes.
+    elif damage == "IO-outcome":
+        path = execution / "IO.result.json"
+        value = reader._decode(path.read_bytes())
+        value["exit_code"] = False
+        path.write_bytes(reader._encode(value))
+    elif damage == "stream":
+        (execution / "I.stdout").write_bytes(b"Unqualified private output")
+    elif damage == "source-pin":
+        monkeypatch.setattr(reader, "READER_SHA256", "f" * 64)
+    else:
+        proof["private_body"] = "not-public"
+    with pytest.raises(ValueError):
+        reader.require_monetary_original_binding(tmp_path, proof, case="foreign", require_restore=True)
+
+
+def test_other_valid_source_totals_cannot_satisfy_the_fixed_browser_cohort(tmp_path: Path) -> None:
+    complete_family(tmp_path)
+    inputs = reader._family(tmp_path, case="foreign", require_restore=True)
+    proof = reader.verify_monetary_original_rows(tmp_path, case="foreign", require_restore=True)
+    execution = next((tmp_path / reader.EXECUTIONS).iterdir())
+    core = reader._decode((execution / "I.json").read_bytes())
+    assert core["final_debits_minor"] == proof["final_debits_minor"] == "81605"
+    core["final_debits_minor"] = core["final_credits_minor"] = "81606"
+    with pytest.raises(ValueError):
+        reader._proof(reader._encode(core), inputs)

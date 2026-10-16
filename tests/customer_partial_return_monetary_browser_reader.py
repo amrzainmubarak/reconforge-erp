@@ -26,8 +26,9 @@ EXECUTIONS = "independent-customer-partial-return-monetary-row-verification"
 PACKET, RESTORE, OBSERVATION_PACKET = "posted-cycle-input.json", "posted-cycle-restored-input.json", "observations-input.json"
 REFUSED_REQUEST = "active-valuation-refused-request.json"
 READER = Path(__file__).resolve().with_name("customer_partial_return_monetary_posted_oracle.py")
-READER_SHA256 = "373977fe94434ed7c59b637ebd2c2bb792e100b68e8035d06a0ef97a14c8c04c"
+READER_SHA256 = "813489d5c445f3f92d173aec77c6f746376ec10e25aef6dd11b54f5abfc520dd"
 VERSIONS = {"identity": (0, 0, 0, 1, 2, 3, 4, 5, 6, 7), "foreign": (0, 0, 0, 1, 2, 2, 2, 3, 4, 5, 6, 7)}
+EXPECTED_TOTALS = {"identity": (12, 28, "71800"), "foreign": (14, 37, "81605")}
 MAX_CAPTURE, MAX_PACKET, MAX_TOTAL, MAX_PROOF = 4 * 1024 * 1024, 64 * 1024 * 1024, 192 * 1024 * 1024, 128 * 1024
 POLICY = StructuredDocumentPolicy(max_file_bytes=MAX_PACKET, max_nodes=100_000, max_depth=12,
                                   max_collection_items=20_000, max_scalar_characters=MAX_CAPTURE)
@@ -175,6 +176,9 @@ def _proof(original: bytes, inputs: dict[str, Any]) -> dict[str, Any]:
         _require(type(proof[key]) is str and re.fullmatch(r"[1-9][0-9]{0,24}", proof[key]) is not None)
     _require(proof["final_debits_minor"] == proof["final_credits_minor"] and proof["final_posting_effects"] > 0 and proof["final_posted_lines"] > 0
              and proof["oracle_source_sha256"] == READER_SHA256)
+    # The independent reader derives actual totals first. This adapter then
+    # binds its proof to the fixed mandatory browser fixture, not caller math.
+    _require((proof["final_posting_effects"], proof["final_posted_lines"], proof["final_debits_minor"]) == EXPECTED_TOTALS[inputs["case"]])
     _require(all(_same_typed(proof[key], inputs[key]) for key in ("input_sha256", "observations_input_sha256", "restore_input_sha256")))
     _require(proof["populated_restore_original_rows_equal"] is inputs["require_restore"]
              and proof["restored_tables"] == (91 if inputs["require_restore"] else 0)

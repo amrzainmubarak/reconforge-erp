@@ -28,6 +28,53 @@ def encoded(value: Any) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
 
 
+def escaped_capture(raw_bytes: int, *, count: int = 17) -> dict[str, Any]:
+    """Valid opaque SQL texts whose quotes/backslashes exercise outer escaping."""
+    rows = []
+    for index in range(count):
+        size = raw_bytes // count + (index < raw_bytes % count)
+        prefix = f'{{"id":"{index:02}","tenant_id":"tenant","text":"'
+        room = size - len(prefix.encode()) - 2
+        value = prefix + '\\"' * (room // 2) + '"}' + (' ' if room % 2 else '')
+        assert len(value.encode()) == size
+        rows.append(value)
+    tables = {name: [] for name in reader.TABLES}
+    tables["domain_audit_events"] = sorted(rows)
+    return {"capture": reader.MAX_CAPTURES - 1, "tables": tables}
+
+
+def test_exact_raw_capture_budget_accepts_escaped_envelope_without_changing_digest() -> None:
+    value = escaped_capture(reader.MAX_CAPTURE_BYTES)
+    original = encoded(value)
+    assert sum(len(row.encode()) for rows in value["tables"].values() for row in rows) == 4 * 1024 * 1024
+    assert len(original) > reader.MAX_CAPTURE_BYTES
+    capture = reader.decode_capture(value, index=reader.MAX_CAPTURES - 1, tenant_id="tenant")
+    assert len(original) <= reader.MAX_CAPTURE_ENVELOPE_BYTES
+    assert capture.sha256 == hashlib.sha256(original).hexdigest()
+
+
+@pytest.mark.parametrize(("raw_bytes", "count"), [(4 * 1024 * 1024 + 1, 17), (256 * 1024 + 1, 1)])
+def test_raw_aggregate_and_individual_row_budgets_remain_exact(raw_bytes: int, count: int) -> None:
+    value = escaped_capture(raw_bytes, count=count)
+    with pytest.raises(reader.MonetaryRawRefusal):
+        reader.decode_capture(value, index=reader.MAX_CAPTURES - 1, tenant_id="tenant")
+
+
+@pytest.mark.parametrize("control", list(range(32)))
+def test_literal_controls_inside_original_json_strings_still_refuse(control: int) -> None:
+    value = escaped_capture(100, count=1)
+    value["tables"]["domain_audit_events"] = ['{"tenant_id":"tenant","text":"' + chr(control) + '"}']
+    with pytest.raises(reader.MonetaryRawRefusal):
+        reader.decode_capture(value, index=reader.MAX_CAPTURES - 1, tenant_id="tenant")
+
+
+def test_envelope_bound_is_derived_from_raw_budget_row_framing_and_exact_empty_schema() -> None:
+    empty = {"capture": reader.MAX_CAPTURES - 1, "tables": {name: [] for name in reader.TABLES}}
+    assert 2 * reader.MAX_CAPTURE_BYTES + 3 * reader.MAX_CAPTURE_ROWS + len(encoded(empty)) == reader.MAX_CAPTURE_ENVELOPE_BYTES
+    for row in ['\t\n\r ' + '{"tenant_id":"tenant","text":"عربي"}', '{"tenant_id":"tenant","text":"\\\\\\""}']:
+        assert len(encoded(row)) - 2 <= 2 * len(row.encode())
+
+
 def row(identifier: str = "row", *, tenant: str = "tenant") -> str:
     return json.dumps({"tenant_id": tenant, "id": identifier}, sort_keys=True)
 

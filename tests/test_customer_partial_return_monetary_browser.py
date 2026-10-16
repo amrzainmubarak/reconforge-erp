@@ -1,4 +1,5 @@
 """Custody/lock/parser tests; synthetic rows are not native financial acceptance."""
+import json
 from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
@@ -25,6 +26,21 @@ def stage(monkeypatch: pytest.MonkeyPatch, retained: dict[str, list[str]]) -> No
             raise ValueError("Invalid synthetic index")
         return {"capture": index, "tables": deepcopy(retained)}, browser._versions(case)[index]
     monkeypatch.setattr(browser, "_snapshot", snapshot)
+
+
+def test_escaped_raw_rows_keep_exact_custody_bytes_above_original_row_budget(monkeypatch, tmp_path):
+    data = tables()
+    data["domain_audit_events"] = sorted(json.dumps({"id": f"{index:02}", "tenant_id": "tenant", "text": '"' * 65_000},
+        ensure_ascii=False, sort_keys=True, separators=(",", ":")) for index in range(17))
+    assert sum(len(row.encode()) for row in data["domain_audit_events"]) < browser.MAX_CAPTURE_BYTES
+    stage(monkeypatch, data)
+    custody = root(tmp_path)
+    browser.capture_monetary_browser(runtime(), "source", custody, case="foreign", index=0)
+    path = custody / "committed-capture-0.json"
+    original = path.read_bytes()
+    assert browser.MAX_CAPTURE_BYTES < len(original) <= browser.CAPTURE_FILE_BYTES
+    assert original == _bytes({"capture": 0, "tables": data}, browser.CAPTURE_FILE_BYTES)
+    assert browser._load(path, index=0, tenant="tenant")["tables"] == data
 
 
 def root(tmp_path: Path, case: str = "foreign") -> Path:

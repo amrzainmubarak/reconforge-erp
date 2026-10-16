@@ -18,7 +18,7 @@ from uuid import uuid4
 from reconforge.io.structured import StructuredDocumentPolicy, parse_json_document
 from tests import customer_partial_return_browser_reader as common
 from tests import customer_partial_return_remainder_browser_reader as custody
-from tests.customer_partial_return_monetary_posted_oracle import TABLES
+from tests.customer_partial_return_monetary_posted_oracle import MAX_CAPTURE_BYTES, MAX_CAPTURE_ENVELOPE_BYTES, TABLES
 
 FAMILY = "native-customer-partial-return-monetary-originals"
 OBSERVATIONS = "native-customer-partial-return-monetary-observation-originals"
@@ -26,12 +26,12 @@ EXECUTIONS = "independent-customer-partial-return-monetary-row-verification"
 PACKET, RESTORE, OBSERVATION_PACKET = "posted-cycle-input.json", "posted-cycle-restored-input.json", "observations-input.json"
 REFUSED_REQUEST = "active-valuation-refused-request.json"
 READER = Path(__file__).resolve().with_name("customer_partial_return_monetary_posted_oracle.py")
-READER_SHA256 = "fbabe6b89d988c0bde96ffb53a8478dd501036ec55f1cf7d3ecbfdb0a3c1b05e"
+READER_SHA256 = "1f07e918dec5c57a52ae89a290ce8298205ee5b87e9d10cf314d5e88dc170a5a"
 VERSIONS = {"identity": (0, 0, 0, 1, 2, 3, 4, 5, 6, 7), "foreign": (0, 0, 0, 1, 2, 2, 2, 3, 4, 5, 6, 7)}
 EXPECTED_TOTALS = {"identity": (12, 28, "71800"), "foreign": (14, 37, "81605")}
-MAX_CAPTURE, MAX_PACKET, MAX_TOTAL, MAX_PROOF = 4 * 1024 * 1024, 64 * 1024 * 1024, 192 * 1024 * 1024, 128 * 1024
+MAX_CAPTURE, MAX_PACKET, MAX_TOTAL, MAX_PROOF = MAX_CAPTURE_ENVELOPE_BYTES, 64 * 1024 * 1024, 192 * 1024 * 1024, 128 * 1024
 POLICY = StructuredDocumentPolicy(max_file_bytes=MAX_PACKET, max_nodes=100_000, max_depth=12,
-                                  max_collection_items=20_000, max_scalar_characters=MAX_CAPTURE)
+                                  max_collection_items=20_000, max_scalar_characters=MAX_CAPTURE_BYTES)
 _require, _same_typed, _encode, _regular, _file = common._require, common._same_typed, common._encode, custody._regular, custody._file
 EXECUTION_NAMES = common.EXECUTION_NAMES
 

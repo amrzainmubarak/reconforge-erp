@@ -24,7 +24,10 @@ from reconforge.infrastructure.postgres import PostgresConnectionFactory, Postgr
 from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
 from reconforge.io.structured import parse_json_document
 from tests.customer_partial_return_monetary_posted_oracle import (
-    MAX_CAPTURE_BYTES,
+    MAX_CAPTURE_BYTES as MAX_CAPTURE_BYTES,
+)
+from tests.customer_partial_return_monetary_posted_oracle import (
+    MAX_CAPTURE_ENVELOPE_BYTES,
     MAX_PACKET_BYTES,
     SCHEMA,
     TABLES,
@@ -49,6 +52,8 @@ FOREIGN_HISTORY_VERSIONS = (0, 0, 0, 1, 2, 2, 2, 3, 4, 5, 6, 7)
 REFUSED_REQUEST = "active-valuation-refused-request.json"
 AUDIT = frozenset({"domain_audit_events", "domain_audit_ledger_state"})
 MAX_ROWS = 4096
+CAPTURE_FILE_BYTES = MAX_CAPTURE_ENVELOPE_BYTES + 1  # Retained final LF.
+OBSERVATION_FILE_BYTES = MAX_CAPTURE_ENVELOPE_BYTES + 4096  # Closed identity/refusal metadata and LF.
 FAILURE_TRACE_BYTES = 8192
 _FAILURE_STAGES = {"main": "capture_dispatch", "_root": "custody_boundary", "_files": "custody_membership",
                    "_load": "existing_capture_decode", "_snapshot": "snapshot_read", "_plan_pin": "posted_plan_affinity",
@@ -128,7 +133,7 @@ def _files(root: Path) -> list[Path]:
 
 def _load(path: Path, *, index: int, tenant: str) -> dict[str, Any]:
     _regular_path(path)
-    value = parse_json_document(_read(path, MAX_CAPTURE_BYTES).decode("utf-8"), policy=LOAD_POLICY, reject_fractional_numbers=True)
+    value = parse_json_document(_read(path, CAPTURE_FILE_BYTES).decode("utf-8"), policy=LOAD_POLICY, reject_fractional_numbers=True)
     decode_capture(value, index=index, tenant_id=tenant)
     return cast(dict[str, Any], value)
 
@@ -209,7 +214,7 @@ def capture_monetary_browser(runtime: ReceiptRuntime, source: str, root: Path, *
     value, version = _snapshot(runtime, source, index=index, case=case)
     if observation is None:
         require(index == len(files) and plan_id is None and plan_digest is None and refusal is None and request is None)
-        _retain(root / f"committed-capture-{index}.json", _bytes(value, MAX_CAPTURE_BYTES))
+        _retain(root / f"committed-capture-{index}.json", _bytes(value, CAPTURE_FILE_BYTES))
         if index == len(_versions(case)) - 1:
             assemble_monetary_browser(root, case=case, tenant=runtime.tenant, source=source)
     else:
@@ -239,12 +244,12 @@ def capture_monetary_browser(runtime: ReceiptRuntime, source: str, root: Path, *
             for path in folder.iterdir():
                 _regular_path(path)
                 require(path.name in {*_kinds(case).values(), OBSERVATION_PACKET, *({REFUSED_REQUEST} if case == "foreign" else set())})
-            _retain(folder / _kinds(case)[observation], _bytes(envelope, MAX_CAPTURE_BYTES + 4096), same_allowed=True)
+            _retain(folder / _kinds(case)[observation], _bytes(envelope, OBSERVATION_FILE_BYTES), same_allowed=True)
         except (ValueError, TypeError, KeyError):
             failed = _storage(root.parent.parent / REFUSED / case)
             require(len(list(failed.iterdir())) < 16)
             suffix = uuid4().hex
-            _retain(failed / ("refused-" + suffix + ".json"), _bytes(envelope, MAX_CAPTURE_BYTES + 4096))
+            _retain(failed / ("refused-" + suffix + ".json"), _bytes(envelope, OBSERVATION_FILE_BYTES))
             if request is not None:
                 _retain(failed / ("refused-request-" + suffix + ".json"), _bytes(request, 8192))
             raise ValueError("Private monetary browser observation refused.") from None
@@ -297,7 +302,7 @@ def _request_pin(value: Any, source: str) -> None:
 
 def _load_observation(path: Path, *, kind: str, tenant: str, source: str, case: str) -> dict[str, Any]:
     _regular_path(path)
-    value = parse_json_document(_read(path, MAX_CAPTURE_BYTES + 4096).decode("utf-8"), policy=LOAD_POLICY, reject_fractional_numbers=True)
+    value = parse_json_document(_read(path, OBSERVATION_FILE_BYTES).decode("utf-8"), policy=LOAD_POLICY, reject_fractional_numbers=True)
     require(type(value) is dict and set(value) == {"schema_version", "kind", "tenant_id", "source_order_id", "capture", "history_version", "plan_id", "plan_digest", "tables", "refusal"})
     row = cast(dict[str, Any], value)
     require(row["schema_version"] == OBSERVATION_SCHEMA and row["kind"] == kind and row["tenant_id"] == tenant and row["source_order_id"] == source)
@@ -348,9 +353,9 @@ def verify_seeded_monetary_browser(runtime: ReceiptRuntime, *, custody_root: Pat
     if runtime.factory.settings.dsn != original_app_dsn:
         restored = {"schema_version": "customer-partial-return-monetary-posted-restored-input-v1", "tenant_id": runtime.tenant,
                     "source_order_id": source, "tables": final["tables"]}
-        _retain(root / RESTORE, _bytes(restored, MAX_CAPTURE_BYTES), same_allowed=True)
+        _retain(root / RESTORE, _bytes(restored, OBSERVATION_FILE_BYTES), same_allowed=True)
     return {"schema_version": "customer-partial-return-monetary-browser-custody-proof-v2", "captures": count, "history_version": 7,
-            "tables": [{"table": name, "rows": len(final["tables"][name]), "sha256": hashlib.sha256(_bytes(final["tables"][name], MAX_CAPTURE_BYTES)).hexdigest()} for name in TABLES],
+            "tables": [{"table": name, "rows": len(final["tables"][name]), "sha256": hashlib.sha256(_bytes(final["tables"][name], CAPTURE_FILE_BYTES)).hexdigest()} for name in TABLES],
             "raw_financial_rows_published": False, "independent_financial_and_audit_verification_required": True}
 
 

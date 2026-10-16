@@ -59,6 +59,15 @@ MAX_ROW_BYTES = 256 * 1024
 MAX_CAPTURE_ROWS = 20_000
 MAX_MINOR = 9_000_000_000_000_000_000
 MAX_CAPTURES = 257  # Original plus at most 256 ordered monetary events.
+# Raw SQL JSON texts retain their own 4 MiB budget. Encoding those texts as
+# JSON strings escapes each valid UTF-8 byte at most twice, adds at most three
+# framing bytes per row, and retains the exact closed empty-table envelope.
+# Literal controls inside strings already fail JSON decoding; valid literal
+# JSON whitespace (TAB/LF/CR) expands to two bytes. No original is normalized.
+MAX_CAPTURE_ENVELOPE_BYTES = 2 * MAX_CAPTURE_BYTES + 3 * MAX_CAPTURE_ROWS + len(json.dumps(
+    {"capture": MAX_CAPTURES - 1, "tables": {name: [] for name in TABLES}},
+    ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False,
+).encode("utf-8"))
 _COMMON = "tenant_id workspace_id organization_id legal_entity_id "
 MONETARY_COLUMNS = {
     "stock_sales_monetary_origins": frozenset((_COMMON + "id stock_order_id invoice_id fx_source_id recognition_plan_id payload source_digest ar_balance").split()),
@@ -234,7 +243,7 @@ def decode_capture(value: object, *, index: int, tenant_id: str) -> Capture:
             require(byte_size <= MAX_CAPTURE_BYTES)
         original.append((name, tuple(rows)))
     canonical = json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode()
-    require(len(canonical) <= MAX_CAPTURE_BYTES)
+    require(len(canonical) <= MAX_CAPTURE_ENVELOPE_BYTES)
     return Capture(index, tuple(original), hashlib.sha256(canonical).hexdigest())
 
 

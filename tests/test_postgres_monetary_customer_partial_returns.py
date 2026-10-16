@@ -35,6 +35,7 @@ from reconforge.infrastructure.postgres_monetary_customer_partial_returns import
 )
 from reconforge.infrastructure.postgres_monetary_stock_sales import PostgresMonetaryStockSalesRepository
 from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
+from tests.monetary_capture_encoding import encode_monetary_capture
 from tests.test_postgres_customer_returns import configure_runtime
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, create_receipt_runtime, receipt_database
 from tests.test_postgres_inventory_receipt_posting import request as receipt_request
@@ -362,7 +363,7 @@ def test_actual_cr3_zero_cost_restoration_resale_return_and_it1_transfer_keep_or
                 assert len(rows) <= 4096
                 tables[name] = [row["original"] for row in rows]
             value = {"checkpoint": checkpoint, "tables": tables}
-            assert len(canonical_json(value).encode("utf-8")) <= 4 * 1024 * 1024
+            encode_monetary_capture(value)
             captures.append(value)
 
     def finance(effects: int, lines: int, turnover: int) -> None:
@@ -531,7 +532,6 @@ def test_actual_cr3_zero_cost_restoration_resale_return_and_it1_transfer_keep_or
         assert [value["checkpoint"] for value in captures] == ["Original", "OldZeroReturn", "ResaleInvoiced", "ResaleReturned", "TransferPosted", "TransferInversePosted"]
         packet = {"schema_version": "customer-partial-return-monetary-restituted-cycle-input-v1", "tenant_id": runtime.tenant,
                   "original_source_order_id": original["id"], "resale_source_order_id": resale["id"], "captures": captures}
-        encoded = canonical_json(packet)
-        assert len(encoded.encode("utf-8")) <= 64 * 1024 * 1024
-        with (private / "native-monetary-restituted-cycle-original-v1.json").open("x", encoding="utf-8", newline="\n") as stream:
-            stream.write(encoded + "\n")
+        encoded = encode_monetary_capture(packet, packet=True)
+        with (private / "native-monetary-restituted-cycle-original-v1.json").open("xb") as stream:
+            stream.write(encoded)

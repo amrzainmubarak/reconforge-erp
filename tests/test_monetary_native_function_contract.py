@@ -29,6 +29,38 @@ from reconforge.infrastructure.postgres_monetary_inventory_shared_hooks import (
 )
 from reconforge.infrastructure.postgres_monetary_stock_shared_hooks import UPGRADED_FUNCTIONS as STOCK_FUNCTIONS
 from reconforge.infrastructure.postgres_monetary_stock_shared_hooks import _body
+from tests.monetary_capture_encoding import MAX_CAPTURE_BYTES, MAX_PACKET_BYTES, encode_monetary_capture
+
+
+def test_raw_capture_encoding_preserves_canonical_utf8_and_final_newline() -> None:
+    value = {"tables": {"opaque": ['{"text":"عربي","amount":1.00}']}, "checkpoint": "Original"}
+    assert encode_monetary_capture(value) == (
+        json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n"
+    ).encode("utf-8")
+
+
+def test_raw_capture_above_financial_snapshot_budget_is_valid() -> None:
+    from reconforge.domain.finance_posting import MAX_SNAPSHOT_BYTES
+
+    value = {"tables": {"opaque": ["x" * (MAX_SNAPSHOT_BYTES + 1)]}}
+    encoded = encode_monetary_capture(value)
+    assert MAX_SNAPSHOT_BYTES == 2_097_152 and MAX_SNAPSHOT_BYTES < len(encoded) < MAX_CAPTURE_BYTES
+    assert json.loads(encoded) == value
+
+
+@pytest.mark.parametrize(("packet", "maximum"), [(False, 4 * 1024 * 1024), (True, 64 * 1024 * 1024)])
+def test_raw_capture_byte_limits_include_the_final_newline(packet: bool, maximum: int) -> None:
+    assert (MAX_PACKET_BYTES if packet else MAX_CAPTURE_BYTES) == maximum
+    # A JSON string has two quotes, plus the mandatory final newline.
+    assert len(encode_monetary_capture("x" * (maximum - 3), packet=packet)) == maximum
+    with pytest.raises(ValueError, match="declared raw JSON budget"):
+        encode_monetary_capture("x" * (maximum - 2), packet=packet)
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_raw_capture_rejects_nonfinite_numbers(value: float) -> None:
+    with pytest.raises(ValueError, match="Out of range float values"):
+        encode_monetary_capture({"nested": [value]})
 
 
 def invalid_local_qualifiers(sql: str) -> list[str]:

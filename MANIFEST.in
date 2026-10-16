@@ -1674,6 +1674,7 @@ include tests/test_monetary_installation_contract.py
 include tests/test_monetary_native_function_contract.py
 include tests/test_monetary_public_contract.py
 include tests/test_monetary_receivables_projection.py
+include tests/test_monetary_repository_contention.py
 include tests/test_monetary_return_source_admission.py
 include tests/test_monetary_stock_owner_boundaries.py
 include tests/test_monetary_stock_revaluation.py

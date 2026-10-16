@@ -31,16 +31,31 @@ def stage(monkeypatch: pytest.MonkeyPatch, retained: dict[str, list[str]]) -> No
 def test_escaped_raw_rows_keep_exact_custody_bytes_above_original_row_budget(monkeypatch, tmp_path):
     data = tables()
     data["domain_audit_events"] = sorted(json.dumps({"id": f"{index:02}", "tenant_id": "tenant", "text": '"' * 65_000},
-        ensure_ascii=False, sort_keys=True, separators=(",", ":")) for index in range(17))
-    assert sum(len(row.encode()) for row in data["domain_audit_events"]) < browser.MAX_CAPTURE_BYTES
+        ensure_ascii=False, sort_keys=True, separators=(",", ":")) for index in range(35))
+    assert 4 * 1024 * 1024 < sum(len(row.encode()) for row in data["domain_audit_events"]) < browser.MAX_CAPTURE_BYTES
     stage(monkeypatch, data)
     custody = root(tmp_path)
     browser.capture_monetary_browser(runtime(), "source", custody, case="foreign", index=0)
     path = custody / "committed-capture-0.json"
     original = path.read_bytes()
-    assert browser.MAX_CAPTURE_BYTES < len(original) <= browser.CAPTURE_FILE_BYTES
+    assert 4 * 1024 * 1024 < len(original) <= browser.CAPTURE_FILE_BYTES <= browser.MAX_PACKET_BYTES
     assert original == _bytes({"capture": 0, "tables": data}, browser.CAPTURE_FILE_BYTES)
     assert browser._load(path, index=0, tenant="tenant")["tables"] == data
+
+
+def test_capture_metadata_and_lf_fit_unchanged_file_budget_and_row_scalar_policy():
+    from tests import customer_partial_return_monetary_browser_reader as adapter
+    from tests.customer_partial_return_monetary_posted_oracle import MAX_ROW_BYTES
+
+    assert browser.CAPTURE_FILE_BYTES < browser.OBSERVATION_FILE_BYTES <= browser.MAX_PACKET_BYTES
+    assert adapter.MAX_CAPTURE + 4096 == browser.OBSERVATION_FILE_BYTES
+    assert adapter.MAX_TOTAL == 192 * 1024 * 1024
+    assert browser.LOAD_POLICY.max_file_bytes == adapter.POLICY.max_file_bytes == 64 * 1024 * 1024
+    assert browser.LOAD_POLICY.max_scalar_characters == adapter.POLICY.max_scalar_characters == MAX_ROW_BYTES == 256 * 1024
+    with pytest.raises(ValueError):
+        adapter._decode(json.dumps({"text": "x" * (MAX_ROW_BYTES + 1)}).encode())
+    with pytest.raises(ValueError):
+        _bytes({"text": "x" * browser.MAX_PACKET_BYTES}, browser.MAX_PACKET_BYTES)
 
 
 def root(tmp_path: Path, case: str = "foreign") -> Path:

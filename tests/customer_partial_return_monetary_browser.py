@@ -22,20 +22,21 @@ from psycopg import sql
 
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, PostgresTenantBoundary
 from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
-from reconforge.io.structured import parse_json_document
+from reconforge.io.structured import StructuredDocumentPolicy, parse_json_document
 from tests.customer_partial_return_monetary_posted_oracle import (
     MAX_CAPTURE_BYTES as MAX_CAPTURE_BYTES,
 )
 from tests.customer_partial_return_monetary_posted_oracle import (
     MAX_CAPTURE_ENVELOPE_BYTES,
     MAX_PACKET_BYTES,
+    MAX_ROW_BYTES,
     SCHEMA,
     TABLES,
     decode_capture,
     decode_packet,
 )
 from tests.customer_partial_return_remainder_browser import _regular_path, _storage
-from tests.customer_partial_returns_browser import LOAD_POLICY, _bytes, _read, _retain, _text, require
+from tests.customer_partial_returns_browser import _bytes, _read, _retain, _text, require
 from tests.erp_browser_seed import seed_erp_browser_principals
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime
 
@@ -54,6 +55,8 @@ AUDIT = frozenset({"domain_audit_events", "domain_audit_ledger_state"})
 MAX_ROWS = 4096
 CAPTURE_FILE_BYTES = MAX_CAPTURE_ENVELOPE_BYTES + 1  # Retained final LF.
 OBSERVATION_FILE_BYTES = MAX_CAPTURE_ENVELOPE_BYTES + 4096  # Closed identity/refusal metadata and LF.
+LOAD_POLICY = StructuredDocumentPolicy(max_file_bytes=MAX_PACKET_BYTES, max_nodes=100_000, max_depth=8,
+    max_collection_items=4096, max_scalar_characters=MAX_ROW_BYTES)
 FAILURE_TRACE_BYTES = 8192
 _FAILURE_STAGES = {"main": "capture_dispatch", "_root": "custody_boundary", "_files": "custody_membership",
                    "_load": "existing_capture_decode", "_snapshot": "snapshot_read", "_plan_pin": "posted_plan_affinity",

@@ -21,7 +21,7 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
-BASE_SHA256 = "1f07e918dec5c57a52ae89a290ce8298205ee5b87e9d10cf314d5e88dc170a5a"
+BASE_SHA256 = "72ac6163d886d6527010a3eadd2827d39461e4242a3c5581718c3eb6bc2c7ddb"
 BASE_PATH = Path(__file__).absolute().with_name("customer_partial_return_monetary_posted_oracle.py")
 
 

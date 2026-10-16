@@ -28,8 +28,10 @@ def encoded(value: Any) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
 
 
-def escaped_capture(raw_bytes: int, *, count: int = 17) -> dict[str, Any]:
+def escaped_capture(raw_bytes: int, *, count: int | None = None) -> dict[str, Any]:
     """Valid opaque SQL texts whose quotes/backslashes exercise outer escaping."""
+    if count is None:
+        count = (raw_bytes + reader.MAX_ROW_BYTES - 1) // reader.MAX_ROW_BYTES
     rows = []
     for index in range(count):
         size = raw_bytes // count + (index < raw_bytes % count)
@@ -46,15 +48,16 @@ def escaped_capture(raw_bytes: int, *, count: int = 17) -> dict[str, Any]:
 def test_exact_raw_capture_budget_accepts_escaped_envelope_without_changing_digest() -> None:
     value = escaped_capture(reader.MAX_CAPTURE_BYTES)
     original = encoded(value)
-    assert sum(len(row.encode()) for rows in value["tables"].values() for row in rows) == 4 * 1024 * 1024
+    assert sum(len(row.encode()) for rows in value["tables"].values() for row in rows) == reader.MAX_CAPTURE_BYTES
+    assert reader.MAX_CAPTURE_BYTES > 4 * 1024 * 1024
     assert len(original) > reader.MAX_CAPTURE_BYTES
     capture = reader.decode_capture(value, index=reader.MAX_CAPTURES - 1, tenant_id="tenant")
     assert len(original) <= reader.MAX_CAPTURE_ENVELOPE_BYTES
     assert capture.sha256 == hashlib.sha256(original).hexdigest()
 
 
-@pytest.mark.parametrize(("raw_bytes", "count"), [(4 * 1024 * 1024 + 1, 17), (256 * 1024 + 1, 1)])
-def test_raw_aggregate_and_individual_row_budgets_remain_exact(raw_bytes: int, count: int) -> None:
+@pytest.mark.parametrize(("raw_bytes", "count"), [(reader.MAX_CAPTURE_BYTES + 1, None), (256 * 1024 + 1, 1)])
+def test_raw_aggregate_and_individual_row_budgets_remain_exact(raw_bytes: int, count: int | None) -> None:
     value = escaped_capture(raw_bytes, count=count)
     with pytest.raises(reader.MonetaryRawRefusal):
         reader.decode_capture(value, index=reader.MAX_CAPTURES - 1, tenant_id="tenant")
@@ -71,6 +74,9 @@ def test_literal_controls_inside_original_json_strings_still_refuse(control: int
 def test_envelope_bound_is_derived_from_raw_budget_row_framing_and_exact_empty_schema() -> None:
     empty = {"capture": reader.MAX_CAPTURES - 1, "tables": {name: [] for name in reader.TABLES}}
     assert 2 * reader.MAX_CAPTURE_BYTES + 3 * reader.MAX_CAPTURE_ROWS + len(encoded(empty)) == reader.MAX_CAPTURE_ENVELOPE_BYTES
+    assert len(encoded(empty)) == reader.EMPTY_CAPTURE_BYTES
+    assert (reader.MAX_PACKET_BYTES - 4096 - 3 * reader.MAX_CAPTURE_ROWS - len(encoded(empty))) // 2 == reader.MAX_CAPTURE_BYTES
+    assert reader.MAX_CAPTURE_ENVELOPE_BYTES + 4096 <= reader.MAX_PACKET_BYTES == 64 * 1024 * 1024
     for row in ['\t\n\r ' + '{"tenant_id":"tenant","text":"عربي"}', '{"tenant_id":"tenant","text":"\\\\\\""}']:
         assert len(encoded(row)) - 2 <= 2 * len(row.encode())
 

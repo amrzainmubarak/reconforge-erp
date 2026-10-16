@@ -23,6 +23,7 @@ from reconforge.infrastructure.postgres_inventory_receipt_posting_schema import 
     install_postgres_inventory_receipt_posting_schema,
 )
 from reconforge.infrastructure.postgres_monetary_installation import verify_monetary_installation_if_present
+from reconforge.infrastructure.postgres_monetary_stock_schema import DOWNGRADE_PREFLIGHT_SQL, DROP_STORAGE_SQL
 from reconforge.infrastructure.postgres_monetary_stock_schema import TABLES as MONETARY_TABLES
 from reconforge.platform.common import PlatformError
 from tests.gfo_browser_restore import database_snapshot
@@ -231,3 +232,99 @@ def test_actual_unrecognized_monetary_draft_blocks_destructive_downgrade(receipt
         row = admin.execute(sql.SQL("SELECT status,source->>'schema_version' schema_version FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s"),
                             (runtime.tenant, draft["id"])).fetchone()
         assert dict(row) == {"status": "Draft", "schema_version": "stock-sales-monetary-order-v2"}
+
+
+def test_actual_force_rls_ddl_owner_cannot_misread_hidden_draft_as_safe_downgrade(populated148_database):
+    """Ownership permits DROP; hidden retained evidence must still stop preflight."""
+    admin_dsn, app_dsn = populated148_database
+    _revision(admin_dsn, "upgrade", NEW)
+    app_role = psycopg.conninfo.conninfo_to_dict(app_dsn)["user"]
+    with psycopg.connect(admin_dsn) as admin:
+        # Only this separate synthetic fixture admits the newly created tables.
+        for name in MONETARY_TABLES:
+            admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{} TO {}")
+                          .format(sql.Identifier(name), sql.Identifier(app_role)))
+    runtime = create_stock_runtime(populated148_database)
+    configure_runtime(runtime)
+    with runtime.actor("maker") as (connection, _, actor):
+        draft = _stock(connection, runtime).create(StockOrder("RLS-HIDDEN-MONETARY-DRAFT", "CUSTOMER", "PO", "ITEM", "MAIN", "STOCK", "1",
+            100, "USD", "2026-10-16", "Genuine retained Draft under forced RLS"), command_id="rls-downgrade:create", actor=actor)
+        assert draft["status"] == "Draft"
+    before = database_snapshot(admin_dsn)
+    assert before["head"] == NEW
+    role = "monetary_ddl_owner_" + uuid4().hex[:12]
+    guard_tables = (*MONETARY_TABLES, "stock_sales_orders", "stock_sales_commands", "operational_fx_sources", "operational_fx_plans", "finance_entries",
+                    "organizations", "legal_entities")
+
+    class RollBackOwnedDrop(Exception):
+        """Force rollback of the positive, permission-complete DDL probe."""
+
+    all_profiles_sql = ("SELECT p.oid,to_jsonb(p) native_profile FROM pg_proc p "
+                        "JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='reconforge' ORDER BY p.oid")
+    with psycopg.connect(admin_dsn, row_factory=dict_row) as admin:
+        profiles_before = _profiles(admin)
+        all_profiles_before = admin.execute(all_profiles_sql).fetchall()
+        assert admin.execute("SELECT count(*) n FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s",
+                             (runtime.tenant, draft["id"])).fetchone()["n"] == 1
+        assert admin.execute("SELECT 1 FROM pg_roles WHERE rolname=%s", (role,)).fetchone() is None
+        try:
+            # Role creation, fixture grants and ownership all roll back below;
+            # no persistent cluster role or business-role privilege is added.
+            admin.execute(sql.SQL("CREATE ROLE {} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS")
+                          .format(sql.Identifier(role)))
+            admin.execute(sql.SQL("GRANT USAGE,CREATE ON SCHEMA reconforge TO {}").format(sql.Identifier(role)))
+            for name in MONETARY_TABLES:
+                admin.execute(sql.SQL("ALTER TABLE reconforge.{} OWNER TO {}")
+                              .format(sql.Identifier(name), sql.Identifier(role)))
+            for name in guard_tables:
+                admin.execute(sql.SQL("GRANT SELECT ON reconforge.{} TO {}")
+                              .format(sql.Identifier(name), sql.Identifier(role)))
+            admin.execute(sql.SQL("SET LOCAL ROLE {}").format(sql.Identifier(role)))
+            flags = admin.execute("SELECT rolcanlogin,rolsuper,rolbypassrls,rolcreatedb,rolcreaterole,rolreplication "
+                                  "FROM pg_roles WHERE rolname=current_user").fetchone()
+            assert all(value is False for value in flags.values())
+            ownership = admin.execute("SELECT c.relname,c.relowner=(SELECT oid FROM pg_roles WHERE rolname=current_user) owned,"
+                "c.relrowsecurity,c.relforcerowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
+                "WHERE n.nspname='reconforge' AND c.relname=ANY(%s) ORDER BY c.relname", (list(MONETARY_TABLES),)).fetchall()
+            assert len(ownership) == len(MONETARY_TABLES) == 7
+            assert all(row["owned"] and row["relrowsecurity"] and row["relforcerowsecurity"] for row in ownership)
+            schema_rights = admin.execute("SELECT has_schema_privilege(current_user,'reconforge','USAGE') usage,"
+                                          "has_schema_privilege(current_user,'reconforge','CREATE') create_schema").fetchone()
+            assert all(value is True for value in schema_rights.values())
+            for name in guard_tables:
+                assert admin.execute("SELECT has_table_privilege(current_user,%s,'SELECT') allowed",
+                                     ("reconforge." + name,)).fetchone()["allowed"] is True
+            assert admin.execute("SHOW row_security").fetchone()["row_security"] == "on"
+            stock_rls = admin.execute("SELECT relrowsecurity,relforcerowsecurity FROM pg_class "
+                                      "WHERE oid='reconforge.stock_sales_orders'::regclass").fetchone()
+            assert all(value is True for value in stock_rls.values())
+            assert admin.execute("SELECT count(*) n FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s",
+                                 (runtime.tenant, draft["id"])).fetchone()["n"] == 0
+            # This is an actual successful DROP by the very same ordinary role,
+            # contained by a savepoint. Missing DDL rights cannot explain refusal.
+            with pytest.raises(RollBackOwnedDrop), admin.transaction():
+                admin.execute("DROP TABLE reconforge.customer_partial_return_monetary_commands")
+                assert admin.execute("SELECT to_regclass('reconforge.customer_partial_return_monetary_commands') absent").fetchone()["absent"] is None
+                raise RollBackOwnedDrop
+            assert admin.execute("SELECT to_regclass('reconforge.customer_partial_return_monetary_commands') present").fetchone()["present"] is not None
+            destructive_reached = False
+            with pytest.raises(psycopg.errors.InsufficientPrivilege) as refused, admin.transaction():
+                admin.execute(DOWNGRADE_PREFLIGHT_SQL)
+                destructive_reached = True
+                admin.execute(DROP_STORAGE_SQL)
+            assert refused.value.sqlstate == "42501" and destructive_reached is False
+            assert refused.value.diag.message_primary == 'query would be affected by row-level security policy for table "stock_sales_orders"'
+            # The failing savepoint also restores transaction-local row_security.
+            assert admin.execute("SHOW row_security").fetchone()["row_security"] == "on"
+            admin.execute("RESET ROLE")
+            assert _profiles(admin) == profiles_before
+            assert admin.execute(all_profiles_sql).fetchall() == all_profiles_before
+            assert admin.execute("SELECT version_num FROM alembic_version").fetchone()["version_num"] == NEW
+            assert admin.execute("SELECT count(*) n FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s",
+                                 (runtime.tenant, draft["id"])).fetchone()["n"] == 1
+        finally:
+            admin.rollback()
+        assert admin.execute("SELECT 1 FROM pg_roles WHERE rolname=%s", (role,)).fetchone() is None
+        assert _profiles(admin) == profiles_before and verify_monetary_installation_if_present(admin) is True
+        assert admin.execute(all_profiles_sql).fetchall() == all_profiles_before
+    assert database_snapshot(admin_dsn) == before

@@ -917,7 +917,8 @@ BEGIN
  PERFORM reconforge.monetary_return_assert(origin_owner.id IS NOT NULL AND plan_owner.kind IN('revalue','reverse_revaluation'),
   'Closing valuation requires its exact monetary Stock origin');
  source:=origin_owner.payload->'source';request:=plan_owner.payload->'command_request';
- FOR prior IN SELECT * FROM reconforge.operational_fx_plans WHERE tenant_id=t AND source_id=source_owner.id AND sequence<plan_owner.sequence ORDER BY sequence LOOP
+ FOR prior IN SELECT previous_plan.* FROM reconforge.operational_fx_plans previous_plan
+  WHERE previous_plan.tenant_id=t AND previous_plan.source_id=source_owner.id AND previous_plan.sequence<plan_owner.sequence ORDER BY previous_plan.sequence LOOP
   PERFORM reconforge.monetary_return_assert(prior.phase=2 AND prior.payload->>'posting_date'<=plan_owner.payload->>'posting_date',
    'Closing valuation follows complete posted native FX chronology');
   IF prior.kind='revalue' THEN
@@ -1488,7 +1489,8 @@ BEGIN
    'Actual native Stock links must exist exactly at their governed source stage');
  END IF;
  PERFORM reconforge.monetary_stock_physical_close(t,target);
- FOR member IN SELECT * FROM reconforge.stock_sales_events WHERE tenant_id=t AND order_id=target ORDER BY version LOOP
+ FOR member IN SELECT event_order.* FROM reconforge.stock_sales_events event_order
+  WHERE event_order.tenant_id=t AND event_order.order_id=target ORDER BY event_order.version LOOP
   version:=version+1;SELECT * INTO command_owner FROM reconforge.stock_sales_commands WHERE tenant_id=t AND order_id=target AND stock_sales_commands.version=member.version;
   next_status:=CASE member.operation WHEN'create' THEN'Draft' WHEN'submit' THEN'Submitted' WHEN'approve' THEN'Approved' WHEN'reserve' THEN'Reserved'
    WHEN'prepare-issue' THEN'IssuePrepared' WHEN'review-issue' THEN'IssueReviewed' WHEN'deliver' THEN'Delivered'
@@ -1509,7 +1511,7 @@ BEGIN
     AND audit_owner.action='stock_sales.'||member.operation AND audit_owner.metadata_json=jsonb_build_object('source_digest',stock_owner.source_digest,'version',version,'status',member.status))
    AND jsonb_array_length(command_owner.result->'events')=version AND NOT EXISTS(
     SELECT 1 FROM jsonb_array_elements(command_owner.result->'events') saved WHERE NOT EXISTS(SELECT 1 FROM reconforge.stock_sales_events actual_event
-     WHERE actual_event.tenant_id=t AND actual_event.order_id=target AND actual_event.version<=version
+     WHERE actual_event.tenant_id=t AND actual_event.order_id=target AND actual_event.version<=monetary_stock_close.version
      AND saved=jsonb_build_object('version',actual_event.version,'actor_id',actual_event.actor_id,'operation',actual_event.operation,
       'reason',actual_event.reason,'status',actual_event.status,'audit_event_id',actual_event.audit_event_id))),
    'Every Stock lifecycle version must retain its exact native actor, immutable request, public acknowledgement and audit prefix');

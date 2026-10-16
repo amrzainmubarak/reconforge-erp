@@ -178,3 +178,105 @@ def test_new_reader_uses_only_stdlib_and_frozen_independent_raw_validation() -> 
     assert "from reconforge" not in text and "import reconforge" not in text
     assert "later_dependency_refusal_proven\": False" in text
     assert "current_authorization_proven\": False" in text
+
+
+def receipt_event_fixture() -> tuple[dict[str, list[dict[str, Any]]], dict[str, Any]]:
+    """Minimal literal event-affinity facts; full financial joins are checked separately."""
+    tables: dict[str, list[dict[str, Any]]] = {name: [] for name in reader.TABLES}
+    scope = {"tenant_id": "tenant", "workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity"}
+    snapshot = {"entry": {"id": "receipt-entry"}, "lines": []}
+    finance_digest = reader._digest(snapshot)
+    body = {"contract_version": "inventory-receipt-plan-v1", "plan_id": "receipt", "plan_version": 1,
+            "operation": "Receipt", "original": None, "scope": {**{k: scope[k] for k in scope if k != "tenant_id"},
+                "organization_code": "ORG", "entity_code": "ENTITY"},
+            "preparer": {"user_id": "maker", "username": "maker"}, "finance_snapshot": snapshot,
+            "finance_validation_digest": finance_digest, "artifacts": {"movement_id": "receipt-movement",
+                "finance_entry_id": "receipt-entry", "posting_effect_id": "receipt-effect"},
+            "preparation_audit_event_id": "prepared-audit", "preparation_outbox_event_id": "prepared-outbox"}
+    body["plan_digest"] = reader._digest({k: v for k, v in body.items() if k not in {"preparation_audit_event_id", "preparation_outbox_event_id"}})
+    plan = {**scope, "id": "receipt", "plan_json": body, "plan_version": 1, "operation": "Receipt",
+            "movement_id": "receipt-movement", "finance_entry_id": "receipt-entry", "plan_digest": body["plan_digest"],
+            "finance_validation_digest": finance_digest, "preparer_actor_id": "maker", "preparer_username": "maker",
+            "preparation_audit_event_id": "prepared-audit", "preparation_outbox_event_id": "prepared-outbox"}
+    reviewed = {"contract_version": "inventory-receipt-review-v1", "review_id": "review", "plan_id": "receipt", "plan_version": 1,
+                "plan_digest": body["plan_digest"], "finance_validation_digest": finance_digest,
+                "reviewer": {"user_id": "checker", "username": "checker"}, "audit_event_id": "reviewed-audit", "outbox_event_id": "reviewed-outbox"}
+    reviewed["review_digest"] = reader._digest({k: v for k, v in reviewed.items() if k not in {"audit_event_id", "outbox_event_id"}})
+    review = {**scope, **{k: reviewed[k] for k in ("plan_id", "plan_version", "plan_digest", "finance_validation_digest", "review_digest", "audit_event_id", "outbox_event_id")},
+              "id": "review", "review_json": reviewed, "reviewer_actor_id": "checker", "reviewer_username": "checker"}
+    link = {**scope, **body["artifacts"], "plan_id": "receipt", "review_id": "review", "posted_actor_id": "poster",
+            "plan_digest": body["plan_digest"], "review_digest": reviewed["review_digest"], "audit_event_id": "committed-audit", "outbox_event_id": "committed-outbox"}
+    tables["inventory_receipt_plans"] = [plan]
+    tables["inventory_receipt_reviews"] = [review]
+    tables["inventory_receipt_links"] = [link]
+    tables["finance_entries"] = [{"tenant_id": "tenant", "id": "receipt-entry", "organization_code": "ORG", "entity_code": "ENTITY"}]
+    tables["finance_posting_effects"] = [{**scope, "id": "receipt-effect", "snapshot_json": snapshot,
+                                           "validation_digest": finance_digest, "posted_actor_id": "poster"}]
+    head = {**scope, "id": "receipt-movement"}
+    lines = [{"tenant_id": "tenant", "id": "receipt-line", "movement_id": "receipt-movement", "line_number": 1}]
+    tables["inventory_movements"], tables["inventory_movement_lines"] = [head], lines
+    common = {"plan_digest": body["plan_digest"], "finance_validation_digest": finance_digest}
+    for sequence, (stage, actor, metadata) in enumerate((
+        ("prepared", "maker", common), ("reviewed", "checker", {**common, "review_digest": reviewed["review_digest"]}),
+        ("committed", "poster", {**common, "review_digest": reviewed["review_digest"], "effect_id": "receipt-effect"}),
+    ), 1):
+        action = "inventory_receipt_" + stage
+        tables["domain_audit_events"].append({"tenant_id": "tenant", "id": stage + "-audit", "sequence": sequence,
+            "actor_user_id": actor, "object_type": "inventory_receipt_posting", "object_id": "receipt", "action": action, "metadata_json": dict(metadata)})
+        tables["outbox_events"].append({**scope, "event_id": stage + "-outbox", "aggregate_type": "inventory_receipt_posting",
+            "aggregate_id": "receipt", "event_type": action, "payload": {**metadata, "audit_event_id": stage + "-audit"}, "created_at": "2026-10-15T00:00:00Z"})
+    return tables, {"head": head, "lines": lines, "audit": [], "outbox": []}
+
+
+def receipt_capture(tables: dict[str, list[dict[str, Any]]]) -> Any:
+    return capture({name: sorted(json.dumps(row, sort_keys=True) for row in rows) for name, rows in tables.items()})
+
+
+def test_real_irp_event_contract_accepts_empty_generic_snapshot_only_for_receipt() -> None:
+    tables, supplied = receipt_event_fixture()
+    facts = receipt_capture(tables)
+    reader._receipt_native(facts, facts.rows("inventory_receipt_plans")[0], supplied)
+    with pytest.raises(reader.base.MonetaryRawRefusal):
+        reader._native(facts, "receipt-movement", supplied)
+
+
+@pytest.mark.parametrize("stage", ["prepared", "reviewed", "committed"])
+@pytest.mark.parametrize("mutation", ["missing-audit", "missing-outbox", "action", "actor", "scope", "digest", "event-link"])
+def test_irp_receipt_requires_each_exact_source_owned_event_pair(stage: str, mutation: str) -> None:
+    tables, supplied = receipt_event_fixture()
+    audit = next(row for row in tables["domain_audit_events"] if row["id"] == stage + "-audit")
+    outbox = next(row for row in tables["outbox_events"] if row["event_id"] == stage + "-outbox")
+    if mutation == "missing-audit":
+        tables["domain_audit_events"].remove(audit)
+    elif mutation == "missing-outbox":
+        tables["outbox_events"].remove(outbox)
+    elif mutation == "action":
+        audit["action"] = "inventory_receipt_prepared" if stage != "prepared" else "inventory_receipt_committed"
+    elif mutation == "actor":
+        audit["actor_user_id"] = "different-human"
+    elif mutation == "scope":
+        outbox["organization_id"] = "different-organization"
+    elif mutation == "digest":
+        audit["metadata_json"]["plan_digest"] = "f" * 64
+    else:
+        outbox["payload"]["audit_event_id"] = "unrelated-audit"
+    facts = receipt_capture(tables)
+    with pytest.raises(reader.base.MonetaryRawRefusal):
+        reader._receipt_native(facts, facts.rows("inventory_receipt_plans")[0], supplied)
+
+
+@pytest.mark.parametrize("event", ["audit", "outbox", "both"])
+def test_irp_receipt_refuses_propagated_generic_movement_events(event: str) -> None:
+    tables, supplied = receipt_event_fixture()
+    if event in {"audit", "both"}:
+        row = {"tenant_id": "tenant", "id": "generic-audit", "sequence": 4, "object_type": "inventory_movement", "object_id": "receipt-movement"}
+        tables["domain_audit_events"].append(row)
+        supplied["audit"] = [row]
+    if event in {"outbox", "both"}:
+        row = {**{key: "tenant" if key == "tenant_id" else "work" if key == "workspace_id" else "org" if key == "organization_id" else "entity" for key in ("tenant_id", "workspace_id", "organization_id", "legal_entity_id")},
+               "event_id": "generic-outbox", "event_type": "posted", "aggregate_type": "inventory_movement", "aggregate_id": "receipt-movement", "payload": {}, "created_at": "2026-10-15T00:00:00Z"}
+        tables["outbox_events"].append(row)
+        supplied["outbox"] = [row]
+    facts = receipt_capture(tables)
+    with pytest.raises(reader.base.MonetaryRawRefusal):
+        reader._receipt_native(facts, facts.rows("inventory_receipt_plans")[0], supplied)

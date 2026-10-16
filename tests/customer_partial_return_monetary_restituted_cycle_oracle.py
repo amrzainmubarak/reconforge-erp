@@ -252,7 +252,7 @@ def verify_zero_original_rows(capture: Any, *, source_order_id: str) -> Any:
     return OriginalFinancial(origin["id"], source, fingerprint, roles, scope, tuple(components), tuple(fifo))
 
 
-def _native(capture: Any, movement_id: str, supplied: Any) -> None:
+def _native_projection(capture: Any, movement_id: str, supplied: Any) -> tuple[bool, bool]:
     """Bind the closed immutable native snapshot, not mutable delivery columns."""
     require(type(supplied) is dict and set(supplied) == {"head", "lines", "audit", "outbox"})
     head = _one(capture, "inventory_movements", id=movement_id)
@@ -263,7 +263,68 @@ def _native(capture: Any, movement_id: str, supplied: Any) -> None:
     outbox = sorted(({key: row[key] for key in OUTBOX_FIELDS} for row in capture.rows("outbox_events")
                      if row["aggregate_type"] == "inventory_movement" and row["aggregate_id"] == movement_id), key=lambda row: row["event_id"])
     _same(supplied, {"head": head, "lines": lines, "audit": audits, "outbox": outbox})
-    require(bool(audits) and bool(outbox))
+    return bool(audits), bool(outbox)
+
+
+def _native(capture: Any, movement_id: str, supplied: Any) -> None:
+    require(all(_native_projection(capture, movement_id, supplied)))
+
+
+def _receipt_native(capture: Any, plan: dict[str, Any], supplied: Any) -> None:
+    """IRP owns three plan events; its directly created movement has no generic event."""
+    require(not any(_native_projection(capture, plan["movement_id"], supplied)))
+    body = plan["plan_json"]
+    review = _one(capture, "inventory_receipt_reviews", plan_id=plan["id"])
+    reviewed = review["review_json"]
+    link = _one(capture, "inventory_receipt_links", plan_id=plan["id"])
+    scope = {key: plan[key] for key in ("tenant_id", "workspace_id", "organization_id", "legal_entity_id")}
+    for row in (plan, review, link, supplied["head"]):
+        _scope(row, scope)
+    require(body["contract_version"] == "inventory-receipt-plan-v1" and reviewed["contract_version"] == "inventory-receipt-review-v1"
+            and _minor(plan["plan_version"], positive=True) == _minor(body["plan_version"], positive=True)
+            == _minor(review["plan_version"], positive=True) == _minor(reviewed["plan_version"], positive=True) == 1
+            and body["operation"] == plan["operation"] == "Receipt" and body["original"] is None
+            and body["plan_id"] == plan["id"] and reviewed["plan_id"] == link["plan_id"] == plan["id"]
+            and reviewed["review_id"] == review["id"] == link["review_id"]
+            and body["plan_digest"] == plan["plan_digest"] == review["plan_digest"] == reviewed["plan_digest"] == link["plan_digest"]
+            and plan["plan_digest"] == _digest({key: value for key, value in body.items()
+                                               if key not in {"plan_digest", "preparation_audit_event_id", "preparation_outbox_event_id"}})
+            and reviewed["review_digest"] == review["review_digest"] == link["review_digest"]
+            and review["review_digest"] == _digest({key: value for key, value in reviewed.items()
+                                                   if key not in {"review_digest", "audit_event_id", "outbox_event_id"}})
+            and body["finance_validation_digest"] == plan["finance_validation_digest"] == review["finance_validation_digest"] == reviewed["finance_validation_digest"]
+            and plan["finance_validation_digest"] == _digest(body["finance_snapshot"]))
+    entry = _one(capture, "finance_entries", id=plan["finance_entry_id"])
+    _same(body["scope"], {**{key: scope[key] for key in ("workspace_id", "organization_id", "legal_entity_id")},
+                          "organization_code": entry["organization_code"], "entity_code": entry["entity_code"]})
+    _same(body["preparer"], {"user_id": plan["preparer_actor_id"], "username": plan["preparer_username"]})
+    _same(reviewed["reviewer"], {"user_id": review["reviewer_actor_id"], "username": review["reviewer_username"]})
+    effect = _one(capture, "finance_posting_effects", id=link["posting_effect_id"])
+    _scope(effect, scope)
+    _same(body["finance_snapshot"], effect["snapshot_json"])
+    require(effect["posted_actor_id"] == link["posted_actor_id"] and effect["validation_digest"] == plan["finance_validation_digest"])
+    for key, value in body["artifacts"].items():
+        if key.endswith("_id"):
+            _same(link[key], value)
+    require(link["movement_id"] == plan["movement_id"] and len({plan["preparer_actor_id"], review["reviewer_actor_id"], link["posted_actor_id"]}) == 3)
+    common = {"plan_digest": plan["plan_digest"], "finance_validation_digest": plan["finance_validation_digest"]}
+    for owner, audit_key, outbox_key, actor, action, metadata in (
+        (plan, "preparation_audit_event_id", "preparation_outbox_event_id", plan["preparer_actor_id"], "inventory_receipt_prepared", common),
+        (review, "audit_event_id", "outbox_event_id", review["reviewer_actor_id"], "inventory_receipt_reviewed", {**common, "review_digest": review["review_digest"]}),
+        (link, "audit_event_id", "outbox_event_id", link["posted_actor_id"], "inventory_receipt_committed", {**common, "review_digest": review["review_digest"], "effect_id": body["artifacts"]["posting_effect_id"]}),
+    ):
+        audit = _one(capture, "domain_audit_events", id=owner[audit_key])
+        outbox = _one(capture, "outbox_events", event_id=owner[outbox_key])
+        _scope(outbox, scope)
+        require(audit["tenant_id"] == scope["tenant_id"] and audit["actor_user_id"] == actor
+                and audit["object_type"] == "inventory_receipt_posting" and audit["object_id"] == plan["id"]
+                and audit["action"] == action and outbox["aggregate_type"] == "inventory_receipt_posting"
+                and outbox["aggregate_id"] == plan["id"] and outbox["event_type"] == action)
+        _same(audit["metadata_json"], metadata)
+        _same(outbox["payload"], {**metadata, "audit_event_id": audit["id"]})
+    require(body["preparation_audit_event_id"] == plan["preparation_audit_event_id"]
+            and body["preparation_outbox_event_id"] == plan["preparation_outbox_event_id"]
+            and reviewed["audit_event_id"] == review["audit_event_id"] and reviewed["outbox_event_id"] == review["outbox_event_id"])
 
 
 def _same(supplied: Any, actual: Any) -> None:
@@ -396,7 +457,7 @@ def _pool(capture: Any, supplied: Any, old: Any, *, corrections: int, zero_stock
             and item["finance_entry"] == entry and item["finance_lines"] == lines and item["posting_effect"] == effect
             and item["valuation_input"] == _one(capture, "inventory_valuation_input_costs", id=plan["input_cost_id"])
             and item["consumptions"] == consumed and item["partial_return_corrections"] == [])
-    _native(capture, plan["movement_id"], item["receipt_native"])
+    _receipt_native(capture, plan, item["receipt_native"])
     expected_exposed = [layer["original_value_minor"], layer["remaining_value_minor"], document["total_value_minor"], detail["value_minor"], plan["total_value_minor"], entry["total_debit_minor"], entry["total_credit_minor"]]
     expected_exposed += [row["debit_minor"] for row in lines] + [row["credit_minor"] for row in lines]
     require(type(item["exposed_amounts_minor"]) is list and all(type(value) is int for value in item["exposed_amounts_minor"])

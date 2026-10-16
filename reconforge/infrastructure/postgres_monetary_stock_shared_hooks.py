@@ -16,6 +16,9 @@ from reconforge.infrastructure.postgres_customer_partial_return_zero_stock_hooks
     UPGRADED_FUNCTIONS as ZERO_STOCK_FUNCTIONS,
 )
 from reconforge.infrastructure.postgres_operational_fx_revaluation_schema import ACTOR_SQL, CLOSE_SQL, VALUATION_SQL
+from reconforge.infrastructure.postgres_stock_sales_reversal_dispatch_schema import (
+    _PATCH_DECLARATIONS as RETAINED_REVERSE_DISPATCH,
+)
 from reconforge.infrastructure.postgres_stock_sales_schema import POSTGRES_STOCK_SALES_SCHEMA_SQL
 
 
@@ -26,11 +29,27 @@ def _definition(name: str, sql: str, delimiter: str) -> str:
     return matches[0]
 
 
+def _native_close_original() -> str:
+    """Retain the actual corrected original-inverse owner discovery.
+
+    The customer-credit migration first added a broad inverse lookup. Its
+    published additive correction removes that lookup and inserts this exact
+    original-entry route. Neither historical SQL constant is changed.
+    """
+    definition = _definition("stock_sales_native_close", POSTGRES_STOCK_SALES_SCHEMA_SQL, "$$")
+    route = RETAINED_REVERSE_DISPATCH.split("native_route TEXT := $route$", 1)[1].split("$route$;", 1)[0]
+    anchor = RETAINED_REVERSE_DISPATCH.split("owner_anchor TEXT := $owner$", 1)[1].split("$owner$;", 1)[0]
+    if definition.count(anchor) != 1:
+        raise ValueError("The retained native Stock owner discovery differs.")
+    return definition.replace(anchor, route + anchor, 1)
+
+
 ORIGINAL_FUNCTIONS = {
     "stock_sales_admit": _definition("stock_sales_admit", POSTGRES_STOCK_SALES_SCHEMA_SQL, "$$"),
     "stock_sales_protect": _definition("stock_sales_protect", POSTGRES_STOCK_SALES_SCHEMA_SQL, "$$"),
     "stock_sales_close": ZERO_STOCK_FUNCTIONS["stock_sales_close"],
     "stock_sales_public": ZERO_STOCK_FUNCTIONS["stock_sales_public"],
+    "stock_sales_native_close": _native_close_original(),
     "fx_close": _definition("fx_close", CLOSE_SQL, "$fx$"),
     "fx_command_actor": _definition("fx_command_actor", ACTOR_SQL, "$fx$"),
     "fx_valuation_equation": _definition("fx_valuation_equation", VALUATION_SQL, "$fx$"),
@@ -40,6 +59,7 @@ _SIGNATURES = {
     "stock_sales_protect": ("", "trigger", "plpgsql", "v", ()),
     "stock_sales_close": ("text,text", "void", "plpgsql", "v", ("t", "target")),
     "stock_sales_public": ("reconforge.stock_sales_orders", "jsonb", "sql", "s", ("d",)),
+    "stock_sales_native_close": ("", "trigger", "plpgsql", "v", ()),
     "fx_close": ("text,text", "void", "plpgsql", "v", ("t", "i")),
     "fx_command_actor": ("", "trigger", "plpgsql", "v", ()),
     "fx_valuation_equation": ("text,text", "jsonb", "plpgsql", "v", ("t", "i")),
@@ -97,6 +117,23 @@ _STOCK_CLOSE_DISPATCH = r""" IF EXISTS(SELECT 1 FROM reconforge.stock_sales_orde
  END IF;
 """
 
+
+def _native_close() -> str:
+    """Financial images retain full source proof; inventory keeps live backing."""
+    original = ORIGINAL_FUNCTIONS["stock_sales_native_close"]
+    _, body = _body(original)
+    anchor = "   PERFORM reconforge.stock_sales_close(changed->>'tenant_id',owner.id);"
+    if body.count(anchor) != 1:
+        raise ValueError("The retained native Stock closure call differs.")
+    return _replace_body(original, body.replace(anchor, r"""   IF TG_TABLE_NAME IN('finance_entries','finance_entry_lines','finance_posting_effects',
+    'ar_invoices','ar_invoice_lines','ar_receipts','ar_receipt_allocations',
+    'operational_finance_plans','operational_finance_reviews','operational_finance_links','operational_finance_commands') THEN
+    PERFORM reconforge.monetary_retained_stock_source_close(changed->>'tenant_id',owner.id);
+   ELSE
+    PERFORM reconforge.stock_sales_close(changed->>'tenant_id',owner.id);
+   END IF;""", 1))
+
+
 _FX_CLOSE_DISPATCH = r""" IF EXISTS(SELECT 1 FROM reconforge.operational_fx_plans plan JOIN reconforge.operational_fx_sources fixed
   ON(fixed.tenant_id,fixed.id)=(plan.tenant_id,plan.source_id) WHERE plan.tenant_id=t AND plan.id=i
   AND fixed.payload->>'schema_version'='operational-fx-stock-source-v2') THEN
@@ -130,6 +167,7 @@ UPGRADED_FUNCTIONS = {
     "stock_sales_protect": _prepend("stock_sales_protect", _STOCK_TRIGGER_DISPATCH),
     "stock_sales_close": _prepend("stock_sales_close", _STOCK_CLOSE_DISPATCH),
     "stock_sales_public": _replace_body(ORIGINAL_FUNCTIONS["stock_sales_public"], _PUBLIC_BODY),
+    "stock_sales_native_close": _native_close(),
     "fx_close": _prepend("fx_close", _FX_CLOSE_DISPATCH),
     "fx_command_actor": _prepend("fx_command_actor", _FX_ACTOR_DISPATCH),
     "fx_valuation_equation": _prepend("fx_valuation_equation", _FX_EQUATION_DISPATCH),

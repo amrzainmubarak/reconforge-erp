@@ -27,6 +27,10 @@ from reconforge.infrastructure.postgres_monetary_inventory_shared_hooks import (
     UPGRADED_FUNCTIONS,
     preflight,
 )
+from reconforge.infrastructure.postgres_monetary_stock_shared_hooks import DOWNGRADE_SQL as STOCK_DOWNGRADE_SQL
+from reconforge.infrastructure.postgres_monetary_stock_shared_hooks import (
+    ORIGINAL_FUNCTIONS as STOCK_ORIGINAL_FUNCTIONS,
+)
 from reconforge.infrastructure.postgres_monetary_stock_shared_hooks import UPGRADED_FUNCTIONS as STOCK_FUNCTIONS
 from reconforge.infrastructure.postgres_monetary_stock_shared_hooks import _body
 from tests.monetary_capture_encoding import MAX_CAPTURE_BYTES, MAX_PACKET_BYTES, encode_monetary_capture
@@ -224,7 +228,8 @@ def _without_unscoped_ar_gates(functions: dict[str, str]) -> dict[str, str]:
 def test_cached_serializer_preserves_every_existing_native_check_and_retained_function() -> None:
     functions = _function_bodies(NATIVE_FUNCTION_SQL)
     previous = {name: body.replace("reconforge.monetary_digest(", "reconforge.irp_digest(")
-                for name, body in functions.items() if name not in {"monetary_canonical", "monetary_digest"}}
+                for name, body in functions.items() if name not in {
+                    "monetary_canonical", "monetary_digest", "monetary_retained_stock_source_close"}}
     previous = _without_unscoped_ar_gates(previous)
     callback = previous["monetary_return_native_close"]
     start = callback.index("  -- These financial envelopes cannot mutate quantity inputs.")
@@ -232,7 +237,7 @@ def test_cached_serializer_preserves_every_existing_native_check_and_retained_fu
     previous["monetary_return_native_close"] = callback[:start] + (
         "  PERFORM reconforge.monetary_stock_close(candidate.tenant_id,candidate.stock_order_id);\n") + callback[end:]
     # Exact ab4bbaf7 predecessor inventory: only the digest call target changes.
-    assert len(previous) == 56 and len(functions) == 58
+    assert len(previous) == 56 and len(functions) == 59
     assert hashlib.sha256(json.dumps(previous, sort_keys=True, separators=(",", ":")).encode()).hexdigest() == (
         "299256b3a36e2d4eb34d84fcd97673a5dbc7a65fc690d0c10a3d7af2bd338de6")
     assert sum(body.count("reconforge.monetary_digest(") for body in previous.values()) == 0
@@ -386,7 +391,7 @@ def _reachable(graph: dict[str, set[str]], start: str) -> set[str]:
 
 def test_source_physical_proof_and_full_source_body_are_exact_except_capacity_extraction_and_label() -> None:
     functions = _function_bodies(NATIVE_FUNCTION_SQL)
-    assert len(functions) == 58
+    assert len(functions) == 59
     old_full = functions["monetary_stock_source_close"].replace("monetary_stock_source_close", "monetary_stock_close").replace(
         "reconforge.monetary_digest(", "reconforge.irp_digest(")
     assert hashlib.sha256(old_full.encode()).hexdigest() == "3b6fc98713b56b8380f85835bb8ecba5f3c30df8fd90396bc90b93921e6f811e"
@@ -408,6 +413,56 @@ def test_source_physical_proof_and_full_source_body_are_exact_except_capacity_ex
     assert proof_consumption.replace("CREATE OR REPLACE FUNCTION", "CREATE FUNCTION", 1).replace(
         "monetary_retained_zero_stock_source_close", "customer_partial_return_zero_stock_close") == old_consumption
     assert old_consumption.replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1) in DOWNGRADE_SQL
+
+
+def test_retained_stock_financial_source_keeps_the_full_actual_dispatch_and_all_other_checks() -> None:
+    functions = _function_bodies(NATIVE_FUNCTION_SQL)
+    live = _function_bodies(STOCK_FUNCTIONS["stock_sales_close"])["stock_sales_close"]
+    leaf = functions["monetary_retained_stock_source_close"].replace("reconforge.monetary_digest(", "reconforge.irp_digest(")
+    capacity = " IF r IS NOT NULL THEN PERFORM reconforge.stock_sales_capacity(t,d.workspace_id,d.legal_entity_id,d.location_id,d.item_id); END IF;\n"
+    assert live.count(capacity) == 1 and "stock_sales_capacity" not in leaf
+    expected = live.replace(capacity, "", 1).replace(
+        "reconforge.monetary_stock_close(t,target)", "reconforge.monetary_stock_source_close(t,target)", 1).replace(
+        "reconforge.customer_partial_return_zero_stock_close(t,target)",
+        "reconforge.monetary_retained_zero_stock_source_close(t,target)", 1)
+    assert leaf == expected
+    assert "stock_sales_capacity" in _function_bodies(retained_zero_stock_close())["customer_partial_return_zero_stock_close"]
+    assert "IF r IS NOT NULL" in live and "r.state IS DISTINCT FROM" in live
+    drop = "DROP FUNCTION reconforge.monetary_retained_stock_source_close(TEXT,TEXT);"
+    assert NATIVE_DOWNGRADE_SQL.count(drop) == 1
+    assert NATIVE_DOWNGRADE_SQL.index(drop) < NATIVE_DOWNGRADE_SQL.index(
+        "DROP FUNCTION reconforge.monetary_retained_zero_stock_source_close(TEXT,TEXT);")
+
+
+def test_legacy_financial_callback_changes_only_the_call_after_all_old_and_new_membership_checks() -> None:
+    original = _function_bodies(STOCK_ORIGINAL_FUNCTIONS["stock_sales_native_close"])["stock_sales_native_close"]
+    assert hashlib.sha256(original.encode()).hexdigest() == "af0d124fe0aa83843ce0bcd7f84bd53d2ab1d36475ee3409f448dc69077dab89"
+    changed = _function_bodies(STOCK_FUNCTIONS["stock_sales_native_close"])["stock_sales_native_close"]
+    begin = changed.index("   IF TG_TABLE_NAME IN('finance_entries'")
+    end = changed.index("   END IF;", begin) + len("   END IF;")
+    dispatch = changed[begin:end]
+    classification, source_call = dispatch.split(" THEN\n", 1)
+    source_call, live_call = source_call.split("   ELSE\n", 1)
+    tables = set(re.findall(r"'([a-z_]+)'", classification))
+    assert len(tables) == 11 and tables == {
+        "finance_entries", "finance_entry_lines", "finance_posting_effects",
+        "ar_invoices", "ar_invoice_lines", "ar_receipts", "ar_receipt_allocations",
+        "operational_finance_plans", "operational_finance_reviews", "operational_finance_links", "operational_finance_commands",
+    }
+    assert source_call.strip() == "PERFORM reconforge.monetary_retained_stock_source_close(changed->>'tenant_id',owner.id);"
+    assert live_call.strip() == "PERFORM reconforge.stock_sales_close(changed->>'tenant_id',owner.id);\n   END IF;"
+    old_call = "   PERFORM reconforge.stock_sales_close(changed->>'tenant_id',owner.id);"
+    assert changed[:begin] + old_call + changed[end:] == original
+    assert "SELECT previous WHERE previous IS NOT NULL UNION SELECT current_row WHERE current_row IS NOT NULL LOOP" in changed[:begin]
+    assert "FOR owner IN SELECT d.id FROM reconforge.stock_sales_orders" in changed[:begin]
+    assert "IF reverse_effect IS NOT NULL THEN" in changed[:begin]
+    assert not tables & {
+        "inventory_movements", "inventory_movement_lines", "inventory_valuation_documents", "inventory_valuation_lines",
+        "inventory_cost_layers", "inventory_layer_consumptions", "stock_sales_orders", "stock_sales_reservations",
+        "stock_sales_issue_claims", "stock_sales_events", "stock_sales_commands", "unknown_relation",
+    }
+    assert STOCK_ORIGINAL_FUNCTIONS["stock_sales_native_close"].replace(
+        "CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1) in STOCK_DOWNGRADE_SQL
 
 
 def test_complete_cost_proof_graph_exposes_both_old_cycles_and_retains_live_owner_capacity() -> None:

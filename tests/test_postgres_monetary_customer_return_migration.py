@@ -42,7 +42,7 @@ _ = receipt_database
 OLD = "0148_pg_partial_return_rounding"
 NEW = "0149_pg_monetary_partial_returns"
 FUNCTIONS = (
-    "stock_sales_admit", "stock_sales_protect", "stock_sales_close", "stock_sales_public",
+    "stock_sales_admit", "stock_sales_protect", "stock_sales_close", "stock_sales_public", "stock_sales_native_close",
     "fx_close", "fx_command_actor", "fx_valuation_equation", "inventory_cost_layer_guard",
     "guard_inventory_receipt_layer_history_complete", "guard_inventory_receipt_link", "customer_partial_return_zero_layer_guard",
     "customer_partial_return_zero_stock_active", "customer_partial_return_zero_stock_plan", "it1_cost_snapshot", "it1_cost_originals", "it1_stock_origins",
@@ -61,7 +61,7 @@ def _profiles(connection):
         p.proisstrict,p.proretset,p.provolatile,p.proparallel,p.proconfig,p.proargnames,p.pronargdefaults,p.prosrc
         FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='reconforge' AND p.proname=ANY(%s)
         ORDER BY p.proname,p.oid""", (list(FUNCTIONS),)).fetchall()
-    assert len(FUNCTIONS) == len(set(FUNCTIONS)) == len(rows) == 18
+    assert len(FUNCTIONS) == len(set(FUNCTIONS)) == len(rows) == 19
     return {row["proname"]: dict(row) for row in rows}
 
 

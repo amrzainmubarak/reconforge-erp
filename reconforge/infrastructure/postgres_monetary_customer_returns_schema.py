@@ -15,6 +15,9 @@ from reconforge.infrastructure.postgres_monetary_inventory_transfer_schema impor
     NATIVE_FUNCTION_SQL as TRANSFER_FUNCTION_SQL,
 )
 from reconforge.infrastructure.postgres_monetary_stock_schema import DOWNGRADE_PREFLIGHT_SQL, TABLES
+from reconforge.infrastructure.postgres_monetary_stock_shared_hooks import (
+    UPGRADED_FUNCTIONS as STOCK_DISPATCH_FUNCTIONS,
+)
 from reconforge.infrastructure.postgres_operational_fx_tax_schema import UPGRADE_SQL as ORIGINAL_FX_SQL
 from reconforge.infrastructure.postgres_stock_sales_schema import POSTGRES_STOCK_SALES_SCHEMA_SQL as ORIGINAL_STOCK_SQL
 
@@ -128,6 +131,24 @@ def _retained_stock_source() -> str:
     value = _retained_zero_stock_close()
     value = _replace_once(value, "CREATE FUNCTION reconforge.customer_partial_return_zero_stock_close(",
         "CREATE FUNCTION reconforge.monetary_retained_zero_stock_source_close(")
+    return _replace_once(value,
+        " IF r IS NOT NULL THEN PERFORM reconforge.stock_sales_capacity(t,d.workspace_id,d.legal_entity_id,d.location_id,d.item_id); END IF;\n", "")
+
+
+def _retained_complete_stock_source() -> str:
+    """Keep the full current Stock dispatch and proof without live capacity.
+
+    Only financial images in the retained native callback use this leaf. The
+    Stock owner, inventory callbacks and quantity guards still call the live
+    closure. Both explicit monetary and zero-cost branches retain their full
+    source proofs, including physical ownership and all posted evidence.
+    """
+    value = STOCK_DISPATCH_FUNCTIONS["stock_sales_close"]
+    value = _replace_once(value, "CREATE OR REPLACE FUNCTION reconforge.stock_sales_close(",
+        "CREATE FUNCTION reconforge.monetary_retained_stock_source_close(")
+    value = _replace_once(value, "reconforge.monetary_stock_close(t,target)", "reconforge.monetary_stock_source_close(t,target)")
+    value = _replace_once(value, "reconforge.customer_partial_return_zero_stock_close(t,target)",
+        "reconforge.monetary_retained_zero_stock_source_close(t,target)")
     return _replace_once(value,
         " IF r IS NOT NULL THEN PERFORM reconforge.stock_sales_capacity(t,d.workspace_id,d.legal_entity_id,d.location_id,d.item_id); END IF;\n", "")
 
@@ -2123,7 +2144,7 @@ CREATE FUNCTION reconforge.monetary_digest(value JSONB) RETURNS TEXT
  $mr149$;
 """
 
-NATIVE_FUNCTION_SQL = "\n".join((CANONICAL_SQL, HISTORY_SQL, EFFECT_SQL, ORIGINAL_EQUATION_SQL, STOCK_ADMISSION_SQL, STOCK_PHYSICAL_SQL, _retained_stock_source(),
+NATIVE_FUNCTION_SQL = "\n".join((CANONICAL_SQL, HISTORY_SQL, EFFECT_SQL, ORIGINAL_EQUATION_SQL, STOCK_ADMISSION_SQL, STOCK_PHYSICAL_SQL, _retained_stock_source(), _retained_complete_stock_source(),
     ORIGIN_SQL, BALANCE_SQL, POSTING_SQL, FX_SQL, PARTIAL_SQL, PUBLIC_SQL, STOCK_CLOSE_SQL, GUARD_SQL, NAMESPACE_SQL,
     PHYSICAL_FUNCTION_SQL, TRANSFER_FUNCTION_SQL, MARKER_SQL)).replace("reconforge.irp_digest(", "reconforge.monetary_digest(")
 

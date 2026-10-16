@@ -168,6 +168,11 @@ def test_cached_serializer_preserves_every_existing_native_check_and_retained_fu
     functions = _function_bodies(NATIVE_FUNCTION_SQL)
     previous = {name: body.replace("reconforge.monetary_digest(", "reconforge.irp_digest(")
                 for name, body in functions.items() if name not in {"monetary_canonical", "monetary_digest"}}
+    callback = previous["monetary_return_native_close"]
+    start = callback.index("  -- These financial envelopes cannot mutate quantity inputs.")
+    end = callback.index(" END LOOP;", start)
+    previous["monetary_return_native_close"] = callback[:start] + (
+        "  PERFORM reconforge.monetary_stock_close(candidate.tenant_id,candidate.stock_order_id);\n") + callback[end:]
     # Exact ab4bbaf7 predecessor inventory: only the digest call target changes.
     assert len(previous) == 56 and len(functions) == 58
     assert hashlib.sha256(json.dumps(previous, sort_keys=True, separators=(",", ":")).encode()).hexdigest() == (
@@ -184,6 +189,26 @@ def test_cached_serializer_preserves_every_existing_native_check_and_retained_fu
         "SELECT encode(sha256(convert_to(reconforge.monetary_canonical(value),'UTF8')),'hex')")
     for name in ("monetary_digest", "monetary_canonical"):
         assert f"DROP FUNCTION reconforge.{name}(JSONB);" in NATIVE_DOWNGRADE_SQL
+
+
+def test_only_fixed_financial_callbacks_use_full_source_proof_with_default_live_capacity() -> None:
+    body = _function_bodies(NATIVE_FUNCTION_SQL)["monetary_return_native_close"]
+    start = body.index("  -- These financial envelopes cannot mutate quantity inputs.")
+    end = body.index(" END LOOP;", start)
+    branch = body[start:end]
+    tables = set(re.findall(r"'([a-z_]+)'", branch))
+    assert tables == {
+        "operational_fx_sources", "operational_fx_plans", "operational_fx_reviews", "operational_fx_links", "operational_fx_commands",
+        "finance_entries", "finance_entry_lines", "finance_entry_line_dimensions", "finance_posting_effects",
+        "ar_invoices", "ar_invoice_lines", "ar_receipts", "ar_receipt_allocations", "domain_audit_events", "outbox_events",
+    }
+    assert branch.count("IF TG_TABLE_NAME IN(") == 1 and branch.count("ELSE") == 1
+    source, live = branch.split("  ELSE\n")
+    assert source.count("PERFORM reconforge.monetary_stock_source_close(candidate.tenant_id,candidate.stock_order_id);") == 1
+    assert "monetary_stock_close(" not in source
+    assert live == "   PERFORM reconforge.monetary_stock_close(candidate.tenant_id,candidate.stock_order_id);\n  END IF;\n"
+    assert "RETURN" not in branch
+    assert body.index("FOR changed IN SELECT previous") < body.index("FOR candidate IN SELECT DISTINCT") < start
 
 
 def test_event_callbacks_classify_each_image_before_any_private_owner_lookup() -> None:

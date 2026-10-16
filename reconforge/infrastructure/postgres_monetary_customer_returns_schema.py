@@ -2021,7 +2021,16 @@ BEGIN
  END LOOP;
  FOR candidate IN SELECT DISTINCT (affected_item.value->>0) COLLATE "C" AS tenant_id,(affected_item.value->>1) COLLATE "C" AS stock_order_id
   FROM jsonb_array_elements(affected) affected_item(value) ORDER BY 1,2 LOOP
-  PERFORM reconforge.monetary_stock_close(candidate.tenant_id,candidate.stock_order_id);
+  -- These financial envelopes cannot mutate quantity inputs. Retain their
+  -- complete source/effect closure; native quantity mutations and all seven
+  -- monetary-owner tables still execute the live capacity wrapper below.
+  IF TG_TABLE_NAME IN('operational_fx_sources','operational_fx_plans','operational_fx_reviews','operational_fx_links','operational_fx_commands',
+    'finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects',
+    'ar_invoices','ar_invoice_lines','ar_receipts','ar_receipt_allocations','domain_audit_events','outbox_events') THEN
+   PERFORM reconforge.monetary_stock_source_close(candidate.tenant_id,candidate.stock_order_id);
+  ELSE
+   PERFORM reconforge.monetary_stock_close(candidate.tenant_id,candidate.stock_order_id);
+  END IF;
  END LOOP;
  IF TG_OP='DELETE' THEN RETURN OLD;END IF;RETURN NEW;
 END $mr149$;

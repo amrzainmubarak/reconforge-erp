@@ -13803,3 +13803,11 @@ The262-vector PostgreSQL differential is diagnostic evidence, not business
 acceptance or a throughput claim. The same actual full case, real nested digest
 equivalence, migration/restore and final-head CI must still pass. Do not skip
 historical hash checks or move them to an unproven birth-time cache.
+
+The exact fifteen existing FX/GL/AR/audit/outbox callback relations close the
+complete native source without repeating capacity for unchanged quantity inputs.
+All seven monetary-owner relations, five inventory callback relations and any
+unknown callback retain the live wrapper. Existing Stock and shared quantity
+BEFORE gates/deferred checks remain unchanged. Both OLD/NEW affinity and all
+source/effect assertions still apply; source peers approve only that closed
+dispatch. Runtime, SQL security and concurrency acceptance remain mandatory.

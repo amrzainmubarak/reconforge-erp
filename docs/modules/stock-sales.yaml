@@ -30,7 +30,7 @@ domain_invariants:
   - Public AR displays active posted closing book value while private refund and credit calculations retain the historical carrying basis
   - Zero functional turnover preserves positive transaction cash and complete governance without inventing a zero journal
   - New cost-v4 retains old and monetary restitution families in its signed quantity and value equation
-domain_events: [stock_sales.create, stock_sales.submit, stock_sales.approve, stock_sales.reserve, stock_sales.prepare-issue, stock_sales.review-issue, stock_sales.deliver, stock_sales.prepare-invoice, stock_sales.review-invoice, stock_sales.invoice, stock_sales.prepare-collection, stock_sales.review-collection, stock_sales.collect, stock_sales.cancel]
+domain_events: [stock_sales.create, stock_sales.submit, stock_sales.approve, stock_sales.reserve, stock_sales.prepare-issue, stock_sales.review-issue, stock_sales.deliver, stock_sales.prepare-invoice, stock_sales.review-invoice, stock_sales.invoice, stock_sales.prepare-collection, stock_sales.review-collection, stock_sales.collect, stock_sales.cancel, customer_partial_return_monetary_prepare, customer_partial_return_monetary_review, customer_partial_return_monetary_post, customer_partial_return_monetary_cancel]
 api_routes:
   - GET /stock-sales/options
   - GET /stock-sales/orders
@@ -71,6 +71,19 @@ api_routes:
   - GET /api/v2/stock-sales/orders
   - GET /api/v2/stock-sales/orders/{identifier}
   - POST /api/v2/stock-sales/orders
+  - POST /api/v2/stock-sales/orders/{identifier}/submit
+  - POST /api/v2/stock-sales/orders/{identifier}/approve
+  - POST /api/v2/stock-sales/orders/{identifier}/reserve
+  - POST /api/v2/stock-sales/orders/{identifier}/issue/prepare
+  - POST /api/v2/stock-sales/orders/{identifier}/issue/review
+  - POST /api/v2/stock-sales/orders/{identifier}/deliver
+  - POST /api/v2/stock-sales/orders/{identifier}/invoice/prepare
+  - POST /api/v2/stock-sales/orders/{identifier}/invoice/review
+  - POST /api/v2/stock-sales/orders/{identifier}/invoice/post
+  - POST /api/v2/stock-sales/orders/{identifier}/collection/prepare
+  - POST /api/v2/stock-sales/orders/{identifier}/collection/review
+  - POST /api/v2/stock-sales/orders/{identifier}/collection/post
+  - POST /api/v2/stock-sales/orders/{identifier}/cancel
   - POST /api/v2/stock-sales/orders/{identifier}/valuations
   - POST /api/v2/stock-sales/orders/{identifier}/valuation-reversals
   - GET /api/v2/stock-sales/orders/{identifier}/fx-plans/{plan_id}
@@ -86,7 +99,7 @@ api_routes:
   - POST /api/v3/customer-partial-returns/plans/{plan_id}/post
   - POST /api/v3/customer-partial-returns/plans/{plan_id}/cancel
 cli_commands: []
-ui_routes: [stock-sales]
+ui_routes: [stock-sales, customer-returns]
 import_schemas: []
 export_schemas: [stock-sales-order-v1, stock-sales-issue-v1, stock-commerce-v1, stock-sales-monetary-v2, customer-partial-return-monetary-v3, customer-partial-return-monetary-balance-v3, stock-monetary-valuation-v1, inventory-transfer-cost-v4]
 synthetic_fixtures:

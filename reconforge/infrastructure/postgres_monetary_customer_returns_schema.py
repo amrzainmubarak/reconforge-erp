@@ -659,7 +659,7 @@ BEGIN
  FOR part IN SELECT value FROM jsonb_array_elements(expected) LOOP
   ordinal:=ordinal+1;
   PERFORM reconforge.monetary_return_assert(actual_lines->(ordinal-1)->>'line_number'=ordinal::text
-   AND(actual_lines->(ordinal-1)-ARRAY['line_number','description'])=part,
+   AND((actual_lines->(ordinal-1))-ARRAY['line_number','description'])=part,
    'Native correction lines require exact ordered original accounts, dimensions and monetary magnitudes');
  END LOOP;
  IF plan_owner.phase IN(1,2) THEN
@@ -1567,7 +1567,7 @@ BEGIN
   PERFORM reconforge.monetary_return_assert(collection_owner.source_id=origin_owner.fx_source_id AND collection_owner.kind='settle'
    AND collection_owner.sequence=(SELECT max(sequence) FROM reconforge.operational_fx_plans WHERE tenant_id=t AND source_id=origin_owner.fx_source_id AND kind='settle')
    AND collection_owner.phase=(CASE stock_owner.status WHEN'CollectionPrepared' THEN 0 WHEN'CollectionReviewed' THEN 1 ELSE 2 END)
-   AND(collection_owner.payload->'command_request'-ARRAY['kind','source_id','reason'])=stock_owner.collection_parameters,
+   AND((collection_owner.payload->'command_request')-ARRAY['kind','source_id','reason'])=stock_owner.collection_parameters,
    'Repeated Stock cash must retain its exact latest native collection owner and request');
  END IF;
  expected_status:=CASE WHEN recognition.phase=0 THEN'Submitted' WHEN balance->>'transaction_outstanding_minor'='0' THEN'Paid'

@@ -103,6 +103,8 @@ def test_zero_fifo_extension_preserves_the_complete_original_units_positive_sum_
 def test_zero_fifo_source_proof_is_conditional_and_precedes_the_unchanged_global_claim_deduction() -> None:
     body = _body(UPGRADED_FUNCTIONS["inventory_quantity_free_fifo"])[1]
     loop = body.index(" FOR zero_candidate IN")
+    relevance = body.index("dispatch_layer.remaining_quantity_scaled>dispatch_layer.original_quantity_scaled-(SELECT COALESCE(sum(dispatch_consumption.quantity_scaled),0)")
+    first_private = body.index("FROM reconforge.customer_partial_return_restorations")
     new_tables = body.index("FROM reconforge.customer_partial_return_monetary_restorations")
     ordinary_exclusion = body.index("IF restitution_quantity<=0 THEN CONTINUE;END IF;")
     snapshot = body.index("quantity_cost:=reconforge.it1_cost_snapshot(")
@@ -111,7 +113,8 @@ def test_zero_fifo_source_proof_is_conditional_and_precedes_the_unchanged_global
     signed = body.index("PERFORM reconforge.it1_assert(restitution_quantity>0,")
     add = body.index("remaining:=remaining+(zero_candidate.layer_json->>'remaining_quantity_scaled')::numeric;")
     claimed = body.index(" SELECT COALESCE(sum(g.quantity_scaled),0) INTO claimed")
-    assert loop < new_tables < ordinary_exclusion < snapshot < originals < current_layer < signed < add < claimed
+    assert loop < relevance < first_private < new_tables < ordinary_exclusion < snapshot < originals < current_layer < signed < add < claimed
+    assert "WHERE dispatch_consumption.tenant_id=dispatch_layer.tenant_id AND dispatch_consumption.cost_layer_id=dispatch_layer.id)" in body[relevance:first_private]
     assert "dispatch_layer.remaining_quantity_scaled>0 AND dispatch_layer.remaining_value_minor=0" in body[loop:new_tables]
     assert body.count("quantity_cost:=reconforge.it1_cost_snapshot(") == 1
     assert body.count("remaining:=remaining+") == 1

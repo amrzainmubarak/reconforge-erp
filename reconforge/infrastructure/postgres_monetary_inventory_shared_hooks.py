@@ -164,6 +164,11 @@ _ZERO_FIFO_QUANTITY = r""" -- Positive-valued backing above remains the original
   ON(dispatch_document.tenant_id,dispatch_document.id)=(dispatch_detail.tenant_id,dispatch_detail.valuation_document_id)
  WHERE dispatch_layer.tenant_id=t AND dispatch_layer.workspace_id=w AND dispatch_layer.legal_entity_id=e AND dispatch_layer.item_id=i
  AND dispatch_layer.inventory_lot_id IS NULL AND dispatch_layer.remaining_quantity_scaled>0 AND dispatch_layer.remaining_value_minor=0
+ -- This inventory-only necessary condition excludes ordinary zero residuals
+ -- before any old/new private restitution lookup. It never grants backing.
+ AND dispatch_layer.remaining_quantity_scaled>dispatch_layer.original_quantity_scaled-(SELECT COALESCE(sum(dispatch_consumption.quantity_scaled),0)
+  FROM reconforge.inventory_layer_consumptions dispatch_consumption
+  WHERE dispatch_consumption.tenant_id=dispatch_layer.tenant_id AND dispatch_consumption.cost_layer_id=dispatch_layer.id)
  AND dispatch_document.status='Approved' AND dispatch_document.workspace_id=w AND dispatch_document.legal_entity_id=e
  AND dispatch_detail.flow_direction='Inbound'
  AND(dispatch_detail.item_id,dispatch_detail.uom_id,dispatch_detail.quantity_precision,dispatch_detail.inventory_lot_id)

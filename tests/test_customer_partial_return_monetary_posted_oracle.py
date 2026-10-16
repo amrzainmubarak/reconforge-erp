@@ -633,9 +633,11 @@ def complete_final_tables() -> dict[str, list[str]]:
             tables["customer_partial_return_monetary_commands"].append(command)
     metadata: dict[str, tuple[str, str, str, dict[str, Any]]] = {}
     for effect in tables["finance_posting_effects"]:
-        metadata[effect["audit_event_id"]] = ("poster", "finance_posting", effect["id"], {})
-        if not any(row.get("event_id") == effect["outbox_event_id"] for row in tables["outbox_events"]):
-            tables["outbox_events"].append({"tenant_id": "tenant", "event_id": effect["outbox_event_id"]})
+        payload = {"entry_id": effect["entry_id"], "content_digest": effect["validation_digest"]}
+        metadata[effect["audit_event_id"]] = ("poster", "finance_posting", effect["id"], payload)
+        tables["outbox_events"] = [row for row in tables["outbox_events"] if row.get("event_id") != effect["outbox_event_id"]]
+        tables["outbox_events"].append({**scope, "event_id": effect["outbox_event_id"], "event_type": "finance_entry_posted", "aggregate_type": "finance_posting",
+                                         "aggregate_id": effect["id"], "payload": {**payload, "audit_event_id": effect["audit_event_id"]}})
     for event in tables["customer_partial_return_monetary_events"]:
         plan = next(row for row in tables["customer_partial_return_monetary_plans"] if row["id"] == event["plan_id"])
         payload = {"plan_digest": plan["plan_digest"], "reason": event["reason"]}
@@ -671,6 +673,17 @@ def test_complete_financial_trace_rederives_every_effect_and_retains_no_native_c
     proof = reader.qualify_raw_cycle(reader.decode_packet(encoded(value)))
     assert (proof["final_posting_effects"], proof["final_posted_lines"], proof["final_debits_minor"]) == (14, 37, "81605")
     assert proof["current_authorization_proven"] is False and proof["observations"] == 0 and proof["populated_restore_original_rows_equal"] is False
+
+
+@pytest.mark.parametrize("field,foreign", [("audit_event_id", "revenue-effect-audit"), ("outbox_event_id", "revenue-effect-outbox")])
+def test_financial_evidence_reference_cannot_borrow_another_real_effect_event(field: str, foreign: str) -> None:
+    tables = complete_final_tables()
+    effects = [json.loads(raw) for raw in tables["finance_posting_effects"]]
+    next(row for row in effects if row["id"] == "cogs-effect")[field] = foreign
+    tables["finance_posting_effects"] = sorted(json.dumps(row, sort_keys=True) for row in effects)
+    value = {"schema_version": reader.SCHEMA, "tenant_id": "tenant", "source_order_id": "stock", "captures": [{"capture": index, "tables": tables} for index in range(2)]}
+    with pytest.raises(reader.MonetaryRawRefusal):
+        reader.qualify_raw_cycle(reader.decode_packet(encoded(value)))
 
 
 def complete_browser_fixture() -> tuple[bytes, bytes, bytes]:

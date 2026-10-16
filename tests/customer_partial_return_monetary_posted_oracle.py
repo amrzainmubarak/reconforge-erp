@@ -1163,6 +1163,14 @@ def _ledger(capture: Capture, original: OriginalFinancial, allowed: set[str]) ->
     require(len({row["id"] for row in effects}) == len(effects) and {row["id"] for row in effects} == allowed)
     lines = count = debit = credit = 0
     for effect in effects:
+        audit = _one(capture, "domain_audit_events", id=effect["audit_event_id"])
+        outbox = _one(capture, "outbox_events", event_id=effect["outbox_event_id"])
+        _scope(outbox, original.scope)
+        metadata = {"entry_id": effect["entry_id"], "content_digest": effect["validation_digest"]}
+        require(audit["actor_user_id"] == effect["posted_actor_id"] and audit["object_type"] == "finance_posting"
+                and audit["object_id"] == effect["id"] and audit["action"] == "finance_entry_posted" and audit["metadata_json"] == metadata
+                and outbox["event_type"] == "finance_entry_posted" and outbox["aggregate_type"] == "finance_posting"
+                and outbox["aggregate_id"] == effect["id"] and outbox["payload"] == {**metadata, "audit_event_id": audit["id"]})
         entry = _one(capture, "finance_entries", id=effect["entry_id"])
         observed = sorted((row for row in capture.rows("finance_entry_lines") if row["entry_id"] == entry["id"]), key=lambda row: _minor(row["line_number"], positive=True))
         left = sum(_minor(row["debit_minor"]) for row in observed)

@@ -1,5 +1,21 @@
 # Execution State
 
+## Current actual M7 gate (2026-10-16, source6f81a58b)
+
+Whole M7 remains OPEN; the master matrix retains M7.7/M7.9 INCOMPLETE.
+Complete native149, source/phase/history/physical/FX owners, API/Studio and
+mandatory native/HTTPS CI wiring are integrated unpublished. Actual empty
+148→149→148→149 and retained installer replays pass22699f7d, preserving all16
+old function OIDs/ACLs/attributes and original downgrade bytes. An owned347-table
+catalog capture is retained and its temporary DB removed. Later identity-cycle
+gates fail closed on a PL/pgSQL binding, then compact-versus-captured monetary
+policy compatibility. The physical proof's coherent policy repair is underway.
+No actual monetary financial/HTTPS/restore acceptance is claimed. Cb0b0's raw91
+reader and B's source-bound bridge pass synthetic/component gates only. Failed
+originals remain external under `m7-monetary-native-20261016-v1-private`.
+Security has13 collected cases. Actual financial, security, populated upgrade,
+HTTPS/restore and final CI remain required. The older checkpoints are historical.
+
 ## Current M7 integration and recovered workspaces (2026-10-16)
 
 Accepted source remains375 below. Unpublished integration checkpoint

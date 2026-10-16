@@ -1,5 +1,18 @@
 # ReconForge Execution Evidence Log
 
+## Actual149 integration gate — 2026-10-16
+
+Owned empty migration roundtrip22699f7d passes one mandatory case/zero skips:
+`m7-monetary-native-20261016-v1-private/migration-alias22699.xml`.
+Actual347-table catalog b4f7bc8de48504375dd79ea41171f1e708580b82670b666ccb36e26b927e8412
+binds scope policies/nullable FX check; its owned DB was removed. Frozen ab0d340e
+failure receipt acd13194f4e73dec82d2d257dca935d3044a7eac83ec3f56152816ff5d0e175d
+and34787d3e failure526b10a9cdb9b6b72b6741aa458e93658763a9b82b2c8ffea19e98bdb6d6c35f
+each retain unchanged source, one failure and zero skips. No actual monetary
+financial acceptance follows. Originals are external under
+`F:/ReconForge_Evidence/recovery-20261014/m7-monetary-native-20261016-v1-private/`.
+Earlier375 acceptance and all failed cohorts remain unchanged.
+
 ## Unaccepted monetary M7 component custody — 2026-10-16
 
 Root42986123 authorization46 PASS preserves the exact old620 inventory digest

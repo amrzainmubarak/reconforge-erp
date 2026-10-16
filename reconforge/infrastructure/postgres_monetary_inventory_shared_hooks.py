@@ -22,6 +22,7 @@ from reconforge.infrastructure.postgres_customer_partial_return_zero_stock_hooks
 from reconforge.infrastructure.postgres_customer_partial_return_zero_stock_hooks import (
     UPGRADED_FUNCTIONS as ZERO_STOCK_FUNCTIONS,
 )
+from reconforge.infrastructure.postgres_inventory_quantity_source_ownership import UPGRADE_SQL as QUANTITY_SQL
 from reconforge.infrastructure.postgres_inventory_receipt_posting_schema import _HISTORY_SQL
 from reconforge.infrastructure.postgres_inventory_valuation_reversal import (
     POSTGRES_INVENTORY_VALUATION_REVERSAL_SCHEMA_SQL,
@@ -57,6 +58,7 @@ ORIGINAL_FUNCTIONS = {
     "it1_cost_snapshot": ROUNDING_TRANSFER_FUNCTIONS["it1_cost_snapshot"],
     "it1_cost_originals": ROUNDING_TRANSFER_FUNCTIONS["it1_cost_originals"],
     "it1_stock_origins": TRANSFER_FUNCTIONS["it1_stock_origins"],
+    "inventory_quantity_free_fifo": _definition("inventory_quantity_free_fifo", QUANTITY_SQL, "$quantity$"),
 }
 _SIGNATURES = {
     "inventory_cost_layer_guard": ("", "trigger", "v", (), True),
@@ -68,6 +70,7 @@ _SIGNATURES = {
     "it1_cost_snapshot": ("text,text,text,text,text", "jsonb", "s", ("t", "w", "o", "e", "i"), False),
     "it1_cost_originals": ("text,jsonb", "void", "s", ("t", "cost"), False),
     "it1_stock_origins": ("text,text,text,text,text", "void", "v", ("t", "w", "o", "e", "i"), False),
+    "inventory_quantity_free_fifo": ("text,text,text,text", "numeric", "s", ("t", "w", "e", "i"), False),
 }
 
 
@@ -150,6 +153,81 @@ _STOCK_ORIGINS = r""" IF EXISTS(SELECT 1 FROM reconforge.inventory_movements dis
   PERFORM reconforge.monetary_transfer_stock_origins(t,w,o,e,i);RETURN;
  END IF;
 """
+
+_ZERO_FIFO_QUANTITY = r""" -- Positive-valued backing above remains the original calculation. Only a
+ -- real zero residual enters this branch and its existing owner-read grants.
+ FOR zero_candidate IN SELECT to_jsonb(dispatch_layer) layer_json,dispatch_document.organization_id
+ FROM reconforge.inventory_cost_layers dispatch_layer
+ JOIN reconforge.inventory_valuation_lines dispatch_detail
+  ON(dispatch_detail.tenant_id,dispatch_detail.id)=(dispatch_layer.tenant_id,dispatch_layer.source_valuation_line_id)
+ JOIN reconforge.inventory_valuation_documents dispatch_document
+  ON(dispatch_document.tenant_id,dispatch_document.id)=(dispatch_detail.tenant_id,dispatch_detail.valuation_document_id)
+ WHERE dispatch_layer.tenant_id=t AND dispatch_layer.workspace_id=w AND dispatch_layer.legal_entity_id=e AND dispatch_layer.item_id=i
+ AND dispatch_layer.inventory_lot_id IS NULL AND dispatch_layer.remaining_quantity_scaled>0 AND dispatch_layer.remaining_value_minor=0
+ AND dispatch_document.status='Approved' AND dispatch_document.workspace_id=w AND dispatch_document.legal_entity_id=e
+ AND dispatch_detail.flow_direction='Inbound'
+ AND(dispatch_detail.item_id,dispatch_detail.uom_id,dispatch_detail.quantity_precision,dispatch_detail.inventory_lot_id)
+  IS NOT DISTINCT FROM(dispatch_layer.item_id,dispatch_layer.uom_id,dispatch_layer.quantity_precision,dispatch_layer.inventory_lot_id)
+ ORDER BY dispatch_layer.created_at,dispatch_layer.id LOOP
+  -- This is a relevance prefilter, never an ownership/authorization proof.
+  -- Ordinary zero residuals with no active restitution keep their old exclusion.
+  SELECT COALESCE(sum(retained.quantity_delta),0) INTO restitution_quantity FROM(
+   SELECT restored.direction::numeric*restored.quantity_scaled quantity_delta
+   FROM reconforge.customer_partial_return_restorations restored
+   JOIN reconforge.customer_partial_return_plans retained_plan
+    ON(retained_plan.tenant_id,retained_plan.id)=(restored.tenant_id,restored.plan_id)
+   JOIN reconforge.customer_partial_return_history retained_history
+    ON(retained_history.tenant_id,retained_history.plan_id)=(restored.tenant_id,restored.plan_id)
+   WHERE restored.tenant_id=t AND restored.cost_layer_id=zero_candidate.layer_json->>'id'
+   AND retained_plan.phase=2 AND retained_plan.operation IN('Return','ReverseReturn')
+   AND retained_plan.payload->>'allocation_policy'='remaining-original-v1'
+   UNION ALL
+   SELECT restored.direction::numeric*restored.quantity_scaled
+   FROM reconforge.customer_partial_return_monetary_restorations restored
+   JOIN reconforge.customer_partial_return_monetary_plans retained_plan
+    ON(retained_plan.tenant_id,retained_plan.id)=(restored.tenant_id,restored.plan_id)
+   JOIN reconforge.customer_partial_return_monetary_history retained_history
+    ON(retained_history.tenant_id,retained_history.partial_plan_id)=(restored.tenant_id,restored.plan_id)
+   WHERE restored.tenant_id=t AND restored.cost_layer_id=zero_candidate.layer_json->>'id'
+   AND retained_plan.phase=2 AND retained_plan.operation IN('Return','ReverseReturn')
+  ) retained;
+  IF restitution_quantity<=0 THEN CONTINUE;END IF;
+  IF quantity_cost IS NULL THEN
+   quantity_cost:=reconforge.it1_cost_snapshot(t,w,zero_candidate.organization_id,e,i);
+   PERFORM reconforge.it1_assert(quantity_cost->>'schema_version' IN('inventory-transfer-cost-v3','inventory-transfer-cost-v4'),
+    'Zero FIFO backing requires its explicit complete native restitution cost policy');
+   PERFORM reconforge.it1_cost_originals(t,quantity_cost);
+  END IF;
+  SELECT count(*),jsonb_agg(captured.value)->0 INTO quantity_members,quantity_source
+   FROM jsonb_array_elements(quantity_cost->'sources') captured(value)
+   WHERE captured.value#>>'{layer,id}'=zero_candidate.layer_json->>'id';
+  PERFORM reconforge.it1_assert(quantity_members=1 AND quantity_source->'layer'=zero_candidate.layer_json,
+   'Zero FIFO backing must equal its unique current approved native layer');
+  restitution_quantity:=0;
+  FOR quantity_correction IN SELECT value FROM jsonb_array_elements(quantity_source->'partial_return_corrections') LOOP
+   IF quantity_correction->>'allocation_policy'='remaining-original-v1' THEN
+    restitution_quantity:=restitution_quantity+(quantity_correction#>>'{restoration,direction}')::numeric
+     *(quantity_correction#>>'{restoration,quantity_scaled}')::numeric;
+   END IF;
+  END LOOP;
+  FOR quantity_correction IN SELECT value FROM jsonb_array_elements(COALESCE(quantity_source->'monetary_return_corrections','[]'::jsonb)) LOOP
+   restitution_quantity:=restitution_quantity+(quantity_correction#>>'{restoration,direction}')::numeric
+    *(quantity_correction#>>'{restoration,quantity_scaled}')::numeric;
+  END LOOP;
+  PERFORM reconforge.it1_assert(restitution_quantity>0,
+   'Zero FIFO backing requires active signed original restitution in that exact layer');
+  remaining:=remaining+(zero_candidate.layer_json->>'remaining_quantity_scaled')::numeric;
+ END LOOP;
+"""
+
+
+def _free_fifo() -> str:
+    value = ORIGINAL_FUNCTIONS["inventory_quantity_free_fifo"]
+    value = _replace(value, "native RECORD;", "native RECORD;zero_candidate RECORD;quantity_cost JSONB;quantity_source JSONB;\n quantity_correction JSONB;quantity_members BIGINT;restitution_quantity NUMERIC;")
+    value = _replace(value, " SELECT COALESCE(sum(g.quantity_scaled),0) INTO claimed", _ZERO_FIFO_QUANTITY + " SELECT COALESCE(sum(g.quantity_scaled),0) INTO claimed")
+    return value.replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1)
+
+
 UPGRADED_FUNCTIONS = {
     "inventory_cost_layer_guard": _cost(),
     "guard_inventory_receipt_layer_history_complete": _history(),
@@ -160,13 +238,14 @@ UPGRADED_FUNCTIONS = {
     "it1_cost_snapshot": _prepend("it1_cost_snapshot", _COST_SNAPSHOT),
     "it1_cost_originals": _prepend("it1_cost_originals", _COST_ORIGINALS),
     "it1_stock_origins": _prepend("it1_stock_origins", _STOCK_ORIGINS),
+    "inventory_quantity_free_fifo": _free_fifo(),
 }
 if set(ORIGINAL_FUNCTIONS) != set(_SIGNATURES) or set(UPGRADED_FUNCTIONS) != set(_SIGNATURES):
     raise ValueError("The finite physical dispatch inventory differs.")
 
 
 def preflight(*, upgraded: bool) -> str:
-    """Reject drift in all nine exact bodies and their execution attributes."""
+    """Reject drift in all ten exact bodies and their execution attributes."""
     functions = UPGRADED_FUNCTIONS if upgraded else ORIGINAL_FUNCTIONS
     checks = []
     for name, (arguments, returns, volatility, names, definer) in _SIGNATURES.items():

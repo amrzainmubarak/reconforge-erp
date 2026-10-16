@@ -60,7 +60,7 @@ def _zero_facts() -> str:
     value = _definition("customer_partial_return_zero_stock_facts", FACTS_SQL, "$cr148zs$")
     value = _replace(value, "customer_partial_return_zero_stock_facts(", "monetary_stock_zero_facts(")
     value = _replace(value, "LANGUAGE plpgsql STABLE", "LANGUAGE plpgsql VOLATILE")
-    value = _replace(value, "reconforge.customer_partial_return_zero_stock_plan(t,i)", "reconforge.monetary_stock_zero_plan(t,i)")
+    value = _replace(value, "reconforge.customer_partial_return_zero_stock_plan(t,i)", "reconforge.monetary_stock_physical_close(t,i)")
     return _replace(value, "'schema_version','stock-sales-restituted-cost-v1'", "'schema_version','stock-sales-monetary-restituted-cost-v1'")
 
 

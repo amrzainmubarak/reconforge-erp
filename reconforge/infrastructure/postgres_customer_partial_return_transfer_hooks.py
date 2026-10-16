@@ -254,6 +254,10 @@ DROP FUNCTION IF EXISTS reconforge.customer_partial_return_transfer_originals(TE
 
 def install_postgres_customer_partial_return_transfer_hooks(connection: Any) -> None:
     """Replay after original installers only when the CR2 owner is installed."""
+    from reconforge.infrastructure.postgres_monetary_installation import verify_monetary_installation_if_present
+
+    if verify_monetary_installation_if_present(connection):
+        return
     row = connection.execute("SELECT to_regclass('reconforge.customer_partial_return_restorations') owner_relation").fetchone()
     if row is None:
         raise RuntimeError("Native partial-return installation lookup failed")

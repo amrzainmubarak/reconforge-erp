@@ -496,6 +496,10 @@ def _new_helpers_preflight() -> str:
 
 def install_customer_partial_return_rounding(connection: Any) -> None:
     """Idempotent retained148 verifier; no legacy body is overwritten here."""
+    from reconforge.infrastructure.postgres_monetary_installation import verify_monetary_installation_if_present
+
+    if verify_monetary_installation_if_present(connection):
+        return
     exists = records(connection.execute("SELECT to_regprocedure('reconforge.customer_partial_return_rounding_version()') present"))[0]["present"]
     if exists is None:
         return

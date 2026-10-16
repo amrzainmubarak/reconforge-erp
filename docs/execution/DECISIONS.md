@@ -1,5 +1,19 @@
 # ReconForge Execution Decisions Log
 
+## Fixed monetary originals and safe retained installers (2026-10-16)
+
+ADR0862 fixes new Stock F/L source ownership, current credit-adjusted AR,
+component/tax/FIFO residual policy, no counterfeit zero journal and explicit
+closing/inverse provenance. Public STABLE reporting and VOLATILE native command
+validation have separate contracts. Preserve16 accepted function identities and
+all historical wire readers; verify149 before any old installer can overwrite
+its newer dispatch. New cost-v4 keeps signed legacy and monetary correction
+evidence. This is an implementation contract pending actual149 acceptance.
+After unexplained deletion of the four old worktree checkouts, resume on
+ordinary Git worktrees outside `.codex/worktrees`, preserving surviving refs,
+external exact patches and a verified incremental bundle. Do not prune or reset
+primary/main or relabel lost/reconstructed component evidence as native proof.
+
 ## Explicit zero-effect authority and retained empty entries (2026-10-15)
 
 Shared Money/authorization stays positive-only by default. Only the finite native

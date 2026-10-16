@@ -1,5 +1,5 @@
 schema_version: 2
-updated_at: "2026-10-15"
+updated_at: "2026-10-16"
 phase: "Enterprise ERP v1.0 — Functional Completion"
 active_sprint: "One-domain closure: M7 actual partial customer returns; then Advanced Manufacturing; no new fragmented milestones; comparative benchmarks deferred"
 completion_source_of_truth: "docs/execution/ENTERPRISE_COMPLETION_MASTER_MATRIX.md"

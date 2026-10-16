@@ -1,5 +1,29 @@
 # Execution State
 
+## Current M7 integration and recovered workspaces (2026-10-16)
+
+Accepted source remains375 below. Unpublished integration checkpoint
+`f1422636e461bf3049048ed9ab06a75992d45b11` includes fixed F/L Stock and partial
+owners, real versioned API/Studio/valuation paths, exact retained620-route proof,
+physical/transfer-cost-v4 components and independent raw91 reader stages.
+The updated authorization inventory passes46 cases; the independent reader
+passes194 pure cases on334be0fd. B377c component closurec682e89b records111 Python
+and105 frontend cases plus build/type checks. These are component results, not
+native149 or complete financial-cycle acceptance. Native cycle3, migration3 and
+security9 cases are collected; none has run on149. Core source/phase/immutable
+guards, complete149 exports, migration assembly and actual gates remain open.
+
+All four `.codex/worktrees/enterprise-m7-*-recovered` checkouts and their Git
+metadata disappeared during work; the cause is undetermined. Existing branch
+refs/commits survived. Work resumes under `F:/ReconForge_Worktrees/` in four
+ordinary Git worktrees. A recovered605 uncommitted lines from exact five original
+tool patches and committedba820986; C is reconstructing its five-test valuation
+addition. B had no uncommitted work. Root's installer WIP was retained. Verified
+incremental four-branch bundle9ca4bcbad4d5d35215fa0c129370fc9ae6184d666635520ffad2c09af351c20
+requires accepted375. Primary69951414, mainb61ea56b and both preexisting dirty
+schema-file SHA256 values remain unchanged. No native worker or partial149
+installation ran during recovery. Whole M7 remains OPEN; no new domain started.
+
 ## Completion first — one domain at a time (2026-10-15)
 
 Accepted bounded M7 source: `37518287126e0f630e726592dda8cc981faa2a96`.

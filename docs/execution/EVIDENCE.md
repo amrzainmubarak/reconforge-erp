@@ -1,5 +1,26 @@
 # ReconForge Execution Evidence Log
 
+## Unaccepted monetary M7 component custody — 2026-10-16
+
+Root42986123 authorization46 PASS preserves the exact old620 inventory digest
+9ef5a1c3f1289de6e1a85fbbaa42b784e1dfe95f17cec3c6ad060c7f67830dfe and
+the prevaluation646 digesta5a57e3066c068c0c7f2ad45a1b0fdf58ca5eb020be234fbc0ca9a5cf25622c9.
+Ccc6a1f9e194 pure reader cases also pass after exact integration334be0fd.
+B377c8342 external component closurec682e89b08098590840f170dc764951e6764bbcc08bc4246fa32021356a39c07
+binds111 Python/105 frontend tests and build/static checks. Native149, actual
+monetary HTTPS, raw91 financial success, populated restore and final CI remain
+unexecuted. Old375 financial acceptance remains bounded and unchanged.
+
+The worktree-loss receipt is retained privately under
+`worktree-loss-20261016-private/recovery-facts-v1.json` (SHA26bd4d2fb590a5ffcf5fa01ba3d43ea6f6faf709b8613fa028b1d52cfe672231).
+Verified four-branch incremental bundle SHA9ca4bcbad4d5d35215fa0c129370fc9ae6184d666635520ffad2c09af351c20
+preserves committed refs and requires375. A's recovered original/remapped patch
+custody under`m7-native-second-worktree-loss-20261016-v1-private` reconstructs605
+lines in one file from five exact original tool arguments; checkpointba820986,
+fileSHAd3198c97fca9cea5a5cd596b11efe8aa833dfa72c543b113b51f60fd6584f1ce.
+The deleted uncommitted C199 receipt is not recreated or reported as an extant
+original. A new source-bound qualification must cover the reconstructed source.
+
 ## Accepted M7 v1/v2 supported scope on frozen375 — 2026-10-15
 
 Source `37518287126e0f630e726592dda8cc981faa2a96` passes CI38771788999, attempt1,

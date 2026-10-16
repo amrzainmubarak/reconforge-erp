@@ -6,11 +6,13 @@ corrected source as an observed legacy envelope. Existing cost-v1/v2/v3 readers
 and original snapshots are unchanged. All new execution uses the caller.
 """
 
+import re
+
 from reconforge.infrastructure.postgres_customer_partial_return_transfer_hooks import (
     UPGRADED_FUNCTIONS as RETAINED_FUNCTIONS,
 )
 from reconforge.infrastructure.postgres_inventory_transfer_schema import OWNER_SQL
-from reconforge.infrastructure.postgres_monetary_stock_shared_hooks import _definition
+from reconforge.infrastructure.postgres_monetary_stock_shared_hooks import _body, _definition
 
 
 def _replace(value: str, old: str, new: str) -> str:
@@ -128,14 +130,77 @@ def _snapshot() -> str:
 
 
 def _quantity_snapshot() -> str:
-    """Keep complete cost evidence without re-adopting unrelated movements.
+    """Build and validate current cost evidence in one native invocation.
 
     Only the global FIFO backing checker calls this read helper. Actual IT1
     source birth/review and Stock admission retain the full adoption snapshot.
+    The complete original-reader predicates run against each fresh source;
+    expensive native proofs reuse only this invocation's actual return values.
     """
     value = _replace(_snapshot(), "CREATE FUNCTION reconforge.monetary_transfer_cost_snapshot(",
         "CREATE FUNCTION reconforge.monetary_quantity_cost_snapshot(")
-    return _replace(value, " PERFORM reconforge.monetary_transfer_stock_origins(t,w,o,e,i);\n", "")
+    value = _replace(value, " PERFORM reconforge.monetary_transfer_stock_origins(t,w,o,e,i);\n", "")
+    value = _replace(value, "AS $it1$\nDECLARE", "AS $it1$\n<<quantity_capture>>\nDECLARE")
+    # The unchanged reader's SQL projection uses an `entry` table alias.
+    # Keep the enclosing captured record disjoint before nesting that reader.
+    value = _replace(value, "entry RECORD;", "quantity_receipt_entry RECORD;")
+    value = _replace(value, "INTO entry FROM", "INTO quantity_receipt_entry FROM")
+    value = _replace(value, "to_jsonb(entry)", "to_jsonb(quantity_receipt_entry)")
+    value = re.sub(r"\bentry\.", "quantity_receipt_entry.", value)
+    value = _replace(value, "correction_count INTEGER:=0;", "correction_count INTEGER:=0;quantity_cost JSONB;\n quantity_receipt JSONB;quantity_zero JSONB;quantity_total NUMERIC;value_total NUMERIC;")
+    value = _replace(value, "  PERFORM reconforge.irp_assert_complete(t,p.id,TRUE);\n",
+        "  PERFORM reconforge.irp_assert_complete(t,p.id,TRUE);\n  quantity_receipt:=to_jsonb(p);\n")
+    value = _replace(value,
+        "  sources:=sources||jsonb_build_array(original);quantities:=quantities+layer.remaining_quantity_scaled;values_minor:=values_minor+layer.remaining_value_minor;",
+        """  quantity_zero:=original->'restituted_consumption_admissions';
+  quantity_cost:=jsonb_build_object('schema_version','inventory-transfer-cost-v4','monetary_policy',policy,
+   'remaining_quantity_scaled',layer.remaining_quantity_scaled,'remaining_value_minor',layer.remaining_value_minor,
+   'sources',jsonb_build_array(original));
+""" + _quantity_original_validation() + """  sources:=sources||jsonb_build_array(original);quantities:=quantities+layer.remaining_quantity_scaled;values_minor:=values_minor+layer.remaining_value_minor;""")
+    _, reader = _body(_originals())
+    envelope = reader[reader.index(" PERFORM reconforge.it1_assert(cost->>"):reader.index(" FOR original IN SELECT")]
+    totals = reader[reader.rindex(" PERFORM reconforge.it1_assert(quantity_total="):reader.rindex("END")]
+    result = """ RETURN jsonb_build_object('schema_version','inventory-transfer-cost-v4','monetary_policy',policy,
+  'remaining_quantity_scaled',quantities,'remaining_value_minor',values_minor,'sources',sources);"""
+    validated_result = "".join((""" quantity_cost:=jsonb_build_object('schema_version','inventory-transfer-cost-v4','monetary_policy',policy,
+  'remaining_quantity_scaled',quantities,'remaining_value_minor',values_minor,'sources',sources);
+""", envelope.replace("cost->", "quantity_cost->").replace("jsonb_object_keys(cost)", "jsonb_object_keys(quantity_cost)"), """ SELECT sum((captured.value#>>'{layer,remaining_quantity_scaled}')::numeric),
+  sum((captured.value#>>'{layer,remaining_value_minor}')::numeric) INTO quantity_total,value_total
+  FROM jsonb_array_elements(sources) captured(value);
+""", totals.replace("cost->", "quantity_cost->"), " RETURN quantity_cost;"))
+    return _replace(value, result, validated_result)
+
+
+def _quantity_original_validation() -> str:
+    """Retain the full reader over a source created by this same invocation.
+
+    No external cost JSON or admission flag reaches this block. The receipt
+    and correction/zero-consumption proofs above already ran on actual native
+    IDs. Keep current receipt, restoration, consumption and GL projection
+    re-reads; exact local proof values replace only their duplicate callbacks.
+    """
+    _, value = _body(_originals())
+    value = _replace(value, "DECLARE original JSONB;", "DECLARE cost JSONB:=quantity_capture.quantity_cost;original JSONB;")
+    value = _replace(value, "  PERFORM reconforge.irp_assert_complete(t,p.id,TRUE);", """  PERFORM reconforge.it1_assert(to_jsonb(p)=quantity_capture.quantity_receipt,
+   'Quantity receipt must equal the same freshly closed actual native owner');""")
+    for family, table, callback in (
+        ("corrections", "customer_partial_return_restorations", "customer_partial_return_transfer_correction_dispatch"),
+        ("monetary_corrections", "customer_partial_return_monetary_restorations", "monetary_transfer_correction"),
+    ):
+        call = "reconforge." + callback + "(t,correction#>>'{restoration,plan_id}',\n      (correction#>>'{restoration,position}')::integer)"
+        proof = """(SELECT quantity_verified.value FROM jsonb_array_elements(quantity_capture.@@FAMILY@@) quantity_verified(value)
+      WHERE(quantity_verified.value#>>'{restoration,plan_id}',quantity_verified.value#>>'{restoration,position}')
+       =(correction#>>'{restoration,plan_id}',correction#>>'{restoration,position}')
+      AND EXISTS(SELECT 1 FROM reconforge.@@TABLE@@ quantity_current
+       WHERE quantity_current.tenant_id=t AND quantity_current.plan_id=correction#>>'{restoration,plan_id}'
+       AND quantity_current.position=(correction#>>'{restoration,position}')::integer
+       AND to_jsonb(quantity_current)=quantity_verified.value->'restoration'))"""
+        value = _replace(value, call, proof.replace("@@FAMILY@@", family).replace("@@TABLE@@", table))
+    value = _replace(value, """(SELECT jsonb_agg(
+    reconforge.monetary_zero_consumption(t,consumed->>'id') ORDER BY ordinal)
+    FROM jsonb_array_elements(original->'consumptions') WITH ORDINALITY retained(consumed,ordinal) WHERE consumed->>'value_minor'='0')""",
+        "quantity_capture.quantity_zero")
+    return value.rstrip() + ";\n"
 
 
 _READ_CORRECTIONS = r"""  PERFORM reconforge.it1_assert(jsonb_typeof(original->'partial_return_corrections')='array'

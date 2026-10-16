@@ -155,12 +155,12 @@ def test_zero_fifo_source_proof_is_conditional_and_precedes_the_unchanged_global
     new_tables = body.index("FROM reconforge.customer_partial_return_monetary_restorations")
     ordinary_exclusion = body.index("IF restitution_quantity<=0 THEN CONTINUE;END IF;")
     snapshot = body.index("quantity_cost:=reconforge.monetary_quantity_cost_snapshot(")
-    originals = body.index("PERFORM reconforge.it1_cost_originals(t,quantity_cost)")
     current_layer = body.index("quantity_members=1 AND quantity_source->'layer'=zero_candidate.layer_json")
     signed = body.index("PERFORM reconforge.it1_assert(restitution_quantity>0,")
     add = body.index("remaining:=remaining+(zero_candidate.layer_json->>'remaining_quantity_scaled')::numeric;")
     claimed = body.index(" SELECT COALESCE(sum(g.quantity_scaled),0) INTO claimed")
-    assert loop < relevance < first_private < new_tables < ordinary_exclusion < snapshot < originals < current_layer < signed < add < claimed
+    assert loop < relevance < first_private < new_tables < ordinary_exclusion < snapshot < current_layer < signed < add < claimed
+    assert "PERFORM reconforge.it1_cost_originals(t,quantity_cost)" not in body
     assert "WHERE dispatch_consumption.tenant_id=dispatch_layer.tenant_id AND dispatch_consumption.cost_layer_id=dispatch_layer.id)" in body[relevance:first_private]
     assert "dispatch_layer.remaining_quantity_scaled>0 AND dispatch_layer.remaining_value_minor=0" in body[loop:new_tables]
     assert body.count("quantity_cost:=reconforge.monetary_quantity_cost_snapshot(") == 1
@@ -231,6 +231,8 @@ def test_cached_serializer_preserves_every_existing_native_check_and_retained_fu
                 for name, body in functions.items() if name not in {
                     "monetary_canonical", "monetary_digest", "monetary_retained_stock_source_close"}}
     previous = _without_unscoped_ar_gates(previous)
+    previous["monetary_quantity_cost_snapshot"] = previous["monetary_transfer_cost_snapshot"].replace(
+        " PERFORM reconforge.monetary_transfer_stock_origins(t,w,o,e,i);\n", "", 1)
     callback = previous["monetary_return_native_close"]
     start = callback.index("  -- These financial envelopes cannot mutate quantity inputs.")
     end = callback.index(" END LOOP;", start)
@@ -511,15 +513,64 @@ def test_complete_cost_proof_graph_exposes_both_old_cycles_and_retains_live_owne
     assert {"stock_sales_capacity", "inventory_quantity_check_capacity", "inventory_quantity_free_fifo"} <= _reachable(old_graph, "customer_partial_return_zero_consumption")
 
 
-def test_quantity_snapshot_omits_only_adoption_and_has_no_other_admission_callsite() -> None:
+def test_quantity_snapshot_keeps_every_capture_predicate_and_its_private_callsite() -> None:
     functions = _function_bodies(ROUNDING_SQL, NATIVE_FUNCTION_SQL, "\n".join(UPGRADED_FUNCTIONS.values()))
     full = functions["monetary_transfer_cost_snapshot"]
     quantity = functions["monetary_quantity_cost_snapshot"]
     adoption = " PERFORM reconforge.monetary_transfer_stock_origins(t,w,o,e,i);\n"
-    assert full.count(adoption) == 1 and quantity == full.replace(adoption, "", 1)
+    assert hashlib.sha256(full.encode()).hexdigest() == "5ec96b5109233ad8469a708bd7d3256af9bbef3850f6cb8f3b1b549b945a0e1f"
+    assert full.count(adoption) == 1
+    original_capture = quantity.replace("<<quantity_capture>>\n", "", 1).replace(
+        ";quantity_cost JSONB;\n quantity_receipt JSONB;quantity_zero JSONB;quantity_total NUMERIC;value_total NUMERIC;", ";", 1).replace(
+        "  quantity_receipt:=to_jsonb(p);\n", "", 1)
+    start = original_capture.index("  quantity_zero:=original->'restituted_consumption_admissions';")
+    end = original_capture.index("  sources:=sources||jsonb_build_array(original);", start)
+    original_capture = original_capture[:start] + original_capture[end:]
+    start = original_capture.rindex(" quantity_cost:=jsonb_build_object(")
+    end = original_capture.rindex("END")
+    original_return = full[full.index(" RETURN jsonb_build_object("):full.rindex("END")]
+    original_capture = (original_capture[:start] + original_return + original_capture[end:]).replace("quantity_receipt_entry", "entry")
+    assert original_capture == full.replace(adoption, "", 1)
     callers = {name for name, body in functions.items() if "reconforge.monetary_quantity_cost_snapshot(" in body}
     assert callers == {"inventory_quantity_free_fifo"}
-    assert "PERFORM reconforge.it1_cost_originals(t,quantity_cost);" in functions["inventory_quantity_free_fifo"]
+    assert "PERFORM reconforge.it1_cost_originals(t,quantity_cost);" not in functions["inventory_quantity_free_fifo"]
     for name in ("monetary_stock_zero_cost", "customer_partial_return_zero_stock_cost"):
         assert "cost:=reconforge.it1_cost_snapshot(t,w,o,e,i);" in functions[name]
     assert "DROP FUNCTION reconforge.monetary_quantity_cost_snapshot(TEXT,TEXT,TEXT,TEXT,TEXT);" in NATIVE_DOWNGRADE_SQL
+
+
+def test_quantity_internal_validation_preserves_the_entire_original_reader_with_actual_local_proofs() -> None:
+    functions = _function_bodies(NATIVE_FUNCTION_SQL)
+    quantity = functions["monetary_quantity_cost_snapshot"]
+    reader = functions["monetary_transfer_cost_originals"]
+    assert hashlib.sha256(reader.encode()).hexdigest() == "91290672be72cb02aa39490fbb905309ffdcb82728f86e212d0f60f15a13c2fd"
+    start = quantity.index("\nDECLARE cost JSONB:=quantity_capture.quantity_cost;")
+    end = quantity.index("  sources:=sources||jsonb_build_array(original);", start)
+    local = quantity[start:end].removesuffix(";\n") + " "
+    local = local.replace("DECLARE cost JSONB:=quantity_capture.quantity_cost;", "DECLARE ", 1)
+    local = local.replace("""  PERFORM reconforge.it1_assert(to_jsonb(p)=quantity_capture.quantity_receipt,
+   'Quantity receipt must equal the same freshly closed actual native owner');""", "  PERFORM reconforge.irp_assert_complete(t,p.id,TRUE);", 1)
+    for family, callback, table in (
+        ("corrections", "customer_partial_return_transfer_correction_dispatch", "customer_partial_return_restorations"),
+        ("monetary_corrections", "monetary_transfer_correction", "customer_partial_return_monetary_restorations"),
+    ):
+        pattern = r"\(SELECT quantity_verified\.value FROM jsonb_array_elements\(quantity_capture\." + family + r"\).*?quantity_verified\.value->'restoration'\)\)"
+        matches = re.findall(pattern, local, re.S)
+        assert len(matches) == 1 and "FROM reconforge." + table + " quantity_current" in matches[0]
+        assert "quantity_current.tenant_id=t AND quantity_current.plan_id=correction#>>'{restoration,plan_id}'" in matches[0]
+        assert "quantity_current.position=(correction#>>'{restoration,position}')::integer" in matches[0]
+        assert "to_jsonb(quantity_current)=quantity_verified.value->'restoration'" in matches[0]
+        local = local.replace(matches[0], "reconforge." + callback + "(t,correction#>>'{restoration,plan_id}',\n      (correction#>>'{restoration,position}')::integer)", 1)
+    zero = reader[reader.index("(SELECT jsonb_agg(\n    reconforge.monetary_zero_consumption("):reader.index(",\n    'Every zero captured consumption")]
+    local = local.replace("quantity_capture.quantity_zero", zero, 1)
+    assert local == reader
+    for callback in ("irp_assert_complete", "customer_partial_return_transfer_correction_dispatch", "monetary_transfer_correction", "monetary_zero_consumption"):
+        assert quantity.count("reconforge." + callback + "(") == 1
+        assert reader.count("reconforge." + callback + "(") == 1
+    assert quantity.index("PERFORM reconforge.irp_assert_complete(t,p.id,TRUE);") < quantity.index("quantity_receipt:=to_jsonb(p);") < start
+    assert quantity.index("quantity_zero:=original->'restituted_consumption_admissions';") < start
+    assert re.search(r"\bentry RECORD;", quantity[:start]) is None
+    envelope = reader[reader.index(" PERFORM reconforge.it1_assert(cost->>"):reader.index(" FOR original IN SELECT")]
+    assert envelope.replace("cost->", "quantity_cost->").replace("jsonb_object_keys(cost)", "jsonb_object_keys(quantity_cost)") in quantity[end:]
+    totals = reader[reader.rindex(" PERFORM reconforge.it1_assert(quantity_total="):reader.rindex("END")]
+    assert totals.replace("cost->", "quantity_cost->") in quantity[end:]

@@ -203,7 +203,8 @@ _ZERO_FIFO_QUANTITY = r""" -- Positive-valued backing above remains the original
    quantity_cost:=reconforge.monetary_quantity_cost_snapshot(t,w,zero_candidate.organization_id,e,i);
    PERFORM reconforge.it1_assert(quantity_cost->>'schema_version' IN('inventory-transfer-cost-v3','inventory-transfer-cost-v4'),
     'Zero FIFO backing requires its explicit complete native restitution cost policy');
-   PERFORM reconforge.it1_cost_originals(t,quantity_cost);
+   -- The quantity helper retains all original-reader checks over its fresh
+   -- internally built sources, with no caller-provided historical snapshot.
   END IF;
   SELECT count(*),jsonb_agg(captured.value)->0 INTO quantity_members,quantity_source
    FROM jsonb_array_elements(quantity_cost->'sources') captured(value)

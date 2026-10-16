@@ -174,6 +174,15 @@ END $rls$;
 """
 
 
+def install_postgres_inventory_valuation_reversal_schema(connection: Any) -> None:
+    """Install foundations without overwriting a current monetary owner."""
+    from reconforge.infrastructure.postgres_monetary_installation import verify_monetary_installation_if_present
+
+    if verify_monetary_installation_if_present(connection):
+        return
+    connection.execute(POSTGRES_INVENTORY_VALUATION_REVERSAL_SCHEMA_SQL)
+
+
 class PostgresInventoryValuationReversalError(RuntimeError):
     """Safe PostgreSQL valuation-reversal failure."""
 

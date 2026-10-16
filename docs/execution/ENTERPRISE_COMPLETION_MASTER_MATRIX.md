@@ -1,5 +1,6 @@
 # ReconForge Enterprise ERP v1.0 — completion source of truth
 
+Accepted bounded M7 v1/v2 source: `37518287126e0f630e726592dda8cc981faa2a96`.
 Audited integration predecessor: `5017eb943d8216f6bb1d2024623e2e2df5c0db49`, above accepted
 M6 `f0d90b2690e6e128516e2ba7da5958a0411fc4b4`. Date: 2026-10-15.
 This file governs remaining work. Earlier milestone matrices and original
@@ -7,6 +8,98 @@ receipts remain historical evidence; their broad headings do not close a domain.
 No capability is removed because implementation or external acceptance is hard.
 
 **Current closure: M7 customer partial returns. Major-domain WIP limit: one.**
+**M7 final closure mode:** M7.7 and M7.9 remain `INCOMPLETE`; requirements are
+frozen.
+
+**Current closure checkpoint (2026-10-16):** remote Draft140 is
+`63f74155d8225812482a3c88da239cd545deb6bf`. Its five witnessed CI failures are
+four required HTTPS cases and one historical empty-rollback fixture. All eight
+monetary native shards, Docker, CodeQL and exact-head manual Security pass;
+whole-CI completion and M7 acceptance are not inferred. Actual native zero
+restitution/resale/return/forward-and-inverse transfer passes1/0skip248.031s;
+the19-retained-function149 migration passes5/0skip106.152s. Current independent
+raw91 qualification derives5effects/12lines/Dr=Cr233, identical-I/-I-O proofs
+and3 tamper refusals. Its retained launcher-path metadata error has a separate
+trusted correction; the original refusal and originals are not rewritten.
+The escaped-envelope repair passes snapshot reading, but identity/foreign now
+refuse the unchanged-business observation. A bounded actual all91-table check
+proves an authorized balance GET changes only version in the two quantity
+coordination rows; every other table remains byte-identical. This is a real
+read-side effect, not permission to omit those rows from evidence. Two exact
+read paths are being corrected to the existing full source proof; all command
+and physical-write live-capacity guards remain. The old fixture is corrected
+in local81519d64 and its same actual failing case passes1/0skip48.873s.
+Legacy zero/restituted HTTPS still exceed15s; a reviewed internal quantity-proof
+consolidation retains every original predicate and current-row reread while
+removing duplicate native callbacks within one invocation. Actual operating
+gates, final-source HTTPS/347-table restore and coherent CI remain required.
+No timeout, financial control, observer equality or frozen scope is relaxed.
+
+**Retained0d5 checkpoint:** remote Draft140 was
+`0d5a7d2a23be230ad54e9888c33940804aa54c1c`, whose final CI is **75 success /
+4 failure / 79 jobs**, with no skipped/cancelled job. The four failures are
+required HTTPS cases: legacy zero/restituted POST waits exceed15s without a
+received HTTP outcome; monetary identity/foreign captures refuse at the
+escaped-envelope size guard after the original4MiB row-content check passes.
+These are two finite internal closure defects, not a new functional scope.
+Local reader-only integration `00c3ce16` corrects genuine IRP event ownership.
+Actual0d5 native zero-reuse/return/forward-and-inverse-transfer passes1/0skip
+403.578s; the three historical compatibility cases pass3/0skip103.825s;
+current149 migration with18 retained functions passes5/0skip101.405s. Their
+source snapshots, ordinary role, bounded controllers and owned cleanup pass.
+Independent raw6 qualification uses native0d5 and corrected reader87adc29:
+-I/-I-O proof bytes agree; three propagated tampers refuse; six captures/91
+tables derive5 effects/12 lines/Dr=Cr233. Original failed-reader evidence remains.
+All eight hosted native shards pass; official manual Security5/5, Docker and
+CodeQL pass, while whole M7 remains `INCOMPLETE`. A bounded legacy financial
+callback repair and an explicitly derived JSON-envelope budget are under
+review. Required next: affected native/migration/security gates, actual HTTPS
+and347-table restore, then coherent final-head CI/security/image acceptance.
+No optional scenario, new milestone or comparative benchmark is added.
+
+**Retained earlier candidates:** the chronology below describes each original
+source and does not override the latest checkpoint or relabel any failure.
+
+Actual0d2a zero-reuse90.431s fails at a dispatch alias/RECORD collision; its
+limited alias repair succeeds on that path in6aeffb13, whose194.168s attempt
+instead refuses IT1 capacity because the shared quantity sum excludes genuine
+restored Q1/V0 stock. The subsequent3e834c3c attempt fails100.848s on a witnessed
+source-proof/current-capacity recursion; its source peer conclusion is withdrawn.
+All failures are retained. Source-proof separation, the same-case six-stage proof
+and18-function migration roundtrip remain required, including the existing v3
+zero-consumption fallback's exact profile/DOWN. Migration5/fb5c and selected
+security6/cd3c pass; neither replaces coherent final acceptance. Published02b3
+CI is a retained terminal failure:56 success/23 failure/79 jobs. No optional
+scenario, additional milestone or comparative-performance work is added.
+
+Published15a1149d removes the witnessed stack cycle but the same required case
+fails127.946s at SQL30s. Its separate25.396s post diagnostic isolates repeated
+all-physical adoption during quantity backing; it is not cycle acceptance. The
+bounded quantity-only cost-proof correction and final native/HTTPS/CI gates
+remain open. Full transfer/Stock admission, financial source ownership and
+global quantity claims retain their existing checks.
+
+The c40c4e15 complete case passes the first return and real zero-cost resale,
+then fails at the resale Return's SQL30s deferred closure (209.619s total).
+Its separately retained second-post diagnostic succeeds32.577s, including
+30.273s deferred work; this is neither that full-case acceptance nor a speed
+comparison. It records224631 recursive canonical-node calls. The bounded
+closure repair preserves every native check and digest byte while using cached
+recursive queries only in new149 functions. Old IRP functions stay unchanged.
+Actual business,18-function migration, HTTPS/restore and final CI remain open.
+
+The26e9-v8 whole native case completes every business assertion (both returns,
+zero-cost resale, forward/inverse IT1, blocked old inverse and cancellation),
+but its284.248s run fails at final raw-packet encoding: the posting serializer's
+2MiB budget was incorrectly reused for the declared64MiB evidence packet.
+The producer-only correction keeps financial limits/readers unchanged and
+enforces the existing4/64MiB custody bounds, including the final newline.
+The preceding26e9-v7 attempt is a separate9.681s custody-directory setup refusal.
+Neither produces an accepted raw6 packet. Published15a CI is terminal69 success/
+10 failure/79 jobs; its originals remain retained. Source fixes do not accept
+those old runs. Required final native/oracle, legacy, migration, HTTPS/restore,
+security/concurrency and exact-head CI gates remain open.
+
 Next: Advanced Manufacturing & Supply Chain, then Global Finance, HCM/Payroll,
 CRM/Sales/Projects/Services, Enterprise Operations/Integration, Enterprise AI.
 The team moves together only after the current domain satisfies every applicable
@@ -53,6 +146,28 @@ Historical evidence rows record their cited source, not current pending work.
 
 ## Capability closure matrix
 
+Final bounded v1/v2 acceptance is fixed at `37518287126e0f630e726592dda8cc981faa2a96`:
+[CI38771788999](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38771788999)
+passes74/74 jobs, attempt1, no failed/cancelled/skipped jobs. Native M7 executes60
+cases in7 commands with zero critical skips; five actual partial-return browser
+jobs execute5 first-attempt cases, and the retained CR1 job executes3 more. All
+six verify populated340-table restore and three tamper refusals each. Python3.11/3.12 each execute8408 PASS and663 inherited
+generic skips; those skips do not replace the mandatory native lanes. Docker,
+CodeQL and manual image/security5/5 pass. Independent custody closures are native
+e9a7aacb, browser4177b945, Python/package32b3c894 and image68ef10fb. Joined closure
+08b2463ac062502131d626afefb3be6a560f1d4ebcd8bb04beb3d1a3d91f178d binds
+171 required files/14458907 bytes and retains all41 artifact IDs/digests; it does
+not claim every legacy ZIP was downloaded. Earlier raw
+financial oracles retain their exact component heads; no old failure is relabeled.
+
+**Applicability of VERIFIED COMPLETE M7 rows:** only the already-fixed zero-tax,
+functional-currency, untracked base-UOM v1/v2 contract. Independent review confirms
+M7.1–6 and M7.8 meet their unchanged bounded closure criteria. M7.7 tax/FX remains
+a mandatory internal functional gap; M7.9 and the whole M7 remain INCOMPLETE.
+The same team is integrating that dependency in Draft140 and separate worktrees.
+This accepts no country pack, entire major domain, production qualification or
+new comparable-performance claim.
+
 Latest source-qualified M7 gates: nativec70 settlement/cash race2 PASS verifies
 invoice, exposure and current/overdue aging at all seven stages; isolated79-table
 proofs derive9/18/205000 and9/19/221000, closure813f8f56. Actual713 ordinary/refund
@@ -64,15 +179,17 @@ independent reader derives9 TOTAL/18/433 from all four79-table captures, closure
 
 The cdd hosted CI is terminal unaccepted: two Python jobs fail one malformed
 lstat fixture; one native shard fails two obsolete78-table helper assertions;
-aggregate fails closed. One fourth-cycle browser job is cancelled at25 minutes
-during Studio build, before HTTPS. Bounded original-log retrieval failed; the
-exact composite subcommand and cause remain unknown (receipt bf9c3e91). Narrow
+aggregate fails closed. One fourth-cycle browser job records25 minutes of total
+job metadata; its official annotation proves the20-minute execution ceiling was
+exceeded during Studio build, before HTTPS. Bounded original-log retrieval
+failed; the exact npm/build/Playwright subcommand and underlying stall cause
+remain unknown. Supplemental receipt216a1222 retains prior qualificationbf9c3e91. Narrow
 stat/79-table fixes have affected actual successes,
 without rewriting that failed run. Gitleaks tree false positive and omitted ADR
 packaging are repaired with unchanged scanner policy and an actual package gate.
-New cohesive CI is still required. All M7 rows remain INCOMPLETE; M7.7's original
-tax/FX contract remains a functional dependency, not an external approval or a
-removed requirement. Major-domain WIP remains M7 only.
+The subsequent exact375 cohesive CI passes74/74. M7.7's original tax/FX contract
+remains a functional dependency, not an external approval or a removed
+requirement. Major-domain WIP remains M7 only.
 
 Historical execution sequences, failed cohorts, corrected assertions and their
 original source-bound receipts remain in [EVIDENCE.md](EVIDENCE.md) and
@@ -89,15 +206,15 @@ Root owns architecture/shared migrations/integration. They all work on M7 now.
 
 | ID / capability | Present | Status | DB→Studio | Integration | Independent proof | Security/concurrency/restore | Head / evidence | Missing cases | Dependencies / owner | Final closure criterion (plus F/E/I/S/R/U/C/P) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| M7.1 Original sale/FIFO provenance | native v1 owner executed | INCOMPLETE | actual5017 DB→Studio v1 cycle | original stock, invoice, receipt/effect links and immutable captured initial collection | independent original5017 posted/restore oracle | actual5017 whole18 SQL/security and populated339-table restore pass | 5017eb94 / current gate | final cohesive CI and original evidence reconciliation | original sale membership; A/C | Actual original rows bind every returned portion and its cost, without repricing or changing history. |
-| M7.2 Repeated partial return and credit | native v1 commands executed | INCOMPLETE | actual5017 bilingual repeated partial-return Studio cycle | existing FIFO/AR/GL with immutable correction history | actual12+3 of15 units; independent17-effect/35-line385000 proof | actual5017 whole18 security and full lost-ACK/restore cycle pass | 5017eb94 / current gate | final cohesive CI and original evidence reconciliation | native correction history; A/B/C | Two partial returns exhaust eligible delivery exactly; excess/replay/forged source cannot create effects. |
-| M7.3 FIFO restitution / COGS / physical receipt | additive v1 restoration executed | INCOMPLETE | actual5017 native/Studio/restore path | original layers and source-owned GL corrections; CR1 history retained | original16000+6000 restitution; actual373 zero-cost resale5 TOTAL/10/203 and mixed5cdb9 TOTAL/18/433 independently verified | actual5017 transfer/security/HTTPS/restore pass; later consumption blocks reversal | 5017eb94 / current gate | final cohesive CI and original evidence reconciliation | existing layer equations and native receipt closure; Root/A/C | Partial receipt restores exact original consumed quantity/value; original layers and full-inverse uniqueness remain valid. |
-| M7.4 AR settlement and later collections | native owner and AR read models executed | INCOMPLETE | nativec70 reports; actual713 bilingual Studio aging/HTTPS/restore | current residual, chronological collection events and economic status | independent79-table split9/18/205000 and cash-race9/19/221000; actual713 AR reads2000/0 | actual two-edge queue, committed residual recheck and full79 overcap rollback; new713 HTTPS/restore/RLS pass | c70bc2f4;713e1bf8 / scoped original receipts | final cohesive CI and original evidence reconciliation | immutable economic history and prefix caps; Root/A/B/C | After credit only true outstanding is collectable; later returns may create a genuine refundable liability. |
-| M7.5 Partial customer refunds | native v1 owner executed | INCOMPLETE | actual5017 native/API/Studio refund/reverse/replay journey | original Cash/liability/GL | actual3000+7000/reverse7000/repost7000; independent final cash/liability conservation | actual5017 forged-parent/cross-source native23514+full rollback, whole18 and restore pass | 5017eb94 / current gate | final cohesive CI and original evidence reconciliation | M7.2–4; A/B/C | Paid customer receives several governed refunds whose sum never exceeds earned refund entitlement. |
-| M7.6 Exact fractional quantities/rounding | v1/v2 remainder, zero and mixed reuse executed | INCOMPLETE | all four v2 HTTPS cycles and713 Studio AR aging/restore pass on recorded heads | existing source HALF_UP pricing; versioned remaining revenue/FIFO policy under ADR0861 | v1 originals retained; zero cdd4 NEW/8/4, mixed5cdb9 TOTAL/18/433, ordinary7136 NEW/12/4001 and refund7138 NEW/17/81000 independently verified separately | native zero/SQL gates, mixed original captures, four actual v2 HTTPS/populated restores and strict immutable-prefix proofs | 5017eb94;cdd5f739;5cdb89c1;713e1bf8 / original receipts | final cohesive CI and original evidence reconciliation | quantity/currency contract; A/B/C/Root | Fractional source and returned quantities conserve cumulative cost/revenue under the declared rounding rule. |
-| M7.7 Tax/foreign-currency return contracts | other engines exist | INCOMPLETE | no connected partial cycle | FX/tax foundations only | no partial-return tax/FX proof | no connected proof | 0b7e3114 / M7-source | original tax reversal, FX settlement and adjustments, policy capture | original taxable/foreign sale owner compatibility; Root/A/C | Original supported foreign/taxed sale returns produce independently verified tax, FX, AR and cost effects; unsupported cases refuse explicitly. |
-| M7.8 Commands/cancellation/reversals | native v1 lifecycle executed | INCOMPLETE | actual5017 lost-response/reverse/repost Studio cycle | native Finance reversals, immutable ACK and current authority | actual cancellation, reversal, replay/caps and three-human SoD | actual whole18 including withdrawal-after-wait; independent76 business byte equality and complete audit-chain extensions | 5017eb94 / current gate | final cohesive CI and original evidence reconciliation | M7 native owner and shared guards; A/B/C | Cancel/reverse/retry every supported phase without double inventory or GL effect, including permission withdrawal while waiting. |
-| M7.9 Actual user journey and final acceptance | v1 and all four v2 actual cycles executed | INCOMPLETE | v1 and all four v2 bilingual HTTPS/Axe/RTL/replay cycles;713 AR aging integrated | native API/Studio and original-source wiring | v1 independent17/35/385000; separate v2 ordinary/refund/zero/resale and mixed financial proofs | actual340-table v2 restores, exact79 financial comparisons and three tampers per run; hosted final acceptance remains open | 5017eb94;cdd5f739;5cdb89c1;713e1bf8 / scoped originals | final cohesive CI, original evidence reconciliation and remaining M7.7 dependency | M7.1–8; B/C/Root | Browser users prepare, independently review/post, settle/refund and inspect source evidence through actual HTTPS; restore reproduces all effects. |
+| M7.1 Original sale/FIFO provenance | native v1 owner executed | VERIFIED COMPLETE | actual5017 DB→Studio v1 cycle | original stock, invoice, receipt/effect links and immutable captured initial collection | independent original5017 posted/restore oracle | actual5017 whole18 SQL/security and populated339-table restore pass | 37518287 / final CI74/74; source-qualified originals above | None within the fixed zero-tax/functional-currency v1/v2 scope; mandatory tax/FX remains M7.7 | original sale membership; A/C | Actual original rows bind every returned portion and its cost, without repricing or changing history. |
+| M7.2 Repeated partial return and credit | native v1 commands executed | VERIFIED COMPLETE | actual5017 bilingual repeated partial-return Studio cycle | existing FIFO/AR/GL with immutable correction history | actual12+3 of15 units; independent17-effect/35-line385000 proof | actual5017 whole18 security and full lost-ACK/restore cycle pass | 37518287 / final CI74/74; source-qualified originals above | None within the fixed zero-tax/functional-currency v1/v2 scope; mandatory tax/FX remains M7.7 | native correction history; A/B/C | Two partial returns exhaust eligible delivery exactly; excess/replay/forged source cannot create effects. |
+| M7.3 FIFO restitution / COGS / physical receipt | additive v1 restoration executed | VERIFIED COMPLETE | actual5017 native/Studio/restore path | original layers and source-owned GL corrections; CR1 history retained | original16000+6000 restitution; actual373 zero-cost resale5 TOTAL/10/203 and mixed5cdb9 TOTAL/18/433 independently verified | actual5017 transfer/security/HTTPS/restore pass; later consumption blocks reversal | 37518287 / final CI74/74; source-qualified originals above | None within the fixed zero-tax/functional-currency v1/v2 scope; mandatory tax/FX remains M7.7 | existing layer equations and native receipt closure; Root/A/C | Partial receipt restores exact original consumed quantity/value; original layers and full-inverse uniqueness remain valid. |
+| M7.4 AR settlement and later collections | native owner and AR read models executed | VERIFIED COMPLETE | nativec70 reports; actual713 bilingual Studio aging/HTTPS/restore | current residual, chronological collection events and economic status | independent79-table split9/18/205000 and cash-race9/19/221000; actual713 AR reads2000/0 | actual two-edge queue, committed residual recheck and full79 overcap rollback; new713 HTTPS/restore/RLS pass | 37518287 / final CI74/74; source-qualified originals above | None within the fixed zero-tax/functional-currency v1/v2 scope; mandatory tax/FX remains M7.7 | immutable economic history and prefix caps; Root/A/B/C | After credit only true outstanding is collectable; later returns may create a genuine refundable liability. |
+| M7.5 Partial customer refunds | native v1 owner executed | VERIFIED COMPLETE | actual5017 native/API/Studio refund/reverse/replay journey | original Cash/liability/GL | actual3000+7000/reverse7000/repost7000; independent final cash/liability conservation | actual5017 forged-parent/cross-source native23514+full rollback, whole18 and restore pass | 37518287 / final CI74/74; source-qualified originals above | None within the fixed zero-tax/functional-currency v1/v2 scope; mandatory tax/FX remains M7.7 | M7.2–4; A/B/C | Paid customer receives several governed refunds whose sum never exceeds earned refund entitlement. |
+| M7.6 Exact fractional quantities/rounding | v1/v2 remainder, zero and mixed reuse executed | VERIFIED COMPLETE | all four v2 HTTPS cycles and713 Studio AR aging/restore pass on recorded heads | existing source HALF_UP pricing; versioned remaining revenue/FIFO policy under ADR0861 | v1 originals retained; zero cdd4 NEW/8/4, mixed5cdb9 TOTAL/18/433, ordinary7136 NEW/12/4001 and refund7138 NEW/17/81000 independently verified separately | native zero/SQL gates, mixed original captures, four actual v2 HTTPS/populated restores and strict immutable-prefix proofs | 37518287 / final CI74/74; source-qualified originals above | None within the fixed zero-tax/functional-currency v1/v2 scope; mandatory tax/FX remains M7.7 | quantity/currency contract; A/B/C/Root | Fractional source and returned quantities conserve cumulative cost/revenue under the declared rounding rule. |
+| M7.7 Tax/foreign-currency return contracts | fixed-source Stock/CR3, API, Studio and native149 implemented; integration unaccepted | INCOMPLETE | actual02b3 identity and fractional0.1 cycles pass; c14a zero-functional collection passes; actual5982 foreign full cycle passes1/0skip411.655s; HTTPS pending | existing FIFO, AR, Cash, FX and FinancePosting; seven additive relations | independent component custody cfad773e/5a1df580; actual foreign pass retains source/cleanup proof; full chronological actual raw91 still required | actual3d7 roundtrip plus ordinary DDL-owner refusal2/0skip63.407s, peer61908f13; final security17, populated upgrade/restore and fixed legacy gates open | Draft140 above accepted139/375; source02b3 foreign509.042s SQL30s and hosted Security/legacy/browser failures retained; coherent repaired head awaits acceptance | credited-basis valuation/inverse; security/restore; populated148 plus explicit new-table ACL prerequisites; bounded exact-command Studio retry; final coherent CI | original taxable/foreign sale owner compatibility; Root/A/C | Original supported foreign/taxed sale returns produce independently verified tax, FX, AR and cost effects; unsupported cases refuse explicitly. |
+| M7.8 Commands/cancellation/reversals | native v1 lifecycle executed | VERIFIED COMPLETE | actual5017 lost-response/reverse/repost Studio cycle | native Finance reversals, immutable ACK and current authority | actual cancellation, reversal, replay/caps and three-human SoD | actual whole18 including withdrawal-after-wait; independent76 business byte equality and complete audit-chain extensions | 37518287 / final CI74/74; source-qualified originals above | None within the fixed zero-tax/functional-currency v1/v2 scope; mandatory tax/FX remains M7.7 | M7 native owner and shared guards; A/B/C | Cancel/reverse/retry every supported phase without double inventory or GL effect, including permission withdrawal while waiting. |
+| M7.9 Actual user journey and final acceptance | v1 and all four v2 actual cycles executed | INCOMPLETE | v1 and all four v2 bilingual HTTPS/Axe/RTL/replay cycles;713 AR aging integrated | native API/Studio and original-source wiring | v1 independent17/35/385000; separate v2 ordinary/refund/zero/resale and mixed financial proofs | exact375 five partial browser jobs/5 cases plus CR1/3 cases, populated340-table restores and three tampers each; CI74/74 | 37518287 / final source and retained component originals | mandatory M7.7 tax/FX original-to-return integration and its own final acceptance | M7.1–8; B/C/Root | Browser users prepare, independently review/post, settle/refund and inspect source evidence through actual HTTPS; restore reproduces all effects. |
 | D1.1 Advanced BOM / engineering revisions / UOM | bounded BOM | INCOMPLETE | bounded | materials/GL | M1 bounded | M1 bounded | M1 | engineering change lifecycle, substitutions, cross-UOM and effectivity | existing BOM/quantity registry; A/B/C after M7 | Released revisions and exact unit conversions drive approved orders while old production retains its original revision. |
 | D1.2 Routings / work centers | foundations | INCOMPLETE | partial | production only | bounded route/cost proof | bounded | M1/M2 | operations, center calendars, resource eligibility | original production owner | Approved routing operations select lawful centers and feed execution/cost. |
 | D1.3 MPS / demand planning | partial demand source | INCOMPLETE | partial | supply plan | bounded shortage proof | bounded | M2 | time buckets, demand ownership, MPS versions | sales/demand and manufacturing source | Customer demand or an approved demand plan creates a reproducible executable master schedule. |

@@ -1,11 +1,241 @@
 # ReconForge Execution Evidence Log
 
-Cancellation qualification `bf9c3e91183f9f4cfcd32d75b118cca0dcc8450dedffc5b50085024efe98e262`
-(7209 bytes) preserves official cdd job116479467387 metadata: Studio composite
-build active, HTTPS never started, total25 minutes. Direct logs return404;
-bounded full-run ZIP transfers remain incomplete. The exact npm/build/Playwright
-subcommand and cancellation cause are unknown. No timeout, assertion or scanner
-policy was relaxed, and no hosted product success is inferred.
+## M7 exact63 and bounded closure diagnoses — 2026-10-16
+
+- Actual native zero-reuse63f7-v10 passes1/0skip248.031s and current migration
+  five-63f7-v2 passes5/0skip106.152s; source/driver/Job/owned cleanup pass.
+  Independent `independent-zero-lineage-63f7-v10-raw91-v2-private/qualification-closure.json`
+  SHA`2ad363c817c11af8587b84a839c64457c79d56eac51450883e29efc3c19fc987`
+  binds6captures/91tables/5effects/12lines/Dr=Cr233, equal-I/-I-O and3 propagated
+  tamper refusals. Original launcher-path mismatch/refusal is retained and the
+  separate Root correction SHA`b74df8fd25ffcace74f713daef768a927c955777daeb2aa4ebf459ea66dbd197`
+  explicitly records the custody limit; no original was rewritten.
+- `actual-monetary-balance-diff-63f7-v1.json`
+  SHA`66d660378f3bccea8451d2e6ff44d4125c35b6b3d89e91f9196beca7562f4b08`
+  records actual authorized foreign-source balance GET: only version in the
+  same two inventory_quantity_claim_gates rows changes; all other90 tables
+  remain exact. Raw private SHA`275fc943fd4bbd82f6e6f4676e3ab5ca0bb1c7940544f21b07b05963fabfbbc2`.
+  Diagnostic1PASS/0skip39.984s; controller600/SQL30/source/driver/Job/cleanup pass.
+  This proves a read-side effect, not the hidden HTTPS predicate or M7 closure.
+- Root81519d64 integrates fixture-only95ac4f06. The same actual historical
+  customer rollback/populated-refusal case passes1/0skip48.873s under the
+  retained finite legacy controller. Its original63 failure remains negative.
+- Exact63 manual Security independent closure
+  `m7-monetary-hosted-63f74155-v1-private/manual-security-independent-v1-private/qualification-closure.json`
+  SHA`25df4394a8375e2e4ee67622c7d89c1c715eeb6bcf05afb5ab881a4edda0ae3a`:
+  official5/5,0Critical/High,9Medium/1Negligible; image/SBOM/Grype hashes match,
+  Gitleaks history/tree empty,65/68 package license metadata, no legal claim.
+  Four exact HTTPS first-cause artifacts remain negative; triage receipt
+  SHA`ef4596c22ff5845e7071664f096f4448b020505d1d8f8a59124823b7f8c5901c`.
+  These components do not close M7; current-head native/HTTPS/restore/CI gates remain.
+
+## M7 actual0d5 closure components and retained final blockers — 2026-10-16
+
+- `m7-monetary-native-20261016-v1-private/root-native-closure-components-0d5a-v1.json`
+  SHA`b685924fa5e0f10880b6635b87de4c95018eaf39c89cae428b9425008d5cafe5`
+  binds the actual zero-reuse1PASS403.578s, legacy3PASS103.825s and current149
+  migration5PASS101.405s, all0skip, source unchanged and owned cleanup successful.
+- Independent raw6 closure `independent-zero-lineage-0d5a-v9-raw91-v2-private/qualification-closure.json`
+  SHA`b6f425dc2366169ac53507e73329e2c42b9b4c9c951319dd976025c4e4d2066f`
+  binds native0d5, reader87adc29, rawSHA`5386fb223dbf77b1db9a2c2243c264f5f4a0fc5f649f7e58e60518348bfe936d`,
+  equal isolated-I/-I-O proofs and3 propagated-tamper refusals:6captures/91tables,
+  2sources/2Returns/2transfers,5effects/12lines/Dr=Cr233. Original0c5 reader refusal
+  is retained; genuine receipt events are independently bound to all3 IRP pairs.
+- Official0d5 terminal custody `m7-monetary-hosted-0d5a7d2a-v1-private/official-0d5-terminal-custody-v1.json`
+  SHA`71ce5dbab97cbd23c8806aa2fe84209112ad6cb3e52948cd0e7db64803fbc5b2`:
+  CI79=75success/4failure/no skips/cancels; all8 native jobs succeed. Seven native
+  logs are complete; migration transport truncations remain explicit despite its
+  official success and observed5/0 mandatory line. Manual Security38872831671
+  succeeds5/5/0skip with0Critical/High,9Medium/1Negligible; Docker/CodeQL pass.
+- Exact real legacy-v2 diagnostic SHA`5dd12359ca6a35f97be324c80a2dae5271f9429514488aaaf2d0412f6475983e`
+  records25.407103s total,22.817992s deferred, full source/owned cleanup unchanged.
+  It establishes the operating blocker, not a comparative benchmark result.
+- Four required HTTPS failures remain negative: zero/restituted request waits
+  at15s without an HTTP outcome, and identity/foreign raw capture decoding at
+  the duplicated escaped-envelope4MiB guard. A full reconstructed1297-byte
+  traceback matches original SHA`dbd3987b23860fddf032cf1fd053fddfa05491a1c2e9f2031e1f64a32104147c`.
+  Corrections preserve all financial checks and original-content limits. None
+  of these components closes M7 before coherent final-source acceptance.
+- Reader/root commits are recoverable outside worktrees in verified bundle
+  `m7-reader-owned-irp-87adc29c-integration-00c3ce16.bundle`,
+  SHA`577c1dafc61897fdbc438b8d5c4edccd9d8930bccb66db90dfe8b4e275b63e6e`.
+
+## M7 final closure inputs — 2026-10-16
+
+Actual15a1149d same-case1FAIL/0skip127.946s records QueryCanceled at SQL30s;
+negative9a3003822d4e2f64b53c2cde238a56f603fbf694648309052feefce1eb6e268e
+binds unchanged4450 source files, executed launcher and successful owned cleanup.
+No raw6 packet exists. A separate actual first-post diagnostic at the same head
+passes25.3956597s: post1.4610361s, exact replay0.3130779s, deferred flush23.3611514s.
+PG counters show15 cost snapshots and15 all-physical adoption calls; nested
+inclusive timings must not be added. Driver retains actor30s/five false flags,
+source/cleanup true; diagnostic closureef4958390353bdb82d7a3be1d2d9c1d79886f9354cda441b1d7a35b625b13e2d
+does not establish native-cycle financial acceptance or a comparative speed gain.
+
+Actual3e834c3c same-case rerun1FAIL/0skip100.848s retains StatementTooComplex
+stack exhaustion. The exact path is FIFO→cost snapshot→monetary Stock source
+close→physical close→current capacity→FIFO; zero-consumption facts also reach
+physical close. The earlier source peer's no-cycle conclusion is withdrawn.
+Native controller reports source unchanged, child exit1, empty Job Object and
+successful owned cleanup. The launcher was written/hashed before executing its
+exact saved file; its before/after hashes match and exit1 is retained at
+launcher-after SHA6bc07da598a309784b9aca3ca7a82b1638ecd2f069d0dd6fe682f103608d1cdc.
+No actual six-stage packet was produced; the independent qualifier was not run.
+
+Actual6aeffb13 zero-reuse1FAIL/0skip194.168s reaches IT1 review and refuses
+inventory_transfer_capacity_conflict: the shared FIFO quantity sum excludes
+the actual Q1/V0 restored layer. Owned cleanup and unchanged source pass;
+negative closure039c6f1752233dc433f621c3ea6fcf37cf05eef5bad2c7f912ec1b7bc8173361
+retains the original failure. No complete raw91 packet or independent financial
+acceptance follows. Four-ref external bundle79bc787ada2c2e51fcda2447ef9150832a9035393eaab6eb112a52d00278faeb
+verifies at6aeffb13; all earlier negative originals remain preserved.
+
+Actualfb5c full migration file5PASS/0skip221.677s and actualcd3c selected security
+6PASS/0skip395.101s retain clean before/after source and successful owned cleanup.
+Independent security closure5637fa99794360d821bb23f66ef31f78fe033352472fef5d3f8848c5a34904d4
+is scoped to those six cases. Actual0d2a zero-reuse1FAIL/0skip90.431s retains the
+document RECORD collision and clean source/cleanup; no complete raw91 packet
+was produced. Published02b3 terminal CI56/23/79 closure21275709af0f8d9c8b398a3f53aae63e56c5b5aa6a1b4428ba289649c19d2239
+remains failed. External four-ref Git bundle A02DAFDB8A53F51E314E964CC7733568F6F22327D286DACE0D3C8139846FFDB8
+verifies against accepted375; checkpoint receipt25b5ed269172d027e3153d6bf46bd78fcdbd32119cf884c8c0407372f23fe75e.
+These are source-qualified components and recovery originals, not M7 acceptance.
+
+## Actual monetary native components and retained failures — 2026-10-16
+
+Draft140 publishes02b3 above accepted139/375. Native fractional0.1
+return/cancellation/inverse1PASS/0skip97.422s closes independently at
+cfad773e518704c75486f95e38c939a9e34154f462319ef1134e48e17e92e6e4.
+Identity credit/second collection/refund/inverse/final settlement1PASS/0skip
+278.255s closes at5a1df580e6ececc64c28d96cd7b0541d4af5e865b3cc3182a82f98309c0e46ad.
+Both bind4447 source files, actual XML/plugin, ordinary-role fixture and cleanup.
+The c14a zero-functional collection case also executes1PASS/0skip85.930s.
+Foreign02b3 fails at final refund after history6: SQL30s QueryCanceled,
+1FAIL/0skip509.042s, unchanged source and successful owned cleanup; no timeout
+increase or relabeling. Originals reside in the existing external
+`m7-monetary-native-20261016-v1-private/` custody directory.
+
+Hosted02b3 CI38842843088 retains legacy79 catalog and unassigned IT1 layer
+failures. Security38842843086 retains two B608 failures; failed-log custody is
+4709cd104b18e15bef4d9b96304e9ffa6de9f6b2daf7f6d3ac5e6a6e5539918e.
+Closed-template repair preserves generated SQL120510 bytes/SHA
+0e4a49313a65781a7be7d76ed9d921786afa3bab49870b9c8e3d9b59ff2a73b5;
+independent equality peer15dc853bc3946497a9e063f1ba19374f263ed58826a573b5565bd0145b990300.
+Actual3d7bad5a roundtrip and ordinary DDL-owner refusal execute2PASS/0skip
+63.407s; independent nine-original closure61908f1340268b1426aaae16fb9dc059298a594d7c40315b9c7d69e3084c742f
+binds unchanged source, real savepoint DROP rollback,42501 refusal before DROP
+and successful owned cleanup. Actual598212e2 foreign cycle executes1PASS/0skip
+411.655s after the reviewed shared-snapshot repair, with unchanged source and
+successful child/dataset cleanup. The old509.042s final-refund failure remains
+separate; no controlled comparative speed claim follows. Fixed legacy/native,
+updated security17, HTTPS/raw91/restore and final coherent CI remain pending.
+F9 frontend1095 PASS/typecheck/build component closure
+2261612ae5880f7985c79bd85f594104dfb41ce0101d1add03baf14c1fac8ffd
+does not substitute for those gates. Independent diagnostic profile review
+b8779f7616e7f024af47cdb8f8de9435604950388fde6781970d091cd6246798
+preserves11.507→15.082s/no gain, recursive counters and actor30s/default90s limits.
+
+## Actual149 integration gate — 2026-10-16
+
+Owned empty migration roundtrip22699f7d passes one mandatory case/zero skips:
+`m7-monetary-native-20261016-v1-private/migration-alias22699.xml`.
+Actual347-table catalog b4f7bc8de48504375dd79ea41171f1e708580b82670b666ccb36e26b927e8412
+binds scope policies/nullable FX check; its owned DB was removed. Frozen ab0d340e
+failure receipt acd13194f4e73dec82d2d257dca935d3044a7eac83ec3f56152816ff5d0e175d
+and34787d3e failure526b10a9cdb9b6b72b6741aa458e93658763a9b82b2c8ffea19e98bdb6d6c35f
+each retain unchanged source, one failure and zero skips. No actual monetary
+financial acceptance follows. Originals are external under
+`F:/ReconForge_Evidence/recovery-20261014/m7-monetary-native-20261016-v1-private/`.
+Earlier375 acceptance and all failed cohorts remain unchanged.
+
+## Unaccepted monetary M7 component custody — 2026-10-16
+
+Root42986123 authorization46 PASS preserves the exact old620 inventory digest
+9ef5a1c3f1289de6e1a85fbbaa42b784e1dfe95f17cec3c6ad060c7f67830dfe and
+the prevaluation646 digesta5a57e3066c068c0c7f2ad45a1b0fdf58ca5eb020be234fbc0ca9a5cf25622c9.
+Ccc6a1f9e194 pure reader cases also pass after exact integration334be0fd.
+B377c8342 external component closurec682e89b08098590840f170dc764951e6764bbcc08bc4246fa32021356a39c07
+binds111 Python/105 frontend tests and build/static checks. Native149, actual
+monetary HTTPS, raw91 financial success, populated restore and final CI remain
+unexecuted. Old375 financial acceptance remains bounded and unchanged.
+
+The worktree-loss receipt is retained privately under
+`worktree-loss-20261016-private/recovery-facts-v1.json` (SHA26bd4d2fb590a5ffcf5fa01ba3d43ea6f6faf709b8613fa028b1d52cfe672231).
+Verified four-branch incremental bundle SHA9ca4bcbad4d5d35215fa0c129370fc9ae6184d666635520ffad2c09af351c20
+preserves committed refs and requires375. A's recovered original/remapped patch
+custody under`m7-native-second-worktree-loss-20261016-v1-private` reconstructs605
+lines in one file from five exact original tool arguments; checkpointba820986,
+fileSHAd3198c97fca9cea5a5cd596b11efe8aa833dfa72c543b113b51f60fd6584f1ce.
+The deleted uncommitted C199 receipt is not recreated or reported as an extant
+original. A new source-bound qualification must cover the reconstructed source.
+
+## Accepted M7 v1/v2 supported scope on frozen375 — 2026-10-15
+
+Source `37518287126e0f630e726592dda8cc981faa2a96` passes CI38771788999, attempt1,
+74/74 jobs with0 failure/cancel/skip. Official run/job response originals remain
+in `final375-global-watch-v3-private/read-08`; actual runtime merge tree matches
+immutable Git375. This does not erase cdd or any earlier negative execution.
+
+Independent native closure `e9a7aacb5139a182c7c093f3a8543d28688aa2ceb82c11f2071f5cdefa06303e`
+(8118 bytes) binds all five M7 jobs:60 PASS/7 pytest commands,0 critical skips,
+mandatory plugin statistics present. JUnit XML was not configured; none is
+invented. Independent browser closure
+`4177b945d511599190fc49d36cf468a6f0804b02532207f4d0dabc91ffe9a066`
+(32350 bytes) verifies five actual partial-return ZIPs plus retained CR1 evidence,
+5 partial cases plus3 CR1 cases, all first-attempt/0 skipped/retry/flaky,
+source/oracle pins, isolated-mode
+producer proofs, actual HTTPS/populated340-table restore and three tampers per
+run. Hosted private raw rows are intentionally not published; fresh C raw
+reexecution is not claimed. Separate private native/oracle originals retain
+their actual heads and direct independent raw derivations.
+
+Python/package closure
+`32b3c894c4f6157e074df3a2cb951ef8548d09b7c91757b4f4b48c5137f59c8e`
+(6135 bytes) binds both8408 PASS/663 inherited generic skips, successful source
+archive steps,3463 sdist files/1476 required files,3455 tracked hash matches and
+960 wheel source matches per Python job. The new22-case mixed oracle also has
+actual targeted execution; no per-node hosted XML was present in quiet logs.
+The first external comparator's nonexistent-filename refusal is retained as a
+reader mistake, not a hosted package failure. Root's source/wheel archive report
+`feb9e3efe0151165aa169dacf513a3f3ac0009d3786945314147d47e9f245ec8`
+separately passes on the same clean source.
+
+Exact-image closure
+`68ef10fb74c6a82ad856d9150e3db66cbd48131e91a073fbcd0a58d013a67268`
+(22645 bytes) binds manualSecurity38771976983,5/5 success, actual image config/
+manifest digests, Syft/Grype subjects and exact375 checkout. Findings:0 Critical,
+0 High,9 Medium,1 Negligible,0 unknown/ignored/active exceptions. DBv6.1.10 age
+37169s is inside the120h gate. License metadata65/68;3 missing, no legal
+compatibility conclusion. Automatic PR image skip remains separately classified;
+manual image success is the actual image proof. Docker/CodeQL also pass.
+
+Joined closure
+`08b2463ac062502131d626afefb3be6a560f1d4ebcd8bb04beb3d1a3d91f178d`
+(5668 bytes) binds171 required originals/14458907 bytes. External byte-exact
+mirror closure `b2343977effb2e9acb87609d045666cadfca6dca461c36501cba48611cdaad78`
+retains173 files/14559130 bytes. All41 artifact IDs/digests are recorded, without
+a claim that every unchanged legacy ZIP/full-run log ZIP was downloaded.
+
+No scanner/timeout/financial policy was weakened. Local tree/HEAD Gitleaks pass;
+a distinct all-local-refs synthetic-fixture finding in a nonancestor branch is
+still retained. Bounded v1/v2 completion does not close mandatory M7.7 tax/FX,
+M7.9, the whole domain, any country pack or Production Qualification. Heavy
+comparative benchmarks remain deferred. Current status is solely in the master.
+
+Earlier source-specific sequences and pending statements below remain historical.
+
+Initial cancellation qualification `bf9c3e91183f9f4cfcd32d75b118cca0dcc8450dedffc5b50085024efe98e262`
+(7209 bytes) remains unchanged. Supplemental qualification
+`216a122254f2fce5d7573bcb434b4c9cbf46d9b2a1da5adce095a1be8f39378f`
+(8527 bytes) binds the official Check Run annotation for cdd job116479467387:
+"The job has exceeded the maximum execution time of 20m0s". Original annotations
+SHA256 `46fc327b03725995dd5850853932e11254e86280cf4588614ef57049d7dc5a9e`
+are retained beside the original metadata and failed retrievals. Total job
+start/completion metadata spans25 minutes; this is distinct from the official
+20-minute execution ceiling. Studio composite build remained active and HTTPS
+never started. Direct logs return404; bounded full-run ZIP transfers remain
+incomplete. The exact npm/build/Playwright subcommand and underlying stall cause
+remain unknown. No timeout, assertion or scanner policy was relaxed, and no
+hosted product success is inferred.
 
 ## M7 original AR reports, Studio aging and mixed-cost proof — 2026-10-15
 
@@ -39,8 +269,10 @@ unchanged five older readers.
 Corrected native backdate case cdd1 PASS39.250s proves Python and actual SQL
 refusal/full79 rollback; earlier373 cohort remains5 PASS/1 FAIL. Hosted cdd
 CI38751026869 terminal68 success/4 failure/1 cancelled/1 skipped remains retained;
-the fourth browser job reaches25 minutes during Studio build, before HTTPS; its original
-setup logs await root-cause review. Stat and exact79
+the fourth browser job has25-minute total metadata and an official20-minute
+execution-ceiling annotation during Studio build, before HTTPS. The underlying
+composite subcommand/stall cause remains unknown; supplemental qualification
+216a1222 preserves original metadata and unsuccessful log retrievals. Stat and exact79
 helper repairs have targeted successes. Package preflight713 refuses missing
 ADR0861; explicit MANIFEST fix ac5fec69 passes actual source/wheel archive gate,
 report5b19022a. Gitleaks8.30.1 tree/HEAD scans pass after exact protocol fixture

@@ -35,7 +35,10 @@ partial_return_contract:
   transfer_compatibility: immutable-cost-v1-v2-readers-and-explicit-remaining-owner-cost-v3
   final_acceptance: docs/execution/ENTERPRISE_COMPLETION_MASTER_MATRIX.md
   remainder_contract:
-    status: implemented-unaccepted
+    status: VERIFIED COMPLETE
+    accepted_scope: zero-tax-functional-currency-untracked-base-uom-v2
+    accepted_source: 37518287126e0f630e726592dda8cc981faa2a96
+    accepted_ci: https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38771788999
     source_birth_policy: remaining-original-v1
     protocol_route: /api/v2/customer-partial-returns
     history_policy: active-original-quantity-and-value-prefix
@@ -50,7 +53,7 @@ partial_return_contract:
     zero_original_admission: stock-sales-restituted-cost-v1-native-source-physical-valuation-consumption-proof
     zero_original_cost_policy: partial-return-restituted-v1
     actual_source_qualified_evidence: [ordinary-https-9af22802, zero-resale-https-373362a6, zero-refund-https-cdd5f739, ordinary-refund-ar-aging-https-713e1bf8]
-    open_acceptance: [final-cohesive-frozen-head-ci, final-source-native-and-independent-evidence-reconciliation]
+    open_acceptance: []
     tax_fx_scope: explicitly-unsupported-pending-original-sale-and-return-contracts
   ar_read_models:
     residual: max-original-gross-minus-actual-allocated-cash-minus-posted-net-credits-zero

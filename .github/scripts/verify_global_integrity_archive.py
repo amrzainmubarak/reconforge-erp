@@ -13,7 +13,82 @@ import tempfile
 import zipfile
 from pathlib import Path, PurePosixPath
 
+MONETARY_REQUIRED = (
+    'alembic/versions/0149_postgres_monetary_customer_partial_returns.py',
+    'apps/web/live/customer-partial-return-monetary-cycles.spec.ts',
+    'apps/web/live/customer-partial-return-monetary.playwright.config.ts',
+    'apps/web/live/monetary-capture-diagnostics.ts',
+    'apps/web/src/test/monetary-capture-diagnostics.test.ts',
+    'apps/web/src/components/MonetaryCustomerReturns.tsx',
+    'apps/web/src/components/MonetaryEvidence.tsx',
+    'apps/web/src/components/MonetaryStockPanel.tsx',
+    'apps/web/src/components/MonetaryStockValuation.test.tsx',
+    'apps/web/src/components/MonetaryStockValuation.tsx',
+    'apps/web/src/components/MonetaryWorkflows.test.tsx',
+    'apps/web/src/monetary-partial-returns-data.ts',
+    'apps/web/src/monetary-paths.ts',
+    'apps/web/src/monetary-public-data.test.ts',
+    'apps/web/src/monetary-public-data.ts',
+    'apps/web/src/monetary-stock-data.ts',
+    'apps/web/src/monetary-test-fixtures.json',
+    'apps/web/src/monetary-valuation-data.test.ts',
+    'apps/web/src/monetary-valuation-data.ts',
+    'apps/web/src/monetary-valuation-test-fixture.json',
+    'apps/web/src/monetary-words.ts',
+    'docs/adr/0862-fixed-monetary-stock-and-partial-corrections.md',
+    'reconforge/api/monetary_partial_return_contract.py',
+    'reconforge/api/monetary_public_contract.py',
+    'reconforge/api/monetary_stock_contract.py',
+    'reconforge/api/monetary_valuation_contract.py',
+    'reconforge/api/routes/customer_partial_returns_v3.py',
+    'reconforge/api/routes/stock_sales_v2.py',
+    'reconforge/domain/monetary_customer_partial_return_commands.py',
+    'reconforge/domain/monetary_customer_returns.py',
+    'reconforge/domain/monetary_stock_revaluation.py',
+    'reconforge/infrastructure/postgres_monetary_customer_partial_returns.py',
+    'reconforge/infrastructure/postgres_monetary_customer_returns_schema.py',
+    'reconforge/infrastructure/postgres_monetary_installation.py',
+    'reconforge/infrastructure/postgres_monetary_inventory_native.py',
+    'reconforge/infrastructure/postgres_monetary_inventory_shared_hooks.py',
+    'reconforge/infrastructure/postgres_monetary_inventory_transfer_schema.py',
+    'reconforge/infrastructure/postgres_monetary_receivables.py',
+    'reconforge/infrastructure/postgres_monetary_stock_sales.py',
+    'reconforge/infrastructure/postgres_monetary_stock_schema.py',
+    'reconforge/infrastructure/postgres_monetary_stock_shared_hooks.py',
+    'tests/customer_partial_return_monetary_browser.py',
+    'tests/customer_partial_return_monetary_browser_reader.py',
+    'tests/customer_partial_return_monetary_oracle.py',
+    'tests/customer_partial_return_monetary_posted_oracle.py',
+    'tests/customer_partial_return_monetary_restituted_cycle_oracle.py',
+    'tests/monetary_capture_encoding.py',
+    'tests/test_customer_partial_return_monetary_browser.py',
+    'tests/test_customer_partial_return_monetary_browser_reader.py',
+    'tests/test_ci_monetary_browser_contract.py',
+    'tests/test_customer_partial_return_monetary_oracle.py',
+    'tests/test_customer_partial_return_monetary_posted_oracle.py',
+    'tests/test_customer_partial_return_monetary_restituted_cycle_oracle.py',
+    'tests/test_inventory_transfer_v4_public_projection.py',
+    'tests/test_monetary_api_transport.py',
+    'tests/test_monetary_customer_return_posting.py',
+    'tests/test_monetary_customer_returns.py',
+    'tests/test_monetary_installation_contract.py',
+    'tests/test_monetary_native_function_contract.py',
+    'tests/test_monetary_public_contract.py',
+    'tests/test_monetary_receivables_projection.py',
+    'tests/test_monetary_repository_contention.py',
+    'tests/test_monetary_return_source_admission.py',
+    'tests/test_monetary_stock_owner_boundaries.py',
+    'tests/test_monetary_stock_revaluation.py',
+    'tests/test_monetary_valuation_contract.py',
+    'tests/test_postgres_monetary_customer_partial_returns.py',
+    'tests/test_postgres_monetary_customer_return_migration.py',
+    'tests/test_postgres_monetary_customer_return_security.py',
+)
+
 HELPERS = (
+    "customer_partial_return_monetary_browser", "customer_partial_return_monetary_browser_reader",
+    "customer_partial_return_monetary_posted_oracle", "customer_partial_return_monetary_oracle",
+    "customer_partial_return_monetary_restituted_cycle_oracle",
     "commercial_collections_browser", "erp_landed_cost_browser", "stock_commerce_browser_seed",
     "fixed_assets_browser_seed", "erp_procurement_enterprise_browser", "enterprise_financial_snapshot_browser",
     "customer_returns_browser", "customer_partial_returns_browser", "customer_partial_return_browser_reader",
@@ -456,7 +531,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
     require(sha(json.dumps(index["entries"][:20], sort_keys=True, separators=(",", ":")).encode("utf-8")) == PREFIX20_SHA, "Twenty retained index entries changed")
     pair = ("docs/execution/benchmarks/" + args.baseline_wrapper, "docs/execution/benchmarks/" + args.candidate_wrapper)
     required = {
-        *DIAGNOSTIC_HELPERS, "tests/test_wave5_profile_diagnostics.py", "tests/test_wave5_large_journal_oracle.py",
+        *MONETARY_REQUIRED, *DIAGNOSTIC_HELPERS, "tests/test_wave5_profile_diagnostics.py", "tests/test_wave5_large_journal_oracle.py",
         "tests/test_publication_diagnostic_dependencies.py",
         "docs/execution/WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md",
         "docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.json",
@@ -831,8 +906,8 @@ def main() -> int:
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--index-count", type=int, default=22)
-    parser.add_argument("--migration-count", type=int, default=147)
-    parser.add_argument("--migration-head", default="0148_pg_partial_return_rounding")
+    parser.add_argument("--migration-count", type=int, default=148)
+    parser.add_argument("--migration-head", default="0149_pg_monetary_partial_returns")
     parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
     parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
     parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")

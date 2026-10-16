@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 from reconforge.infrastructure import postgres_receivables as module
+from reconforge.infrastructure.postgres_monetary_receivables import CATALOG_FIELDS
 from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
 from reconforge.platform.common import PlatformError
 
@@ -33,6 +34,8 @@ class Connection:
         self.calls.append((query, args))
         if query.startswith("WITH marker AS"):
             return Result(self.flags)
+        if query.startswith("WITH monetary_helpers AS"):
+            return Result({"profile": dict.fromkeys(CATALOG_FIELDS, False)})
         if query.startswith("SELECT id,workspace_id"):
             row: dict[str, Any] = dict.fromkeys(PostgresReceivablesRepository._INVOICE, "")
             row.update(id="invoice", total_minor=45000, status="Approved", cancel_reason="", row_version=3)
@@ -94,7 +97,7 @@ def test_each_projection_selects_the_complete_native_or_explicit_legacy_contract
     assert aging["items"][0]["outstanding_minor"] == (20000 if native else 35000)
     probes = [query for query, _ in connection.calls if query.startswith("WITH marker AS")]
     assert len(probes) == 3
-    financial = [query for query, _ in connection.calls if not query.startswith("WITH marker AS")]
+    financial = [query for query, _ in connection.calls if not query.startswith(("WITH marker AS", "WITH monetary_helpers AS"))]
     assert any("customer_partial_return_credit" in query for query in financial) is native
     if not native:
         assert all("customer_partial_return" not in query for query in financial)

@@ -550,6 +550,10 @@ def _helpers_preflight() -> str:
 
 
 def verify_zero_stock_functions(connection: Any) -> None:
+    from reconforge.infrastructure.postgres_monetary_installation import verify_monetary_installation_if_present
+
+    if verify_monetary_installation_if_present(connection):
+        return
     if not records(connection.execute("SELECT to_regprocedure('reconforge.customer_partial_return_zero_stock_plan(text,text)') present"))[0]["present"]:
         raise ValueError("The complete versioned zero-stock native contract is required.")
     connection.execute(_preflight(upgraded_only=True))
@@ -564,6 +568,10 @@ def install_customer_partial_return_receipt_chronology(connection: Any) -> None:
     Unknown original metadata or bodies fail closed before replacement; CREATE
     OR REPLACE preserves the existing OID, owner, ACL and trigger bindings.
     """
+    from reconforge.infrastructure.postgres_monetary_installation import verify_monetary_installation_if_present
+
+    if verify_monetary_installation_if_present(connection):
+        return
     marker = records(connection.execute("SELECT to_regprocedure('reconforge.customer_partial_return_rounding_version()') present"))[0]["present"]
     if marker is None:
         return

@@ -51,6 +51,10 @@ REMAINDER_SCENARIOS = {
     "customer-partial-return-remainder-refund": "refund",
 }
 RESTITUTED_SCENARIO = "customer-partial-return-restituted"
+MONETARY_SCENARIOS = {
+    "customer-partial-return-monetary-identity": "identity",
+    "customer-partial-return-monetary-foreign": "foreign",
+}
 PUBLIC_ORIGINAL_JSON = re.compile(
     r"(?:\.last-run|"
     r"cashflow-(?:view|original|original-wire|browser-read-boundary)|"
@@ -90,7 +94,10 @@ PRIVATE_PARTIAL_RETURN_FAMILIES = {"native-customer-partial-return-originals", "
                                   "native-customer-partial-return-remainder-failed-observation-originals",
                                   "native-customer-partial-return-restituted-originals",
                                   "native-customer-partial-return-restituted-observation-originals",
-                                  "native-customer-partial-return-restituted-failed-observation-originals"}
+                                  "native-customer-partial-return-restituted-failed-observation-originals",
+                                  "native-customer-partial-return-monetary-originals",
+                                  "native-customer-partial-return-monetary-observation-originals",
+                                  "native-customer-partial-return-monetary-failed-observation-originals"}
 PRIVATE_RETURN_FAMILIES = {"native-customer-return-originals", *PRIVATE_PARTIAL_RETURN_FAMILIES}
 
 
@@ -388,7 +395,9 @@ def publish_browser_diagnostics(output: Path, private: Path, known_private_value
         remainder_financial_verification: dict[str, Any] | None = None,
         remainder_case: str | None = None, remainder_require_restore: bool = False,
         restituted_financial_verification: dict[str, Any] | None = None,
-        restituted_require_restore: bool = False) -> dict[str, Any]:
+        restituted_require_restore: bool = False,
+        monetary_financial_verification: dict[str, Any] | None = None,
+        monetary_case: str | None = None, monetary_require_restore: bool = False) -> dict[str, Any]:
     """Publish only complete derived diagnostics; financial bytes are excluded."""
     helper_source = Path(diagnostic_redaction.__file__).read_bytes()
     helper_sha = hashlib.sha256(helper_source).hexdigest()
@@ -416,6 +425,12 @@ def publish_browser_diagnostics(output: Path, private: Path, known_private_value
             from tests.customer_partial_return_restituted_browser_reader import require_restituted_original_binding
             require_restituted_original_binding(private, restituted_financial_verification,
                 require_restore=restituted_require_restore)
+        if monetary_financial_verification is not None:
+            from tests.customer_partial_return_monetary_browser_reader import require_monetary_original_binding
+            if monetary_case is None:
+                raise ValueError("A finite monetary case is required for original binding.")
+            require_monetary_original_binding(private, monetary_financial_verification,
+                case=monetary_case, require_restore=monetary_require_restore)
         inputs = {name: private / name for name in ("browser.log", "playwright.json") if (private / name).exists()}
         inputs.update({name: path for name, path in quarantined.items() if name.startswith("playwright-artifacts/")})
         if (private / "playwright-artifacts").is_symlink():
@@ -471,6 +486,11 @@ def publish_browser_diagnostics(output: Path, private: Path, known_private_value
         if restituted_financial_verification is not None:
             require_restituted_original_binding(private, restituted_financial_verification,
                 require_restore=restituted_require_restore)
+        if monetary_financial_verification is not None:
+            if monetary_case is None:
+                raise ValueError("A finite monetary case is required for completed original binding.")
+            require_monetary_original_binding(private, monetary_financial_verification,
+                case=monetary_case, require_restore=monetary_require_restore)
         if workspace_verification is not None and require_workspace_recovery_acceptance(
                 private, known_private_values=known_private_values) != workspace_verification:
             raise ValueError("Workspace originals changed during completed publication.")
@@ -769,16 +789,47 @@ def publish_original_oracle_custody(private: Path, output: Path, verified: dict[
     return {"financial_bytes_transformed": False, "verified_against_original_custody": True, "members": members}
 
 
+def require_monetary_native_restore(value: Any) -> None:
+    """This new149 cohort retains full347 catalog and93 protected relations.
+
+    Existing restore/populated proof contracts and raw78/79 readers are intact.
+    The extra currency registry relations are protected in addition to raw91.
+    """
+    from tests.customer_partial_return_monetary_posted_oracle import TABLES
+    from tests.gfo_browser_restore import FINANCIAL_TABLES
+    protected = set(TABLES) | set(FINANCIAL_TABLES)
+    audits = {"domain_audit_events", "domain_audit_ledger_state"}
+    new_tables = {"stock_sales_monetary_origins", "customer_partial_return_monetary_commands", "customer_partial_return_monetary_entries",
+                  "customer_partial_return_monetary_events", "customer_partial_return_monetary_history", "customer_partial_return_monetary_plans",
+                  "customer_partial_return_monetary_restorations"}
+    if (type(value) is not dict or value.get("status") != "passed" or type(value.get("tamper_refusals")) is not int or value["tamper_refusals"] != 3
+            or type(value.get("snapshot")) is not dict or type(value["snapshot"].get("tables")) is not dict
+            or len(value["snapshot"]["tables"]) != 347 or not new_tables <= set(value["snapshot"]["tables"])
+            or type(value["snapshot"].get("forced_rls_financial_tables")) is not int or value["snapshot"]["forced_rls_financial_tables"] != 93):
+        raise ValueError("Monetary149 populated native restore is incomplete.")
+    expected = {"protected_financial_tables": protected, "unbound_tenant_probe_tables": protected,
+                "sibling_workspace_probe_tables": set(TABLES) - audits, "tenant_global_audit_tables": audits}
+    for key, names in expected.items():
+        rows = value.get(key)
+        if type(rows) is not list or any(type(name) is not str for name in rows) or len(rows) != len(names) or set(rows) != names:
+            raise ValueError("Monetary149 native restore scope probes are incomplete.")
+    counts = value.get("scope_probe_counts")
+    expected_counts = {"protected": 93, "unbound_tenant": 93, "sibling_workspace": 89, "tenant_global_audit": 2}
+    if type(counts) is not dict or set(counts) != set(expected_counts) or any(type(counts[key]) is not int or counts[key] != number for key, number in expected_counts.items()):
+        raise ValueError("Monetary149 native restore probe counts differ.")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-native-restore", action="store_true")
-    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "customer-partial-returns", *REMAINDER_SCENARIOS, RESTITUTED_SCENARIO, "supplier-returns", "operational-fx-tax", "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer"), default="expansion")
+    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "customer-partial-returns", *REMAINDER_SCENARIOS, RESTITUTED_SCENARIO, *MONETARY_SCENARIOS, "supplier-returns", "operational-fx-tax", "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer"), default="expansion")
     parser.add_argument("--runtime-root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "output/erp-expansion-20261009/browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
     args = parser.parse_args()
     remainder_case = REMAINDER_SCENARIOS.get(args.scenario)
     restituted_case = args.scenario == RESTITUTED_SCENARIO
+    monetary_case = MONETARY_SCENARIOS.get(args.scenario)
     seed: Callable[[str, str], Any] = seed_expansion_browser
     # Scenario verifiers may require private custody before binding their
     # ordinary one-runtime original/restore callback with functools.partial.
@@ -1032,6 +1083,20 @@ def main() -> int:
             "DELETE FROM reconforge.supplier_return_commands WHERE tenant_id=%s",
             "DELETE FROM reconforge.ap_supplier_invoice_credits WHERE tenant_id=%s",
         )
+    elif monetary_case is not None:
+        from tests.customer_partial_return_monetary_browser import AUDIT as MONETARY_AUDIT
+        from tests.customer_partial_return_monetary_browser import TABLES as MONETARY_TABLES
+        from tests.customer_partial_return_monetary_browser import seed_monetary_browser, verify_seeded_monetary_browser
+        seed = partial(seed_monetary_browser, case=monetary_case)
+        verify_cycles = partial(verify_seeded_monetary_browser, case=monetary_case)
+        configuration = "apps/web/live/customer-partial-return-monetary.playwright.config.ts"
+        extension_tables = MONETARY_TABLES
+        workspace_probe_tables = tuple(name for name in MONETARY_TABLES if name not in MONETARY_AUDIT)
+        tamper_statements = (
+            "UPDATE reconforge.customer_partial_return_monetary_plans SET expected_history_version=expected_history_version+1 WHERE tenant_id=%s",
+            "DELETE FROM reconforge.customer_partial_return_monetary_history WHERE tenant_id=%s",
+            "UPDATE reconforge.customer_partial_return_monetary_restorations SET value_minor=value_minor+1 WHERE tenant_id=%s",
+        )
     elif restituted_case:
         from tests.customer_partial_return_restituted_browser import TABLES as RESTITUTED_TABLES
         from tests.customer_partial_return_restituted_browser import (
@@ -1208,14 +1273,17 @@ def main() -> int:
         if not origin.is_relative_to(runtime_root):
             raise ValueError("Expansion module origin is outside the integrated runtime checkout.")
         module_origins[module_name] = {"path": str(origin), "sha256": hashlib.sha256(origin.read_bytes()).hexdigest()}
-    if remainder_case is not None or restituted_case or args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer", "customer-partial-returns"}:
-        owner_module = ("reconforge.infrastructure.postgres_customer_partial_returns" if remainder_case is not None or restituted_case
+    if monetary_case is not None or remainder_case is not None or restituted_case or args.scenario in {"manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing", "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer", "customer-partial-returns"}:
+        owner_module = ("reconforge.infrastructure.postgres_monetary_customer_partial_returns" if monetary_case is not None
+                        else "reconforge.infrastructure.postgres_customer_partial_returns" if remainder_case is not None or restituted_case
                         else "reconforge.infrastructure.postgres_intercompany_cashflow" if args.scenario == "intercompany-source-cashflow"
                         else "reconforge.infrastructure.postgres_" + args.scenario.replace("-", "_"))
         verification_module = (verify_cycles.func.__module__ if isinstance(verify_cycles, partial)
                                else verify_cycles.__module__)
         seed_module = seed.func.__module__ if isinstance(seed, partial) else seed.__module__
-        for module_name in dict.fromkeys((owner_module, seed_module, verification_module)):
+        additional_origins = ("reconforge.infrastructure.postgres_monetary_stock_sales", "reconforge.domain.monetary_customer_returns",
+                              "reconforge.domain.monetary_stock_revaluation", "tests.customer_partial_return_monetary_posted_oracle") if monetary_case is not None else ()
+        for module_name in dict.fromkeys((owner_module, seed_module, verification_module, *additional_origins)):
             origin_file = importlib.import_module(module_name).__file__
             if origin_file is None:
                 raise ValueError("New enterprise module has no captured source file.")
@@ -1273,7 +1341,14 @@ def main() -> int:
             assert role_flags == [False, False]
             report["role_privileges"] = role_flags
         runtime = seed(admin_dsn, app_dsn)
-        if restituted_case:
+        if monetary_case is not None:
+            from tests.customer_partial_return_monetary_browser import FAMILY as MONETARY_FAMILY
+            partial_custody = private_diagnostics / MONETARY_FAMILY / monetary_case
+            verify_cycles = partial(verify_cycles, custody_root=partial_custody, original_app_dsn=app_dsn)
+            environment.update(RECONFORGE_MONETARY_PYTHON=sys.executable,
+                RECONFORGE_MONETARY_RUNTIME_ROOT=str(runtime_root), RECONFORGE_MONETARY_CASE=monetary_case,
+                RECONFORGE_MONETARY_CUSTODY_ROOT=str(partial_custody))
+        elif restituted_case:
             from tests.customer_partial_return_restituted_browser import FAMILY as RESTITUTED_FAMILY
             from tests.customer_partial_return_restituted_browser import capture_restituted_browser
             runtime, partial_source = runtime
@@ -1400,6 +1475,8 @@ def main() -> int:
                 report["native_restore"] = verify_expansion_native_restore(runtime, container,
                     verify_cycles=verify_cycles, extension_tables=extension_tables, tamper_statements=tamper_statements,
                     tamper_actor=tamper_actor, workspace_probe_tables=workspace_probe_tables)
+                if monetary_case is not None:
+                    require_monetary_native_restore(report["native_restore"])
             if args.scenario == "customer-returns":
                 report["independent_financial_original_verification"] = verify_customer_return_original_rows(
                     private_diagnostics, required_captures=3 if args.verify_native_restore else 1)
@@ -1415,6 +1492,10 @@ def main() -> int:
                 from tests.customer_partial_return_restituted_browser_reader import verify_restituted_original_rows
                 report["independent_restituted_verification"] = verify_restituted_original_rows(
                     private_diagnostics, require_restore=args.verify_native_restore)
+            if monetary_case is not None:
+                from tests.customer_partial_return_monetary_browser_reader import verify_monetary_original_rows
+                report["independent_monetary_verification"] = verify_monetary_original_rows(
+                    private_diagnostics, case=monetary_case, require_restore=args.verify_native_restore)
             if args.scenario == "inventory-transfer":
                 # Fresh restore captures must still equal the first trusted
                 # packet before any of its original bytes become public.
@@ -1457,6 +1538,7 @@ def main() -> int:
         partial_verification = report.get("independent_partial_return_verification")
         remainder_verification = report.get("independent_remainder_verification")
         restituted_verification = report.get("independent_restituted_verification")
+        monetary_verification = report.get("independent_monetary_verification")
         publication = publish_browser_diagnostics(output, private_diagnostics, secret_values,
             workspace_verification=verification if isinstance(verification, dict) else None,
             financial_verification=financial_verification if isinstance(financial_verification, dict) else None,
@@ -1464,7 +1546,9 @@ def main() -> int:
             remainder_financial_verification=remainder_verification if isinstance(remainder_verification, dict) else None,
             remainder_case=remainder_case, remainder_require_restore=args.verify_native_restore,
             restituted_financial_verification=restituted_verification if isinstance(restituted_verification, dict) else None,
-            restituted_require_restore=args.verify_native_restore)
+            restituted_require_restore=args.verify_native_restore,
+            monetary_financial_verification=monetary_verification if isinstance(monetary_verification, dict) else None,
+            monetary_case=monetary_case, monetary_require_restore=args.verify_native_restore)
         report["browser_diagnostics"] = publication
         if publication["status"] != "published":
             report["status"] = "failed"

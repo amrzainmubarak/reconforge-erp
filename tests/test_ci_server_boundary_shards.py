@@ -16,6 +16,8 @@ SHARDS = {
     "industry-close", "receivables", "finance-posting", "inventory-payables", "erp-expansion", "finance-reporting",
     "commercial-integrity", "customer-partial-cycle", "customer-partial-security", "customer-partial-rounding", "supply-integrity", "finance-integrity",
     "customer-partial-rounding-migration", "customer-partial-rounding-security",
+    "customer-partial-monetary",
+    "customer-partial-monetary-migration", "customer-partial-monetary-security",
     "supplier-returns", "fx-revaluation",
     "manufacturing-execution", "intercompany-operations", "intercompany-cashflow", "intercompany-group-reporting", "procurement-sourcing", "procurement-sourcing-api", "manufacturing-sourcing",
     "people-project-payroll", "accrual-deferral", "manufacturing-supply-plan", "project-time-billing", "project-source-reconciliation", "inventory-transfer",
@@ -51,6 +53,9 @@ INTEGRITY_FILES = {
         "tests/test_postgres_customer_partial_return_zero_stock.py",
     ),
     "customer-partial-rounding-migration": ("tests/test_postgres_customer_partial_return_rounding_migration.py",),
+    "customer-partial-monetary": ("tests/test_postgres_monetary_customer_partial_returns.py",),
+    "customer-partial-monetary-migration": ("tests/test_postgres_monetary_customer_return_migration.py",),
+    "customer-partial-monetary-security": ("tests/test_postgres_monetary_customer_return_security.py",),
     "customer-partial-rounding-security": (
         "tests/test_postgres_customer_partial_return_rounding_security.py",
         "tests/test_postgres_customer_partial_return_zero_stock_security.py",
@@ -171,7 +176,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 72  # Retain complete old contracts and new148 native files exactly once.
+    assert len(commands) == 75  # Retain every prior command plus all three complete mandatory monetary files.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -275,6 +280,7 @@ def test_enterprise_browser_matrix_requires_every_real_https_and_populated_resto
         "procurement-commitments", "customer-returns", "customer-partial-returns",
         "customer-partial-return-remainder-ordinary", "customer-partial-return-remainder-zero", "customer-partial-return-remainder-refund",
         "customer-partial-return-restituted",
+        "customer-partial-return-monetary-identity", "customer-partial-return-monetary-foreign",
         "supplier-returns", "operational-fx-tax",
         "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "intercompany-source-cashflow", "intercompany-group-diagnostic", "people-project-payroll", "procurement-sourcing",
         "accrual-deferral", "project-time-billing", "project-source-reconciliation", "manufacturing-supply-plan", "inventory-transfer",

@@ -1,6 +1,154 @@
 # Execution State
 
+## M7 final closure mode — frozen requirements (2026-10-16)
+
+The latest human directive freezes M7.7/M7.9; whole M7 stays OPEN. No optional
+scenario, new domain or nonblocking performance comparison is authorized
+in this closure round. Remote Draft140 is63f74155. Actual native zero-reuse
+passes1/0skip248.031s,19-function149 migration5/0skip106.152s, and independent
+raw91/I-I-O/3tampers derives5effects/12lines/Dr=Cr233. All eight monetary native
+CI shards, Docker, CodeQL and manual Security5/5 pass. Five witnessed CI failures
+remain negative: four HTTPS cases and the historical quantity-gate fixture.
+That same fixture passes1/0skip48.873s after local81519d64's test-only repair.
+The fixed envelope now passes snapshot reading. A separate actual all91 check
+proves balance GET changes only the two quantity-gate version fields; read-path
+source-proof correction is under independent review. Legacy zero/restituted
+still exceed the unchanged15s POST bound; reviewed same-invocation full-proof
+consolidation must pass actual operation gates. Final-source HTTPS/347-table
+restore and coherent CI remain OPEN. No observer equality or control is relaxed.
+Main and the two primary dirty file hashes remain unchanged.
+
+Retained predecessor0d5a7d2a has terminal CI75 success/
+4 failure/79 jobs; local reader-only integration is00c3ce16. Actual zero-reuse
+passes1/0skip403.578s, legacy compatibility3/0skip103.825s and migration149
+5/0skip101.405s, with source/cleanup verified. Independent corrected IRP reader
+qualifies actual raw6 through identical-I/-I-O output and3 tamper refusals,
+deriving5 effects/12 lines/Dr=Cr233. All hosted native shards and current manual
+Security5/5, Docker and CodeQL pass. Required remaining defects are the old
+zero/restituted15s POST waits and the monetary identity/foreign escaped-envelope
+size refusal; source fixes and final exact-head HTTPS/restore/CI remain OPEN.
+Main and the two primary dirty file hashes are unchanged.
+
+### Retained predecessor attempts (source-qualified historical limits)
+
+Predecessor15a1149d terminal CI has69 success/10 failure/79 jobs.
+Earlier02b3 terminal CI records
+56 successful and23 failed jobs of79, all originals retained. Accepted139
+remains375, and main plus the primary user's two dirty files are unchanged.
+The coherent local repairs cover the observed financial-owner callback ACL
+regression, exact admin Cash scope and historical-fixture guard overwrites.
+Native5 migration cases pass221.677s onfb5c and selected6 native security cases
+pass395.101s oncd3c. Actual0d2a zero-reuse fails90.431s at a new dispatch alias
+named document shadowing an original RECORD; its failure is not reclassified.
+The limited dispatch_* alias repair is integrated. Required remaining work:
+Actual6aeffb13 rerun fails1/0skip194.168s at IT1 review: the authoritative
+shared FIFO quantity sum excludes genuine Q1/V0 restored stock. Its clean source,
+owned cleanup and negative closure039c6f1752233dc433f621c3ea6fcf37cf05eef5bad2c7f912ec1b7bc8173361
+are retained; no complete six-stage raw91 packet exists. The bounded repair must
+preserve original units, positive-layer sums and all unreleased global claims,
+admitting zero-value quantity only through current native restitution proof.
+The migration custody inventory now includes that17th retained function.
+The next actual3e834c3c attempt fails1/0skip100.848s with stack-depth exhaustion:
+FIFO proof reaches Stock live capacity through both transfer-source closure and
+zero-consumption facts. Source, saved executed launcher and owned cleanup remain
+unchanged; no raw packet exists. The source review's earlier no-cycle judgement
+is withdrawn. Separate full historical source proof from live capacity, retaining
+every current command/deferred capacity check and all accounting/source guards.
+The source regression also catches the retained v3 zero-consumption fallback
+before DB execution. Preserve that full historical proof separately while its
+legacy current Stock close keeps capacity; retained-function custody becomes18.
+Actual15a1149d removes the stack cycle but fails1/0skip127.946s on the unchanged
+SQL30s bound during the first zero Return; negative9a300382 is retained. The
+bounded same-post diagnostic passes25.396s with cleanup/source unchanged, including
+23.361s deferred closure and15 repeated whole-physical cost adoption calls. This
+is not native-cycle acceptance or a speed comparison. Restrict the FIFO quantity
+proof to the exact existing cost factory minus only its final all-physical adoption
+call; keep full originals, every live owner/adoption guard and global claims.
+Required remaining work is to rerun that same zero-reuse case with its six original raw91 captures, independently
+verify them, run both actual monetary HTTPS/restore cycles, and accept the final
+coherent source through required native/legacy/CI/security/Docker/CodeQL gates.
+No external architectural decision currently blocks these finite repairs.
+
+The following source-qualified checkpoints retain their original limits.
+
+## Current actual M7 gate (2026-10-16, accepted375 / Draft140)
+
+Whole M7 remains OPEN; the master matrix retains M7.7/M7.9 INCOMPLETE.
+Complete native149, source/phase/history/physical/FX owners, API/Studio and
+mandatory native/HTTPS CI wiring are published in Draft140 above unchanged139.
+Actual02b3 fractional0.1 return/cancellation/inverse passes1/0skip97.422s;
+identity credit/second collection/refund/inverse/final-settlement passes1/0skip
+278.255s. Independent component closures cfad773e and5a1df580 bind source,
+original XML, mandatory plugin and owned cleanup. Actual c14a positive transaction
+cash/zero functional journal case passes1/0skip85.930s. Foreign02b3 reaches
+history6 but final refund fails closed at the existing30s SQL limit; its509.042s
+negative and successful source/fixture cleanup remain preserved.
+Actual empty
+148→149→148→149 and retained installer replays pass22699f7d, preserving all16
+old function OIDs/ACLs/attributes and original downgrade bytes on that exact
+earlier source. A347-table catalog capture is retained with its temporary DB
+removed. Hosted02b3 CI preserves real legacy79 catalog and IT1 alias failures;
+Security preserves two Bandit B608 failures. The verifier template repair emits
+the exact same120510 SQL bytes. The RLS downgrade refusal guard and reviewed
+posted-snapshot reuse repair are integrated. Actual598212e2 foreign cycle now
+passes1/0skip411.655s, including the final refund within the unchanged30s actor
+statement limit; source, child-job cleanup and owned-database cleanup pass.
+Actual3d7bad5a empty roundtrip plus non-bypass DDL-owner refusal pass2/0skip
+63.407s, independently qualified at61908f13. The original509.042s failure stays
+retained; different pass/fail outcomes establish no comparable speed gain.
+Closed legacy79/86 and67/74 adapters, explicit fixture-only ACL restoration,
+owned-event callback admission and rollback-before-retryable-conflict are
+integrated. Actual raw91 chronological financial proof, monetary HTTPS/restore,
+updated17-case security and final coherent CI remain required. Full frontend
+component proof1095 PASS/typecheck/build is bound to unchanged F9 UI bytes.
+No whole-M7, country, production or comparable-performance acceptance is claimed.
+All old failures remain external; the following checkpoints are historical.
+
+## Current M7 integration and recovered workspaces (2026-10-16)
+
+Accepted source remains375 below. Unpublished integration checkpoint
+`f1422636e461bf3049048ed9ab06a75992d45b11` includes fixed F/L Stock and partial
+owners, real versioned API/Studio/valuation paths, exact retained620-route proof,
+physical/transfer-cost-v4 components and independent raw91 reader stages.
+The updated authorization inventory passes46 cases; the independent reader
+passes194 pure cases on334be0fd. B377c component closurec682e89b records111 Python
+and105 frontend cases plus build/type checks. These are component results, not
+native149 or complete financial-cycle acceptance. Native cycle3, migration3 and
+security9 cases are collected; none has run on149. Core source/phase/immutable
+guards, complete149 exports, migration assembly and actual gates remain open.
+
+All four `.codex/worktrees/enterprise-m7-*-recovered` checkouts and their Git
+metadata disappeared during work; the cause is undetermined. Existing branch
+refs/commits survived. Work resumes under `F:/ReconForge_Worktrees/` in four
+ordinary Git worktrees. A recovered605 uncommitted lines from exact five original
+tool patches and committedba820986; C is reconstructing its five-test valuation
+addition. B had no uncommitted work. Root's installer WIP was retained. Verified
+incremental four-branch bundle9ca4bcbad4d5d35215fa0c129370fc9ae6184d666635520ffad2c09af351c20
+requires accepted375. Primary69951414, mainb61ea56b and both preexisting dirty
+schema-file SHA256 values remain unchanged. No native worker or partial149
+installation ran during recovery. Whole M7 remains OPEN; no new domain started.
+
 ## Completion first — one domain at a time (2026-10-15)
+
+Accepted bounded M7 source: `37518287126e0f630e726592dda8cc981faa2a96`.
+CI38771788999 passes74/74 at attempt1, zero failed/cancelled/skipped jobs.
+M7 native60 PASS/7 commands/0 critical skips; five partial-browser jobs execute5
+first-attempt cases plus CR1 executes3. All six use real HTTPS, populated340-table
+restore and three tampers each. Python3.11/3.12 each pass8408 with663 inherited generic skips; Docker and
+CodeQL pass. Manual exact-image Security38771976983 passes5/5:0 Critical/High,
+9 Medium,1 Negligible,3/68 SBOM records missing license metadata. No legal
+compatibility or production assurance is inferred. Joined closure08b2463a binds
+171 required original files/14458907 bytes on immutable375.
+
+The master marks M7.1–6 and M7.8 VERIFIED COMPLETE only for the unchanged
+zero-tax/functional-currency/untracked v1/v2 contract. Mandatory M7.7 and dependent
+M7.9 remain INCOMPLETE; whole M7 is OPEN. A/B/C continue the SAME M7 tax/FX
+original-source and return dependency in unpublished worktrees. No new major
+domain or milestone has started. Accepted375 stays fixed in its original branch
+and Draft139 while the next coherent source is built separately.
+
+The following component notes record earlier checkpoints, including their old
+pending statements and negative originals; they do not supersede current status.
 
 Latest integrated slice: actualc70 settlement/cash-race2 PASS, including native
 invoice/exposure/current and overdue aging at seven stages. New79-table originals
@@ -15,9 +163,12 @@ backdate security passes1/1 atcdd. Component results retain their own heads.
 CI38751026869 on cdd is a preserved terminal failure: Python8385 PASS plus one
 bad lstat test double, and native8 PASS/2 FAIL on obsolete78-table capture.
 The aggregate fails closed. Terminal totals are68 success/4 failure/1 cancelled/
-1 skipped; the fourth HTTPS job reaches its25-minute limit during Studio build, before HTTPS,
-and bounded log retrieval retains404 and incomplete ZIP originals. The exact
-composite subcommand/cause remains unknown, receipt bf9c3e91. Both narrow fixes
+1 skipped; the fourth browser job records25 minutes of total job metadata while
+the official Check Run annotation proves its20-minute execution ceiling was
+exceeded during Studio build, before HTTPS. Direct log retrieval retains404 and
+bounded run-ZIP downloads remain incomplete. The exact npm/build/Playwright
+subcommand and underlying stall cause remain unknown; supplemental receipt
+216a1222 preserves the earlier bf9c3e91 qualification. Both narrow fixes
 execute their targeted gates;
 Linux affected stat case also passes. Original Gitleaks protocol-fixture false
 positive is corrected without scanner exceptions; tree and HEAD-history scans

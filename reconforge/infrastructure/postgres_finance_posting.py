@@ -440,6 +440,7 @@ class PostgresFinancePostingRepository:
                 (("AD1-", "AD1R-"), "accrual-deferral"),
                 (("PB1-", "PB1C-"), "project-billing"),
                 (("CR2-", "CRF2-", "CR2R-", "CRF2R-"), "customer-partial-return"),
+                (("CR3-", "CRF3-", "CR3R-", "CRF3R-"), "customer-partial-return-monetary"),
             )
             for prefixes, kind in enterprise_sources:
                 if entry["entry_number"].upper().startswith(prefixes) or entry["id"].upper().startswith(prefixes):
@@ -661,6 +662,13 @@ class PostgresFinancePostingRepository:
                     self.connection, self.tenant_id, source["id"], original["id"], number
                 ):
                     raise FinancePostingError("posting_source_unsupported", "Partial corrections require their exact reviewed source-owned inverse.")
+            monetary_prefixes = ("CR3-", "CRF3-", "CR3R-", "CRF3R-")
+            if source["entry_number"].upper().startswith(monetary_prefixes) or source["id"].upper().startswith(monetary_prefixes):
+                participant_type = source_participant_type("customer-partial-return-monetary")
+                if participant_type is None or not isinstance(_source_owner, participant_type) or not _source_owner.admits_reversal(
+                    self.connection, self.tenant_id, source["id"], original["id"], number
+                ):
+                    raise FinancePostingError("posting_source_unsupported", "Monetary corrections require their exact reviewed source-owned inverse.")
             if source["entry_number"].upper().startswith(("IC2-", "IC2S-", "IC2R-", "IC2E-")) or source["id"].upper().startswith(("IC2-", "IC2S-", "IC2R-", "IC2E-")):
                 participant_type = source_participant_type("intercompany-fx")
                 if participant_type is None or not isinstance(_source_owner, participant_type) or not _source_owner.admits_reversal(

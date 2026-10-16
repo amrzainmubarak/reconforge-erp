@@ -62,6 +62,15 @@ def test_live_server_receivables_http_lifecycle_is_scoped_exact_and_human_govern
             assert tuple(
                 admin.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=%s", (app_user,)).fetchone()
             ) == (False, False)
+            if admin.execute("SELECT to_regclass('reconforge.stock_sales_monetary_origins')").fetchone()[0] is not None:
+                # This legacy, unscoped AR lifecycle must not acquire a new
+                # monetary directory or payload grant merely to use native AR.
+                assert tuple(admin.execute(
+                    "SELECT has_table_privilege(%s,'reconforge.stock_sales_monetary_origins','SELECT'),"
+                    "has_column_privilege(%s,'reconforge.stock_sales_monetary_origins','ar_balance','SELECT'),"
+                    "has_column_privilege(%s,'reconforge.stock_sales_monetary_origins','payload','SELECT')",
+                    (app_user, app_user, app_user),
+                ).fetchone()) == (False, False, False)
             for dependency in (
                 "operational_finance_plans", "operational_finance_links", "sales_revenue_documents",
                 "stock_sales_orders", "stock_sales_issue_claims",
@@ -187,6 +196,11 @@ def test_live_server_receivables_http_lifecycle_is_scoped_exact_and_human_govern
             assert invoice.status_code == 200, invoice.text
             invoice_body = invoice.json()
             invoice_id = str(invoice_body["id"])
+            with admin.transaction():
+                assert tuple(admin.execute(
+                    "SELECT organization_id,legal_entity_id FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s",
+                    (tenant_id, invoice_id),
+                ).fetchone()) == (None, None)
             assert invoice_body["lines"][0]["quantity"] == "1.0000000000001"
             assert invoice_body["created_by"] == maker.id
 

@@ -30,8 +30,9 @@ ENTERPRISE_M3_EXACT_ROUTES = frozenset({
 EXPECTED_ENTERPRISE_M3_ROUTE_COUNT = 9
 ENTERPRISE_M4_PREFIXES = ("/api/v1/inventory-transfer/",)
 EXPECTED_ENTERPRISE_M4_ROUTE_COUNT = 8
-ENTERPRISE_M7_PREFIXES = ("/api/v1/customer-partial-returns/", "/api/v2/customer-partial-returns/")
-EXPECTED_ENTERPRISE_M7_ROUTE_COUNT = 18
+MONETARY_M7_PREFIXES = ("/api/v2/stock-sales/", "/api/v3/customer-partial-returns/")
+ENTERPRISE_M7_PREFIXES = ("/api/v1/customer-partial-returns/", "/api/v2/customer-partial-returns/", *MONETARY_M7_PREFIXES)
+EXPECTED_ENTERPRISE_M7_ROUTE_COUNT = 49
 WAVE5_PREFIXES = ("/api/v1/manufacturing-execution/", "/api/v1/intercompany-operations/", "/api/v1/procurement-sourcing/")
 WAVE4_PREFIXES = (
     "/api/v1/customer-returns/", "/api/v1/procurement-commitments/",
@@ -86,6 +87,9 @@ HANDLER_BOUNDARY_HELPERS = {
     "sales_revenue.py": frozenset({"_execute", "_transition"}),
     "procurement_operations.py": frozenset({"execute"}),
     "stock_sales.py": frozenset({"_execute", "_transition", "_commerce_execute"}),
+    # Both command families enter the same scoped ordinary PostgreSQL owner;
+    # valuation supplies its stricter exact permission union and closed projector.
+    "stock_sales_v2.py": frozenset({"execute", "execute_valuation", "_transition"}),
     "procurement_partial.py": frozenset({"_execute"}),
     "financial_reporting.py": frozenset({"_execute"}),
     "financial_installments.py": frozenset({"execute", "_authority"}),
@@ -96,6 +100,7 @@ HANDLER_BOUNDARY_HELPERS = {
     "fixed_assets.py": frozenset({"execute", "_authority"}),
     "customer_returns.py": frozenset({"execute", "_authority"}),
     "customer_partial_returns.py": frozenset({"execute", "_authority"}),
+    "customer_partial_returns_v3.py": frozenset({"execute"}),
     "procurement_commitments.py": frozenset({"_execute", "_authority"}),
     "supplier_returns.py": frozenset({"_execute"}),
     "operational_fx_tax.py": frozenset({"execute", "_authority"}),
@@ -209,6 +214,41 @@ def test_enterprise_route_cohorts_retain_historical_m1_and_classify_exact_m3_add
         "payables.approve", "payables.manage", "payables.match", "payables.read", "payables.reverse", "payables.settle",
     )
     validate_authorization_surface(contracts)
+
+
+def test_fixed_monetary_routes_preserve_all_620_retained_contracts(tmp_path: Path) -> None:
+    contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
+    retained = tuple(item for item in contracts if not item.path.startswith(MONETARY_M7_PREFIXES))
+    assert len(retained) == 620
+    assert authorization_inventory_digest(retained) == "9ef5a1c3f1289de6e1a85fbbaa42b784e1dfe95f17cec3c6ad060c7f67830dfe"
+    by_key = {(item.method, item.path): item for item in contracts}
+    monetary = tuple(item for item in contracts if item.path.startswith(MONETARY_M7_PREFIXES))
+    assert len(monetary) == 31
+    assert sum(item.path.startswith("/api/v2/stock-sales/") for item in monetary) == 22
+    assert all(item.mode == "all" for item in monetary)
+    valuation = {
+        (method, "/api/v2/stock-sales/orders/{identifier}" + suffix): operation
+        for method, suffix, operation in (
+            ("POST", "/valuations", "prepare"), ("POST", "/valuation-reversals", "prepare_reversal"),
+            ("GET", "/fx-plans/{plan_id}", "read"), ("POST", "/fx-plans/{plan_id}/review", "review"),
+            ("POST", "/fx-plans/{plan_id}/post", "post"),
+        )
+    }
+    from reconforge.infrastructure.postgres_monetary_stock_sales import VALUATION_PERMISSIONS
+    assert authorization_inventory_digest(tuple(item for item in contracts if (item.method, item.path) not in valuation)) == "a5a57e3066c068c0c7f2ad45a1b0fdf58ca5eb020be234fbc0ca9a5cf25622c9"
+    additions = {
+        "/api/v2/stock-sales/orders/{identifier}/collection/prepare": "receivables.manage",
+        "/api/v2/stock-sales/orders/{identifier}/collection/review": "receivables.approve",
+    }
+    for item in monetary:
+        if (item.method, item.path) in valuation:
+            assert set(item.permissions) == set(VALUATION_PERMISSIONS[valuation[item.method, item.path]])
+            continue
+        old_path = "/api/v1" + item.path[len("/api/v2" if item.path.startswith("/api/v2/") else "/api/v3"):]
+        old = by_key[item.method, old_path]
+        expected = set(old.permissions) | ({additions[item.path]} if item.path in additions else set())
+        assert set(item.permissions) == expected
+    assert not any(item.path.startswith("/api/v2/stock-sales/commerce/") for item in contracts)
 
 
 def test_wave3_routes_require_exact_authority_and_preserve_all_accepted_route_contracts(tmp_path: Path) -> None:
@@ -343,6 +383,14 @@ def test_mutating_route_modules_declare_a_server_boundary_or_explicit_protocol_c
     ("GET", "/api/v1/project-source-reconciliation/close-diagnostics/evidence", "receivables.read"),
     ("GET", "/api/v1/intercompany-fx/sources/{source_id}/native-evidence-bundle", "intercompany_fx.read"),
     ("GET", "/api/v1/intercompany-fx/sources/{source_id}/native-evidence-bundle", "finance_core.read"),
+    ("POST", "/api/v2/stock-sales/orders/{identifier}/collection/prepare", "receivables.manage"),
+    ("POST", "/api/v2/stock-sales/orders/{identifier}/collection/review", "receivables.approve"),
+    ("POST", "/api/v3/customer-partial-returns/plans/{plan_id}/post", "finance_core.post"),
+    ("POST", "/api/v3/customer-partial-returns/plans/{original_id}/reversals", "finance_core.reverse"),
+    ("POST", "/api/v2/stock-sales/orders/{identifier}/valuations", "receivables.manage"),
+    ("POST", "/api/v2/stock-sales/orders/{identifier}/valuation-reversals", "finance_core.reverse"),
+    ("POST", "/api/v2/stock-sales/orders/{identifier}/fx-plans/{plan_id}/review", "receivables.approve"),
+    ("POST", "/api/v2/stock-sales/orders/{identifier}/fx-plans/{plan_id}/post", "finance_core.post"),
 ])
 def test_enterprise_sensitive_contract_refuses_adjacent_authority(
     tmp_path: Path, method: str, path: str, required: str,

@@ -112,7 +112,7 @@ class ForeignInvoicePreparation:
     journal_code: str
     foreign_currency_code: str
     net_minor: int
-    original_rate: HistoricalRate
+    original_rate: HistoricalRate | None
     country_code: str
     transaction_class: str
     taxes: tuple[TaxComponent, ...]
@@ -123,7 +123,9 @@ class ForeignInvoicePreparation:
     loss_account_code: str
     reason: str
 
-    def payload(self) -> dict[str, Any]:
+    def payload(self, *, allow_currency_identity: bool = False) -> dict[str, Any]:
+        if type(allow_currency_identity) is not bool:
+            fail("Currency identity admission must be an explicit internal boolean.")
         data = asdict(self)
         for key, value in data.items():
             if key not in {"net_minor", "original_rate", "taxes"} and text(value, key, maximum=500 if key == "reason" else 160) != value:
@@ -136,7 +138,14 @@ class ForeignInvoicePreparation:
             fail("Country and currency require explicit uppercase ISO-style codes.")
         if type(self.taxes) is not tuple or len(self.taxes) > MAX_TAX_COMPONENTS:
             fail("Use at most eight ordered net-exclusive tax components.")
-        data["original_rate"] = self.original_rate.payload(day)
+        if self.original_rate is None:
+            if not allow_currency_identity:
+                fail("A historical foreign invoice requires its original exchange observation.")
+            data["original_rate"] = None
+        elif type(self.original_rate) is HistoricalRate:
+            data["original_rate"] = self.original_rate.payload(day)
+        else:
+            fail("A historical rate requires the finite retained rate contract.")
         data["taxes"] = [component.payload(day=day, country=self.country_code, transaction_class=self.transaction_class) for component in self.taxes]
         if len({component.policy_id for component in self.taxes}) != len(self.taxes):
             fail("Retained tax component policy identities must be distinct.")
@@ -164,18 +173,33 @@ def convert_minor(amount: int, exchange: ExchangeRate, context: CurrencyRegistry
     return exact_minor(converted, "functional conversion", zero=True)
 
 
-def invoice_equation(request: ForeignInvoicePreparation, functional: str, context: CurrencyRegistryContext) -> dict[str, Any]:
-    args = request.payload()
-    exchange = request.original_rate.resolve(request.foreign_currency_code, functional, context, request.posting_date)
+def invoice_equation(request: ForeignInvoicePreparation, functional: str, context: CurrencyRegistryContext,
+                     *, allow_currency_identity: bool = False) -> dict[str, Any]:
+    """Recognize net-exclusive tax components through the existing prefix law.
+
+    The default remains the foreign-only FX1 contract. The fixed monetary Stock
+    owner may explicitly admit a same-currency source with an absent rate; no
+    synthetic exchange observation or derived functional unit price is created.
+    """
+    args = request.payload(allow_currency_identity=allow_currency_identity)
+    identity = request.foreign_currency_code == functional
+    if identity:
+        if not allow_currency_identity or request.original_rate is not None:
+            fail("Currency identity requires the explicit native contract and an absent rate.")
+        exchange = None
+    else:
+        if request.original_rate is None:
+            fail("A foreign monetary source requires its original historical rate.")
+        exchange = request.original_rate.resolve(request.foreign_currency_code, functional, context, request.posting_date)
     net = Money.from_minor_units(request.net_minor, request.foreign_currency_code, registry_context=context)
-    functional_net = convert_minor(request.net_minor, exchange, context)
+    functional_net = request.net_minor if exchange is None else convert_minor(request.net_minor, exchange, context)
     exact_minor(functional_net, "functional net")
     components = []
     foreign_prefix, functional_prefix = request.net_minor, functional_net
     for component in request.taxes:
         foreign_tax = net.multiply_exact(exact_rate(component.rate, tax=True)).to_minor_units()
         foreign_prefix = exact_minor(foreign_prefix + foreign_tax, "foreign gross")
-        converted_prefix = convert_minor(foreign_prefix, exchange, context)
+        converted_prefix = foreign_prefix if exchange is None else convert_minor(foreign_prefix, exchange, context)
         components.append({**component.payload(day=request.posting_date, country=request.country_code, transaction_class=request.transaction_class),
                            "foreign_tax_minor": foreign_tax, "functional_tax_minor": converted_prefix - functional_prefix})
         functional_prefix = converted_prefix

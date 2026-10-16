@@ -1,5 +1,102 @@
 # ReconForge Execution Decisions Log
 
+## Keep global FIFO quantity evidence within its cost boundary (2026-10-16)
+
+The actual15a1 SQL30s failure and retained function profile identify repeated
+whole-physical adoption inside the new zero-FIFO backing check. Generate one
+fixed quantity-only snapshot from the same complete cost factory, omitting only
+its final all-physical adoption call. Keep every receipt/layer/consumption,
+signed correction, actual effect, native zero admission and residual assertion;
+keep the existing full originals reader and exact current-layer equality. Its
+sole production caller is free-FIFO, never Stock/IT1 admission or stored source
+evidence. Actual transfer snapshots, current Stock/physical/quantity owners,
+claims, locks and30s bound stay unchanged. Native inventory becomes56 functions,
+42 trigger bindings and18 retained exact profiles. No cache, flag, new relation
+or permission grant is introduced. Re-execute the same required native case.
+
+## Break the witnessed source-proof/current-capacity cycle (2026-10-16)
+
+The3e834c3c actual stack trace supersedes the incomplete static no-cycle review.
+Keep the complete canonical Stock, event/command/audit, FX, history, AR, physical
+and finance source proof in an explicit leaf source-close function. Transfer
+originals and zero-consumption facts use source proof without live capacity.
+The existing public Stock close retains its signature and executes complete
+source proof followed by the exact original reservation-presence capacity check,
+including pre-origin and consumed/released reservation stages. Every current
+command and deferred owner still uses the live close. No caller flag, GUC,
+cache, relaxed RLS, stack increase or timeout increase may cut the cycle.
+The regression graph also exposes the retained v3 zero-consumption fallback
+through its old full Stock close. Preserve its complete original source proof
+in a second capacity-free helper, changing only149's retained zero-consumption
+proof call. Actual legacy Stock commands keep their original live capacity law.
+The two required source helpers make the native function inventory55; retained
+original functions18 include exact old zero-consumption identity/profile/DOWN.
+Trigger bindings42 and raw capture tables91 stay fixed. This is compatibility
+for the already-supported source family, not a new business scenario.
+
+## Preserve global quantity controls for zero-cost restitution (2026-10-16)
+
+The actual6aeffb13 IT1 capacity refusal is a required M7 reuse/transfer defect,
+not an optional expansion. Extend only149's retained shared FIFO quantity
+dispatch, without modifying historical migrations. Preserve exact original unit
+checks, positive-layer sum, global unreleased claims and insufficient-backing
+refusal. Admit an actual zero-value layer once only after exact current native
+cost-v3/v4 proof and positive signed active restitution; ordinary zero residuals
+stay excluded. Keep invoker/STABLE attributes, OID/owner/ACL and exact DOWN body.
+Retained-function custody becomes17; new functions53, bindings42 and raw tables91
+remain unchanged. No extra grants, local capacity bypass or timeout increase.
+
+## Freeze M7 closure and repair only witnessed regressions (2026-10-16)
+
+Keep the agreed M7.7/M7.9 scope fixed. Existing native SS1/FX1 source admission
+and reserved CR3 headers classify each OLD/NEW financial image before new-owner
+directory reads; ordinary FinanceCore retains its existing guards without new
+private monetary SELECT requirements. Keep the AR namespace guard unchanged;
+admin-only Cash fixture restoration must supply the original receipt's scope.
+Verify current149 before any legacy valuation installer can overwrite guards;
+historical raw reinstallation assertions run inside rollback and preserve exact
+catalog profiles. Rename only the new dispatch aliases that collide with
+retained RECORD locals. Never relax timeouts, preflight, accounting or RLS.
+
+## Owned event admission and explicit bounded retries (2026-10-16)
+
+Skip unrelated audit/outbox object types before querying the monetary owner,
+checking OLD and NEW independently. Exempt outbox administrative updates only
+when the complete envelope is unchanged after removing the nine existing
+delivery fields; identity, payload, scope, lease floor and future fields remain
+protected by the existing immutable/fencing guards. Grant no financial reads to
+unrelated workers. Translate only SQLSTATE55P03 after the owner transaction or
+savepoint has rolled back into monetary_return_retryable_conflict. Preserve its
+original cause, all other errors and existing5s/10s bounds. The user explicitly
+retries the exact saved command/body after contention; never create a new key or
+automatically retry. Every retry repeats current authority admission.
+
+## Refusal-first migration and shared actual posting snapshots (2026-10-16)
+
+ADR0862 now makes new-relation runtime ACLs an explicit149 upgrade prerequisite;
+populated148 evidence does not imply unchanged-ACL compatibility. Downgrade must
+fail when FORCE RLS hides retained rows from a non-bypass DDL owner. Keep the
+transaction-local refusal guard and require an actual owner regression. Reuse
+only the actual snapshot/hash already checked by the common posted verifier;
+retain every owner-specific seal, scope, line, audit and outbox check. No cached
+transaction marker, supplied financial fact or relaxed timeout is introduced.
+The observed foreign final-refund30s failure justifies this bounded repair;
+single diagnostic11.507/15.082s samples establish no performance improvement.
+
+## Fixed monetary originals and safe retained installers (2026-10-16)
+
+ADR0862 fixes new Stock F/L source ownership, current credit-adjusted AR,
+component/tax/FIFO residual policy, no counterfeit zero journal and explicit
+closing/inverse provenance. Public STABLE reporting and VOLATILE native command
+validation have separate contracts. Preserve16 accepted function identities and
+all historical wire readers; verify149 before any old installer can overwrite
+its newer dispatch. New cost-v4 keeps signed legacy and monetary correction
+evidence. This is an implementation contract pending actual149 acceptance.
+After unexplained deletion of the four old worktree checkouts, resume on
+ordinary Git worktrees outside `.codex/worktrees`, preserving surviving refs,
+external exact patches and a verified incremental bundle. Do not prune or reset
+primary/main or relabel lost/reconstructed component evidence as native proof.
+
 ## Explicit zero-effect authority and retained empty entries (2026-10-15)
 
 Shared Money/authorization stays positive-only by default. Only the finite native
@@ -13693,3 +13790,24 @@ Observed SELECT-only statements do not revoke application DML ACLs. Pin actual
 definer/owner/ACL context before changing shared hooks; no invoker-label shortcut
 proves actor RLS. Retain environmental setup failures separately from financial
 test failures. See ADR0859; no147 or partial-stock API/Studio action is added.
+
+### 2026-10-16 — M7 operation-blocking canonical query planning
+
+Keep every current source, request, acknowledgement and financial digest check.
+The real c40 zero-resale Return fails deferred SQL30s; the isolated successful
+post profile records224631 recursive SQL canonical-node calls. New149-only
+immutable invoker helpers retain C-ordered object keys, ordinal arrays, exact
+PostgreSQL scalar text and standard UTF8/SHA256. Cached PL/pgSQL recursive
+queries change no accepted bytes, existing IRP functions or rejection policy.
+The262-vector PostgreSQL differential is diagnostic evidence, not business
+acceptance or a throughput claim. The same actual full case, real nested digest
+equivalence, migration/restore and final-head CI must still pass. Do not skip
+historical hash checks or move them to an unproven birth-time cache.
+
+The exact fifteen existing FX/GL/AR/audit/outbox callback relations close the
+complete native source without repeating capacity for unchanged quantity inputs.
+All seven monetary-owner relations, five inventory callback relations and any
+unknown callback retain the live wrapper. Existing Stock and shared quantity
+BEFORE gates/deferred checks remain unchanged. Both OLD/NEW affinity and all
+source/effect assertions still apply; source peers approve only that closed
+dispatch. Runtime, SQL security and concurrency acceptance remain mandatory.

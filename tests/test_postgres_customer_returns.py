@@ -2,6 +2,7 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from fractions import Fraction
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -20,6 +21,90 @@ from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, receip
 from tests.test_postgres_stock_sales import create_reserved_order, create_stock_runtime, execute
 
 _ = receipt_database
+
+
+LEGACY_CUSTOMER_RETURN_TABLES = (
+    'ar_customers', 'ar_idempotency_keys',
+    'ar_invoice_lines', 'ar_invoices',
+    'ar_receipt_allocations', 'ar_receipts',
+    'customer_return_commands', 'customer_return_events',
+    'customer_return_plans', 'domain_audit_events',
+    'domain_audit_ledger_state', 'finance_accounts',
+    'finance_charts', 'finance_dimension_values',
+    'finance_dimensions', 'finance_entries',
+    'finance_entry_line_dimensions', 'finance_entry_lines',
+    'finance_journals', 'finance_posting_commands',
+    'finance_posting_effects', 'inventory_cost_layers',
+    'inventory_count_lines', 'inventory_count_sessions',
+    'inventory_items', 'inventory_layer_consumptions',
+    'inventory_locations', 'inventory_lots',
+    'inventory_movement_lines', 'inventory_movements',
+    'inventory_quantity_claim_gates', 'inventory_quantity_source_guards',
+    'inventory_quantity_source_releases', 'inventory_receipt_commands',
+    'inventory_receipt_links', 'inventory_receipt_plans',
+    'inventory_receipt_reviews', 'inventory_reorder_rules',
+    'inventory_transfer_claims', 'inventory_transfer_commands',
+    'inventory_transfer_events', 'inventory_transfer_releases',
+    'inventory_transfer_sources', 'inventory_units_of_measure',
+    'inventory_valuation_documents', 'inventory_valuation_input_costs',
+    'inventory_valuation_lines', 'inventory_valuation_policies',
+    'inventory_valuation_reversal_effects', 'inventory_valuation_reversals',
+    'inventory_warehouses', 'operational_finance_commands',
+    'operational_finance_links', 'operational_finance_plans',
+    'operational_finance_reviews', 'outbox_consumer_receipts',
+    'outbox_delivery_evidence', 'outbox_events',
+    'stock_commerce_commands', 'stock_commerce_lines',
+    'stock_commerce_orders', 'stock_commerce_tranches',
+    'stock_sales_commands', 'stock_sales_events',
+    'stock_sales_issue_claims', 'stock_sales_orders',
+    'stock_sales_reservations',
+)
+LEGACY_MONETARY_TABLES = tuple(sorted((
+    "stock_sales_monetary_origins", "customer_partial_return_monetary_plans",
+    "customer_partial_return_monetary_entries", "customer_partial_return_monetary_events",
+    "customer_partial_return_monetary_history", "customer_partial_return_monetary_restorations",
+    "customer_partial_return_monetary_commands",
+)))
+
+
+def legacy_customer_return_capture_tables(connection: Any, tenant: str, scope: dict[str, str]) -> tuple[str, ...]:
+    """Keep the original67 family closed, including after empty149 roundtrips."""
+    from psycopg import sql
+
+    if set(scope) != {"workspace_id", "organization_id", "legal_entity_id"}:
+        raise AssertionError("Legacy capture requires its exact scoped actor context.")
+    tables = connection.execute("""SELECT c.relname::text AS table_name,c.relkind::text AS relation_kind
+        FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='reconforge' AND ((c.relkind IN('r','p')
+        AND c.relname ~ '^(customer_return_|stock_|finance_|ar_|inventory_|operational_finance_|domain_audit_|outbox_)')
+        OR c.relname::text=ANY(%s::text[])) ORDER BY c.relname COLLATE "C"
+        """, (list(LEGACY_MONETARY_TABLES),)).fetchall()
+    names = tuple(row["table_name"] for row in tables)
+    if any(row["relation_kind"] != "r" for row in tables):
+        raise AssertionError("Legacy capture requires the original native table kinds.")
+    assert len(LEGACY_CUSTOMER_RETURN_TABLES) == len(set(LEGACY_CUSTOMER_RETURN_TABLES)) == 67
+    if names == LEGACY_CUSTOMER_RETURN_TABLES:
+        return LEGACY_CUSTOMER_RETURN_TABLES
+    if names != tuple(sorted((*LEGACY_CUSTOMER_RETURN_TABLES, *LEGACY_MONETARY_TABLES))):
+        raise AssertionError("Legacy capture requires exact original67 or complete monetary149 additions.")
+    for name in LEGACY_MONETARY_TABLES:
+        populated = connection.execute(sql.SQL(
+            "SELECT EXISTS(SELECT 1 FROM reconforge.{} WHERE tenant_id=%s AND workspace_id=%s "
+            "AND organization_id=%s AND legal_entity_id=%s) AS populated"
+        ).format(sql.Identifier(name)), (tenant, scope["workspace_id"], scope["organization_id"], scope["legal_entity_id"])).fetchone()
+        if populated is None or type(populated["populated"]) is not bool or populated["populated"]:
+            raise AssertionError("Legacy capture requires all monetary149 owners empty in its tenant and scope.")
+    return LEGACY_CUSTOMER_RETURN_TABLES
+
+
+def restore_empty_monetary_fixture_select(admin: Any, app_user: str) -> None:
+    """Restore only this fixture role's SELECT after recreated empty relations."""
+    from psycopg import sql
+
+    for table in LEGACY_MONETARY_TABLES:
+        admin.execute(sql.SQL("GRANT SELECT ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(app_user)))
+        assert admin.execute("SELECT has_table_privilege(%s,%s,'SELECT')", (app_user, "reconforge." + table)).fetchone()[0] is True
+        assert admin.execute("SELECT has_table_privilege(%s,%s,'INSERT,UPDATE,DELETE')", (app_user, "reconforge." + table)).fetchone()[0] is False
 
 
 def configure_runtime(runtime: ReceiptRuntime, *, seed_scope_grants: bool = True) -> None:
@@ -112,14 +197,13 @@ def retained_rows(runtime: ReceiptRuntime) -> dict[str, list[dict[str, Any]]]:
     from psycopg import sql
 
     with runtime.actor("maker") as (connection, _, _actor):
-        tables = connection.execute("""SELECT table_name FROM information_schema.tables WHERE table_schema='reconforge'
-            AND table_type='BASE TABLE' AND table_name ~ '^(customer_return_|stock_|finance_|ar_|inventory_|operational_finance_|domain_audit_|outbox_)'
-            ORDER BY table_name""").fetchall()
+        tables = legacy_customer_return_capture_tables(connection, runtime.tenant,
+            {"workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity"})
         state = {}
         for table in tables:
             rows = connection.execute(sql.SQL("SELECT to_jsonb(r) v FROM reconforge.{} r WHERE tenant_id=%s ORDER BY to_jsonb(r)::text")
-                .format(sql.Identifier(table["table_name"])), (runtime.tenant,)).fetchall()
-            state[table["table_name"]] = [row["v"] for row in rows]
+                .format(sql.Identifier(table)), (runtime.tenant,)).fetchall()
+            state[table] = [row["v"] for row in rows]
         return state
 
 
@@ -345,6 +429,7 @@ def test_forward_upgrade_retains_native_source_empty_rollback_and_populated_cred
                 admin.execute(sql.SQL("GRANT SELECT ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(app_user)))
                 assert admin.execute("SELECT has_table_privilege(%s,%s,'SELECT')", (app_user, "reconforge." + table)).fetchone()[0] is True
                 assert admin.execute("SELECT has_table_privilege(%s,%s,'INSERT,UPDATE,DELETE')", (app_user, "reconforge." + table)).fetchone()[0] is False
+            restore_empty_monetary_fixture_select(admin, app_user)
             # Empty later migrations recreate the scoped Finance Core directory.
             # Restoring inverse prerequisites gives no personnel/module reads.
             admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE ON reconforge.financial_effect_claim_gates TO {}").format(sql.Identifier(app_user)))
@@ -363,7 +448,21 @@ def test_forward_upgrade_retains_native_source_empty_rollback_and_populated_cred
         # are reset by the explicitly empty downgrade and upgrade.
         assert {name: rows for name, rows in after_rows.items() if name != coordination_table} == original_history
         plan = prepare_return(runtime, source)
-        reinitialized = retained_rows(runtime)[coordination_table]
+        prepared_rows = retained_rows(runtime)
+        # Financial preparation has no quantity effect. Recreate the discarded
+        # runtime epochs through the actual live capacity entry, rather than
+        # requiring an incidental capacity write from a financial callback.
+        assert prepared_rows[coordination_table] == []
+        with runtime.actor("maker") as (connection, _, _actor):
+            stock = connection.execute("""SELECT workspace_id,legal_entity_id,location_id,item_id
+                FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s""", (runtime.tenant, source)).fetchone()
+            assert stock is not None
+            connection.execute("SELECT reconforge.stock_sales_capacity(%s,%s,%s,%s,%s)",
+                (runtime.tenant, stock["workspace_id"], stock["legal_entity_id"], stock["location_id"], stock["item_id"]))
+        capacity_rows = retained_rows(runtime)
+        assert {name: rows for name, rows in capacity_rows.items() if name != coordination_table} == {
+            name: rows for name, rows in prepared_rows.items() if name != coordination_table}
+        reinitialized = capacity_rows[coordination_table]
         assert len(reinitialized) == len(original_coordination)
         # The original SQL JSON ordering includes the version, whose deliberate
         # reset can change row order. Compare every identity field canonically.
@@ -840,3 +939,106 @@ def test_below_cost_native_stock_source_reads_and_replays_require_retained_cogs_
     assert execute(runtime, sale, "review-issue", "checker") == reviewed
     assert execute(runtime, reviewed, "deliver", "poster") == delivered
     assert Decimal("60.00") in observed and Decimal("6.000") not in observed
+
+
+class _LegacyCr1Catalog:
+    """Pure catalog/query witness; real PostgreSQL ACL acceptance is separate."""
+
+    def __init__(self, names: tuple[str, ...], populated: dict[str, Any] | None = None, kind: str = "r") -> None:
+        self.names, self.populated, self.kind = names, populated or {}, kind
+        self.empty_checks: list[str] = []
+        self.grants: list[str] = []
+
+    def execute(self, query: Any, parameters: Any = None) -> Any:
+        if isinstance(query, str):
+            if "pg_catalog.pg_class" in query:
+                assert "information_schema" not in query and parameters == (list(LEGACY_MONETARY_TABLES),)
+                return SimpleNamespace(fetchall=lambda: [
+                    {"table_name": name, "relation_kind": self.kind if name in LEGACY_MONETARY_TABLES else "r"}
+                    for name in self.names
+                ])
+            assert "has_table_privilege" in query and parameters[0] == "fixture_runtime_app"
+            allowed = "'SELECT'" in query
+            return SimpleNamespace(fetchone=lambda: (allowed,))
+        statement = query.as_string()
+        if statement.startswith("GRANT SELECT ON reconforge."):
+            assert statement.endswith(' TO "fixture_runtime_app"') and "PUBLIC" not in statement
+            self.grants.append(statement.split('reconforge."')[1].split('"')[0])
+            return None
+        name = statement.split('reconforge."')[1].split('"')[0]
+        assert statement.startswith("SELECT EXISTS(") and name in LEGACY_MONETARY_TABLES
+        assert parameters in (("synthetic-cr1", "work", "org", "entity"), ("synthetic-cr1", "work", "org", "kwd-entity"))
+        self.empty_checks.append(name)
+        result = self.populated.get(name, False)
+        if isinstance(result, Exception):
+            raise result
+        return SimpleNamespace(fetchone=lambda: {"populated": result})
+
+
+@pytest.mark.parametrize("extended", [False, True])
+@pytest.mark.parametrize("entity", ["entity", "kwd-entity"])
+def test_cr1_legacy_catalog_preserves_exact67_for_both_fixture_scopes(extended: bool, entity: str) -> None:
+    names = tuple(sorted((*LEGACY_CUSTOMER_RETURN_TABLES, *LEGACY_MONETARY_TABLES))) if extended else LEGACY_CUSTOMER_RETURN_TABLES
+    catalog = _LegacyCr1Catalog(names)
+    assert legacy_customer_return_capture_tables(catalog, "synthetic-cr1", {
+        "workspace_id": "work", "organization_id": "org", "legal_entity_id": entity,
+    }) == LEGACY_CUSTOMER_RETURN_TABLES
+    assert catalog.empty_checks == (list(LEGACY_MONETARY_TABLES) if extended else [])
+
+
+@pytest.mark.parametrize("damage", [*LEGACY_MONETARY_TABLES, "old-missing", "unknown", "duplicate"])
+def test_cr1_legacy_catalog_refuses_partial_or_unreviewed_family(damage: str) -> None:
+    names = list(sorted((*LEGACY_CUSTOMER_RETURN_TABLES, *LEGACY_MONETARY_TABLES)))
+    if damage in LEGACY_MONETARY_TABLES:
+        names.remove(damage)
+    elif damage == "old-missing":
+        names.remove(LEGACY_CUSTOMER_RETURN_TABLES[0])
+    else:
+        names.append("stock_unreviewed_future" if damage == "unknown" else names[-1])
+        names.sort()
+    catalog = _LegacyCr1Catalog(tuple(names))
+    with pytest.raises(AssertionError, match="exact original67"):
+        legacy_customer_return_capture_tables(catalog, "synthetic-cr1", {
+            "workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity",
+        })
+    assert catalog.empty_checks == []
+
+
+@pytest.mark.parametrize("name", LEGACY_MONETARY_TABLES)
+@pytest.mark.parametrize("denied", [False, True])
+def test_cr1_legacy_capture_refuses_populated_or_unreadable_owner(name: str, denied: bool) -> None:
+    catalog = _LegacyCr1Catalog(tuple(sorted((*LEGACY_CUSTOMER_RETURN_TABLES, *LEGACY_MONETARY_TABLES))), {
+        name: PermissionError("fixture SELECT denied") if denied else True,
+    })
+    with pytest.raises(PermissionError if denied else AssertionError):
+        legacy_customer_return_capture_tables(catalog, "synthetic-cr1", {
+            "workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity",
+        })
+    assert name in catalog.empty_checks
+
+
+@pytest.mark.parametrize("value", [0, "false", None])
+def test_cr1_legacy_capture_refuses_untyped_emptiness_evidence(value: Any) -> None:
+    catalog = _LegacyCr1Catalog(tuple(sorted((*LEGACY_CUSTOMER_RETURN_TABLES, *LEGACY_MONETARY_TABLES))), {
+        LEGACY_MONETARY_TABLES[0]: value,
+    })
+    with pytest.raises(AssertionError, match="empty"):
+        legacy_customer_return_capture_tables(catalog, "synthetic-cr1", {
+            "workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity",
+        })
+
+
+@pytest.mark.parametrize("kind", ["v", "p", "S"])
+def test_cr1_legacy_capture_refuses_wrong_kind_reserved_owner(kind: str) -> None:
+    catalog = _LegacyCr1Catalog(tuple(sorted((*LEGACY_CUSTOMER_RETURN_TABLES, *LEGACY_MONETARY_TABLES))), kind=kind)
+    with pytest.raises(AssertionError, match="table kinds"):
+        legacy_customer_return_capture_tables(catalog, "synthetic-cr1", {
+            "workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity",
+        })
+    assert catalog.empty_checks == []
+
+
+def test_cr1_empty_roundtrip_restores_only_seven_explicit_fixture_select_grants() -> None:
+    catalog = _LegacyCr1Catalog(())
+    restore_empty_monetary_fixture_select(catalog, "fixture_runtime_app")
+    assert catalog.grants == list(LEGACY_MONETARY_TABLES)

@@ -3,7 +3,7 @@
 from importlib import import_module
 from typing import Any, Literal, cast
 
-ParticipantKind = Literal["manufacturing-v2-post", "manufacturing-v2-receipt", "intercompany-fx", "people-payroll", "accrual-deferral", "project-billing", "manufacturing-supply", "customer-partial-return"]
+ParticipantKind = Literal["manufacturing-v2-post", "manufacturing-v2-receipt", "intercompany-fx", "people-payroll", "accrual-deferral", "project-billing", "manufacturing-supply", "customer-partial-return", "customer-partial-return-monetary"]
 _PARTICIPANTS = {
     "manufacturing-v2-post": ("reconforge.infrastructure.postgres_manufacturing_execution_v2", "_ManufacturingV2PostingParticipant"),
     "manufacturing-v2-receipt": ("reconforge.infrastructure.postgres_manufacturing_execution_v2", "_ManufacturingV2ReceiptParticipant"),
@@ -13,6 +13,7 @@ _PARTICIPANTS = {
     "manufacturing-supply": ("reconforge.infrastructure.postgres_manufacturing_supply_plan", "_ManufacturingSupplyParticipant"),
     "people-payroll": ("reconforge.infrastructure.postgres_people_project_payroll", "_PeoplePayrollPostingParticipant"),
     "customer-partial-return": ("reconforge.infrastructure.postgres_customer_partial_returns", "_CustomerPartialReturnPostingParticipant"),
+    "customer-partial-return-monetary": ("reconforge.infrastructure.postgres_monetary_customer_partial_returns", "_MonetaryCustomerReturnPostingParticipant"),
 }
 
 

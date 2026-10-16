@@ -59,6 +59,8 @@ class _FxPostingParticipant:
 
 
 class PostgresOperationalFxTaxRepository:
+    _source_schema = "operational-fx-source-v1"
+
     def __init__(self, connection: Any, tenant_id: str) -> None:
         self.connection, self.tenant_id = connection, tenant_id
         self.owner = PostgresOperationalFinanceRepository(connection, tenant_id)
@@ -75,7 +77,10 @@ class PostgresOperationalFxTaxRepository:
         rows = records(self.connection.execute(statement, (self.tenant_id, text(identifier, table + "_id"))))
         if not rows:
             fail("Foreign receivable is absent or outside current scope.", "fx_" + table + "_not_found")
-        return dict(rows[0]["payload"])
+        value = dict(rows[0]["payload"])
+        if table == "source" and value.get("schema_version") != self._source_schema:
+            fail("The source belongs to a different fixed monetary owner.", "fx_source_protocol_conflict")
+        return value
 
     def _period(self, period_id: str) -> None:
         if self.connection.execute("SELECT id FROM reconforge.fiscal_periods WHERE tenant_id=%s AND id=%s FOR SHARE",
@@ -84,10 +89,12 @@ class PostgresOperationalFxTaxRepository:
 
     def _source(self, source_id: str) -> dict[str, Any]:
         rows = records(self.connection.execute(
-            "SELECT invoice_id FROM reconforge.operational_fx_sources WHERE tenant_id=%s AND id=%s",
+            "SELECT invoice_id,payload FROM reconforge.operational_fx_sources WHERE tenant_id=%s AND id=%s",
             (self.tenant_id, text(source_id, "source_id"))))
         if not rows:
             fail("Foreign receivable is absent or outside current scope.", "fx_source_not_found")
+        if rows[0]["payload"].get("schema_version") != self._source_schema:
+            fail("The source belongs to a different fixed monetary owner.", "fx_source_protocol_conflict")
         # All detail, evidence and mutation paths lock the native customer and
         # invoice before the retained owner and plan. Native AR uses that order.
         self.connection.execute("""SELECT c.id FROM reconforge.ar_customers c JOIN reconforge.ar_invoices i
@@ -379,12 +386,14 @@ class PostgresOperationalFxTaxRepository:
         with self.owner._transaction():
             plan = self._peek("plan", plan_id)
             source = self._peek("source", plan["source_id"])
+            self._admit_journal_presence(source, plan)
             self._authorize(actor, permission, source, plan)
             digest, replay = self._command(plan, operation, command_id, actor, request)
             self._period(plan["period_id"])
             FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(plan["workspace_id"])
             plan = self._plan(plan_id)
             source = self._source(plan["source_id"])
+            self._admit_journal_presence(source, plan)
             # Grants can be revoked while the command waits for a currency or
             # native parent lock; retained ACKs require authority at return.
             self._authorize(actor, permission, source, plan)
@@ -402,7 +411,8 @@ class PostgresOperationalFxTaxRepository:
                 if plan["kind"] == "recognize":
                     invoice = self.ar.get_invoice(source["invoice_id"])
                     self.ar.approve_invoice(source["invoice_id"], expected_version=invoice["row_version"], actor_label=actor.username)
-                self.owner.finance.validate_entry(plan["entry_id"], reason=request["reason"], actor_label=actor.username)
+                if plan["entry_id"] is not None:
+                    self.owner.finance.validate_entry(plan["entry_id"], reason=request["reason"], actor_label=actor.username)
                 audit, outbox = self.owner._event(plan, "operational_fx_reviewed", actor, {"plan_digest": plan["plan_digest"]})
                 self.connection.execute("""INSERT INTO reconforge.operational_fx_reviews
                     (tenant_id,plan_id,reviewer_actor_id,reason,audit_event_id,outbox_event_id) VALUES(%s,%s,%s,%s,%s,%s)""",
@@ -413,25 +423,39 @@ class PostgresOperationalFxTaxRepository:
                     fail("Posting requires a third distinct human.", "fx_actor_denied")
                 receipt_id = None
                 if plan["kind"] == "settle":
-                    receipt = self.ar.post_receipt(receipt_number=plan_id, customer_code=source["request"]["customer_code"],
+                    receipt = self.ar.post_receipt(receipt_number=self._receipt_number(plan), customer_code=source["request"]["customer_code"],
                         receipt_date=plan["posting_date"], currency_code=source["foreign_policy"]["currency_code"],
                         amount_minor=plan["equation"]["foreign_minor"], allocations=[ReceiptAllocationInput(source["invoice_id"], plan["equation"]["foreign_minor"])],
                         workspace=source["workspace_id"], organization_code=source["request"]["organization_code"], entity_code=source["request"]["entity_code"],
                         idempotency_key="FX1:receipt:" + command_id, actor_label=actor.username)
                     receipt_id = receipt["id"]
-                self._participant = _FxPostingParticipant(self, plan["entry_id"])
-                try:
-                    effect = self.owner.posting.post(plan["entry_id"], command_id="FX1:" + command_id,
-                        expected_validation_digest=plan["validation_digest"], reason=request["reason"], actor=actor, _source_owner=self._participant)
-                finally:
-                    self._participant = None
-                audit, outbox = self.owner._event(plan, "operational_fx_posted", actor, {"plan_digest": plan["plan_digest"], "posting_effect_id": effect["id"]})
+                effect_id = None
+                if plan["entry_id"] is not None:
+                    self._participant = _FxPostingParticipant(self, plan["entry_id"])
+                    try:
+                        effect_id = self.owner.posting.post(plan["entry_id"], command_id="FX1:" + command_id,
+                            expected_validation_digest=plan["validation_digest"], reason=request["reason"], actor=actor, _source_owner=self._participant)["id"]
+                    finally:
+                        self._participant = None
+                audit, outbox = self.owner._event(plan, "operational_fx_posted", actor, {"plan_digest": plan["plan_digest"], "posting_effect_id": effect_id})
                 self.connection.execute("""INSERT INTO reconforge.operational_fx_links
                     (tenant_id,plan_id,posting_effect_id,receipt_id,posted_actor_id,reason,audit_event_id,outbox_event_id) VALUES(%s,%s,%s,%s,%s,%s,%s,%s)""",
-                    (self.tenant_id, plan_id, effect["id"], receipt_id, actor.user_id, request["reason"], audit, outbox))
+                    (self.tenant_id, plan_id, effect_id, receipt_id, actor.user_id, request["reason"], audit, outbox))
                 phase = 2
             self.connection.execute("UPDATE reconforge.operational_fx_plans SET phase=%s WHERE tenant_id=%s AND id=%s", (phase, self.tenant_id, plan_id))
+            if operation == "post":
+                self._after_posted(source, plan)
             return self._remember(plan, operation, command_id, actor, digest, request)
+
+    def _receipt_number(self, plan: Mapping[str, Any]) -> str:
+        return str(plan["id"])
+
+    def _admit_journal_presence(self, source: Mapping[str, Any], plan: Mapping[str, Any]) -> None:
+        if plan.get("entry_id") is None:
+            fail("Legacy foreign receivable phases require their exact retained functional journal.", "fx_state_invalid")
+
+    def _after_posted(self, source: Mapping[str, Any], plan: Mapping[str, Any]) -> None:
+        """Legacy FX1 has no additional owner history to append."""
 
     def review(self, plan_id: str, *, expected_plan_digest: str, reason: str, command_id: str, actor: PostingActor) -> dict[str, Any]:
         return self._phase("review", plan_id, expected_plan_digest=expected_plan_digest, reason=reason, command_id=command_id, actor=actor)
@@ -460,8 +484,9 @@ class PostgresOperationalFxTaxRepository:
         with self.owner._transaction():
             self.owner._actor(actor, "finance_core.read", scope, mutation=False)
             rows = records(self.connection.execute("""SELECT id,payload FROM reconforge.operational_fx_sources
-                WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s AND id>%s ORDER BY id COLLATE "C" LIMIT %s""",
-                (self.tenant_id, scope["workspace_id"], scope["organization_id"], scope["legal_entity_id"], after, limit + 1)))
+                WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s AND id>%s
+                AND payload->>'schema_version'=%s ORDER BY id COLLATE "C" LIMIT %s""",
+                (self.tenant_id, scope["workspace_id"], scope["organization_id"], scope["legal_entity_id"], after, self._source_schema, limit + 1)))
             for row in rows[:limit]:
                 self._authorize(actor, "finance_core.read", row["payload"], mutation=False)
             return {"invoices": [row["payload"] for row in rows[:limit]], "next_after": rows[limit - 1]["id"] if len(rows) > limit else None}

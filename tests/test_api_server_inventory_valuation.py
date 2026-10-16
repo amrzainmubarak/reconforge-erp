@@ -26,9 +26,9 @@ from reconforge.infrastructure.postgres_inventory_core import (
     POSTGRES_INVENTORY_CORE_SCHEMA_SQL,
     PostgresInventoryCoreRepository,
 )
-from reconforge.infrastructure.postgres_inventory_valuation import POSTGRES_INVENTORY_VALUATION_SCHEMA_SQL
+from reconforge.infrastructure.postgres_inventory_valuation import install_postgres_inventory_valuation_schema
 from reconforge.infrastructure.postgres_inventory_valuation_reversal import (
-    POSTGRES_INVENTORY_VALUATION_REVERSAL_SCHEMA_SQL,
+    install_postgres_inventory_valuation_reversal_schema,
 )
 from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data import (
@@ -66,8 +66,8 @@ def test_live_server_inventory_valuation_and_reversal_http_contract_is_exact_and
             install_postgres_master_data_application_schema(admin)
             install_postgres_finance_core_schema(admin)
             admin.execute(POSTGRES_INVENTORY_CORE_SCHEMA_SQL)
-            admin.execute(POSTGRES_INVENTORY_VALUATION_SCHEMA_SQL)
-            admin.execute(POSTGRES_INVENTORY_VALUATION_REVERSAL_SCHEMA_SQL)
+            install_postgres_inventory_valuation_schema(admin)
+            install_postgres_inventory_valuation_reversal_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             admin.execute(f"GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {app_user}")
             admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s)", (tenant_id, tenant_id))

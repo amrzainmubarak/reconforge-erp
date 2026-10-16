@@ -99,6 +99,8 @@ def stock_sales_money_context(row: Mapping[str, Any]) -> tuple[int, int]:
 
 
 class PostgresStockSalesRepository:
+    _source_schema = "stock-sales-order-v1"
+
     def __init__(self, connection: Any, tenant_id: str, *, workspace_id: str, organization_id: str,
                  legal_entity_id: str, organization_code: str, entity_code: str) -> None:
         self.connection, self.tenant_id = connection, validate_tenant_id(tenant_id)
@@ -182,13 +184,17 @@ class PostgresStockSalesRepository:
         args = (self.tenant_id, text(identifier, "stock order"), self.scope["workspace_id"],
                 self.scope["organization_id"], self.scope["legal_entity_id"])
         if lock:
-            return self._one("""SELECT * FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s
+            row = self._one("""SELECT * FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s
                 AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s FOR UPDATE""", args)
-        if read_lock:
-            return self._one("""SELECT * FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s
+        elif read_lock:
+            row = self._one("""SELECT * FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s
                 AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s FOR SHARE""", args)
-        return self._one("""SELECT * FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s
-            AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s""", args)
+        else:
+            row = self._one("""SELECT * FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s
+                AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s""", args)
+        if row["source"].get("schema_version") != self._source_schema:
+            raise FinancePostingError("stock_sales_protocol_conflict", "The source belongs to a different fixed Stock protocol.")
+        return row
 
     def _view(self, identifier: str) -> dict[str, Any]:
         return self._one("SELECT reconforge.stock_sales_public(d) value FROM reconforge.stock_sales_orders d WHERE tenant_id=%s AND id=%s",
@@ -284,8 +290,20 @@ class PostgresStockSalesRepository:
         self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
             (f"{row['legal_entity_id']}|{row['item_id']}|",))
 
+    def _issue_money(self, row: Mapping[str, Any]) -> tuple[str, Mapping[str, Any]]:
+        """Default single-currency interpretation; fixed new owners override it."""
+        return str(row["currency_code"]), row["source"]["monetary_policy"]
+
+    def _restituted_cost(self, row: Mapping[str, Any], allocations: list[dict[str, Any]]) -> Any:
+        return self._one("SELECT reconforge.customer_partial_return_zero_stock_cost(%s,%s,%s,%s,%s,%s::jsonb) value",
+            (self.tenant_id, row["workspace_id"], row["organization_id"], row["legal_entity_id"], row["item_id"], canonical_json(allocations)))["value"]
+
+    def _issue_authority(self, row: Mapping[str, Any], total: int, cost_snapshot: Any, actor: PostingActor) -> None:
+        self._actor(actor, "prepare-issue", {**row, "total_minor": max(row["total_minor"], total)})
+
     def _prepare_issue(self, row: Mapping[str, Any], parameters: Mapping[str, Any], actor: PostingActor) -> dict[str, Any]:
         request = StockIssuePreparation(**dict(parameters)).payload()
+        valuation_currency, quoted = self._issue_money(row)
         if request["posting_date"] < row["source"]["order_date"]:
             raise FinancePostingError("stock_sales_date_invalid", "Delivery cannot precede the order.")
         self._stock_lock(row)
@@ -302,7 +320,7 @@ class PostgresStockSalesRepository:
             WHERE p.tenant_id=%s AND p.workspace_id=%s AND p.organization_id=%s AND p.legal_entity_id=%s
             AND p.policy_code=%s AND p.active AND p.currency_code=%s AND a.active AND a.allow_posting AND a.allow_manual_posting
             AND b.active AND b.allow_posting AND b.allow_manual_posting AND a.account_type='Expense' AND b.account_type='Asset'""",
-            (row["item_id"], self.tenant_id, row["workspace_id"], row["organization_id"], row["legal_entity_id"], request["policy_code"], row["currency_code"]))
+            (row["item_id"], self.tenant_id, row["workspace_id"], row["organization_id"], row["legal_entity_id"], request["policy_code"], valuation_currency))
         layers = [dict(value) for value in self.connection.execute("""SELECT l.*,d.currency_precision,d.currency_rounding_policy,
             d.currency_registry_version,d.currency_registry_digest FROM reconforge.inventory_cost_layers l
             JOIN reconforge.inventory_valuation_lines v ON v.tenant_id=l.tenant_id AND v.id=l.source_valuation_line_id
@@ -310,7 +328,6 @@ class PostgresStockSalesRepository:
             WHERE l.tenant_id=%s AND l.workspace_id=%s AND l.legal_entity_id=%s AND l.item_id=%s
             AND l.inventory_lot_id IS NULL AND l.remaining_quantity_scaled>0 AND d.status='Approved'
             ORDER BY l.created_at,l.id FOR UPDATE OF l""", (self.tenant_id, row["workspace_id"], row["legal_entity_id"], row["item_id"])).fetchall()]
-        quoted = row["source"]["monetary_policy"]
         currency_policy, _ = FinancePolicyStore(self.connection, tenant_id=self.tenant_id).entry({"currency_code": quoted["currency_code"],
             "currency_precision": quoted["precision"], "currency_rounding_policy": quoted["rounding_policy"],
             "currency_registry_version": quoted["registry_version"], "currency_registry_digest": quoted["registry_digest"]})
@@ -327,9 +344,8 @@ class PostgresStockSalesRepository:
                          and part["value_minor"] == part["remaining_value_minor"]) for part in allocations)
         cost_snapshot = None
         if restituted:
-            cost_snapshot = self._one("SELECT reconforge.customer_partial_return_zero_stock_cost(%s,%s,%s,%s,%s,%s::jsonb) value",
-                (self.tenant_id, row["workspace_id"], row["organization_id"], row["legal_entity_id"], row["item_id"], canonical_json(allocations)))["value"]
-        self._actor(actor, "prepare-issue", {**row, "total_minor": max(row["total_minor"], total)})
+            cost_snapshot = self._restituted_cost(row, allocations)
+        self._issue_authority(row, total, cost_snapshot, actor)
         number = "SS1-" + digest_payload([self.tenant_id, row["id"]])[:32].upper()
         entry_id = platform_id("GLE", row["workspace_id"], number) if total > 0 else None
         plan = {"schema_version": "stock-sales-issue-v2" if restituted else "stock-sales-issue-v1", "preparer_actor_id": actor.user_id, "preparer_username": actor.username,
@@ -382,7 +398,7 @@ class PostgresStockSalesRepository:
              valuation_date,currency_code,created_by,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest)
             VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""", (self.tenant_id, valuation_id,
             row["workspace_id"], row["organization_id"], row["legal_entity_id"], request["period_id"], movement["id"], plan["policy_id"],
-            plan["entry_number"], request["posting_date"], row["currency_code"], plan["preparer_username"],
+            plan["entry_number"], request["posting_date"], policy["currency_code"], plan["preparer_username"],
             policy["precision"], policy["rounding_policy"], policy["registry_version"], policy["registry_digest"]))
         line_id = platform_id("STVL", row["id"])
         self.connection.execute("""INSERT INTO reconforge.inventory_valuation_lines
@@ -450,9 +466,7 @@ class PostgresStockSalesRepository:
             if row["row_version"] != expected_version or row["status"] not in STOCK_STAGES:
                 raise FinancePostingError("stock_sales_version_conflict", "Order changed; reload before proceeding.")
             stage = STOCK_STAGES.index(row["status"])
-            if operation != "cancel" and (stage >= len(STOCK_OPERATIONS) or STOCK_OPERATIONS[stage] != operation):
-                raise FinancePostingError("stock_sales_state_invalid", "Only the next complete owner operation is allowed.")
-            changes: dict[str, Any] = {"status": STOCK_STAGES[stage + 1] if operation != "cancel" else "Cancelled"}
+            changes: dict[str, Any] = {"status": self._next_status(row, operation)}
             if operation == "approve":
                 if row["created_by"] == actor.user_id:
                     raise FinancePostingError("stock_sales_sod_denied", "Creator cannot approve their product order.")
@@ -490,6 +504,14 @@ class PostgresStockSalesRepository:
                 changes.update(self._revenue(row, operation, parameters, actor, command_id, reason))
             self._advance(row, changes)
             return self._remember(self._order(identifier), command_id, request, reason, actor)
+
+    def _next_status(self, row: Mapping[str, Any], operation: str) -> str:
+        stage = STOCK_STAGES.index(row["status"])
+        if operation == "cancel":
+            return "Cancelled"
+        if stage >= len(STOCK_OPERATIONS) or STOCK_OPERATIONS[stage] != operation:
+            raise FinancePostingError("stock_sales_state_invalid", "Only the next complete owner operation is allowed.")
+        return STOCK_STAGES[stage + 1]
 
     def _advance(self, row: Mapping[str, Any], changes: Mapping[str, Any]) -> None:
         from psycopg import sql
@@ -574,8 +596,9 @@ class PostgresStockSalesRepository:
             ensure_repository_tenant_scope(self.connection, self.tenant_id)
             self._actor(actor, "read")
             rows = self.connection.execute("""SELECT id FROM reconforge.stock_sales_orders WHERE tenant_id=%s
-                AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s ORDER BY id COLLATE "C" LIMIT 100""",
-                (self.tenant_id, self.scope["workspace_id"], self.scope["organization_id"], self.scope["legal_entity_id"])).fetchall()
+                AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s AND source->>'schema_version'=%s
+                ORDER BY id COLLATE "C" LIMIT 100""",
+                (self.tenant_id, self.scope["workspace_id"], self.scope["organization_id"], self.scope["legal_entity_id"], self._source_schema)).fetchall()
             return {"orders": [self.get(row["id"], actor=actor) for row in rows]}
 
     def options(self, *, actor: PostingActor) -> dict[str, Any]:

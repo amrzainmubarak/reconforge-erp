@@ -56,6 +56,7 @@ from reconforge.api.routes import (
     consolidation_ppa,
     customer_partial_returns,
     customer_partial_returns_v2,
+    customer_partial_returns_v3,
     customer_returns,
     durable_job_operations,
     emergency_access,
@@ -110,6 +111,7 @@ from reconforge.api.routes import (
     security_center,
     security_governance,
     stock_sales,
+    stock_sales_v2,
     supplier_returns,
     users,
     webauthn,
@@ -466,12 +468,14 @@ def create_api_app(
     app.include_router(procurement_operations.router, prefix="/api/v1")
     app.include_router(financial_reporting.router, prefix="/api/v1")
     app.include_router(stock_sales.router, prefix="/api/v1")
+    app.include_router(stock_sales_v2.router, prefix="/api/v2")
     app.include_router(procurement_partial.router, prefix="/api/v1")
     app.include_router(financial_installments.router, prefix="/api/v1")
     app.include_router(commercial_collections.router, prefix="/api/v1")
     app.include_router(customer_returns.router, prefix="/api/v1")
     app.include_router(customer_partial_returns.router, prefix="/api/v1")
     app.include_router(customer_partial_returns_v2.router, prefix="/api/v2")
+    app.include_router(customer_partial_returns_v3.router, prefix="/api/v3")
     app.include_router(intercompany_operations.router, prefix="/api/v1")
     app.include_router(intercompany_fx.router, prefix="/api/v1")
     app.include_router(intercompany_cashflow.router, prefix="/api/v1")
@@ -604,13 +608,18 @@ def create_api_app(
             }
         ),
     )
-    partial_v2_contracts = build_route_authorization_inventory(
-        (customer_partial_returns_v2.router,), prefix="/api/v2", public_routes=frozenset(), identity_routes=frozenset()
+    v2_contracts = build_route_authorization_inventory(
+        (customer_partial_returns_v2.router, stock_sales_v2.router),
+        prefix="/api/v2", public_routes=frozenset(), identity_routes=frozenset()
+    )
+    v3_contracts = build_route_authorization_inventory(
+        (customer_partial_returns_v3.router,),
+        prefix="/api/v3", public_routes=frozenset(), identity_routes=frozenset()
     )
     scim_contracts = build_route_authorization_inventory(
         (scim.router,), prefix="", public_routes=frozenset(), identity_routes=frozenset()
     )
-    app.state.authorization_contracts = tuple(sorted((*core_contracts, *partial_v2_contracts, *scim_contracts)))
+    app.state.authorization_contracts = tuple(sorted((*core_contracts, *v2_contracts, *v3_contracts, *scim_contracts)))
     validate_authorization_surface(app.state.authorization_contracts, require_critical_routes=True)
     app.state.authorization_contract_digest = authorization_inventory_digest(app.state.authorization_contracts)
     return app

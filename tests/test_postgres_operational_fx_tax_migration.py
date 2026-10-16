@@ -9,6 +9,10 @@ import pytest
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
+from reconforge.infrastructure.postgres_monetary_installation import (
+    installation_preflight_sql,
+    verify_monetary_installation_if_present,
+)
 from reconforge.infrastructure.postgres_operational_fx_revaluation_schema import DOWNGRADE_SQL as REVALUATION_DOWN
 from reconforge.infrastructure.postgres_operational_fx_revaluation_schema import UPGRADE_SQL as REVALUATION_UP
 from reconforge.infrastructure.postgres_operational_fx_tax import PostgresOperationalFxTaxRepository
@@ -32,16 +36,59 @@ def test_empty_schema_rollback_reupgrade_and_populated_evidence_refusal(receipt_
     from psycopg import sql
 
     with psycopg.connect(receipt_database[0]) as admin:
-        admin.execute(REVALUATION_DOWN)
-        admin.execute(DOWNGRADE_SQL)
-        assert admin.execute("SELECT to_regclass('reconforge.operational_fx_sources')").fetchone()[0] is None
-        admin.execute(UPGRADE_SQL)
-        admin.execute(REVALUATION_UP)
-        # Additive table recreation drops its previous ACLs; deployment's
-        # explicit module grant step must accompany the restored schema.
-        app_user = psycopg.conninfo.conninfo_to_dict(receipt_database[1])["user"]
-        for table in ("operational_fx_sources", "operational_fx_plans", "operational_fx_reviews", "operational_fx_links", "operational_fx_commands"):
-            admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON {} TO {}").format(sql.Identifier("reconforge", table), sql.Identifier(app_user)))
+        monetary = verify_monetary_installation_if_present(admin)
+        profile_sql = """SELECT kind,original FROM (
+            SELECT 'relation' kind,to_jsonb(c)::text original FROM pg_class c
+                JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='reconforge'
+            UNION ALL SELECT 'function',to_jsonb(p)::text FROM pg_proc p
+                JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='reconforge'
+            UNION ALL SELECT 'trigger',to_jsonb(t)::text FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid
+                JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='reconforge'
+            UNION ALL SELECT 'policy',to_jsonb(p)::text FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid
+                JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='reconforge'
+            UNION ALL SELECT 'constraint',to_jsonb(c)::text FROM pg_constraint c
+                JOIN pg_namespace n ON n.oid=c.connamespace WHERE n.nspname='reconforge'
+            UNION ALL SELECT 'column',to_jsonb(a)::text FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid
+                JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='reconforge'
+            ) profiles ORDER BY kind COLLATE "C",original COLLATE "C"
+            """
+        before = admin.execute(profile_sql).fetchall() if monetary else None
+        # Simulate the historical FX roundtrip below its real dependants, then
+        # roll back the simulation to preserve the current catalog and ACLs.
+        with admin.transaction(force_rollback=monetary):
+            if monetary:
+                from reconforge.infrastructure.postgres_monetary_customer_returns_schema import (
+                    DOWNGRADE_SQL as NATIVE_DOWN,
+                )
+                from reconforge.infrastructure.postgres_monetary_inventory_shared_hooks import (
+                    DOWNGRADE_SQL as PHYSICAL_DOWN,
+                )
+                from reconforge.infrastructure.postgres_monetary_stock_schema import (
+                    DOWNGRADE_PREFLIGHT_SQL,
+                    DROP_STORAGE_SQL,
+                )
+                from reconforge.infrastructure.postgres_monetary_stock_shared_hooks import DOWNGRADE_SQL as STOCK_DOWN
+
+                # Same safe ordering as revision149: refuse retained monetary
+                # sources before changing any body, constraint or relation.
+                for statement in (DOWNGRADE_PREFLIGHT_SQL, installation_preflight_sql(), PHYSICAL_DOWN, STOCK_DOWN,
+                                  NATIVE_DOWN, DROP_STORAGE_SQL):
+                    admin.execute(statement)
+                assert verify_monetary_installation_if_present(admin) is False
+            admin.execute(REVALUATION_DOWN)
+            admin.execute(DOWNGRADE_SQL)
+            assert admin.execute("SELECT to_regclass('reconforge.operational_fx_sources')").fetchone()[0] is None
+            admin.execute(UPGRADE_SQL)
+            admin.execute(REVALUATION_UP)
+            if not monetary:
+                # Historical recreation requires its original explicit fixture
+                # grants. Current149 restores its exact ACLs through rollback.
+                app_user = psycopg.conninfo.conninfo_to_dict(receipt_database[1])["user"]
+                for table in ("operational_fx_sources", "operational_fx_plans", "operational_fx_reviews", "operational_fx_links", "operational_fx_commands"):
+                    admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON {} TO {}").format(sql.Identifier("reconforge", table), sql.Identifier(app_user)))
+        if monetary:
+            assert admin.execute(profile_sql).fetchall() == before
+            assert verify_monetary_installation_if_present(admin) is True
     runtime = seed_fx_runtime(receipt_database)
     posted = finish_fx(runtime, prepare_fx(runtime))
     with psycopg.connect(receipt_database[0]) as admin:

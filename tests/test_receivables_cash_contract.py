@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
 from reconforge.db import connect
+from reconforge.infrastructure.postgres import set_local_tenant_scope
 from reconforge.io.persisted import encode_financial_idempotency_response
 from tests.receivables_cash_runtime import CashRuntime, synthetic_cash_runtime
 from tests.test_receivables_api import _setup, _token
@@ -110,6 +111,8 @@ def test_live_cash_real_auth_read_scope_request_identity_and_unknown_allocation(
     legacy_allocation = client.post(f"/api/v1/receivables/receipts/{receipt_id}/allocate", headers=headers, json={**allocation, "expected_version": 2})
     assert legacy_allocation.status_code == 400
     with psycopg.connect(runtime.admin_dsn) as admin:
+        set_local_tenant_scope(admin, "cash-a", organization_id=posted.json()["organization_id"],
+                               workspace_id=posted.json()["workspace_id"], legal_entity_id=posted.json()["legal_entity_id"])
         admin.execute("UPDATE reconforge.ar_receipts SET organization_id='cash-org',legal_entity_id='cash-entity-a' WHERE tenant_id='cash-a' AND id=%s", (receipt_id,))
     # Initial creation retries remain original creation responses; GET is current.
     assert client.post("/api/v1/receivables/receipts", headers=headers, json=body).json()["allocated_minor"] == 0

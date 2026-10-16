@@ -1,3 +1,5 @@
+import { isMonetaryPath } from "./monetary-paths";
+
 /** A prepared command binds one route and exact payload until its outcome is known.
  * Keep this object for transport/5xx/response-contract retries. Never regenerate its
  * key or expected version after a possibly committed request.
@@ -25,7 +27,7 @@ export function isPartialReturnV2Path(path: string, mutation: boolean): boolean 
 }
 
 export function prepareScopedCommand(path: string, body: Record<string, ScopedJsonValue>): PreparedScopedCommand {
-  if ((!path.startsWith("/api/v1/") && !isPartialReturnV2Path(path, true)) || path.includes("?") || Object.hasOwn(body, "command_id")) throw new Error("scoped_command_invalid");
+  if ((!path.startsWith("/api/v1/") && !isPartialReturnV2Path(path, true) && !isMonetaryPath(path, true)) || path.includes("?") || Object.hasOwn(body, "command_id")) throw new Error("scoped_command_invalid");
   let nodes = 0;
   const ancestors = new Set<object>();
   function copy(value: ScopedJsonValue, depth: number): ScopedJsonValue {

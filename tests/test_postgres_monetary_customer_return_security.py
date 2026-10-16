@@ -5,18 +5,21 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 from threading import Barrier
+from uuid import uuid4
 
 import psycopg
 import pytest
 from psycopg import sql
+from psycopg.rows import dict_row
 
 from reconforge.domain.finance_posting import FinancePostingError, canonical_json
 from reconforge.domain.monetary_customer_partial_return_commands import MonetaryPartialReturnPreparation
-from reconforge.infrastructure.postgres import PostgresTenantBoundary
+from reconforge.infrastructure.postgres import PostgresTenantBoundary, set_local_tenant_scope
 from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository
 from reconforge.infrastructure.postgres_monetary_customer_partial_returns import (
     PostgresMonetaryCustomerPartialReturnsRepository,
 )
+from reconforge.infrastructure.postgres_monetary_stock_schema import TABLES as MONETARY_TABLES
 from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 from reconforge.platform.common import current_server_principal, server_principal_context
 from tests.customer_partial_return_monetary_posted_oracle import TABLES
@@ -239,4 +242,121 @@ def test_actual_scope_withdrawal_commits_during_post_lock_wait_and_prevents_effe
         with pytest.raises(FinancePostingError) as refused:
             future.result(timeout=20)
     assert refused.value.code == "operational_scope_denied"
+    assert _business_digest(runtime) == before
+
+
+def _prepared_event(runtime, plan):
+    with runtime.actor("maker") as (connection, _, _actor):
+        rows = connection.execute("""SELECT audit_event_id,outbox_event_id
+            FROM reconforge.customer_partial_return_monetary_events
+            WHERE tenant_id=%s AND plan_id=%s AND operation='prepare'""", (runtime.tenant, plan["id"])).fetchall()
+        assert len(rows) == 1
+        return dict(rows[0])
+
+
+@pytest.mark.parametrize("attack", ["audit-wrong-type", "outbox-wrong-type", "outbox-payload"])
+def test_actual_owned_monetary_event_cannot_escape_closure_by_type_or_envelope_mutation(receipt_database, attack):
+    runtime, order = _source(receipt_database, foreign=True)
+    plan = _return(runtime, order, 4, 0)
+    event = _prepared_event(runtime, plan)
+    before = _business_digest(runtime)
+    with runtime.actor("poster") as (connection, _, _actor):
+        audit = attack == "audit-wrong-type"
+        query = ("SELECT to_jsonb(r)::text original FROM reconforge.domain_audit_events r WHERE tenant_id=%s AND id=%s" if audit else
+                 "SELECT to_jsonb(r)::text original FROM reconforge.outbox_events r WHERE tenant_id=%s AND event_id=%s")
+        identifier = event["audit_event_id" if audit else "outbox_event_id"]
+        original = connection.execute(query, (runtime.tenant, identifier)).fetchone()["original"]
+        with pytest.raises(psycopg.errors.RaiseException) as refused, connection.transaction():
+            if audit:
+                connection.execute("UPDATE reconforge.domain_audit_events SET object_type='reconciliation_run' WHERE tenant_id=%s AND id=%s",
+                                   (runtime.tenant, identifier))
+            elif attack == "outbox-wrong-type":
+                connection.execute("UPDATE reconforge.outbox_events SET aggregate_type='reconciliation_run' WHERE tenant_id=%s AND event_id=%s",
+                                   (runtime.tenant, identifier))
+            else:
+                connection.execute("UPDATE reconforge.outbox_events SET payload=payload||'{\"unowned_override\":true}'::jsonb WHERE tenant_id=%s AND event_id=%s",
+                                   (runtime.tenant, identifier))
+            connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+        assert refused.value.sqlstate == "P0001" and refused.value.diag.constraint_name is None
+        assert refused.value.diag.message_primary == ("Domain audit events are append-only" if audit else
+                                                      "outbox event identity and payload are immutable")
+        assert connection.execute(query, (runtime.tenant, identifier)).fetchone()["original"] == original
+    assert _business_digest(runtime) == before
+
+
+def test_actual_owned_monetary_outbox_delivery_requires_no_private_financial_table_read(receipt_database):
+    runtime, order = _source(receipt_database, foreign=True)
+    plan = _return(runtime, order, 4, 0)
+    event = _prepared_event(runtime, plan)
+    before = _business_digest(runtime)
+    identifier = event["outbox_event_id"]
+    role = "monetary_delivery_worker_" + uuid4().hex[:12]
+    private_tables = (*MONETARY_TABLES, *("operational_fx_" + suffix for suffix in ("sources", "plans", "reviews", "links", "commands")))
+    delivery_fields = {"status", "attempt_count", "available_at", "claimed_at", "claimed_by", "published_at",
+                       "last_error", "dead_lettered_at", "lease_generation"}
+    original_query = "SELECT to_jsonb(r) original FROM reconforge.outbox_events r WHERE tenant_id=%s AND event_id=%s"
+    delivery_query = "SELECT lease_generation,action,worker_id,attempts FROM reconforge.outbox_delivery_evidence WHERE tenant_id=%s AND event_id=%s"
+    with psycopg.connect(runtime.admin_dsn, row_factory=dict_row) as admin:
+        original = admin.execute(original_query, (runtime.tenant, identifier)).fetchone()["original"]
+        assert original["aggregate_type"] == "operational_finance" and original["aggregate_id"] == plan["id"]
+        assert original["event_type"] == "customer_partial_return_monetary_prepare"
+        assert original["payload"]["plan_digest"] == plan["plan_digest"]
+        assert original["payload"]["audit_event_id"] == event["audit_event_id"]
+        assert all(original[key] == value for key, value in SCOPE.items())
+        assert original["status"] == "Pending" and original["attempt_count"] == original["lease_generation"] == 0
+        prior_evidence = admin.execute(delivery_query, (runtime.tenant, identifier)).fetchall()
+        assert prior_evidence == []
+        assert admin.execute("SELECT 1 FROM pg_roles WHERE rolname=%s", (role,)).fetchone() is None
+        try:
+            # All role/grant and delivery changes are transaction-contained.
+            # Force the deferred checks while still the minimal worker, then
+            # roll back; a killed fixture cannot leave a cluster role behind.
+            admin.execute(sql.SQL("CREATE ROLE {} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS")
+                          .format(sql.Identifier(role)))
+            admin.execute(sql.SQL("GRANT USAGE ON SCHEMA reconforge TO {}").format(sql.Identifier(role)))
+            admin.execute(sql.SQL("GRANT SELECT ON reconforge.outbox_events,reconforge.outbox_delivery_evidence TO {}")
+                          .format(sql.Identifier(role)))
+            admin.execute(sql.SQL("""GRANT UPDATE(status,attempt_count,available_at,claimed_at,claimed_by,
+                published_at,last_error,dead_lettered_at,lease_generation) ON reconforge.outbox_events TO {}""")
+                          .format(sql.Identifier(role)))
+            admin.execute(sql.SQL("SET LOCAL ROLE {}").format(sql.Identifier(role)))
+            set_local_tenant_scope(admin, runtime.tenant, **SCOPE)
+            flags = admin.execute("SELECT rolcanlogin,rolsuper,rolbypassrls,rolcreatedb,rolcreaterole,rolreplication "
+                                  "FROM pg_roles WHERE rolname=current_user").fetchone()
+            assert all(value is False for value in flags.values())
+            assert len(MONETARY_TABLES) == 7 and len(private_tables) == len(set(private_tables)) == 12
+            rights = admin.execute("SELECT has_column_privilege(current_user,'reconforge.outbox_events','status','UPDATE') delivery,"
+                "has_column_privilege(current_user,'reconforge.outbox_events','payload','UPDATE') payload,"
+                "has_column_privilege(current_user,'reconforge.outbox_events','tenant_id','UPDATE') tenant").fetchone()
+            assert rights == {"delivery": True, "payload": False, "tenant": False}
+            for table in private_tables:
+                allowed = admin.execute("SELECT has_table_privilege(current_user,%s,'SELECT') whole,"
+                    "has_any_column_privilege(current_user,%s,'SELECT') any_column", ("reconforge." + table,) * 2).fetchone()
+                assert allowed == {"whole": False, "any_column": False}
+                with pytest.raises(psycopg.errors.InsufficientPrivilege) as denied, admin.transaction():
+                    admin.execute(sql.SQL("SELECT tenant_id FROM reconforge.{} LIMIT 1").format(sql.Identifier(table)))
+                assert denied.value.sqlstate == "42501"
+            assert admin.execute(original_query, (runtime.tenant, identifier)).fetchone()["original"] == original
+            claimed = admin.execute("""UPDATE reconforge.outbox_events SET status='Claimed',claimed_by=%s,
+                claimed_at=clock_timestamp()+interval '60 seconds',attempt_count=attempt_count+1,lease_generation=lease_generation+1
+                WHERE tenant_id=%s AND event_id=%s RETURNING event_id,lease_generation""", (role, runtime.tenant, identifier)).fetchall()
+            assert claimed == [{"event_id": identifier, "lease_generation": 1}]
+            admin.execute("SET CONSTRAINTS ALL IMMEDIATE")
+            published = admin.execute("""UPDATE reconforge.outbox_events SET status='Published',claimed_at=NULL,claimed_by=NULL,
+                published_at=clock_timestamp(),last_error=NULL WHERE tenant_id=%s AND event_id=%s RETURNING event_id""",
+                (runtime.tenant, identifier)).fetchall()
+            assert published == [{"event_id": identifier}]
+            admin.execute("SET CONSTRAINTS ALL IMMEDIATE")
+            after = admin.execute(original_query, (runtime.tenant, identifier)).fetchone()["original"]
+            assert after["status"] == "Published" and after["lease_generation"] == after["attempt_count"] == 1
+            assert {key: value for key, value in original.items() if key not in delivery_fields} == {
+                key: value for key, value in after.items() if key not in delivery_fields}
+            evidence = admin.execute(delivery_query, (runtime.tenant, identifier)).fetchall()
+            assert len(evidence) == 2 and {row["action"] for row in evidence} == {"claimed", "published"}
+            assert all(row["worker_id"] == role and row["lease_generation"] == row["attempts"] == 1 for row in evidence)
+        finally:
+            admin.rollback()
+        assert admin.execute("SELECT 1 FROM pg_roles WHERE rolname=%s", (role,)).fetchone() is None
+        assert admin.execute(original_query, (runtime.tenant, identifier)).fetchone()["original"] == original
+        assert admin.execute(delivery_query, (runtime.tenant, identifier)).fetchall() == prior_evidence
     assert _business_digest(runtime) == before

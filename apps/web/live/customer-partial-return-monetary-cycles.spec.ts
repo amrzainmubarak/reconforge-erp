@@ -148,7 +148,10 @@ async function closeAndReverseCurrentForeignCarrying(page: Page) {
   await fields(form, { reason: "Value current credit-adjusted receivable", period_id: "period", posting_date: day, unrealized_gain_account_code: "UGAIN", unrealized_loss_account_code: "ULOSS", rate: "1.50", rateSource: rate("1.50").source, effective_at: rate("1.50").effective_at });
   let plan = await valuationCommand(page, `${stockRoot}/orders/${source}/valuations`, () => form.getByRole("button", { name: text("en", "prepareValuation"), exact: true }).click());
   expect(plan.monetary).toEqual({ transaction_outstanding_minor: "560", functional_historical_outstanding_minor: "700", functional_valued_outstanding_minor: "840", functional_unrealized_gain_minor: "140", functional_unrealized_loss_minor: "0", functional_turnover_minor: "140" });
-  plan = await valuationPhase(page, plan, "review"); plan = await valuationPhase(page, plan, "post"); capture = 5; observe();
+  plan = await valuationPhase(page, plan, "review"); plan = await valuationPhase(page, plan, "post");
+  const valuedBalance = page.getByRole("region", { name: text("en", "stockTitle"), exact: true }).getByRole("region", { name: text("en", "currentBalance"), exact: true });
+  await expect(valuedBalance).toContainText("5.60 EUR"); await expect(valuedBalance).toContainText("8.40 USD");
+  capture = 5; observe();
   const blocked = await returnForm(page, "4");
   await expect(blocked.getByRole("button", { name: text("en", "prepareReturn"), exact: true })).toBeDisabled();
   const body = { command_id: crypto.randomUUID(), source_order_id: source, quantity_scaled: "4", period_id: "period", posting_date: day, reason: "Actual remaining original tax and cost", expected_history_version: 2 };

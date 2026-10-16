@@ -1462,6 +1462,7 @@ BEGIN
 END $mr149$;
 CREATE FUNCTION reconforge.monetary_stock_close(t TEXT,target TEXT) RETURNS VOID
  LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
+<<monetary_stock_close>>
 DECLARE stock_owner RECORD;origin_owner RECORD;invoice_owner RECORD;member RECORD;command_owner RECORD;prior_event RECORD;
  source JSONB;actual JSONB;balance JSONB;history JSONB;recognition RECORD;initial_review RECORD;collection_owner RECORD;
  expected_status TEXT;next_status TEXT;version INTEGER:=0;stage INTEGER;
@@ -1832,6 +1833,7 @@ BEGIN
 END $mr149$;
 CREATE FUNCTION reconforge.monetary_return_native_close() RETURNS TRIGGER
  LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
+<<monetary_return_native_close>>
 DECLARE changed JSONB;previous JSONB;current_row JSONB;tenant TEXT;stock_id TEXT;entry_id TEXT;movement_id TEXT;invoice_id TEXT;plan_id TEXT;origin_id TEXT;
  member RECORD;origin_owner RECORD;candidate RECORD;reference TEXT;
 BEGIN
@@ -1883,7 +1885,8 @@ BEGIN
   END IF;
   IF plan_id IS NOT NULL THEN SELECT owned.origin_id INTO origin_id FROM reconforge.customer_partial_return_monetary_plans owned WHERE owned.tenant_id=tenant AND owned.id=plan_id;END IF;
   IF origin_id IS NOT NULL THEN SELECT owned.stock_order_id INTO stock_id FROM reconforge.stock_sales_monetary_origins owned WHERE owned.tenant_id=tenant AND owned.id=origin_id;END IF;
-  IF invoice_id IS NOT NULL THEN SELECT owned.stock_order_id INTO stock_id FROM reconforge.stock_sales_monetary_origins owned WHERE owned.tenant_id=tenant AND owned.invoice_id=invoice_id;END IF;
+  IF invoice_id IS NOT NULL THEN SELECT owned.stock_order_id INTO stock_id FROM reconforge.stock_sales_monetary_origins owned
+   WHERE owned.tenant_id=tenant AND owned.invoice_id=monetary_return_native_close.invoice_id;END IF;
   IF entry_id IS NOT NULL THEN
    FOR candidate IN SELECT fixed.stock_order_id FROM reconforge.stock_sales_monetary_origins fixed
     JOIN reconforge.customer_partial_return_monetary_plans partial_plan ON(partial_plan.tenant_id,partial_plan.origin_id)=(fixed.tenant_id,fixed.id)

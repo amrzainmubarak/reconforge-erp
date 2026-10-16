@@ -53,6 +53,7 @@ def _zero_active() -> str:
     value = _replace(value, "owned.issue_plan->>'policy_id',owned.currency_code)",
         "owned.issue_plan->>'policy_id',owned.source#>>'{functional_policy,currency_code}')")
     value = _replace(value, "owned.source->'monetary_policy',valuation.currency_code", "owned.source->'functional_policy',valuation.currency_code")
+    value = _replace(value, "reconforge.sales_revenue_policy_matches(", "reconforge.monetary_stock_policy_matches(")
     return _replace(value, " RETURN to_jsonb(owned);", " PERFORM reconforge.monetary_stock_zero_plan(t,owned.id);\n RETURN to_jsonb(owned);")
 
 

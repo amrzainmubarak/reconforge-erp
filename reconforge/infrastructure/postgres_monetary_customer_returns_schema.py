@@ -110,7 +110,8 @@ def _stock_physical() -> str:
  IF d.issue_plan ? 'cost_admission_policy' THEN PERFORM reconforge.monetary_stock_zero_plan(t,target);END IF;
  SELECT * INTO r FROM reconforge.stock_sales_reservations""")
     body = body.replace("d.source->'monetary_policy'", "d.source->'functional_policy'")
-    body = body.replace("d.currency_code", "(d.source#>>'{functional_policy,currency_code}')")
+    body = re.sub(r"\bd\.currency_code\b", "(d.source#>>'{functional_policy,currency_code}')", body)
+    body = body.replace("reconforge.sales_revenue_policy_matches(", "reconforge.monetary_stock_policy_matches(")
     body = body.replace("r IS NULL", "r.order_id IS NULL").replace("r IS NOT NULL", "r.order_id IS NOT NULL")
     body = body.replace("claim IS NULL", "claim.order_id IS NULL").replace("claim IS NOT NULL", "claim.order_id IS NOT NULL")
     body = body.replace("entry IS NULL", "entry.id IS NULL")
@@ -204,6 +205,13 @@ CREATE FUNCTION reconforge.monetary_full_policy(compact JSONB) RETURNS JSONB
   'currency_rounding_policy',compact->'rounding_policy','currency_registry_version',compact->'registry_version',
   'currency_registry_digest',compact->'registry_digest')
  WHERE reconforge.fx_object(compact,ARRAY['currency_code','precision','rounding_policy','registry_version','registry_digest'])
+$mr149$;
+CREATE FUNCTION reconforge.monetary_stock_policy_matches(t TEXT,q JSONB,c TEXT,p INTEGER,r TEXT,v TEXT,h TEXT) RETURNS BOOLEAN
+ LANGUAGE sql STABLE SET search_path=pg_catalog AS $mr149$
+ SELECT COALESCE(reconforge.fx_object(q,ARRAY['currency_code','precision','rounding_policy','registry_version','registry_digest'])
+  AND reconforge.fx_policy(t,reconforge.monetary_full_policy(q))
+  AND reconforge.monetary_full_policy(q)=jsonb_build_object('currency_code',c,'currency_precision',p,
+   'currency_rounding_policy',r,'currency_registry_version',v,'currency_registry_digest',h),FALSE)
 $mr149$;
 CREATE FUNCTION reconforge.monetary_return_ratio(v NUMERIC,q NUMERIC,selected NUMERIC) RETURNS BIGINT
  LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog AS $mr149$

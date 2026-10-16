@@ -87,8 +87,8 @@ def _read(runtime: ReceiptRuntime, order: dict[str, Any]) -> dict[str, Any]:
 
 def _collect(runtime: ReceiptRuntime, order: dict[str, Any], amount: int, *, rate: str | None, number: str) -> dict[str, Any]:
     order = _act(runtime, _read(runtime, order), "prepare-collection", "maker", {
-        "receipt_number": number, "receipt_date": DAY, "journal_code": "STOCK", "period_id": "period",
-        "cash_account_code": "CASH", "amount_minor": amount, "settlement_rate": _rate(rate)}, suffix=number)
+        "receipt_number": number, "receipt_date": DAY, "period_id": "period",
+        "amount_minor": amount, "settlement_rate": _rate(rate)}, suffix=number)
     order = _act(runtime, order, "review-collection", "checker", suffix=number)
     return _act(runtime, order, "collect", "poster", suffix=number)
 

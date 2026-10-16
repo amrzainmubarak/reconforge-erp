@@ -21,13 +21,15 @@ from reconforge.domain.monetary_customer_partial_return_commands import (
 )
 from reconforge.domain.operational_fx_tax import HistoricalRate
 from reconforge.domain.stock_sales import StockOrder
+from reconforge.infrastructure.postgres import PostgresTenantBoundary
+from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
 from reconforge.infrastructure.postgres_monetary_customer_partial_returns import (
     PostgresMonetaryCustomerPartialReturnsRepository,
 )
 from reconforge.infrastructure.postgres_monetary_stock_sales import PostgresMonetaryStockSalesRepository
 from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
 from tests.test_postgres_customer_returns import configure_runtime
-from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, receipt_database
+from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, create_receipt_runtime, receipt_database
 from tests.test_postgres_inventory_receipt_posting import request as receipt_request
 from tests.test_postgres_operational_fx_tax import native_balances, seed_fx_masters
 from tests.test_postgres_stock_sales import create_stock_runtime
@@ -56,13 +58,26 @@ def _act(runtime: ReceiptRuntime, order: dict[str, Any], operation: str, human: 
 
 
 def _source(database: tuple[str, str], *, foreign: bool, unit_price: int = 1000,
-            original_rate: str = "1.25", receipt_total_minor: int = 12000) -> tuple[ReceiptRuntime, dict[str, Any]]:
+            original_rate: str = "1.25", receipt_total_minor: int = 12000, fractional: bool = False) -> tuple[ReceiptRuntime, dict[str, Any]]:
     assert type(receipt_total_minor) is int and receipt_total_minor > 0
-    runtime = create_stock_runtime(database, seed_stock=receipt_total_minor == 12000)
+    assert type(fractional) is bool
+    if fractional:
+        # Configure the existing unreferenced master before any receipt/Stock
+        # history, using the already-supported native tenths fixture pattern.
+        base = create_receipt_runtime(database)
+        with PostgresTenantBoundary(base.factory).transaction(base.tenant) as connection:
+            inventory = PostgresInventoryCoreRepository(connection, base.tenant)
+            inventory.upsert_uom(uom_code="TENTH", name="Exact monetary tenths", decimal_places=1, workspace="work")
+            inventory.upsert_item(item_code="ITEM", name="Original fractional monetary item", organization_code="ORG", uom_code="TENTH",
+                                  inventory_account_code="INVENTORY", workspace="work")
+        runtime = create_stock_runtime(database, base_runtime=base, seed_stock=False)
+    else:
+        runtime = create_stock_runtime(database, seed_stock=receipt_total_minor == 12000)
     configure_runtime(runtime)
-    if receipt_total_minor != 12000:
+    quantity = "1" if fractional else "10"
+    if receipt_total_minor != 12000 or fractional:
         with runtime.actor("maker") as (_, owner, actor):
-            receipt = owner.prepare_receipt(replace(receipt_request(), total_value_minor=receipt_total_minor),
+            receipt = owner.prepare_receipt(replace(receipt_request(), quantity=quantity, total_value_minor=receipt_total_minor),
                 command_id="inbound-prepare", actor=actor)
         with runtime.actor("checker") as (_, owner, actor):
             review = owner.review(receipt["plan_id"], command_id="inbound-review", expected_plan_digest=receipt["plan_digest"],
@@ -73,7 +88,7 @@ def _source(database: tuple[str, str], *, foreign: bool, unit_price: int = 1000,
     seed_fx_masters(runtime)
     with runtime.actor("maker") as (connection, _, actor):
         order = _stock(connection, runtime).create(StockOrder("ACTUAL-MONETARY", "FOREIGN" if foreign else "CUSTOMER",
-            "SOURCE-PO", "ITEM", "MAIN", "STOCK", "10", unit_price, "EUR" if foreign else "USD", DAY,
+            "SOURCE-PO", "ITEM", "MAIN", "STOCK", quantity, unit_price, "EUR" if foreign else "USD", DAY,
             "Synthetic actual Stock and monetary original"), command_id="monetary:create", actor=actor)
     for operation, human, parameters in (
         ("submit", "maker", {}), ("approve", "checker", {}), ("reserve", "maker", {}),
@@ -206,7 +221,7 @@ def test_actual_zero_functional_collection_keeps_positive_transaction_cash_witho
 
 
 def test_actual_zero_journal_return_cancel_and_exact_merchandise_inverse_keep_physical_governance(receipt_database: tuple[str, str]) -> None:
-    runtime, order = _source(receipt_database, foreign=True, unit_price=1, original_rate="0.25", receipt_total_minor=1)
+    runtime, order = _source(receipt_database, foreign=True, unit_price=10, original_rate="0.25", receipt_total_minor=1, fractional=True)
 
     def check_stage(version: int, restored_quantity: int, restoration_rows: int) -> None:
         # Original receipt1 + COGS1 + recognition3. No Return/Inverse can
@@ -214,6 +229,9 @@ def test_actual_zero_journal_return_cancel_and_exact_merchandise_inverse_keep_ph
         balances = native_balances(runtime)
         assert {key: value for key, value in balances.items() if value} == {"CLEARING": -1, "COGS": 1, "AR": 3, "REVENUE": -3}
         with runtime.actor("poster") as (connection, _, _actor):
+            stock = connection.execute("SELECT quantity_scaled,quantity_precision FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s",
+                                       (runtime.tenant, order["id"])).fetchone()
+            assert dict(stock) == {"quantity_scaled": 10, "quantity_precision": 1}
             assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 3
             assert connection.execute("SELECT count(*) n FROM reconforge.finance_entries WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 3
             assert connection.execute("SELECT count(*) n FROM reconforge.finance_entry_lines WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 6
@@ -265,6 +283,9 @@ def test_actual_zero_journal_return_cancel_and_exact_merchandise_inverse_keep_ph
         movement = connection.execute("SELECT movement_type,status,source_reference FROM reconforge.inventory_movements WHERE tenant_id=%s AND id=%s",
                                       (runtime.tenant, posted["movement_id"])).fetchone()
         assert dict(movement) == {"movement_type": "Receipt", "status": "Posted", "source_reference": posted["id"]}
+        detail = connection.execute("SELECT quantity_scaled,quantity_precision FROM reconforge.inventory_movement_lines WHERE tenant_id=%s AND movement_id=%s",
+                                    (runtime.tenant, posted["movement_id"])).fetchall()
+        assert len(detail) == 1 and dict(detail[0]) == {"quantity_scaled": 1, "quantity_precision": 1}
     with runtime.actor("maker") as (connection, _, actor):
         owner = PostgresMonetaryCustomerPartialReturnsRepository(connection, runtime.tenant)
         args = MonetaryPartialReversePreparation(posted["id"], "period", DAY, "Reverse exact zero functional merchandise operation", 1)
@@ -282,3 +303,6 @@ def test_actual_zero_journal_return_cancel_and_exact_merchandise_inverse_keep_ph
         movement = connection.execute("SELECT movement_type,status,source_reference FROM reconforge.inventory_movements WHERE tenant_id=%s AND id=%s",
                                       (runtime.tenant, inverse["movement_id"])).fetchone()
         assert dict(movement) == {"movement_type": "Delivery", "status": "Posted", "source_reference": inverse["id"]}
+        detail = connection.execute("SELECT quantity_scaled,quantity_precision FROM reconforge.inventory_movement_lines WHERE tenant_id=%s AND movement_id=%s",
+                                    (runtime.tenant, inverse["movement_id"])).fetchall()
+        assert len(detail) == 1 and dict(detail[0]) == {"quantity_scaled": 1, "quantity_precision": 1}

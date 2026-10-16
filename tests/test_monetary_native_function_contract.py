@@ -196,10 +196,36 @@ def _function_bodies(*sources: str) -> dict[str, str]:
     return functions
 
 
+def _without_unscoped_ar_gates(functions: dict[str, str]) -> dict[str, str]:
+    """Restore the exact full-scope bodies for the older golden contracts."""
+    restored = dict(functions)
+    restored["monetary_stock_invoice_balance"] = restored["monetary_stock_invoice_balance"].replace(
+        " IF invoice_owner.organization_id IS NULL OR invoice_owner.legal_entity_id IS NULL THEN RETURN NULL;END IF;\n", "", 1)
+    namespace = restored["monetary_namespace"]
+    for image in ("OLD", "NEW"):
+        gate = (
+            "   IF invoice_owner.id IS NOT NULL AND(invoice_owner.organization_id IS NULL OR invoice_owner.legal_entity_id IS NULL) THEN\n"
+            f"    IF TG_TABLE_NAME='ar_invoice_lines' THEN RETURN {image};END IF;\n"
+            "    SELECT id,organization_id,legal_entity_id INTO receipt_owner FROM reconforge.ar_receipts "
+            f"WHERE tenant_id={image}.tenant_id AND id=to_jsonb({image})->>'receipt_id';\n"
+            "    IF receipt_owner.id IS NOT NULL AND(receipt_owner.organization_id IS NULL OR receipt_owner.legal_entity_id IS NULL) "
+            f"THEN RETURN {image};END IF;\n   END IF;\n"
+        )
+        namespace = namespace.replace(gate, "", 1)
+    restored["monetary_namespace"] = namespace.replace(";receipt_owner RECORD;", ";", 1)
+    callback = restored["monetary_return_native_close"]
+    start = callback.index("  -- A fixed monetary owner requires full native AR scope.")
+    end = callback.index("  IF TG_TABLE_NAME='stock_sales_monetary_origins' THEN", start)
+    restored["monetary_return_native_close"] = (callback[:start] + callback[end:]).replace(
+        ";invoice_scope RECORD;receipt_scope RECORD;", ";", 1)
+    return restored
+
+
 def test_cached_serializer_preserves_every_existing_native_check_and_retained_function() -> None:
     functions = _function_bodies(NATIVE_FUNCTION_SQL)
     previous = {name: body.replace("reconforge.monetary_digest(", "reconforge.irp_digest(")
                 for name, body in functions.items() if name not in {"monetary_canonical", "monetary_digest"}}
+    previous = _without_unscoped_ar_gates(previous)
     callback = previous["monetary_return_native_close"]
     start = callback.index("  -- These financial envelopes cannot mutate quantity inputs.")
     end = callback.index(" END LOOP;", start)
@@ -286,6 +312,47 @@ def test_event_dispatch_change_preserves_finance_admission_and_delivery_envelope
     # byte contracts; neither surface belongs to this event-only repair.
     assert hashlib.sha256(finance.encode()).hexdigest() == "095bb662dbbbeda979e8ecd2699c7d41f2c6fc6025b8622442308f473d55c0f4"
     assert hashlib.sha256(delivery.encode()).hexdigest() == "59f12ca824c593c5d4fba312be2a6fb93fbc952a94d08024fc9c5ee52e004a8b"
+
+
+def test_unscoped_ar_balance_requires_a_visible_header_before_excluding_private_ownership() -> None:
+    body = _function_bodies(NATIVE_FUNCTION_SQL)["monetary_stock_invoice_balance"]
+    gate = " IF invoice_owner.organization_id IS NULL OR invoice_owner.legal_entity_id IS NULL THEN RETURN NULL;END IF;\n"
+    assert body.count(gate) == 1
+    assert body.index("invoice_owner.id IS NOT NULL") < body.index(gate) < body.index("FROM reconforge.stock_sales_monetary_origins")
+    assert hashlib.sha256(body.replace(gate, "", 1).encode()).hexdigest() == "bb3b6e13d89f0712c2a6a2c5c980d381e2f4b4162eba3fb9e316503f687e5de8"
+
+
+def test_unscoped_namespace_children_require_actual_headers_and_preserve_every_owned_check() -> None:
+    body = _function_bodies(NATIVE_FUNCTION_SQL)["monetary_namespace"]
+    for image in ("OLD", "NEW"):
+        gate = (
+            "   IF invoice_owner.id IS NOT NULL AND(invoice_owner.organization_id IS NULL OR invoice_owner.legal_entity_id IS NULL) THEN\n"
+            f"    IF TG_TABLE_NAME='ar_invoice_lines' THEN RETURN {image};END IF;\n"
+            "    SELECT id,organization_id,legal_entity_id INTO receipt_owner FROM reconforge.ar_receipts "
+            f"WHERE tenant_id={image}.tenant_id AND id=to_jsonb({image})->>'receipt_id';\n"
+            "    IF receipt_owner.id IS NOT NULL AND(receipt_owner.organization_id IS NULL OR receipt_owner.legal_entity_id IS NULL) "
+            f"THEN RETURN {image};END IF;\n   END IF;\n"
+        )
+        assert body.count(gate) == 1
+        body = body.replace(gate, "", 1)
+    body = body.replace(";receipt_owner RECORD;", ";", 1)
+    assert hashlib.sha256(body.encode()).hexdigest() == "b9d186665c578e1a296a7303952ba3086e8fc5e019d85ef15c1239256da97b45"
+
+
+def test_unscoped_native_images_cannot_hide_a_missing_or_fully_scoped_allocation_parent() -> None:
+    body = _function_bodies(NATIVE_FUNCTION_SQL)["monetary_return_native_close"]
+    start = body.index("  -- A fixed monetary owner requires full native AR scope.")
+    end = body.index("  IF TG_TABLE_NAME='stock_sales_monetary_origins' THEN", start)
+    gate = body[start:end]
+    assert body.index("FOR changed IN SELECT previous") < start
+    assert "RETURN" not in gate
+    assert "changed->>'id' IS NOT NULL AND(changed->>'organization_id' IS NULL OR changed->>'legal_entity_id' IS NULL)" in gate
+    invoice = gate.index("IF invoice_scope.id IS NOT NULL AND(invoice_scope.organization_id IS NULL OR invoice_scope.legal_entity_id IS NULL) THEN")
+    receipt = gate.index("IF receipt_scope.id IS NOT NULL AND(receipt_scope.organization_id IS NULL OR receipt_scope.legal_entity_id IS NULL) THEN CONTINUE;END IF;")
+    assert invoice < gate.index("IF TG_TABLE_NAME='ar_invoice_lines' THEN CONTINUE;END IF;") < gate.index("FROM reconforge.ar_receipts") < receipt
+    assert set(re.findall(r"FROM reconforge\.([a-z_]+)", gate)) == {"ar_invoices", "ar_receipts"}
+    restored = (body[:start] + body[end:]).replace(";invoice_scope RECORD;receipt_scope RECORD;", ";", 1)
+    assert hashlib.sha256(restored.encode()).hexdigest() == "bba8e1b00f9014c87e7063a103f8cf87e85484c0d753795cfda9d0bafd44a4da"
 
 
 def _proof_call_graph(functions: dict[str, str]) -> dict[str, set[str]]:

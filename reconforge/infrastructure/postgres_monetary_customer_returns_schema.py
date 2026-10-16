@@ -524,6 +524,7 @@ BEGIN
  PERFORM reconforge.monetary_return_assert(invoice_owner.organization_id IS NULL OR invoice_owner.legal_entity_id IS NULL
   OR reconforge.irp_scope(t,invoice_owner.workspace_id,invoice_owner.organization_id,invoice_owner.legal_entity_id),
   'A visible invoice outside the current full child scope cannot fall back to legacy monetary economics');
+ IF invoice_owner.organization_id IS NULL OR invoice_owner.legal_entity_id IS NULL THEN RETURN NULL;END IF;
  SELECT id,workspace_id,organization_id,legal_entity_id,invoice_id,ar_balance INTO origin_owner
   FROM reconforge.stock_sales_monetary_origins WHERE tenant_id=t AND invoice_id=i;
  IF origin_owner.id IS NULL THEN RETURN NULL;END IF;
@@ -1781,13 +1782,18 @@ END $mr149$;
 NAMESPACE_SQL = r"""
 CREATE FUNCTION reconforge.monetary_namespace() RETURNS TRIGGER
  LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
-DECLARE changed JSONB;origin_owner RECORD;source_owner RECORD;plan_owner RECORD;stock_owner RECORD;review_owner RECORD;invoice_owner RECORD;
+DECLARE changed JSONB;origin_owner RECORD;source_owner RECORD;plan_owner RECORD;stock_owner RECORD;review_owner RECORD;invoice_owner RECORD;receipt_owner RECORD;
  actor TEXT:=current_setting('app.stock_sales_actor_id',true);partial_actor TEXT:=current_setting('app.customer_partial_return_monetary_actor_id',true);
  expected JSONB;prefix JSONB;amount NUMERIC;
 BEGIN
  IF TG_OP='DELETE' THEN
   IF TG_TABLE_NAME IN('ar_invoice_lines','ar_receipt_allocations') THEN
    SELECT * INTO invoice_owner FROM reconforge.ar_invoices WHERE tenant_id=OLD.tenant_id AND id=OLD.invoice_id;
+   IF invoice_owner.id IS NOT NULL AND(invoice_owner.organization_id IS NULL OR invoice_owner.legal_entity_id IS NULL) THEN
+    IF TG_TABLE_NAME='ar_invoice_lines' THEN RETURN OLD;END IF;
+    SELECT id,organization_id,legal_entity_id INTO receipt_owner FROM reconforge.ar_receipts WHERE tenant_id=OLD.tenant_id AND id=to_jsonb(OLD)->>'receipt_id';
+    IF receipt_owner.id IS NOT NULL AND(receipt_owner.organization_id IS NULL OR receipt_owner.legal_entity_id IS NULL) THEN RETURN OLD;END IF;
+   END IF;
    IF invoice_owner.organization_id IS NOT NULL AND invoice_owner.legal_entity_id IS NOT NULL THEN
     PERFORM reconforge.monetary_return_assert(reconforge.irp_scope(invoice_owner.tenant_id,invoice_owner.workspace_id,invoice_owner.organization_id,invoice_owner.legal_entity_id),
      'Deleting a native invoice child cannot hide original ownership under another current scope');
@@ -1813,6 +1819,11 @@ BEGIN
      'A fully scoped native invoice cannot conceal source ownership under another child scope');
    END IF;
   ELSE
+   IF invoice_owner.id IS NOT NULL AND(invoice_owner.organization_id IS NULL OR invoice_owner.legal_entity_id IS NULL) THEN
+    IF TG_TABLE_NAME='ar_invoice_lines' THEN RETURN NEW;END IF;
+    SELECT id,organization_id,legal_entity_id INTO receipt_owner FROM reconforge.ar_receipts WHERE tenant_id=NEW.tenant_id AND id=to_jsonb(NEW)->>'receipt_id';
+    IF receipt_owner.id IS NOT NULL AND(receipt_owner.organization_id IS NULL OR receipt_owner.legal_entity_id IS NULL) THEN RETURN NEW;END IF;
+   END IF;
    IF invoice_owner.organization_id IS NOT NULL AND invoice_owner.legal_entity_id IS NOT NULL THEN
     PERFORM reconforge.monetary_return_assert(reconforge.irp_scope(invoice_owner.tenant_id,invoice_owner.workspace_id,invoice_owner.organization_id,invoice_owner.legal_entity_id),
      'A native invoice child cannot hide monetary ownership by choosing another current scope');
@@ -1880,7 +1891,7 @@ CREATE FUNCTION reconforge.monetary_return_native_close() RETURNS TRIGGER
  LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
 <<monetary_return_native_close>>
 DECLARE changed JSONB;previous JSONB;current_row JSONB;tenant TEXT;stock_id TEXT;entry_id TEXT;movement_id TEXT;invoice_id TEXT;plan_id TEXT;origin_id TEXT;
- member RECORD;origin_owner RECORD;candidate RECORD;reference TEXT;entry_number TEXT;affected JSONB:='[]'::jsonb;
+ member RECORD;origin_owner RECORD;candidate RECORD;invoice_scope RECORD;receipt_scope RECORD;reference TEXT;entry_number TEXT;affected JSONB:='[]'::jsonb;
 BEGIN
  IF TG_OP<>'INSERT' THEN previous:=to_jsonb(OLD);END IF;IF TG_OP<>'DELETE' THEN current_row:=to_jsonb(NEW);END IF;
  IF TG_TABLE_NAME='outbox_events' AND TG_OP='UPDATE'
@@ -1893,6 +1904,18 @@ BEGIN
   IF(TG_TABLE_NAME='domain_audit_events' AND COALESCE(changed->>'object_type','') NOT IN('operational_finance','stock_sales'))
    OR(TG_TABLE_NAME='outbox_events' AND COALESCE(changed->>'aggregate_type','') NOT IN('operational_finance','stock_sales')) THEN
    CONTINUE;
+  END IF;
+  -- A fixed monetary owner requires full native AR scope. Classify only an
+  -- actual public header or each retained header image, never a missing row.
+  IF TG_TABLE_NAME IN('ar_invoices','ar_receipts') THEN
+   IF changed->>'id' IS NOT NULL AND(changed->>'organization_id' IS NULL OR changed->>'legal_entity_id' IS NULL) THEN CONTINUE;END IF;
+  ELSIF TG_TABLE_NAME IN('ar_invoice_lines','ar_receipt_allocations') THEN
+   SELECT id,organization_id,legal_entity_id INTO invoice_scope FROM reconforge.ar_invoices WHERE tenant_id=tenant AND id=changed->>'invoice_id';
+   IF invoice_scope.id IS NOT NULL AND(invoice_scope.organization_id IS NULL OR invoice_scope.legal_entity_id IS NULL) THEN
+    IF TG_TABLE_NAME='ar_invoice_lines' THEN CONTINUE;END IF;
+    SELECT id,organization_id,legal_entity_id INTO receipt_scope FROM reconforge.ar_receipts WHERE tenant_id=tenant AND id=changed->>'receipt_id';
+    IF receipt_scope.id IS NOT NULL AND(receipt_scope.organization_id IS NULL OR receipt_scope.legal_entity_id IS NULL) THEN CONTINUE;END IF;
+   END IF;
   END IF;
   IF TG_TABLE_NAME='stock_sales_monetary_origins' THEN stock_id:=changed->>'stock_order_id';
   ELSIF TG_TABLE_NAME='customer_partial_return_monetary_plans' THEN origin_id:=changed->>'origin_id';

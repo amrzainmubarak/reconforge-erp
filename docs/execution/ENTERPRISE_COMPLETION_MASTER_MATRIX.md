@@ -9,9 +9,33 @@ No capability is removed because implementation or external acceptance is hard.
 
 **Current closure: M7 customer partial returns. Major-domain WIP limit: one.**
 **M7 final closure mode:** M7.7 and M7.9 remain `INCOMPLETE`; requirements are
-frozen. The finite blockers are zero-restored-stock reuse/transfer and its
-independent six-stage raw91 proof, corrected legacy/least-privilege compatibility,
-both real monetary HTTPS/restore cycles, and final exact-head mandatory CI.
+frozen.
+
+**Latest verified checkpoint (2026-10-16):** remote Draft140 is
+`0d5a7d2a23be230ad54e9888c33940804aa54c1c`, whose final CI is **75 success /
+4 failure / 79 jobs**, with no skipped/cancelled job. The four failures are
+required HTTPS cases: legacy zero/restituted POST waits exceed15s without a
+received HTTP outcome; monetary identity/foreign captures refuse at the
+escaped-envelope size guard after the original4MiB row-content check passes.
+These are two finite internal closure defects, not a new functional scope.
+Local reader-only integration `00c3ce16` corrects genuine IRP event ownership.
+Actual0d5 native zero-reuse/return/forward-and-inverse-transfer passes1/0skip
+403.578s; the three historical compatibility cases pass3/0skip103.825s;
+current149 migration with18 retained functions passes5/0skip101.405s. Their
+source snapshots, ordinary role, bounded controllers and owned cleanup pass.
+Independent raw6 qualification uses native0d5 and corrected reader87adc29:
+-I/-I-O proof bytes agree; three propagated tampers refuse; six captures/91
+tables derive5 effects/12 lines/Dr=Cr233. Original failed-reader evidence remains.
+All eight hosted native shards pass; official manual Security5/5, Docker and
+CodeQL pass, while whole M7 remains `INCOMPLETE`. A bounded legacy financial
+callback repair and an explicitly derived JSON-envelope budget are under
+review. Required next: affected native/migration/security gates, actual HTTPS
+and347-table restore, then coherent final-head CI/security/image acceptance.
+No optional scenario, new milestone or comparative benchmark is added.
+
+**Retained earlier candidates:** the chronology below describes each original
+source and does not override the latest checkpoint or relabel any failure.
+
 Actual0d2a zero-reuse90.431s fails at a dispatch alias/RECORD collision; its
 limited alias repair succeeds on that path in6aeffb13, whose194.168s attempt
 instead refuses IT1 capacity because the shared quantity sum excludes genuine

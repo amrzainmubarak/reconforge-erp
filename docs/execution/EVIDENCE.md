@@ -1,5 +1,36 @@
 # ReconForge Execution Evidence Log
 
+## M7 actual0d5 closure components and retained final blockers — 2026-10-16
+
+- `m7-monetary-native-20261016-v1-private/root-native-closure-components-0d5a-v1.json`
+  SHA`b685924fa5e0f10880b6635b87de4c95018eaf39c89cae428b9425008d5cafe5`
+  binds the actual zero-reuse1PASS403.578s, legacy3PASS103.825s and current149
+  migration5PASS101.405s, all0skip, source unchanged and owned cleanup successful.
+- Independent raw6 closure `independent-zero-lineage-0d5a-v9-raw91-v2-private/qualification-closure.json`
+  SHA`b6f425dc2366169ac53507e73329e2c42b9b4c9c951319dd976025c4e4d2066f`
+  binds native0d5, reader87adc29, rawSHA`5386fb223dbf77b1db9a2c2243c264f5f4a0fc5f649f7e58e60518348bfe936d`,
+  equal isolated-I/-I-O proofs and3 propagated-tamper refusals:6captures/91tables,
+  2sources/2Returns/2transfers,5effects/12lines/Dr=Cr233. Original0c5 reader refusal
+  is retained; genuine receipt events are independently bound to all3 IRP pairs.
+- Official0d5 terminal custody `m7-monetary-hosted-0d5a7d2a-v1-private/official-0d5-terminal-custody-v1.json`
+  SHA`71ce5dbab97cbd23c8806aa2fe84209112ad6cb3e52948cd0e7db64803fbc5b2`:
+  CI79=75success/4failure/no skips/cancels; all8 native jobs succeed. Seven native
+  logs are complete; migration transport truncations remain explicit despite its
+  official success and observed5/0 mandatory line. Manual Security38872831671
+  succeeds5/5/0skip with0Critical/High,9Medium/1Negligible; Docker/CodeQL pass.
+- Exact real legacy-v2 diagnostic SHA`5dd12359ca6a35f97be324c80a2dae5271f9429514488aaaf2d0412f6475983e`
+  records25.407103s total,22.817992s deferred, full source/owned cleanup unchanged.
+  It establishes the operating blocker, not a comparative benchmark result.
+- Four required HTTPS failures remain negative: zero/restituted request waits
+  at15s without an HTTP outcome, and identity/foreign raw capture decoding at
+  the duplicated escaped-envelope4MiB guard. A full reconstructed1297-byte
+  traceback matches original SHA`dbd3987b23860fddf032cf1fd053fddfa05491a1c2e9f2031e1f64a32104147c`.
+  Corrections preserve all financial checks and original-content limits. None
+  of these components closes M7 before coherent final-source acceptance.
+- Reader/root commits are recoverable outside worktrees in verified bundle
+  `m7-reader-owned-irp-87adc29c-integration-00c3ce16.bundle`,
+  SHA`577c1dafc61897fdbc438b8d5c4edccd9d8930bccb66db90dfe8b4e275b63e6e`.
+
 ## M7 final closure inputs — 2026-10-16
 
 Actual15a1149d same-case1FAIL/0skip127.946s records QueryCanceled at SQL30s;

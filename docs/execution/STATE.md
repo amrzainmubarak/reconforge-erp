@@ -4,8 +4,20 @@
 
 The latest human directive freezes M7.7/M7.9; whole M7 stays OPEN. No optional
 scenario, new domain or nonblocking performance comparison is authorized
-in this closure round. Remote Draft140 is15a1149d; its terminal CI has69 success/
-10 failure/79 jobs, with retained native/HTTPS and legacy-compatibility failures.
+in this closure round. Remote Draft140 is0d5a7d2a, with terminal CI75 success/
+4 failure/79 jobs; local reader-only integration is00c3ce16. Actual zero-reuse
+passes1/0skip403.578s, legacy compatibility3/0skip103.825s and migration149
+5/0skip101.405s, with source/cleanup verified. Independent corrected IRP reader
+qualifies actual raw6 through identical-I/-I-O output and3 tamper refusals,
+deriving5 effects/12 lines/Dr=Cr233. All hosted native shards and current manual
+Security5/5, Docker and CodeQL pass. Required remaining defects are the old
+zero/restituted15s POST waits and the monetary identity/foreign escaped-envelope
+size refusal; source fixes and final exact-head HTTPS/restore/CI remain OPEN.
+Main and the two primary dirty file hashes are unchanged.
+
+### Retained predecessor attempts (source-qualified historical limits)
+
+Predecessor15a1149d terminal CI has69 success/10 failure/79 jobs.
 Earlier02b3 terminal CI records
 56 successful and23 failed jobs of79, all originals retained. Accepted139
 remains375, and main plus the primary user's two dirty files are unchanged.

@@ -9,7 +9,7 @@ snapshot:
   evidence_base_commit: "37518287126e0f630e726592dda8cc981faa2a96"
   policy_change_commit: "the commit containing this file"
   published: true
-  publication: "Accepted bounded M7 v1/v2 remains Draft139/375 CI74/74 above preserved M6-M1/Wave5 dependencies. Draft140 monetary contract stays OPEN. Original02b3 SQL30s, hosted Security/legacy/browser failures are preserved. Actual5982 foreign full cycle now passes1/0skip411.655s; actual3d7 empty roundtrip and non-bypass DDL-owner refusal pass2/0skip63.407s (peer61908f13). Closed catalog adapters, fixture ACL restoration, owned-event admission and rollback-before-explicit-retry repairs are integrated. Updated security17, raw91/HTTPS/restore and final coherent CI remain required; no next domain or comparable-performance claim."
+  publication: "Accepted bounded Draft139/375 preserved. Draft140 exact0d5 terminal CI75/79 with only four required HTTPS failures; all8 native shards, manualSecurity5/5, Docker and CodeQL succeed. Actual native zero-cycle1PASS, legacy3PASS, migration5PASS and independent raw6 I/I-O/3tamper5effects12lines233 are source-qualified components. Local00c3 reader corrects genuineIRP event ownership. Current closure defects: legacyzero/restitutedPOST15s latency and monetaryidentity/foreign escaped-envelope size accounting; bounded source fixes pending, then coherent final native/HTTPS/347restore/CI gates. WholeM7 INCOMPLETE; no next domain or comparative performance claim."
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 

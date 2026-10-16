@@ -123,15 +123,15 @@ _ZERO_PLAN = r""" IF EXISTS(SELECT 1 FROM reconforge.stock_sales_orders fixed WH
  END IF;
 """
 _COST_SNAPSHOT = r""" IF EXISTS(SELECT 1 FROM reconforge.customer_partial_return_monetary_restorations restoration
- JOIN reconforge.inventory_cost_layers layer ON(layer.tenant_id,layer.id)=(restoration.tenant_id,restoration.cost_layer_id)
- WHERE layer.tenant_id=t AND layer.workspace_id=w AND layer.legal_entity_id=e AND layer.item_id=i)
- OR EXISTS(SELECT 1 FROM reconforge.inventory_cost_layers layer
- JOIN reconforge.inventory_layer_consumptions consumed ON(consumed.tenant_id,consumed.cost_layer_id)=(layer.tenant_id,layer.id)
+ JOIN reconforge.inventory_cost_layers dispatch_layer ON(dispatch_layer.tenant_id,dispatch_layer.id)=(restoration.tenant_id,restoration.cost_layer_id)
+ WHERE dispatch_layer.tenant_id=t AND dispatch_layer.workspace_id=w AND dispatch_layer.legal_entity_id=e AND dispatch_layer.item_id=i)
+ OR EXISTS(SELECT 1 FROM reconforge.inventory_cost_layers dispatch_layer
+ JOIN reconforge.inventory_layer_consumptions consumed ON(consumed.tenant_id,consumed.cost_layer_id)=(dispatch_layer.tenant_id,dispatch_layer.id)
  JOIN reconforge.inventory_valuation_lines detail ON(detail.tenant_id,detail.id)=(consumed.tenant_id,consumed.valuation_line_id)
  JOIN reconforge.inventory_valuation_documents document ON(document.tenant_id,document.id)=(detail.tenant_id,detail.valuation_document_id)
  JOIN reconforge.inventory_movements movement ON(movement.tenant_id,movement.id)=(document.tenant_id,document.movement_id)
  JOIN reconforge.stock_sales_orders fixed ON(fixed.tenant_id,fixed.id)=(movement.tenant_id,movement.source_reference)
- WHERE layer.tenant_id=t AND layer.workspace_id=w AND layer.legal_entity_id=e AND layer.item_id=i
+ WHERE dispatch_layer.tenant_id=t AND dispatch_layer.workspace_id=w AND dispatch_layer.legal_entity_id=e AND dispatch_layer.item_id=i
  AND fixed.source->>'schema_version'='stock-sales-monetary-order-v2') THEN
   RETURN reconforge.monetary_transfer_cost_snapshot(t,w,o,e,i);
  END IF;

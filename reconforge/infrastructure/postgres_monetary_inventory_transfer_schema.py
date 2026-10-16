@@ -58,7 +58,7 @@ BEGIN
    'item_id',stock.item_id,'uom_id',stock.uom_id,'quantity_precision',stock.quantity_precision,'location_id',stock.location_id,
    'original_cogs_effect_id',stock.cogs_effect_id,'original_cost_minor',(stock.issue_plan->>'total_cost_minor')::bigint),
   'plan',jsonb_build_object('id',owned.id,'source_id',owned.origin_id,'operation',owned.operation,'phase',owned.phase,
-   'plan_digest',owned.plan_digest,'functional_cost_minor',cost::text),
+   'plan_digest',owned.plan_digest,'functional_cost_minor',cost::bigint),
   'entry',CASE WHEN cost>0 THEN to_jsonb(entry_owner) ELSE NULL END,'effect',CASE WHEN cost>0 THEN to_jsonb(effect_owner) ELSE NULL END,
   'lines',CASE WHEN cost>0 THEN COALESCE((SELECT jsonb_agg(to_jsonb(detail) ORDER BY detail.line_number,detail.id)
    FROM reconforge.finance_entry_lines detail WHERE detail.tenant_id=t AND detail.entry_id=entry_owner.id),'[]'::jsonb) ELSE'[]'::jsonb END,

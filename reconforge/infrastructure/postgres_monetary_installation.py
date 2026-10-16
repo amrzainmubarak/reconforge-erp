@@ -41,7 +41,7 @@ def function_preflight(source: str) -> str:
             raise ValueError("Unsupported monetary native result type.")
         values = {
             "SIGNATURE": name + "(" + ",".join(pair[1].lower() for pair in pairs) + ")",
-            "RETURNS": returns.lower(), "LANGUAGE": language,
+            "RETURNS": {"integer": "int4", "bigint": "int8", "boolean": "bool"}.get(returns.lower(), returns.lower()), "LANGUAGE": language,
             "VOLATILITY": "i" if "IMMUTABLE" in normalized else "s" if "STABLE" in normalized else "v",
             "ARGNAMES": "ARRAY[" + ",".join("'" + pair[0] + "'" for pair in pairs) + "]::text[]" if pairs else "NULL::text[]",
             "BODY_HASH": hashlib.sha256(body.encode("utf-8")).hexdigest(),

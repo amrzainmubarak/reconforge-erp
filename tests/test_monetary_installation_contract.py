@@ -62,3 +62,11 @@ def test_native_physical_and_transfer_execution_profiles_are_closed_without_defa
     assert assertion.count("Monetary native execution contract drift") == 12
     with pytest.raises(ValueError, match="overloaded"):
         function_preflight(PHYSICAL_SQL + TRANSFER_SQL + PHYSICAL_SQL)
+
+
+@pytest.mark.parametrize("declaration,catalog_type", [("INTEGER", "int4"), ("BIGINT", "int8"), ("BOOLEAN", "bool")])
+def test_result_sql_aliases_bind_the_actual_schema_qualified_catalog_type(declaration, catalog_type):
+    assertion = function_preflight("CREATE FUNCTION reconforge.catalog_type() RETURNS " + declaration
+        + " LANGUAGE sql IMMUTABLE SET search_path=pg_catalog AS $$ SELECT NULL $$;")
+    assert "native.prorettype<>'pg_catalog." + catalog_type + "'::regtype" in assertion
+    assert "'pg_catalog." + declaration.lower() + "'::regtype" not in assertion

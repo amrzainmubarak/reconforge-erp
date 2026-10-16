@@ -66,6 +66,7 @@ MONETARY_REQUIRED = (
     'tests/test_monetary_customer_return_posting.py',
     'tests/test_monetary_customer_returns.py',
     'tests/test_monetary_installation_contract.py',
+    'tests/test_monetary_native_function_contract.py',
     'tests/test_monetary_public_contract.py',
     'tests/test_monetary_receivables_projection.py',
     'tests/test_monetary_return_source_admission.py',

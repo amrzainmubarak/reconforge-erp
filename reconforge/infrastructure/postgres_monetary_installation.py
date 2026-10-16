@@ -67,6 +67,7 @@ def function_preflight(source: str) -> str:
 def installation_preflight_sql() -> str:
     """Emit the same complete verifier for online installs and offline migrations."""
     from reconforge.infrastructure.postgres_monetary_customer_returns_schema import (
+        NATIVE_CATALOG_SQL,
         NATIVE_FUNCTION_SQL,
         NATIVE_TRIGGER_CONTRACTS,
     )
@@ -100,6 +101,7 @@ def installation_preflight_sql() -> str:
         statements.append(statement)
     if not names:
         raise ValueError("The monetary native trigger inventory is empty.")
+    statements.append(NATIVE_CATALOG_SQL)
     return "\n".join(statements)
 
 

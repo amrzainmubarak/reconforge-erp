@@ -91,6 +91,15 @@ def test_actual_new_native_function_and_force_rls_drift_refuse_without_repair(re
             verify_monetary_installation_if_present(admin)
         assert _profiles(admin) == before
         assert verify_monetary_installation_if_present(admin) is True
+        with pytest.raises(psycopg.errors.CheckViolation), admin.transaction():
+            admin.execute("ALTER POLICY scope ON reconforge.customer_partial_return_monetary_history USING(TRUE) WITH CHECK(TRUE)")
+            verify_monetary_installation_if_present(admin)
+        assert verify_monetary_installation_if_present(admin) is True
+        with pytest.raises(psycopg.errors.CheckViolation), admin.transaction():
+            admin.execute("ALTER TABLE reconforge.operational_fx_plans DROP CONSTRAINT monetary_fx_journal_presence")
+            admin.execute("ALTER TABLE reconforge.operational_fx_plans ADD CONSTRAINT monetary_fx_journal_presence CHECK(TRUE)")
+            verify_monetary_installation_if_present(admin)
+        assert verify_monetary_installation_if_present(admin) is True
 
 
 def test_actual_unrecognized_monetary_draft_blocks_destructive_downgrade(receipt_database):

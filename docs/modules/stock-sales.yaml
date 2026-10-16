@@ -1,15 +1,15 @@
 id: stock-sales
 name: Governed product sales and stock-to-cash
-version: 0.2.0
+version: 0.3.0
 maturity: experimental
 owner: Amr
-dependencies: [identity, master-data, inventory-core, inventory-valuation, inventory-receipt-posting, finance-posting, receivables, operational-finance]
+dependencies: [identity, master-data, inventory-core, inventory-valuation, inventory-receipt-posting, finance-posting, receivables, operational-finance, operational-fx-tax]
 incompatible_versions: []
 data_classification: confidential-financial
 retention_policy: immutable source, command, review and posted financial history
-permissions: [sales.read, sales.manage, sales.approve, inventory.read, inventory.manage, inventory.post, inventory.valuation.manage, inventory.valuation.approve, receivables.read, receivables.manage, receivables.approve, finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
+permissions: [sales.read, sales.manage, sales.approve, inventory.read, inventory.manage, inventory.post, inventory.valuation.manage, inventory.valuation.approve, receivables.read, receivables.manage, receivables.approve, finance_core.read, finance_core.manage, finance_core.validate, finance_core.post, finance_core.reverse]
 default_roles: []
-migrations: [0113_pg_stock_sales, 0116_pg_stock_commerce]
+migrations: [0113_pg_stock_sales, 0116_pg_stock_commerce, 0149_pg_monetary_partial_returns]
 domain_invariants:
   - exact existing HALF_EVEN FIFO and integer minor units
   - reservations share native inventory advisory lock and cannot exceed actual stock
@@ -25,6 +25,11 @@ domain_invariants:
   - Native commercial child writes require the authoritative parent command and exact progress acknowledgement in the same transaction
   - Fractional quantities require exact additive minor-unit value so tranche rounding cannot change the agreed line price
   - Commercial command acknowledgements retain small immutable source and progress digests without copying growing line snapshots
+  - New monetary sources fix transaction currency commercial pricing and separate functional currency FIFO COGS and GL at birth
+  - Partial monetary returns restore signed original FIFO witnesses and original net and tax components without rewriting accepted history
+  - Public AR displays active posted closing book value while private refund and credit calculations retain the historical carrying basis
+  - Zero functional turnover preserves positive transaction cash and complete governance without inventing a zero journal
+  - New cost-v4 retains old and monetary restitution families in its signed quantity and value equation
 domain_events: [stock_sales.create, stock_sales.submit, stock_sales.approve, stock_sales.reserve, stock_sales.prepare-issue, stock_sales.review-issue, stock_sales.deliver, stock_sales.prepare-invoice, stock_sales.review-invoice, stock_sales.invoice, stock_sales.prepare-collection, stock_sales.review-collection, stock_sales.collect, stock_sales.cancel]
 api_routes:
   - GET /stock-sales/options
@@ -62,13 +67,32 @@ api_routes:
   - POST /stock-sales/commerce/orders/{identifier}/review-collection
   - POST /stock-sales/commerce/orders/{identifier}/collect
   - POST /stock-sales/commerce/orders/{identifier}/cancel
+  - GET /api/v2/stock-sales/options
+  - GET /api/v2/stock-sales/orders
+  - GET /api/v2/stock-sales/orders/{identifier}
+  - POST /api/v2/stock-sales/orders
+  - POST /api/v2/stock-sales/orders/{identifier}/valuations
+  - POST /api/v2/stock-sales/orders/{identifier}/valuation-reversals
+  - GET /api/v2/stock-sales/orders/{identifier}/fx-plans/{plan_id}
+  - POST /api/v2/stock-sales/orders/{identifier}/fx-plans/{plan_id}/review
+  - POST /api/v2/stock-sales/orders/{identifier}/fx-plans/{plan_id}/post
+  - GET /api/v3/customer-partial-returns/plans
+  - GET /api/v3/customer-partial-returns/plans/{plan_id}
+  - GET /api/v3/customer-partial-returns/sources/{source_order_id}/balance
+  - POST /api/v3/customer-partial-returns/plans
+  - POST /api/v3/customer-partial-returns/plans/{return_id}/refunds
+  - POST /api/v3/customer-partial-returns/plans/{original_id}/reversals
+  - POST /api/v3/customer-partial-returns/plans/{plan_id}/review
+  - POST /api/v3/customer-partial-returns/plans/{plan_id}/post
+  - POST /api/v3/customer-partial-returns/plans/{plan_id}/cancel
 cli_commands: []
 ui_routes: [stock-sales]
 import_schemas: []
-export_schemas: [stock-sales-order-v1, stock-sales-issue-v1, stock-commerce-v1]
+export_schemas: [stock-sales-order-v1, stock-sales-issue-v1, stock-commerce-v1, stock-sales-monetary-v2, customer-partial-return-monetary-v3, customer-partial-return-monetary-balance-v3, stock-monetary-valuation-v1, inventory-transfer-cost-v4]
 synthetic_fixtures:
   - tests/test_postgres_stock_sales.py canonical persisted human fixture and actual reviewed inbound FIFO receipt
   - tests/test_postgres_stock_commerce.py multi-product multi-warehouse partial delivery invoice and collection tranches
+  - tests/test_postgres_monetary_customer_partial_returns.py genuine native identity and foreign originals and positive transaction zero-functional cash
 threat_model:
   - stale or forged authority and amount permissions
   - over-reservation and concurrent native stock withdrawal
@@ -77,8 +101,10 @@ threat_model:
   - cross-entity receipt namespace collision
   - direct SQL native tranche transition outside its parent acknowledgement
   - partial commercial line quantity or financial value overcommit
+  - monetary correction source substitution mismatched historical carrying and counterfeit zero financial evidence
+  - active closing valuation confused with private historical refund or credit allocation basis
 benchmarks: []
-rollback_plan: empty migration downgrade restores exact predecessor receipt namespace functions; retained stock-sale history requires backup restore
+rollback_plan: empty migration downgrade restores exact predecessor receipt namespace functions and sixteen149 shared function identities; any new fixed monetary Draft or retained evidence refuses destructive149 downgrade and requires a compatible verified backup
 test_matrix:
   - tests/test_stock_sales_money_context.py finite original-price policy affinity preserved phase amounts explicit sealed commercial parent projection and pre-source human authority
   - tests/test_postgres_stock_sales_read_authority.py original quoted-price READ ceilings original phase WRITE amounts and actual current-role scope capacity-wait authority
@@ -92,10 +118,18 @@ test_matrix:
   - apps/web/src/stock-commerce-data.test.ts independent BigInt line and tranche conservation
   - apps/web/src/components/StockCommercePanel.test.tsx distinct posting actor and Arabic RTL contracts
   - apps/web/live/stock-commerce-cycles.spec.ts real HTTPS four partial cycles lost acknowledgement replay bilingual mobile accessibility
-runtime_acceptance: bounded local PostgreSQL API Studio and populated restore accepted on6ec9; see docs/execution/ERP_EXPANSION_ACCEPTANCE_2026-10-09.json and current-source PR126 hosted checks
+  - tests/test_postgres_monetary_customer_partial_returns.py required actual credit second collection refund copied inverse and zero-functional cash
+  - tests/test_postgres_monetary_customer_return_security.py required SQL isolation current authority lock wait interruption and concurrency
+  - tests/test_postgres_monetary_customer_return_migration.py required148 and149 roundtrip OID ACL profile reinstallation and retained Draft refusal
+  - tests/customer_partial_return_monetary_posted_oracle.py independent raw91 original journal and physical evidence qualification
+  - apps/web/live/customer-partial-return-monetary-cycles.spec.ts required real bilingual HTTPS cash return valuation inverse lost response and restored evidence
+runtime_acceptance: legacy bounded local PostgreSQL API Studio and populated restore accepted on6ec9 and bounded partial returns on375; new monetary149 source and all actual native HTTPS restore and final CI gates remain pending and do not constitute completed functionality
 scope_limits:
   - PostgreSQL only; existing local workflows remain available
   - Legacy single-item APIs and immutable history preserve their accepted contracts
   - Commercial parents support up to 1000 explicit non-lot product-location lines in functional currency with per-line partial native tranches
   - Each invoice tranche is settled in full; partial settlement of one AR invoice is not claimed
-  - Explicit zero-tax; no tax calculation stock return credit-note inverse credit-limit engine or configurable price-list engine
+  - The original single-source and commercial tranche protocols retain their explicit zero-tax interpretation
+  - New fixed monetary protocol uses configured synthetic tax rules only; no statutory country compliance or universal tax coverage is claimed
+  - New monetary partial returns and closing capabilities remain unaccepted pending one-source native HTTPS restore independent financial and CI evidence
+  - Configurable enterprise price lists country tax packs and full corporate finance remain outside the closed legacy contract

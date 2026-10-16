@@ -207,6 +207,7 @@ async function corrections(source: Record<string, unknown>, scope: FinanceScope,
     if (seen.has(key) || seen.size >= limit) invalid(); seen.add(key);
     const consumed = consumptions.get(String(restored.original_consumption_id));
     if (!consumed || consumed.valuation_line_id !== restored.original_valuation_line_id || (monetary ? 0n : BigInt(String(restored.offset_quantity_scaled))) + BigInt(restored.quantity_scaled) > BigInt(String(consumed.quantity_scaled)) || BigInt(restored.value_minor) > BigInt(String(consumed.value_minor))) invalid();
+    if (monetary && BigInt(String(consumed.value_minor)) > BigInt(String(original.original_cost_minor))) invalid();
     if (consumed.value_minor === "0") {
       const admission = zeroAdmissions.get(String(consumed.id));
       if (!factual || !admission || !transferObject(admission.issue_plan) || original.original_cost_minor !== admission.issue_plan.total_cost_minor
@@ -219,6 +220,7 @@ async function corrections(source: Record<string, unknown>, scope: FinanceScope,
       const witness = monetary ? { before_quantity_scaled: restored.before_quantity_scaled, before_value_minor: restored.before_value_minor } : fields(correction.allocation_witness, ["before_quantity_scaled", "before_value_minor"]);
       if (correction.allocation_policy !== (monetary ? "remaining-dual-currency-v1" : "remaining-original-v1") || typeof correction.history_sequence !== "number" || !Number.isSafeInteger(correction.history_sequence) || correction.history_sequence < 1 || correction.history_sequence > 256
           || !exact(witness.before_quantity_scaled) || witness.before_quantity_scaled === "0" || !exact(witness.before_value_minor) || !exact(totalCost) || BigInt(totalCost) < BigInt(restored.value_minor)) invalid();
+      if (monetary && BigInt(totalCost) > BigInt(String(original.original_cost_minor))) invalid();
       const prior = sequences.get(String(original.id));
       if (prior && (correction.history_sequence < prior.sequence || correction.history_sequence === prior.sequence && (plan.id !== prior.plan || Number(restored.position) <= prior.position))) invalid();
       sequences.set(String(original.id), { sequence: correction.history_sequence, position: Number(restored.position), plan: String(plan.id) });

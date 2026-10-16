@@ -365,6 +365,16 @@ it("pins one shared positive TOTAL effect across zero and positive portions on d
   entry.validation_digest = effect.validation_digest = await transferDigest(snapshot, true);
   await reseal(transfer); await expect(parseTransfer(transfer, transferScope, "synthetic")).rejects.toThrow("invalid");
 });
+it("refuses a balanced sealed monetary cost journal larger than its whole original Stock cost", async () => {
+  const transfer = await monetaryCostFixture([{ sequence: 1, beforeQuantity: "3", beforeValue: "1001", quantity: "1", value: "334", total: "1002" }]);
+  await expect(parseTransfer(transfer, transferScope, "synthetic")).rejects.toThrow("invalid");
+});
+it("refuses a monetary original total smaller than its individual original consumption", async () => {
+  const transfer = await monetaryCostFixture([monetaryThree[0]]);
+  const row = (transfer.cost_snapshot.sources[0].monetary_return_corrections as Row[])[0];
+  (row.source as Row).original_cost_minor = "500"; // Journal334 still fits; original consumption1001 does not.
+  await reseal(transfer); await expect(parseTransfer(transfer, transferScope, "synthetic")).rejects.toThrow("invalid");
+});
 it("bounds the combined native correction byte population even when every individual row is small", async () => {
   const transfer = await monetaryCostFixture(Array.from({ length: 7 }, (_, index) => ({ sequence: index + 1, beforeQuantity: String(7 - index), beforeValue: String(7 - index), quantity: "1", value: "1" })), false, "7", "7");
   expect(await parseTransfer(transfer, transferScope, "synthetic")).toEqual(transfer);

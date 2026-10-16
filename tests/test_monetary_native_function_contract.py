@@ -487,6 +487,14 @@ def test_complete_cost_proof_graph_exposes_both_old_cycles_and_retains_live_owne
         "fx_convert", "fx_event", "fx_minor", "fx_object", "fx_policy", "fx_rate", "irp_assert_complete", "irp_canonical",
         "irp_digest", "irp_scope", "irp_text", "irp_timestamp", "sales_revenue_actor", "sales_revenue_policy_matches", "stock_sales_stage",
     }
+    financial_source_reachable = _reachable(graph, "monetary_retained_stock_source_close")
+    assert not {
+        "stock_sales_capacity", "inventory_quantity_check_capacity", "inventory_quantity_free_fifo",
+        "stock_sales_close", "monetary_stock_close", "customer_partial_return_zero_stock_close",
+    } & financial_source_reachable
+    # The full legacy positive-cost branch additionally uses only the existing
+    # IMMUTABLE integer FIFO allocation arithmetic; no live capacity leaf.
+    assert financial_source_reachable - set(graph) == (reachable - set(graph)) | {"stock_sales_fifo_value"}
     assert "stock_sales_capacity" in _reachable(graph, "monetary_stock_close")
     assert "monetary_stock_close" in graph["monetary_return_native_close"]
     assert "monetary_stock_close" in graph["stock_sales_close"]

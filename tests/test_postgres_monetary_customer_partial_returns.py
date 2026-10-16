@@ -13,7 +13,9 @@ from typing import Any
 
 import pytest
 
-from reconforge.domain.finance_posting import FinancePostingError
+from reconforge.domain.finance_posting import FinancePostingError, canonical_json
+from reconforge.domain.inventory_transfer import PERMISSIONS as TRANSFER_PERMISSIONS
+from reconforge.domain.inventory_transfer import TransferInversePreparation, TransferPreparation
 from reconforge.domain.monetary_customer_partial_return_commands import (
     MonetaryPartialRefundPreparation,
     MonetaryPartialReturnPreparation,
@@ -22,7 +24,9 @@ from reconforge.domain.monetary_customer_partial_return_commands import (
 from reconforge.domain.operational_fx_tax import HistoricalRate
 from reconforge.domain.stock_sales import StockOrder
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
+from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
+from reconforge.infrastructure.postgres_inventory_transfer import PostgresInventoryTransferRepository
 from reconforge.infrastructure.postgres_monetary_customer_partial_returns import (
     PostgresMonetaryCustomerPartialReturnsRepository,
 )
@@ -31,6 +35,8 @@ from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRe
 from tests.test_postgres_customer_returns import configure_runtime
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, create_receipt_runtime, receipt_database
 from tests.test_postgres_inventory_receipt_posting import request as receipt_request
+from tests.test_postgres_inventory_transfer import phase as transfer_phase
+from tests.test_postgres_inventory_transfer import physical as transfer_physical
 from tests.test_postgres_operational_fx_tax import native_balances, seed_fx_masters
 from tests.test_postgres_stock_sales import create_stock_runtime
 
@@ -306,3 +312,163 @@ def test_actual_zero_journal_return_cancel_and_exact_merchandise_inverse_keep_ph
         detail = connection.execute("SELECT quantity_scaled,quantity_precision FROM reconforge.inventory_movement_lines WHERE tenant_id=%s AND movement_id=%s",
                                     (runtime.tenant, inverse["movement_id"])).fetchall()
         assert len(detail) == 1 and dict(detail[0]) == {"quantity_scaled": 1, "quantity_precision": 1}
+
+
+def test_actual_cr3_zero_cost_restoration_resale_return_and_it1_transfer_keep_original_lineage(receipt_database: tuple[str, str]) -> None:
+    runtime, original = _source(receipt_database, foreign=True, unit_price=10, original_rate="0.25", receipt_total_minor=1, fractional=True)
+
+    def finance(effects: int, lines: int, turnover: int) -> None:
+        with runtime.actor("poster") as (connection, _, _actor):
+            totals = connection.execute("""SELECT count(DISTINCT e.id) effects,count(l.id) lines,
+                sum(l.debit_minor) debit,sum(l.credit_minor) credit FROM reconforge.finance_posting_effects e
+                JOIN reconforge.finance_entry_lines l ON(l.tenant_id,l.entry_id)=(e.tenant_id,e.entry_id)
+                WHERE e.tenant_id=%s""", (runtime.tenant,)).fetchone()
+            assert dict(totals) == {"effects": effects, "lines": lines, "debit": turnover, "credit": turnover}
+
+    def retained_originals() -> tuple[str, str]:
+        with runtime.actor("poster") as (connection, _, _actor):
+            consumed = connection.execute("""SELECT to_jsonb(c)::text original FROM reconforge.inventory_layer_consumptions c
+                JOIN reconforge.inventory_valuation_lines v ON(v.tenant_id,v.id)=(c.tenant_id,c.valuation_line_id)
+                WHERE c.tenant_id=%s AND v.valuation_document_id=%s""", (runtime.tenant, original["valuation_id"])).fetchall()
+            history = connection.execute("""SELECT to_jsonb(h)::text original FROM reconforge.customer_partial_return_monetary_history h
+                JOIN reconforge.stock_sales_monetary_origins o ON(o.tenant_id,o.id)=(h.tenant_id,h.origin_id)
+                WHERE h.tenant_id=%s AND o.stock_order_id=%s ORDER BY h.sequence""", (runtime.tenant, original["id"])).fetchall()
+            assert len(consumed) == len(history) == 1
+            return consumed[0]["original"], history[0]["original"]
+
+    finance(3, 6, 5)
+    old_return = _posted(runtime, _return(runtime, original, 1, 0))
+    assert old_return["entries"] == [] and old_return["movement_id"]
+    assert (old_return["monetary"]["transaction_credit_minor"], old_return["monetary"]["functional_credit_minor"],
+            old_return["monetary"]["functional_cost_minor"]) == ("1", "0", "0")
+    frozen_originals = retained_originals()
+    finance(3, 6, 5)
+
+    # This is a new fixed monetary Stock source, not a synthetic zero journal
+    # or a repricing of the original EUR commercial line.
+    with runtime.actor("maker") as (connection, _, actor):
+        resale = _stock(connection, runtime).create(StockOrder("CR3-ZERO-RESALE", "CUSTOMER", "RESTORED-PO", "ITEM", "MAIN", "STOCK",
+            "0.1", 1000, "USD", DAY, "Actual resale of CR3-restored zero-cost quantity"), command_id="cr3-zero-resale:create", actor=actor)
+    for operation, human, parameters in (
+        ("submit", "maker", {}), ("approve", "checker", {}), ("reserve", "maker", {}),
+        ("prepare-issue", "maker", {"posting_date": DAY, "period_id": "period", "policy_code": "FIFO"}),
+        ("review-issue", "checker", {}), ("deliver", "poster", {}),
+        ("prepare-invoice", "maker", {"invoice_number": "CR3-ZERO-RESALE-INVOICE", "invoice_date": DAY, "due_date": "2026-10-31",
+            "journal_code": "STOCK", "period_id": "period", "receivable_account_code": "AR", "revenue_account_code": "REVENUE",
+            "cash_account_code": "CASH", "refund_liability_account_code": "REFUND", "gain_account_code": "GAIN", "loss_account_code": "LOSS",
+            "country_code": "EG", "transaction_class": "synthetic-stock", "original_rate": None,
+            "taxes": [{"policy_id": "SYNTHETIC-VAT", "country_code": "EG", "transaction_class": "synthetic-stock",
+                "effective_from": "2026-01-01", "effective_to": "2026-12-31", "rate": "0.14", "account_code": "TAX",
+                "source": "Synthetic reviewed fraction", "version": "2026-v1"}]}),
+        ("review-invoice", "checker", {}), ("invoice", "poster", {}),
+    ):
+        resale = _act(runtime, resale, operation, human, parameters)
+    assert resale["status"] == "Invoiced" and resale["quantity_scaled"] == "1" and resale["quantity_precision"] == 1
+    assert resale["functional_cogs_minor"] == "0" and resale["cogs_entry_id"] is resale["cogs_effect_id"] is None
+    assert resale["cost_admission_policy"] == "partial-return-restituted-v1" and resale["movement_id"] and resale["valuation_id"]
+    origin = resale["monetary_origin"]
+    assert origin["original_rate"] is None
+    assert tuple(origin[key] for key in ("transaction_net_minor", "transaction_tax_minor", "transaction_gross_minor",
+        "functional_net_minor", "functional_tax_minor", "functional_gross_minor")) == ("100", "14", "114", "100", "14", "114")
+    finance(4, 9, 119)
+    assert retained_originals() == frozen_originals
+
+    with runtime.actor("maker") as (connection, _, actor):
+        request = MonetaryPartialReturnPreparation(**SCOPE, organization_code="ORG", entity_code="ENTITY", source_order_id=resale["id"],
+            quantity_scaled=1, period_id="period", posting_date=DAY, reason="Actual full return of zero-cost resale", expected_history_version=0)
+        owner = PostgresMonetaryCustomerPartialReturnsRepository(connection, runtime.tenant)
+        returned = owner.prepare(request, command_id="cr3-zero-resale:return", actor=actor)
+        assert owner.prepare(request, command_id="cr3-zero-resale:return", actor=actor) == returned
+    returned = _posted(runtime, returned)
+    assert [part["purpose"] for part in returned["entries"]] == ["MerchandiseCredit"]
+    assert (returned["monetary"]["transaction_credit_minor"], returned["monetary"]["functional_credit_minor"],
+            returned["monetary"]["functional_cost_minor"]) == ("114", "114", "0")
+    for plan in (old_return, returned):
+        assert len({plan["preparer_actor_id"], plan["reviewer_actor_id"], plan["posted_actor_id"]}) == 3
+    finance(5, 12, 233)
+    assert retained_originals() == frozen_originals
+
+    with runtime.actor("poster") as (connection, _, _actor):
+        consumed = connection.execute("""SELECT c.* FROM reconforge.inventory_layer_consumptions c
+            JOIN reconforge.inventory_valuation_lines v ON(v.tenant_id,v.id)=(c.tenant_id,c.valuation_line_id)
+            WHERE c.tenant_id=%s ORDER BY c.value_minor DESC,c.id""", (runtime.tenant,)).fetchall()
+        assert [(row["quantity_scaled"], row["value_minor"]) for row in consumed] == [(10, 1), (1, 0)]
+        item = connection.execute("SELECT item_id FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s", (runtime.tenant, original["id"])).fetchone()["item_id"]
+        source = connection.execute("SELECT payload,source_digest FROM reconforge.stock_sales_monetary_origins WHERE tenant_id=%s AND stock_order_id=%s",
+                                    (runtime.tenant, resale["id"])).fetchone()
+        issue = connection.execute("SELECT issue_plan,reconforge.irp_digest(issue_plan) digest FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s",
+                                   (runtime.tenant, resale["id"])).fetchone()
+        assert source["payload"]["source"]["original_cost_admission_digest"] == issue["digest"]
+        assert source["payload"]["source"]["consumptions"][0]["original_consumption_id"] == consumed[1]["id"]
+        assert source["payload"]["source"]["consumptions"][0]["value_minor"] == 0
+        document = connection.execute("SELECT status,total_value_minor,finance_entry_id FROM reconforge.inventory_valuation_documents WHERE tenant_id=%s AND id=%s",
+                                      (runtime.tenant, resale["valuation_id"])).fetchone()
+        assert dict(document) == {"status": "Approved", "total_value_minor": 0, "finance_entry_id": None}
+        restorations = connection.execute("""SELECT plan_id,quantity_scaled,value_minor,direction,correction_effect_id,consumption_count_at_restore
+            FROM reconforge.customer_partial_return_monetary_restorations WHERE tenant_id=%s ORDER BY consumption_count_at_restore""", (runtime.tenant,)).fetchall()
+        assert [dict(row) for row in restorations] == [
+            {"plan_id": old_return["id"], "quantity_scaled": 1, "value_minor": 0, "direction": 1, "correction_effect_id": None, "consumption_count_at_restore": 1},
+            {"plan_id": returned["id"], "quantity_scaled": 1, "value_minor": 0, "direction": 1, "correction_effect_id": None, "consumption_count_at_restore": 2},
+        ]
+        pool = connection.execute("SELECT reconforge.it1_cost_snapshot(%s,'work','org','entity',%s) value", (runtime.tenant, item)).fetchone()["value"]
+        assert pool["schema_version"] == "inventory-transfer-cost-v4" and pool["remaining_quantity_scaled"] == 1 and pool["remaining_value_minor"] == 0
+        assert len(pool["sources"]) == 1 and pool["sources"][0]["partial_return_corrections"] == []
+        assert {part["restoration"]["plan_id"] for part in pool["sources"][0]["monetary_return_corrections"]} == {old_return["id"], returned["id"]}
+        admissions = pool["sources"][0]["restituted_consumption_admissions"]
+        assert len(admissions) == 1 and admissions[0]["consumption_id"] == consumed[1]["id"] and admissions[0]["posting_effect"] is None
+        connection.execute("SELECT reconforge.it1_cost_originals(%s,%s::jsonb)", (runtime.tenant, canonical_json(pool)))
+
+    # The transfer follows the zero-cost resale AND its new return. Its
+    # authority must admit the genuine absent-journal consumed document too.
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
+        identities = PostgresIdentityRepository(connection)
+        for permission in sorted(set().union(*TRANSFER_PERMISSIONS.values())):
+            identities.create_permission(tenant_id=runtime.tenant, permission_name=permission)
+            identities.grant_permission(tenant_id=runtime.tenant, role_name="receipt-operator", permission_name=permission)
+        inventory = PostgresInventoryCoreRepository(connection, runtime.tenant)
+        inventory.upsert_warehouse(warehouse_code="SECOND", name="Restituted destination", organization_code="ORG", entity_code="ENTITY", workspace="work")
+        inventory.upsert_location(warehouse_code="SECOND", location_code="STOCK", name="Restituted stock", organization_code="ORG", workspace="work")
+    with runtime.actor("maker") as (connection, _, actor):
+        transfer_owner = PostgresInventoryTransferRepository(connection, runtime.tenant)
+        with pytest.raises(FinancePostingError) as wrong_currency:
+            transfer_owner._consumed_document_amount({**pool, "monetary_policy": {**pool["monetary_policy"], "currency_code": "EUR"}}, SCOPE)
+        assert wrong_currency.value.code == "inventory_transfer_invalid"
+        transfer = transfer_owner.create(TransferPreparation("CR3-ZERO-TRANSFER", "ITEM", "0.1",
+            "MAIN/STOCK", "SECOND/STOCK", "period", DAY, "Actual transfer after zero-cost resale return", SCOPE), command_id="cr3-zero-transfer:create", actor=actor)
+        assert transfer_physical(connection, runtime) == {"MAIN/STOCK": 1, "SECOND/STOCK": 0}
+        assert transfer["source"]["cost_snapshot"] == pool
+    transfer = transfer_phase(runtime, transfer_phase(runtime, transfer, "review", "checker"), "post", "poster")
+    assert transfer["source"]["phase"] == 2
+    with runtime.actor("maker") as (connection, _, actor):
+        assert transfer_physical(connection, runtime) == {"MAIN/STOCK": 0, "SECOND/STOCK": 1}
+        native = transfer["source"]
+        inverse = PostgresInventoryTransferRepository(connection, runtime.tenant).create_inverse(TransferInversePreparation(native["id"], native["source_digest"],
+            native["row_version"], "CR3-ZERO-TRANSFER-INVERSE", "period", DAY, "Exact physical inverse after zero-cost resale"),
+            command_id="cr3-zero-transfer:inverse", actor=actor)
+    inverse = transfer_phase(runtime, transfer_phase(runtime, inverse, "review", "checker"), "post", "poster")
+    assert inverse["source"]["phase"] == 2 and inverse["source"]["original"]["id"] == transfer["source"]["id"]
+    with runtime.actor("poster") as (connection, _, _actor):
+        assert transfer_physical(connection, runtime) == {"MAIN/STOCK": 1, "SECOND/STOCK": 0}
+        assert connection.execute("SELECT reconforge.it1_cost_snapshot(%s,'work','org','entity',%s) value", (runtime.tenant, item)).fetchone()["value"] == pool
+    finance(5, 12, 233)
+    assert retained_originals() == frozen_originals
+    assert {key: value for key, value in native_balances(runtime).items() if value} == {"CLEARING": -1, "COGS": 1, "AR": 3, "REVENUE": -3}
+    assert _balance(runtime, original)["history_version"] == _balance(runtime, resale)["history_version"] == 1
+    assert _balance(runtime, resale)["transaction_outstanding_minor"] == _balance(runtime, resale)["functional_outstanding_minor"] == "0"
+
+    # Later native consumption remains retained even after its own Return.
+    # A failed old inverse must not erase that dependency or any business row.
+    with runtime.actor("maker") as (connection, _, actor):
+        inverse_plan = PostgresMonetaryCustomerPartialReturnsRepository(connection, runtime.tenant).prepare_reversal(
+            MonetaryPartialReversePreparation(old_return["id"], "period", DAY, "Prove retained resale consumption blocks old inverse", 1),
+            command_id="cr3-zero-original:inverse", actor=actor)
+    inverse_plan = _phase(runtime, inverse_plan, "review", "checker")
+    from tests.test_postgres_monetary_customer_return_security import _business_digest
+
+    before = _business_digest(runtime)
+    with pytest.raises(FinancePostingError) as dependency:
+        _phase(runtime, inverse_plan, "post", "poster")
+    assert dependency.value.code == "monetary_return_reversal_dependency" and _business_digest(runtime) == before
+    assert _phase(runtime, inverse_plan, "cancel", "poster")["phase"] == 3
+    assert retained_originals() == frozen_originals
+    finance(5, 12, 233)

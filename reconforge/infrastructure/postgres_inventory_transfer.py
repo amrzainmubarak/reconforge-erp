@@ -116,7 +116,42 @@ class PostgresInventoryTransferRepository:
             (self.tenant_id, identifiers, scope["workspace_id"], scope["workspace_id"], scope["organization_id"],
                 scope["legal_entity_id"], canonical_json(snapshot["monetary_policy"])))
         if row["originals"] != len(identifiers):
-            fail("Transfer requires every original consumed document in its captured scope and monetary policy.")
+            # A zero-cost Stock resale has an Approved valuation and immutable
+            # consumption, but deliberately has no fabricated COGS journal.
+            # Keep the original financial-membership query above intact; only
+            # the disjoint absent-journal population may use the native factual
+            # restitution owner, with exact document/line/policy affinity.
+            from psycopg import sql
+
+            installed = self._one("""SELECT
+                to_regprocedure('reconforge.monetary_zero_consumption(text,text)') IS NOT NULL monetary,
+                to_regprocedure('reconforge.customer_partial_return_zero_consumption(text,text)') IS NOT NULL legacy""", ())
+            if not installed["monetary"] and not installed["legacy"]:
+                fail("Transfer requires every original consumed document in its captured scope and monetary policy.")
+            helper = "monetary_zero_consumption" if installed["monetary"] else "customer_partial_return_zero_consumption"
+            query = sql.SQL("""WITH zero_originals AS MATERIALIZED(
+                SELECT c.tenant_id,c.id,to_jsonb(d) document,to_jsonb(v) detail
+                FROM reconforge.inventory_layer_consumptions c
+                JOIN reconforge.inventory_valuation_lines v ON(v.tenant_id,v.id)=(c.tenant_id,c.valuation_line_id)
+                JOIN reconforge.inventory_valuation_documents d ON(d.tenant_id,d.id)=(v.tenant_id,v.valuation_document_id)
+                WHERE c.tenant_id=%s AND c.id=ANY(%s) AND c.workspace_id=%s
+                AND c.quantity_scaled>0 AND c.value_minor=0 AND v.quantity_scaled>0 AND v.value_minor=0
+                AND d.status='Approved' AND d.total_value_minor=0 AND d.finance_entry_id IS NULL
+                AND(d.workspace_id,d.organization_id,d.legal_entity_id)=(%s,%s,%s)
+                AND jsonb_build_object('currency_code',d.currency_code,'currency_precision',d.currency_precision,
+                    'currency_rounding_policy',d.currency_rounding_policy,'currency_registry_version',d.currency_registry_version,
+                    'currency_registry_digest',d.currency_registry_digest)=%s::jsonb),
+                admitted_zero AS MATERIALIZED(
+                    SELECT z.*,reconforge.{}(z.tenant_id,z.id) proof FROM zero_originals z)
+                SELECT count(DISTINCT id) originals FROM admitted_zero
+                WHERE proof->>'consumption_id'=id AND proof->>'cost_admission_policy'='partial-return-restituted-v1'
+                AND proof->'valuation_document'=document AND proof->'valuation_line'=detail
+                AND proof#>'{{issue_plan,total_cost_minor}}'='0'::jsonb AND proof->'posting_effect'='null'::jsonb""").format(sql.Identifier(helper))
+            admitted = self.connection.execute(query,
+                (self.tenant_id, identifiers, scope["workspace_id"], scope["workspace_id"], scope["organization_id"],
+                 scope["legal_entity_id"], canonical_json(snapshot["monetary_policy"]))).fetchone()
+            if admitted is None or row["originals"] + admitted["originals"] != len(identifiers):
+                fail("Transfer requires every original consumed document in its captured scope and monetary policy.")
         return int(row["amount"])
 
     def _context(self, identifier: str, operation: str, actor: PostingActor) -> None:

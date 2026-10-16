@@ -1,14 +1,18 @@
 """Real app registration and strict request models; no native posting claim."""
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from reconforge.api import create_api_app
+from reconforge.api.errors import APIError
 from reconforge.api.routes import customer_partial_returns_v3 as partial
 from reconforge.api.routes import stock_sales_v2 as stock
 from reconforge.db import run_migrations
+from reconforge.domain.finance_posting import FinancePostingError
 from tests.api_route_registration import registered_http_operations
 
 HISTORY = {"command_id": "synthetic-command", "expected_history_version": 0, "period_id": "period", "posting_date": "2026-10-15", "reason": "Explicit actual intent"}
@@ -16,6 +20,33 @@ RETURN = {**HISTORY, "source_order_id": "original-monetary-stock", "quantity_sca
 COLLECTION = {"command_id": "synthetic-command", "expected_version": 10, "reason": "Explicit collection intent", "receipt_number": "CASH", "receipt_date": "2026-10-15", "period_id": "period", "amount_minor": "1", "settlement_rate": None}
 INVOICE = {"command_id": "synthetic-command", "expected_version": 7, "reason": "Explicit origin intent", "invoice_number": "INVOICE", "invoice_date": "2026-10-15", "due_date": "2026-10-31", "period_id": "period", "journal_code": "SALES",
            "receivable_account_code": "AR", "revenue_account_code": "REVENUE", "cash_account_code": "CASH", "refund_liability_account_code": "REFUND", "gain_account_code": "GAIN", "loss_account_code": "LOSS", "country_code": "ZZ", "transaction_class": "synthetic-merchandise", "taxes": [], "original_rate": None}
+
+
+def test_cr3_api_translates_typed_contention_to_409_once_without_implicit_retry(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise the real error translator, not native authority or posting."""
+    request: Any = object()
+    user: Any = object()
+    actor, owner = object(), object()
+    finance = SimpleNamespace(connection=object())
+    scope = SimpleNamespace(tenant_id="synthetic", workspace_id="work", organization_id="organization",
+                            legal_entity_id="entity", organization_code="ORG", entity_code="ENTITY")
+    monkeypatch.setattr(partial, "server_finance_core_enabled", lambda _request: True)
+    monkeypatch.setattr(partial.legacy, "_actor", lambda _request, _user: actor)
+    monkeypatch.setattr(partial, "PostgresMonetaryCustomerPartialReturnsRepository", lambda _connection, _tenant_id: owner)
+    monkeypatch.setattr(partial, "execute_postgres_finance_core_scoped", lambda _request, operation: operation(finance, scope))
+    cause = FinancePostingError("monetary_return_retryable_conflict", "Retry the exact retained command after the current operation finishes.")
+    calls: list[tuple[object, object, object]] = []
+
+    def contended(actual_owner: Any, actual_actor: Any, actual_scope: Any) -> Any:
+        calls.append((actual_owner, actual_actor, actual_scope))
+        raise cause
+
+    with pytest.raises(APIError) as refused:
+        partial.execute(request, user, contended)
+    assert refused.value.status_code == 409
+    assert refused.value.code == "monetary_return_retryable_conflict"
+    assert refused.value.__cause__ is cause
+    assert calls == [(owner, actor, scope)]
 
 
 def test_real_app_registers_exactly_31_fixed_monetary_routes_and_preserves_legacy_contracts(tmp_path: Path) -> None:

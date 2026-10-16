@@ -88,6 +88,87 @@ it("retains the exact versioned post command after response loss, blocks other a
   await waitFor(() => expect(onLock).toHaveBeenLastCalledWith(false));
 });
 
+it("retains a contended CR3 command for an explicit same-body human retry in both languages", async () => {
+  let posted = false;
+  const attempts: { path: string; body: string }[] = [], value = reviewed();
+  const fetcher = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(url);
+    if (init?.method === "POST") {
+      attempts.push({ path, body: String(init.body) });
+      if (attempts.length === 1) return json({ error: { code: "monetary_return_retryable_conflict", message: "The command is contended." } }, 409);
+      posted = true; return json({ plan: fixtures.return });
+    }
+    return json(path.includes("/balance") ? { balance: balance() } : path.endsWith(value.id) ? { plan: posted ? fixtures.return : value } : { plans: [posted ? fixtures.return : value] });
+  });
+  vi.stubGlobal("fetch", fetcher);
+  const view = render(<MonetaryCustomerReturns locale="en" scope={scope} identity={identity} externallyLocked={false} onLockChange={onLock} />);
+  await selectPartial();
+  const form = screen.getByRole("form", { name: text("en", "post") });
+  fireEvent.change(within(form).getByLabelText(text("en", "reason")), { target: { value: "Retain original contended command" } });
+  fireEvent.click(within(form).getByRole("button", { name: text("en", "post") }));
+  await screen.findByRole("button", { name: text("en", "retry") });
+  expect(screen.getByRole("alert")).toHaveTextContent("Another operation is using a required resource.");
+  expect(screen.getByRole("alert")).not.toHaveTextContent(text("en", "unknown"));
+  expect(screen.getByRole("alert")).toHaveFocus();
+  expect(screen.getByRole("button", { name: text("en", "refresh") })).toBeDisabled();
+  expect(screen.getByRole("combobox", { name: text("en", "selectPlan") })).toBeDisabled();
+  expect(within(form).getByLabelText(text("en", "reason"))).toBeDisabled();
+  expect(attempts).toHaveLength(1); expect(onLock).toHaveBeenLastCalledWith(true);
+  const count = fetcher.mock.calls.length;
+  view.rerender(<MonetaryCustomerReturns locale="ar" scope={scope} identity={identity} externallyLocked={false} onLockChange={onLock} />);
+  expect(screen.getByRole("region", { name: text("ar", "partialTitle") })).toHaveAttribute("dir", "rtl");
+  expect(screen.getByRole("alert")).toHaveTextContent("يتعذر تنفيذ الأمر الآن لوجود عملية أخرى.");
+  expect(fetcher).toHaveBeenCalledTimes(count);
+  fireEvent.click(screen.getByRole("button", { name: text("ar", "retry") }));
+  await screen.findByRole("heading", { name: `${text("ar", "Return")} · ${text("ar", "Posted")}` });
+  expect(attempts).toHaveLength(2); expect(attempts[0]).toEqual(attempts[1]);
+  expect(attempts[1].path).toBe(`${monetaryPartialRoot}/plans/${value.id}/post`);
+  expect(JSON.parse(attempts[1].body)).toMatchObject({ expected_plan_digest: value.plan_digest, reason: "Retain original contended command" });
+  expect(JSON.parse(attempts[1].body).command_id).toEqual(expect.any(String));
+  await waitFor(() => expect(onLock).toHaveBeenLastCalledWith(false));
+});
+
+it.each([[409, "customer_partial_return_source_changed"], [400, "monetary_return_retryable_conflict"], [403, "monetary_return_retryable_conflict"]])("does not retain a definitive HTTP %s / %s response as a retryable command", async (status, code) => {
+  const attempts: string[] = [], value = reviewed();
+  vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    if (init?.method === "POST") { attempts.push(String(init.body)); return json({ error: { code, message: "Definitive refusal" } }, Number(status)); }
+    return json(String(url).includes("/balance") ? { balance: balance() } : String(url).endsWith(value.id) ? { plan: value } : { plans: [value] });
+  }));
+  render(<MonetaryCustomerReturns locale="en" scope={scope} identity={identity} externallyLocked={false} onLockChange={onLock} />);
+  await selectPartial();
+  const form = screen.getByRole("form", { name: text("en", "post") });
+  fireEvent.change(within(form).getByLabelText(text("en", "reason")), { target: { value: "Definitive refusal" } });
+  fireEvent.click(within(form).getByRole("button", { name: text("en", "post") }));
+  await waitFor(() => expect(attempts).toHaveLength(1));
+  await waitFor(() => expect(onLock).toHaveBeenLastCalledWith(false));
+  expect(screen.queryByRole("button", { name: text("en", "retry") })).not.toBeInTheDocument();
+});
+
+it("rechecks current authority on a manual contended retry and clears its retained command after 403", async () => {
+  const attempts: { path: string; body: string }[] = [], value = reviewed();
+  let denied = false;
+  vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    if (init?.method === "POST") {
+      attempts.push({ path: String(url), body: String(init.body) });
+      if (attempts.length === 1) return json({ error: { code: "monetary_return_retryable_conflict", message: "Contended" } }, 409);
+      denied = true; return json({ error: { code: "monetary_return_permission_denied", message: "Current permission refused" } }, 403);
+    }
+    return denied ? json({ error: { code: "forbidden", message: "Current permission refused" } }, 403) : json(String(url).includes("/balance") ? { balance: balance() } : String(url).endsWith(value.id) ? { plan: value } : { plans: [value] });
+  }));
+  render(<MonetaryCustomerReturns locale="en" scope={scope} identity={identity} externallyLocked={false} onLockChange={onLock} />);
+  await selectPartial();
+  const form = screen.getByRole("form", { name: text("en", "post") });
+  fireEvent.change(within(form).getByLabelText(text("en", "reason")), { target: { value: "Recheck current authority" } });
+  fireEvent.click(within(form).getByRole("button", { name: text("en", "post") }));
+  fireEvent.click(await screen.findByRole("button", { name: text("en", "retry") }));
+  await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(text("en", "denied")));
+  expect(attempts).toHaveLength(2); expect(attempts[0]).toEqual(attempts[1]);
+  expect(screen.queryByRole("button", { name: text("en", "retry") })).not.toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: text("en", "evidence") })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: text("en", "currentBalance") })).not.toBeInTheDocument();
+  expect(onLock).toHaveBeenLastCalledWith(false);
+});
+
 it.each(["maker", "checker"])("requires a third person even when the return has no monetary journal: %s", async id => {
   const value = reviewed(true);
   vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL) => json(String(url).includes("/balance") ? { balance: balance() } : String(url).endsWith(value.id) ? { plan: value } : { plans: [value] })));

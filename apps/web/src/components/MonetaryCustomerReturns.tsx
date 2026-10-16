@@ -76,7 +76,8 @@ export function MonetaryCustomerReturns({ locale, scope, identity, externallyLoc
       setBalance(null); setPending(null); setReason(""); setStale(false); setRefresh(old => old + 1); onLockChange(false);
     } catch (caught) {
       if (!current()) return;
-      if (!(caught instanceof AdminApiError) || caught.status >= 500) { setError("unknown"); setStale(true); }
+      if (caught instanceof AdminApiError && caught.status === 409 && caught.code === "monetary_return_retryable_conflict") { setError("retryableConflict"); setStale(true); }
+      else if (!(caught instanceof AdminApiError) || caught.status >= 500) { setError("unknown"); setStale(true); }
       else { setPending(null); onLockChange(false); fail(caught); }
     } finally { lock.current = false; if (current()) setBusy(false); }
   }
@@ -100,7 +101,7 @@ export function MonetaryCustomerReturns({ locale, scope, identity, externallyLoc
   const independent = plan && plan.preparer_actor_id !== identity.id, third = independent && plan.reviewer_actor_id !== identity.id;
   return <section aria-label={t("partialTitle")} dir={locale === "ar" ? "rtl" : "ltr"}><h2>{t("partialTitle")}</h2><p>{t("partialBoundary")}</p><p>{t("duties")}</p>
     {error && <p role="alert" ref={alert} tabIndex={-1}>{t(error)}</p>}{(loading || busy) && <p role="status">{t("loading")}</p>}
-    {pending && !busy && <aside role="status"><p>{t("unknown")}</p><button disabled={externallyLocked} onClick={() => void send(pending)}>{t("retry")}</button></aside>}
+    {pending && !busy && <aside role="status"><p>{t(error === "retryableConflict" ? "retryableConflict" : "unknown")}</p><button disabled={externallyLocked} onClick={() => void send(pending)}>{t("retry")}</button></aside>}
     <section className="panel"><button disabled={locked} onClick={() => setRefresh(old => old + 1)}>{t("refresh")}</button><label>{t("selectPlan")}<select disabled={locked} value={plan?.id ?? ""} onChange={event => { ++generation.current; const value = plans.find(item => item.id === event.target.value) ?? null; setPlan(value); setSource(value?.source_order_id ?? ""); setBalance(null); setError(null); }}><option value="">—</option>{plans.map(value => <option key={value.id} value={value.id}>{t(value.operation)} · {t(value.status)} · {value.id}</option>)}</select></label>{!plans.length && !loading && <p>{t("emptyPlans")}</p>}</section>
     <form className="panel reporting-form" aria-label={t("sourceLoad")} onSubmit={event => void inspect(event)}>{input("source_order_id", source, value => { ++generation.current; setSource(value); setPlan(null); setBalance(null); })}<button disabled={locked || !source.trim() || !has("read")}>{t("sourceLoad")}</button></form>
     <form className="panel reporting-form" aria-label={t("loadPlan")} onSubmit={event => void inspect(event, true)}><label>{t("planId")}<input value={planId} maxLength={160} disabled={locked} onChange={event => setPlanId(event.target.value)} /></label><button disabled={locked || !planId.trim() || !has("read")}>{t("loadPlan")}</button></form>

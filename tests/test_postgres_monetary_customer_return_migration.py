@@ -1,9 +1,14 @@
 """Real148/149 migration custody, existing function identity and safe downgrade."""
 
+import hashlib
+import json
 import os
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
+from uuid import uuid4
 
 import psycopg
 import pytest
@@ -18,7 +23,15 @@ from reconforge.infrastructure.postgres_inventory_receipt_posting_schema import 
     install_postgres_inventory_receipt_posting_schema,
 )
 from reconforge.infrastructure.postgres_monetary_installation import verify_monetary_installation_if_present
+from reconforge.infrastructure.postgres_monetary_stock_schema import TABLES as MONETARY_TABLES
 from reconforge.platform.common import PlatformError
+from tests.gfo_browser_restore import database_snapshot
+from tests.test_postgres_customer_partial_return_rounding import (
+    create_remainder_runtime,
+    phase_v2,
+    prepare_v2,
+)
+from tests.test_postgres_customer_partial_returns import SETTLEMENT_TABLES
 from tests.test_postgres_customer_returns import configure_runtime
 from tests.test_postgres_inventory_receipt_posting import receipt_database
 from tests.test_postgres_monetary_customer_partial_returns import _stock
@@ -47,6 +60,105 @@ def _profiles(connection):
         ORDER BY p.proname,p.oid""", (list(FUNCTIONS),)).fetchall()
     assert len(rows) == 16
     return {row["proname"]: dict(row) for row in rows}
+
+
+@pytest.fixture
+def populated148_database() -> Iterator[tuple[str, str]]:
+    """A separate function-owned DB: the module fixture can retain149 Drafts."""
+    name = "reconforge_monetary_compat_" + uuid4().hex[:16]
+    admin_url = urlsplit(os.environ["RECONFORGE_TEST_POSTGRES_ADMIN_DSN"])
+    admin = urlunsplit(admin_url._replace(path="/" + name))
+    app = psycopg.conninfo.make_conninfo(os.environ["RECONFORGE_TEST_POSTGRES_DSN"], dbname=name)
+    control_dsn = psycopg.conninfo.make_conninfo(admin, dbname="postgres", connect_timeout=5)
+    with psycopg.connect(control_dsn, autocommit=True) as control:
+        control.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
+    try:
+        _revision(admin, "upgrade", OLD)
+        from reconforge.infrastructure.postgres_receipt_admission import install_postgres_receipt_admission
+
+        with psycopg.connect(admin) as connection:
+            install_postgres_inventory_receipt_posting_schema(connection)
+            install_postgres_receipt_admission(connection)
+            role = psycopg.conninfo.conninfo_to_dict(app)["user"]
+            assert type(role) is str and role
+            # These privileges belong only to this owned synthetic fixture.
+            for statement in ("GRANT USAGE ON SCHEMA reconforge TO {}",
+                              "GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {}",
+                              "GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA reconforge TO {}"):
+                connection.execute(sql.SQL(statement).format(sql.Identifier(role)))
+        yield admin, app
+    finally:
+        with psycopg.connect(control_dsn, autocommit=True) as control:
+            control.execute(sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(name)))
+            assert control.execute("SELECT 1 FROM pg_database WHERE datname=%s", (name,)).fetchone() is None
+
+
+def _old_financial_rows(runtime):
+    """All79 original table memberships, with hashes instead of private rows."""
+    assert len(SETTLEMENT_TABLES) == len(set(SETTLEMENT_TABLES)) == 79
+    result = {}
+    with runtime.actor("maker") as (connection, _, _actor):
+        for name in SETTLEMENT_TABLES:
+            rows = connection.execute(sql.SQL("SELECT to_jsonb(r)::text original FROM reconforge.{} r "
+                "WHERE tenant_id=%s ORDER BY to_jsonb(r)::text COLLATE \"C\"").format(sql.Identifier(name)), (runtime.tenant,)).fetchall()
+            raw = json.dumps([row["original"] for row in rows], separators=(",", ":"), ensure_ascii=False).encode()
+            result[name] = {"rows": len(rows), "sha256": hashlib.sha256(raw).hexdigest()}
+    return result
+
+
+def _ack_digest(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+
+
+def test_actual_retained_posted148_v2_source_and_ack_survive149_upgrade(populated148_database):
+    admin_dsn, app_dsn = populated148_database
+    runtime, source = create_remainder_runtime(populated148_database)
+    command = "retained148-v2-native-prepare"
+    prepared = prepare_v2(runtime, source, 1, 0, command)
+    reviewed = phase_v2(runtime, prepared, "review", "checker")
+    posted = phase_v2(runtime, reviewed, "post", "poster")
+    assert posted["phase"] == 2 and posted["allocation_policy"] == "remaining-original-v1"
+    assert (posted["credit_minor"], posted["cogs_restored_minor"]) == (1000, 334)
+    acknowledgements = tuple(_ack_digest(value) for value in (prepared, reviewed, posted))
+    financial_before = _old_financial_rows(runtime)
+    assert financial_before["customer_partial_return_history"]["rows"] == 1
+    assert financial_before["customer_partial_return_allocation_witnesses"]["rows"] == 1
+    before = database_snapshot(admin_dsn)
+    assert before["head"] == OLD and all(name not in before["tables"] for name in MONETARY_TABLES)
+    with psycopg.connect(admin_dsn, row_factory=dict_row) as admin:
+        original_profiles = _profiles(admin)
+        assert verify_monetary_installation_if_present(admin) is False
+    _revision(admin_dsn, "upgrade", NEW)
+    upgraded = database_snapshot(admin_dsn)
+    assert upgraded["head"] == NEW and set(upgraded["tables"]) == set(before["tables"]) | set(MONETARY_TABLES)
+    assert all(upgraded["tables"][name] == rows for name, rows in before["tables"].items())
+    role = psycopg.conninfo.conninfo_to_dict(app_dsn)["user"]
+    assert type(role) is str and role
+    with psycopg.connect(admin_dsn, row_factory=dict_row) as admin:
+        assert verify_monetary_installation_if_present(admin) is True
+        current_profiles = _profiles(admin)
+        assert {name: {key: value for key, value in row.items() if key != "prosrc"} for name, row in original_profiles.items()} == {
+            name: {key: value for key, value in row.items() if key != "prosrc"} for name, row in current_profiles.items()}
+        for name in MONETARY_TABLES:
+            assert admin.execute(sql.SQL("SELECT count(*) n FROM reconforge.{}").format(sql.Identifier(name))).fetchone()["n"] == 0
+            assert admin.execute("SELECT has_table_privilege(%s,%s,'SELECT,INSERT,UPDATE,DELETE') allowed",
+                                 (role, "reconforge." + name)).fetchone()["allowed"] is False
+            # Upgrade grants no business privileges. A recreated/new table is
+            # admitted explicitly only for this test's ordinary runtime role.
+            admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{} TO {}")
+                          .format(sql.Identifier(name), sql.Identifier(role)))
+    with runtime.actor("maker") as (connection, _, _actor):
+        flags = connection.execute("SELECT rolsuper,rolbypassrls,rolcreaterole,rolcreatedb,rolreplication "
+                                   "FROM pg_roles WHERE rolname=current_user").fetchone()
+        assert all(flags[name] is False for name in ("rolsuper", "rolbypassrls", "rolcreaterole", "rolcreatedb", "rolreplication"))
+    assert financial_before == _old_financial_rows(runtime)
+    replayed = (prepare_v2(runtime, source, 1, 0, command), phase_v2(runtime, prepared, "review", "checker"),
+                phase_v2(runtime, reviewed, "post", "poster"))
+    assert tuple(_ack_digest(value) for value in replayed) == acknowledgements
+    assert financial_before == _old_financial_rows(runtime)
+    with psycopg.connect(admin_dsn, row_factory=dict_row) as admin:
+        for name in MONETARY_TABLES:
+            assert admin.execute(sql.SQL("SELECT count(*) n FROM reconforge.{}").format(sql.Identifier(name))).fetchone()["n"] == 0
 
 
 def test_actual_empty_roundtrip_preserves_original_oids_acl_and_exact_execution_attributes(receipt_database):

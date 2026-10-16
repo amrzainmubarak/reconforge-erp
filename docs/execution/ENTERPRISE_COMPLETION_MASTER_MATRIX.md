@@ -40,6 +40,18 @@ closure repair preserves every native check and digest byte while using cached
 recursive queries only in new149 functions. Old IRP functions stay unchanged.
 Actual business,18-function migration, HTTPS/restore and final CI remain open.
 
+The26e9-v8 whole native case completes every business assertion (both returns,
+zero-cost resale, forward/inverse IT1, blocked old inverse and cancellation),
+but its284.248s run fails at final raw-packet encoding: the posting serializer's
+2MiB budget was incorrectly reused for the declared64MiB evidence packet.
+The producer-only correction keeps financial limits/readers unchanged and
+enforces the existing4/64MiB custody bounds, including the final newline.
+The preceding26e9-v7 attempt is a separate9.681s custody-directory setup refusal.
+Neither produces an accepted raw6 packet. Published15a CI is terminal69 success/
+10 failure/79 jobs; its originals remain retained. Source fixes do not accept
+those old runs. Required final native/oracle, legacy, migration, HTTPS/restore,
+security/concurrency and exact-head CI gates remain open.
+
 Next: Advanced Manufacturing & Supply Chain, then Global Finance, HCM/Payroll,
 CRM/Sales/Projects/Services, Enterprise Operations/Integration, Enterprise AI.
 The team moves together only after the current domain satisfies every applicable

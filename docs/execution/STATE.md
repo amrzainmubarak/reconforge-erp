@@ -4,8 +4,9 @@
 
 The latest human directive freezes M7.7/M7.9; whole M7 stays OPEN. No optional
 scenario, new domain or nonblocking performance comparison is authorized
-in this closure round. Remote Draft140 is15a1149d; its running CI has retained
-native/HTTPS and legacy-compatibility failures. Earlier02b3 terminal CI records
+in this closure round. Remote Draft140 is15a1149d; its terminal CI has69 success/
+10 failure/79 jobs, with retained native/HTTPS and legacy-compatibility failures.
+Earlier02b3 terminal CI records
 56 successful and23 failed jobs of79, all originals retained. Accepted139
 remains375, and main plus the primary user's two dirty files are unchanged.
 The coherent local repairs cover the observed financial-owner callback ACL

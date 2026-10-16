@@ -60,6 +60,7 @@ MONETARY_REQUIRED = (
     'tests/customer_partial_return_monetary_oracle.py',
     'tests/customer_partial_return_monetary_posted_oracle.py',
     'tests/customer_partial_return_monetary_restituted_cycle_oracle.py',
+    'tests/monetary_capture_encoding.py',
     'tests/test_customer_partial_return_monetary_browser.py',
     'tests/test_customer_partial_return_monetary_browser_reader.py',
     'tests/test_ci_monetary_browser_contract.py',

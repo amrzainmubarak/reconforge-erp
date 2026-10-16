@@ -1852,7 +1852,7 @@ CREATE FUNCTION reconforge.monetary_return_native_close() RETURNS TRIGGER
  LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
 <<monetary_return_native_close>>
 DECLARE changed JSONB;previous JSONB;current_row JSONB;tenant TEXT;stock_id TEXT;entry_id TEXT;movement_id TEXT;invoice_id TEXT;plan_id TEXT;origin_id TEXT;
- member RECORD;origin_owner RECORD;candidate RECORD;reference TEXT;affected JSONB:='[]'::jsonb;
+ member RECORD;origin_owner RECORD;candidate RECORD;reference TEXT;entry_number TEXT;affected JSONB:='[]'::jsonb;
 BEGIN
  IF TG_OP<>'INSERT' THEN previous:=to_jsonb(OLD);END IF;IF TG_OP<>'DELETE' THEN current_row:=to_jsonb(NEW);END IF;
  IF TG_TABLE_NAME='outbox_events' AND TG_OP='UPDATE'
@@ -1914,6 +1914,31 @@ BEGIN
   IF invoice_id IS NOT NULL THEN SELECT owned.stock_order_id INTO stock_id FROM reconforge.stock_sales_monetary_origins owned
    WHERE owned.tenant_id=tenant AND owned.invoice_id=monetary_return_native_close.invoice_id;END IF;
   IF entry_id IS NOT NULL THEN
+   -- Header callbacks retain their own OLD/NEW image. Child/effect callbacks
+   -- resolve the actual referenced header; its own OLD callback and native
+   -- foreign keys retain deletion/reparenting closure if that header is gone.
+   IF TG_TABLE_NAME='finance_entries' THEN
+    entry_number:=upper(changed->>'entry_number');reference:=changed->>'external_reference';
+   ELSE
+    SELECT upper(entry.entry_number),entry.external_reference INTO entry_number,reference
+     FROM reconforge.finance_entries entry WHERE entry.tenant_id=tenant AND entry.id=monetary_return_native_close.entry_id;
+   END IF;
+   IF COALESCE(entry_number,'')~'^(CR3|CRF3|CR3R|CRF3R)-[A-F0-9]{32}-[RCF]$'
+    OR COALESCE(reference,'')~'^(CR3|CRF3|CR3R|CRF3R)-[0-9a-f]{32}$' THEN
+    NULL; -- Reserved correction forgeries still require exact owner membership.
+   ELSIF COALESCE(entry_number,'')~'^SS1-[A-F0-9]{32}$' THEN
+    SELECT fixed.id INTO stock_id FROM reconforge.stock_sales_orders fixed
+     WHERE fixed.tenant_id=tenant AND fixed.cogs_entry_id=monetary_return_native_close.entry_id
+     AND fixed.source->>'schema_version'='stock-sales-monetary-order-v2';
+    IF stock_id IS NULL THEN CONTINUE;END IF;
+   ELSIF COALESCE(entry_number,'')~'^FX1-[A-F0-9]{32}$' THEN
+    IF NOT EXISTS(SELECT 1 FROM reconforge.operational_fx_plans native_plan
+     JOIN reconforge.operational_fx_sources native_source ON(native_source.tenant_id,native_source.id)=(native_plan.tenant_id,native_plan.source_id)
+     WHERE native_plan.tenant_id=tenant AND native_plan.entry_id=monetary_return_native_close.entry_id
+     AND native_source.payload->>'schema_version'='operational-fx-stock-source-v2') THEN CONTINUE;END IF;
+   ELSE
+    CONTINUE;
+   END IF;
    FOR candidate IN SELECT fixed.stock_order_id FROM reconforge.stock_sales_monetary_origins fixed
     JOIN reconforge.customer_partial_return_monetary_plans partial_plan ON(partial_plan.tenant_id,partial_plan.origin_id)=(fixed.tenant_id,fixed.id)
     JOIN reconforge.customer_partial_return_monetary_entries journal ON(journal.tenant_id,journal.plan_id)=(partial_plan.tenant_id,partial_plan.id)
@@ -1925,7 +1950,6 @@ BEGIN
      AND fixed.source->>'schema_version'='stock-sales-monetary-order-v2' LOOP
     affected:=affected||jsonb_build_array(jsonb_build_array(tenant,candidate.stock_order_id));
    END LOOP;
-   SELECT entry.external_reference INTO reference FROM reconforge.finance_entries entry WHERE entry.tenant_id=tenant AND entry.id=monetary_return_native_close.entry_id;
    IF reference~'^(CR3|CRF3|CR3R|CRF3R)-[0-9a-f]{32}$' THEN
     PERFORM reconforge.monetary_return_assert(EXISTS(SELECT 1 FROM reconforge.customer_partial_return_monetary_entries journal
      WHERE journal.tenant_id=tenant AND journal.plan_id=reference AND journal.entry_id=monetary_return_native_close.entry_id),

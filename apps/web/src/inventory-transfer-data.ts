@@ -50,16 +50,18 @@ const policyFields = ["currency_code", "currency_precision", "currency_rounding_
 function fields(value: unknown, keys: readonly string[]): Record<string, unknown> {
   if (!transferObject(value) || Object.keys(value).length !== keys.length || keys.some(key => !Object.hasOwn(value, key))) invalid(); return value;
 }
-function boundedCorrection(value: unknown, maximumBytes = 262144, maximumNodes = 32768): void {
-  const pending: Array<[unknown, number]> = [[value, 0]]; let nodes = 0;
+function boundedCorrection(value: unknown, maximumBytes = 262144, maximumNodes = 32768, nativeSpacing = false): void {
+  const pending: Array<[unknown, number]> = [[value, 0]]; let nodes = 0, spacing = 0;
   while (pending.length) {
     const [part, depth] = pending.pop()!;
     if (++nodes > maximumNodes || depth > 32) invalid();
-    if (Array.isArray(part)) { if (part.length > 1024) invalid(); for (const child of part) pending.push([child, depth + 1]); }
-    else if (transferObject(part)) { if (Object.keys(part).length > 1024) invalid(); for (const [key, child] of Object.entries(part)) { if (key.length > 160) invalid(); pending.push([child, depth + 1]); } }
+    if (Array.isArray(part)) { if (part.length > 1024) invalid(); spacing += Math.max(part.length - 1, 0); for (const child of part) pending.push([child, depth + 1]); }
+    else if (transferObject(part)) { const count = Object.keys(part).length; if (count > 1024) invalid(); spacing += count + Math.max(count - 1, 0); for (const [key, child] of Object.entries(part)) { if (key.length > 160) invalid(); pending.push([child, depth + 1]); } }
     else if (!(part === null || typeof part === "boolean" || typeof part === "string" && part.length <= 262144 || typeof part === "number" && Number.isSafeInteger(part))) invalid();
   }
-  if (new TextEncoder().encode(transferCanonical(value, true)).length > maximumBytes) invalid();
+  // Native jsonb text adds one space after each object colon and collection
+  // comma. Count structure, never punctuation inside retained string values.
+  if (new TextEncoder().encode(transferCanonical(value, true)).length + (nativeSpacing ? spacing : 0) > maximumBytes) invalid();
 }
 interface CorrectionProtocols {
   remainder: boolean;
@@ -68,13 +70,13 @@ interface CorrectionProtocols {
   history: Map<string, string>;
   events: Map<string, Map<number, { plan: string; original: string | null; direction: number }>>;
 }
-async function zeroConsumptionAdmissions(source: Record<string, unknown>, consumptions: Map<string, Record<string, unknown>>, scope: FinanceScope, tenantId: string, policy: Record<string, unknown>, v3: boolean): Promise<Map<string, Record<string, unknown>>> {
+async function zeroConsumptionAdmissions(source: Record<string, unknown>, consumptions: Map<string, Record<string, unknown>>, scope: FinanceScope, tenantId: string, policy: Record<string, unknown>, v3: boolean, v4 = false): Promise<Map<string, Record<string, unknown>>> {
   const zero = [...consumptions.values()].filter(row => row.value_minor === "0"), result = new Map<string, Record<string, unknown>>();
   if (!zero.length) { if (Object.hasOwn(source, "restituted_consumption_admissions")) invalid(); return result; }
   if (!v3 || !Array.isArray(source.restituted_consumption_admissions) || source.restituted_consumption_admissions.length !== zero.length) invalid();
   const layer = source.layer as Record<string, unknown>;
   for (const [index, raw] of source.restituted_consumption_admissions.entries()) {
-    boundedCorrection(raw);
+    boundedCorrection(raw, 262144, 32768, v4);
     const admission = fields(raw, ["consumption_id", "stock_order_id", "cost_admission_policy", "issue_plan", "valuation_document", "valuation_line", "posting_effect", "physical"]);
     const consumed = zero[index];
     if (admission.consumption_id !== consumed.id || !text(admission.stock_order_id) || admission.cost_admission_policy !== "partial-return-restituted-v1") invalid();
@@ -91,7 +93,7 @@ async function zeroConsumptionAdmissions(source: Record<string, unknown>, consum
     // This is retained historical cost evidence, never a re-price using current
     // layers. The bounded original contains the earlier restitution population.
     const before = await cost(issue.restitution_cost_snapshot, scope, tenantId);
-    if (before.schema_version !== "inventory-transfer-cost-v3" || transferCanonical(before.monetary_policy) !== transferCanonical(policy)) invalid();
+    if (before.schema_version !== "inventory-transfer-cost-v3" && !(v4 && before.schema_version === "inventory-transfer-cost-v4") || transferCanonical(before.monetary_policy) !== transferCanonical(policy)) invalid();
     const allocations = new Map<string, Record<string, unknown>>(); let totalQuantity = 0n, totalValue = 0n, needed = false;
     for (const rawAllocation of issue.allocations) {
       const allocation = fields(rawAllocation, ["cost_layer_id", "row_version", "remaining_quantity_scaled", "remaining_value_minor", "quantity_scaled", "value_minor"]);
@@ -109,7 +111,7 @@ async function zeroConsumptionAdmissions(source: Record<string, unknown>, consum
       if (take !== q) { expected = v * take / q; const rem = v * take % q; if (rem * 2n > q || rem * 2n === q && expected % 2n === 1n) expected += 1n; }
       if (BigInt(allocation.value_minor) !== expected) invalid();
       if (expected === 0n || take < q && expected === v) {
-        const active = (pool.partial_return_corrections as Record<string, unknown>[]).filter(row => Object.hasOwn(row, "allocation_policy"))
+        const active = [...pool.partial_return_corrections as Record<string, unknown>[], ...(before.schema_version === "inventory-transfer-cost-v4" ? pool.monetary_return_corrections as Record<string, unknown>[] : [])].filter(row => Object.hasOwn(row, "allocation_policy"))
           .reduce((sum, row) => sum + BigInt(String((row.restoration as Record<string, unknown>).direction)) * BigInt(String((row.restoration as Record<string, unknown>).quantity_scaled)), 0n);
         if (active <= 0n) invalid(); needed = true;
       }
@@ -153,10 +155,11 @@ async function zeroConsumptionAdmissions(source: Record<string, unknown>, consum
   }
   return result;
 }
-async function corrections(source: Record<string, unknown>, scope: FinanceScope, tenantId: string, policy: Record<string, unknown>, seen: Set<string>, v3: boolean, protocols: CorrectionProtocols): Promise<[bigint, bigint]> {
-  fields(source, ["layer", "valuation_document", "valuation_line", "receipt_plan", "receipt_link", "receipt_review", "finance_entry", "finance_lines", "posting_effect", "receipt_native", "valuation_input", "consumptions", "exposed_amounts_minor", "partial_return_corrections", ...(v3 && Object.hasOwn(source, "restituted_consumption_admissions") ? ["restituted_consumption_admissions"] : [])]);
+async function corrections(source: Record<string, unknown>, scope: FinanceScope, tenantId: string, policy: Record<string, unknown>, seen: Set<string>, v3: boolean, protocols: CorrectionProtocols, v4 = false): Promise<[bigint, bigint]> {
+  fields(source, ["layer", "valuation_document", "valuation_line", "receipt_plan", "receipt_link", "receipt_review", "finance_entry", "finance_lines", "posting_effect", "receipt_native", "valuation_input", "consumptions", "exposed_amounts_minor", "partial_return_corrections", ...(v4 ? ["monetary_return_corrections"] : []), ...(v3 && Object.hasOwn(source, "restituted_consumption_admissions") ? ["restituted_consumption_admissions"] : [])]);
   const layer = source.layer as Record<string, unknown>, valuation = source.valuation_line as Record<string, unknown>;
-  if (!Array.isArray(source.partial_return_corrections) || source.partial_return_corrections.length > 200 || !Array.isArray(source.consumptions) || source.consumptions.length > 200
+  const limit = v4 ? 256 : 200;
+  if (!Array.isArray(source.partial_return_corrections) || source.partial_return_corrections.length > limit || v4 && (!Array.isArray(source.monetary_return_corrections) || source.monetary_return_corrections.length + source.partial_return_corrections.length > limit) || !Array.isArray(source.consumptions) || source.consumptions.length > 200
       || !exact(layer.original_quantity_scaled) || layer.original_quantity_scaled === "0" || !exact(layer.original_value_minor) || layer.original_value_minor === "0") invalid();
   let quantity = 0n, value = 0n, consumedQuantity = 0n, consumedValue = 0n;
   const consumptions = new Map<string, Record<string, unknown>>(), net = new Map<string, [bigint, bigint]>();
@@ -167,28 +170,32 @@ async function corrections(source: Record<string, unknown>, scope: FinanceScope,
         || !exact(consumed.quantity_scaled) || consumed.quantity_scaled === "0" || !exact(consumed.value_minor) || !v3 && consumed.value_minor === "0") invalid();
     consumptions.set(consumed.id, consumed); consumedQuantity += BigInt(consumed.quantity_scaled); consumedValue += BigInt(consumed.value_minor);
   }
-  const zeroAdmissions = await zeroConsumptionAdmissions(source, consumptions, scope, tenantId, policy, v3);
+  const zeroAdmissions = await zeroConsumptionAdmissions(source, consumptions, scope, tenantId, policy, v3, v4);
   if (zeroAdmissions.size) protocols.remainder = true;
   const debitExposures: string[] = [], creditExposures: string[] = [];
-  for (const raw of source.partial_return_corrections) {
-    boundedCorrection(raw);
-    const remainder = v3 && transferObject(raw) && Object.hasOwn(raw, "allocation_policy");
-    const correction = fields(raw, ["restoration", "source", "plan", "entry", "effect", "lines", "dimensions", "physical", ...(remainder ? ["history_sequence", "allocation_policy", "allocation_witness"] : [])]);
-    const restored = fields(correction.restoration, ["tenant_id", "source_id", "plan_id", "position", "original_consumption_id", "original_valuation_line_id", "cost_layer_id", "offset_quantity_scaled", "quantity_scaled", "value_minor", "direction", "physical_movement_id", "original_cogs_effect_id", "correction_effect_id", "original_restoration_plan_id", "consumption_count_at_restore"]);
-    const factual = remainder && transferObject(correction.source) && Object.hasOwn(correction.source, "original_cost_minor");
-    const original = fields(correction.source, ["id", "source_fingerprint", ...Object.keys(scope), "item_id", "uom_id", "quantity_precision", "location_id", "original_cogs_effect_id", ...(factual ? ["original_cost_minor", "cost_admission_digest"] : [])]);
-    if (factual && (!exact(original.original_cost_minor) || !digest(original.cost_admission_digest))) invalid();
+  const rows = [...source.partial_return_corrections.map(raw => ({ raw, monetary: false })), ...(v4 ? (source.monetary_return_corrections as unknown[]).map(raw => ({ raw, monetary: true })) : [])];
+  if (v4) boundedCorrection(rows.map(({ raw }) => raw), 1048576, 100000, true);
+  for (const { raw, monetary } of rows) {
+    boundedCorrection(raw, 262144, 32768, v4);
+    const remainder = monetary || v3 && transferObject(raw) && Object.hasOwn(raw, "allocation_policy");
+    const correction = fields(raw, ["restoration", "source", "plan", "entry", "effect", "lines", "dimensions", "physical", ...(remainder ? ["history_sequence", "allocation_policy", ...(monetary ? [] : ["allocation_witness"])] : [])]);
+    const restored = fields(correction.restoration, ["tenant_id", ...(monetary ? [...Object.keys(scope), "origin_id", "before_quantity_scaled", "before_value_minor"] : ["source_id", "offset_quantity_scaled", "original_cogs_effect_id"]), "plan_id", "position", "original_consumption_id", "original_valuation_line_id", "cost_layer_id", "quantity_scaled", "value_minor", "direction", "physical_movement_id", "correction_effect_id", "original_restoration_plan_id", "consumption_count_at_restore"]);
+    const factual = monetary || remainder && transferObject(correction.source) && Object.hasOwn(correction.source, "original_cost_minor");
+    const original = fields(correction.source, ["id", ...(monetary ? ["source_digest", "stock_order_id"] : ["source_fingerprint"]), ...Object.keys(scope), "item_id", "uom_id", "quantity_precision", "location_id", "original_cogs_effect_id", ...(factual ? ["original_cost_minor", ...(monetary ? [] : ["cost_admission_digest"])] : [])]);
+    if (factual && (!exact(original.original_cost_minor) || !monetary && !digest(original.cost_admission_digest))) invalid();
     const absentOriginalCost = factual && original.original_cost_minor === "0";
-    const plan = fields(correction.plan, ["id", "source_id", "operation", "phase", "plan_digest", ...(remainder ? ["cogs_restored_minor"] : [])]);
+    const plan = fields(correction.plan, ["id", "source_id", "operation", "phase", "plan_digest", ...(remainder ? [monetary ? "functional_cost_minor" : "cogs_restored_minor"] : [])]);
+    const totalCost = plan[monetary ? "functional_cost_minor" : "cogs_restored_minor"];
     if (!Number.isSafeInteger(restored.position) || Number(restored.position) < 1 || Number(restored.position) > 32 || ![1, -1].includes(Number(restored.direction)) || typeof restored.direction !== "number"
         || !Number.isSafeInteger(restored.consumption_count_at_restore) || Number(restored.consumption_count_at_restore) < 1 || Number(restored.consumption_count_at_restore) > 200
-        || restored.tenant_id !== tenantId || restored.cost_layer_id !== layer.id || restored.source_id !== original.id || restored.plan_id !== plan.id || plan.source_id !== original.id
-        || !text(plan.id) || !new RegExp(`^${restored.direction === 1 ? "CR2" : "CR2R"}-[a-f0-9]{32}$`).test(plan.id) || plan.phase !== 2
-        || plan.operation !== (restored.direction === 1 ? "Return" : "ReverseReturn") || !digest(plan.plan_digest) || !digest(original.source_fingerprint)
-        || !text(original.id) || !/^CRS2-[a-f0-9]{32}$/.test(original.id) || Object.entries(scope).some(([key, expected]) => original[key] !== expected)
+        || restored.tenant_id !== tenantId || restored.cost_layer_id !== layer.id || restored[monetary ? "origin_id" : "source_id"] !== original.id || restored.plan_id !== plan.id || plan.source_id !== original.id
+        || monetary && Object.entries(scope).some(([key, expected]) => restored[key] !== expected)
+        || !text(plan.id) || !new RegExp(`^${monetary ? restored.direction === 1 ? "CR3" : "CR3R" : restored.direction === 1 ? "CR2" : "CR2R"}-[a-f0-9]{32}$`).test(plan.id) || plan.phase !== 2
+        || plan.operation !== (restored.direction === 1 ? "Return" : "ReverseReturn") || !digest(plan.plan_digest) || !digest(original[monetary ? "source_digest" : "source_fingerprint"])
+        || !text(original.id) || !new RegExp(`^${monetary ? "MSO" : "CRS2"}-[a-f0-9]{32}$`).test(original.id) || monetary && !text(original.stock_order_id) || Object.entries(scope).some(([key, expected]) => original[key] !== expected)
         || original.item_id !== layer.item_id || original.uom_id !== layer.uom_id || original.quantity_precision !== layer.quantity_precision || !text(original.location_id)
-        || restored.original_cogs_effect_id !== original.original_cogs_effect_id || (absentOriginalCost ? original.original_cogs_effect_id !== null : !text(original.original_cogs_effect_id))
-        || !exact(restored.offset_quantity_scaled) || !exact(restored.quantity_scaled) || restored.quantity_scaled === "0" || !exact(restored.value_minor) || !remainder && restored.value_minor === "0") invalid();
+        || !monetary && restored.original_cogs_effect_id !== original.original_cogs_effect_id || (absentOriginalCost ? original.original_cogs_effect_id !== null : !text(original.original_cogs_effect_id))
+        || !monetary && !exact(restored.offset_quantity_scaled) || !exact(restored.quantity_scaled) || restored.quantity_scaled === "0" || !exact(restored.value_minor) || !remainder && restored.value_minor === "0") invalid();
     if (v3) {
       if (String(original.id) < previousSource || sourceProtocols.has(String(original.id)) && sourceProtocols.get(String(original.id)) !== remainder) invalid();
       previousSource = String(original.id); sourceProtocols.set(previousSource, remainder);
@@ -197,31 +204,32 @@ async function corrections(source: Record<string, unknown>, scope: FinanceScope,
       protocols.sources.set(previousSource, sourcePin);
     }
     const key = `${plan.id}:${restored.position}`;
-    if (seen.has(key) || seen.size >= 200) invalid(); seen.add(key);
+    if (seen.has(key) || seen.size >= limit) invalid(); seen.add(key);
     const consumed = consumptions.get(String(restored.original_consumption_id));
-    if (!consumed || consumed.valuation_line_id !== restored.original_valuation_line_id || BigInt(restored.offset_quantity_scaled) + BigInt(restored.quantity_scaled) > BigInt(String(consumed.quantity_scaled)) || BigInt(restored.value_minor) > BigInt(String(consumed.value_minor))) invalid();
+    if (!consumed || consumed.valuation_line_id !== restored.original_valuation_line_id || (monetary ? 0n : BigInt(String(restored.offset_quantity_scaled))) + BigInt(restored.quantity_scaled) > BigInt(String(consumed.quantity_scaled)) || BigInt(restored.value_minor) > BigInt(String(consumed.value_minor))) invalid();
     if (consumed.value_minor === "0") {
       const admission = zeroAdmissions.get(String(consumed.id));
       if (!factual || !admission || !transferObject(admission.issue_plan) || original.original_cost_minor !== admission.issue_plan.total_cost_minor
+          || monetary && original.stock_order_id !== admission.stock_order_id
           || (admission.posting_effect === null ? !absentOriginalCost : !transferObject(admission.posting_effect) || admission.posting_effect.id !== original.original_cogs_effect_id)) invalid();
     } else if (absentOriginalCost) invalid();
     const previous = net.get(String(consumed.id)) ?? [0n, 0n];
     if (remainder) {
       protocols.remainder = true;
-      const witness = fields(correction.allocation_witness, ["before_quantity_scaled", "before_value_minor"]);
-      if (correction.allocation_policy !== "remaining-original-v1" || typeof correction.history_sequence !== "number" || !Number.isSafeInteger(correction.history_sequence) || correction.history_sequence < 1 || correction.history_sequence > 256
-          || !exact(witness.before_quantity_scaled) || witness.before_quantity_scaled === "0" || !exact(witness.before_value_minor) || !exact(plan.cogs_restored_minor) || BigInt(plan.cogs_restored_minor) < BigInt(restored.value_minor)) invalid();
+      const witness = monetary ? { before_quantity_scaled: restored.before_quantity_scaled, before_value_minor: restored.before_value_minor } : fields(correction.allocation_witness, ["before_quantity_scaled", "before_value_minor"]);
+      if (correction.allocation_policy !== (monetary ? "remaining-dual-currency-v1" : "remaining-original-v1") || typeof correction.history_sequence !== "number" || !Number.isSafeInteger(correction.history_sequence) || correction.history_sequence < 1 || correction.history_sequence > 256
+          || !exact(witness.before_quantity_scaled) || witness.before_quantity_scaled === "0" || !exact(witness.before_value_minor) || !exact(totalCost) || BigInt(totalCost) < BigInt(restored.value_minor)) invalid();
       const prior = sequences.get(String(original.id));
       if (prior && (correction.history_sequence < prior.sequence || correction.history_sequence === prior.sequence && (plan.id !== prior.plan || Number(restored.position) <= prior.position))) invalid();
       sequences.set(String(original.id), { sequence: correction.history_sequence, position: Number(restored.position), plan: String(plan.id) });
-      const planPin = transferCanonical({ plan, sequence: correction.history_sequence });
+      const planPin = transferCanonical({ plan, sequence: correction.history_sequence, ...(monetary ? { entry: correction.entry, effect: correction.effect, lines: correction.lines, dimensions: correction.dimensions, physical: correction.physical } : {}) });
       const historyKey = `${original.id}:${correction.history_sequence}`;
       if (protocols.plans.has(String(plan.id)) && protocols.plans.get(String(plan.id)) !== planPin
           || protocols.history.has(historyKey) && protocols.history.get(historyKey) !== plan.id) invalid();
       protocols.plans.set(String(plan.id), planPin); protocols.history.set(historyKey, String(plan.id));
       const beforeQ = BigInt(witness.before_quantity_scaled), beforeV = BigInt(witness.before_value_minor), take = BigInt(restored.quantity_scaled);
       const originalQ = BigInt(String(consumed.quantity_scaled)), originalV = BigInt(String(consumed.value_minor));
-      if (beforeQ > originalQ || beforeV > originalV || take > beforeQ || BigInt(restored.offset_quantity_scaled) !== originalQ - beforeQ) invalid();
+      if (beforeQ > originalQ || beforeV > originalV || take > beforeQ || !monetary && BigInt(String(restored.offset_quantity_scaled)) !== originalQ - beforeQ) invalid();
       if (restored.direction === 1) {
         if (beforeQ !== originalQ - previous[0] || beforeV !== originalV - previous[1]) invalid();
         let expected = beforeV;
@@ -235,7 +243,7 @@ async function corrections(source: Record<string, unknown>, scope: FinanceScope,
     } else if (BigInt(restored.value_minor) * BigInt(String(consumed.quantity_scaled)) !== BigInt(String(consumed.value_minor)) * BigInt(restored.quantity_scaled)) invalid();
     const delta: [bigint, bigint] = [BigInt(restored.direction) * BigInt(restored.quantity_scaled), BigInt(restored.direction) * BigInt(restored.value_minor)];
     quantity += delta[0]; value += delta[1]; net.set(String(consumed.id), [previous[0] + delta[0], previous[1] + delta[1]]);
-    if (restored.direction === 1 ? restored.original_restoration_plan_id !== null : !text(restored.original_restoration_plan_id) || !/^CR2-[a-f0-9]{32}$/.test(restored.original_restoration_plan_id)) invalid();
+    if (restored.direction === 1 ? restored.original_restoration_plan_id !== null : !text(restored.original_restoration_plan_id) || !new RegExp(`^${monetary ? "CR3" : "CR2"}-[a-f0-9]{32}$`).test(restored.original_restoration_plan_id)) invalid();
     if (remainder) {
       const events = protocols.events.get(String(original.id)) ?? new Map();
       const event = { plan: String(plan.id), original: restored.original_restoration_plan_id as string | null, direction: Number(restored.direction) };
@@ -243,7 +251,7 @@ async function corrections(source: Record<string, unknown>, scope: FinanceScope,
       if (events.has(sequence) && transferCanonical(events.get(sequence)) !== transferCanonical(event)) invalid();
       events.set(sequence, event); protocols.events.set(String(original.id), events);
     }
-    const zeroCost = remainder && plan.cogs_restored_minor === "0";
+    const zeroCost = remainder && totalCost === "0";
     if (zeroCost) {
       if (restored.correction_effect_id !== null || correction.entry !== null || correction.effect !== null || !Array.isArray(correction.lines) || correction.lines.length || !Array.isArray(correction.dimensions) || correction.dimensions.length) invalid();
     } else {
@@ -257,7 +265,7 @@ async function corrections(source: Record<string, unknown>, scope: FinanceScope,
           || (restored.direction === 1 ? entry.external_reference !== plan.id || effect.reverses_effect_id !== null || entry.reverses_posting_id !== null : !text(effect.reverses_effect_id) || entry.external_reference !== effect.reverses_effect_id || entry.reverses_posting_id !== effect.reverses_effect_id)
           || !digest(entry.validation_digest) || entry.validation_digest !== effect.validation_digest || entry.validation_contract_version !== "finance-entry-review-v1" || effect.validation_contract_version !== entry.validation_contract_version
           || !text(entry.preparer_actor_id) || !text(entry.validator_actor_id) || !text(effect.posted_actor_id) || new Set([entry.preparer_actor_id, entry.validator_actor_id, effect.posted_actor_id]).size !== 3
-          || !exact(entry.total_debit_minor) || entry.total_debit_minor === "0" || entry.total_debit_minor !== entry.total_credit_minor || BigInt(entry.total_debit_minor) < BigInt(restored.value_minor) || remainder && entry.total_debit_minor !== plan.cogs_restored_minor) invalid();
+          || !exact(entry.total_debit_minor) || entry.total_debit_minor === "0" || entry.total_debit_minor !== entry.total_credit_minor || BigInt(entry.total_debit_minor) < BigInt(restored.value_minor) || remainder && entry.total_debit_minor !== totalCost) invalid();
       const lineIds = new Set<string>(), dimensions = new Map<string, Record<string, string>>(); let debit = 0n, credit = 0n;
       for (const [index, line] of correction.lines.entries()) {
         if (!transferObject(line) || line.tenant_id !== tenantId || line.entry_id !== entry.id || !text(line.id) || lineIds.has(line.id) || line.line_number !== index + 1 || !text(line.account_id) || line.currency_code !== policy.currency_code
@@ -294,17 +302,18 @@ async function corrections(source: Record<string, unknown>, scope: FinanceScope,
     const original = consumptions.get(id)!;
     if (netQuantity < 0n || netValue < 0n || netQuantity > BigInt(String(original.quantity_scaled)) || netValue > BigInt(String(original.value_minor))) invalid();
   }
-  const originals = new Map(source.partial_return_corrections.map(raw => { const row = raw as Record<string, unknown>, restored = row.restoration as Record<string, unknown>; return [`${restored.plan_id}:${restored.position}`, row]; }));
+  const originals = new Map(rows.map(({ raw }) => { const row = raw as Record<string, unknown>, restored = row.restoration as Record<string, unknown>; return [`${restored.plan_id}:${restored.position}`, row]; }));
   const reversed = new Set<string>();
-  for (const raw of source.partial_return_corrections) {
+  for (const { raw, monetary } of rows) {
     const row = raw as Record<string, unknown>, restored = row.restoration as Record<string, unknown>;
     if (restored.direction === -1) {
       const key = `${restored.original_restoration_plan_id}:${restored.position}`, previous = originals.get(key);
       if (!previous || !transferObject(previous.restoration) || previous.restoration.direction !== 1 || reversed.has(key)
           || (row.effect === null ? previous.effect !== null : !transferObject(row.effect) || !transferObject(previous.effect) || row.effect.reverses_effect_id !== previous.effect.id)
-          || ["source_id", "cost_layer_id", "original_consumption_id", "original_valuation_line_id", "offset_quantity_scaled", "quantity_scaled", "value_minor", "original_cogs_effect_id"].some(name => restored[name] !== (previous.restoration as Record<string, unknown>)[name])) invalid();
-      if (Object.hasOwn(row, "allocation_policy") && (previous.allocation_policy !== row.allocation_policy || transferCanonical(previous.allocation_witness) !== transferCanonical(row.allocation_witness)
-          || !transferObject(row.plan) || !transferObject(previous.plan) || row.plan.cogs_restored_minor !== previous.plan.cogs_restored_minor)) invalid();
+          || [monetary ? "origin_id" : "source_id", "cost_layer_id", "original_consumption_id", "original_valuation_line_id", ...(monetary ? ["before_quantity_scaled", "before_value_minor"] : ["offset_quantity_scaled", "original_cogs_effect_id"]), "quantity_scaled", "value_minor"].some(name => restored[name] !== (previous.restoration as Record<string, unknown>)[name])) invalid();
+      const costField = monetary ? "functional_cost_minor" : "cogs_restored_minor";
+      if (Object.hasOwn(row, "allocation_policy") && (previous.allocation_policy !== row.allocation_policy || !monetary && transferCanonical(previous.allocation_witness) !== transferCanonical(row.allocation_witness)
+          || !transferObject(row.plan) || !transferObject(previous.plan) || row.plan[costField] !== previous.plan[costField])) invalid();
       reversed.add(key);
     }
   }
@@ -313,7 +322,8 @@ async function corrections(source: Record<string, unknown>, scope: FinanceScope,
   return [quantity, value];
 }
 async function cost(value: unknown, scope: FinanceScope, tenantId: string): Promise<TransferCost> {
-  const v3 = transferObject(value) && value.schema_version === "inventory-transfer-cost-v3";
+  const v4 = transferObject(value) && value.schema_version === "inventory-transfer-cost-v4";
+  const v3 = transferObject(value) && value.schema_version === "inventory-transfer-cost-v3" || v4;
   const v2 = transferObject(value) && value.schema_version === "inventory-transfer-cost-v2" || v3;
   if (!transferObject(value) || value.schema_version !== "inventory-transfer-cost-v1" && !v2 || !transferObject(value.monetary_policy)
       || !/^[A-Z]{3}$/.test(String(value.monetary_policy.currency_code)) || !Number.isInteger(value.monetary_policy.currency_precision)
@@ -324,7 +334,7 @@ async function cost(value: unknown, scope: FinanceScope, tenantId: string): Prom
   const ids = new Set<string>(), seenCorrections = new Set<string>(); let quantity = 0n, minor = 0n;
   const protocols: CorrectionProtocols = { remainder: false, sources: new Map(), plans: new Map(), history: new Map(), events: new Map() };
   for (const source of value.sources) {
-    if (!v2 && transferObject(source) && (Object.hasOwn(source, "partial_return_corrections") || Object.hasOwn(source, "restituted_consumption_admissions"))) invalid();
+    if (transferObject(source) && (!v2 && (Object.hasOwn(source, "partial_return_corrections") || Object.hasOwn(source, "restituted_consumption_admissions")) || !v4 && Object.hasOwn(source, "monetary_return_corrections"))) invalid();
     if (!transferObject(source) || !transferObject(source.layer) || source.layer.tenant_id !== tenantId || !text(source.layer.id) || ids.has(source.layer.id)
         || !transferObject(source.receipt_plan) || source.receipt_plan.operation !== "Receipt" || !transferObject(source.receipt_plan.scope)
         || Object.entries(scope).some(([key, expected]) => (source.receipt_plan as Record<string, Record<string, unknown>>).scope[key] !== expected)
@@ -337,10 +347,12 @@ async function cost(value: unknown, scope: FinanceScope, tenantId: string): Prom
         || !Array.isArray(source.finance_lines) || source.finance_lines.length !== 2 || !Array.isArray(source.exposed_amounts_minor)
         || !source.exposed_amounts_minor.every(exact) || !exact(source.layer.remaining_quantity_scaled) || !exact(source.layer.remaining_value_minor)) invalid();
     if (transferCanonical(source.receipt_plan.currency_policy) !== transferCanonical(value.monetary_policy)) invalid();
-    if (v2) await corrections(source, scope, tenantId, value.monetary_policy, seenCorrections, v3, protocols);
+    if (v2) await corrections(source, scope, tenantId, value.monetary_policy, seenCorrections, v3, protocols, v4);
     ids.add(source.layer.id); quantity += BigInt(source.layer.remaining_quantity_scaled); minor += BigInt(source.layer.remaining_value_minor);
   }
-  if (quantity !== BigInt(value.remaining_quantity_scaled) || minor !== BigInt(value.remaining_value_minor) || v2 && !seenCorrections.size || v3 && !protocols.remainder) invalid();
+  // Native v4 may be selected by a monetary Stock consumption before any
+  // return exists. Its two closed correction arrays can both be empty.
+  if (quantity !== BigInt(value.remaining_quantity_scaled) || minor !== BigInt(value.remaining_value_minor) || !v4 && (v2 && !seenCorrections.size || v3 && !protocols.remainder)) invalid();
   // The visible correction pool cannot prove omitted cash events. It can still
   // refuse an inverse that contradicts a later active Return on another layer.
   for (const events of protocols.events.values()) {
@@ -363,7 +375,7 @@ export async function parseTransfer(value: unknown, scope: FinanceScope, tenantI
       || !transferObject(value.native_response) || !transferObject(value.native_response.head) || !Array.isArray(value.native_response.lines)
       || value.native_response.lines.length !== 1) invalid();
   const dynamic = ["source_digest", "phase", "row_version", "reviewer_actor_id", "poster_actor_id", "review_cost_snapshot", "review_cost_digest", "claim", "release", "native_response"];
-  for (const candidate of [value.cost_snapshot, value.review_cost_snapshot]) if (transferObject(candidate) && ["inventory-transfer-cost-v2", "inventory-transfer-cost-v3"].includes(String(candidate.schema_version))) boundedCorrection(candidate, 4194304, 100000);
+  for (const candidate of [value.cost_snapshot, value.review_cost_snapshot]) if (transferObject(candidate) && ["inventory-transfer-cost-v2", "inventory-transfer-cost-v3", "inventory-transfer-cost-v4"].includes(String(candidate.schema_version))) boundedCorrection(candidate, 4194304, 100000, candidate.schema_version === "inventory-transfer-cost-v4");
   await seal(Object.fromEntries(Object.entries(value).filter(([key]) => !dynamic.includes(key))), value.source_digest);
   const originalCost = await cost(value.cost_snapshot, scope, tenantId);
   if (value.phase === 0 && value.row_version !== 1 || value.phase === 1 && value.row_version !== 2

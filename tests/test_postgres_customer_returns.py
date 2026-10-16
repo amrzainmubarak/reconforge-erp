@@ -448,7 +448,21 @@ def test_forward_upgrade_retains_native_source_empty_rollback_and_populated_cred
         # are reset by the explicitly empty downgrade and upgrade.
         assert {name: rows for name, rows in after_rows.items() if name != coordination_table} == original_history
         plan = prepare_return(runtime, source)
-        reinitialized = retained_rows(runtime)[coordination_table]
+        prepared_rows = retained_rows(runtime)
+        # Financial preparation has no quantity effect. Recreate the discarded
+        # runtime epochs through the actual live capacity entry, rather than
+        # requiring an incidental capacity write from a financial callback.
+        assert prepared_rows[coordination_table] == []
+        with runtime.actor("maker") as (connection, _, _actor):
+            stock = connection.execute("""SELECT workspace_id,legal_entity_id,location_id,item_id
+                FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s""", (runtime.tenant, source)).fetchone()
+            assert stock is not None
+            connection.execute("SELECT reconforge.stock_sales_capacity(%s,%s,%s,%s,%s)",
+                (runtime.tenant, stock["workspace_id"], stock["legal_entity_id"], stock["location_id"], stock["item_id"]))
+        capacity_rows = retained_rows(runtime)
+        assert {name: rows for name, rows in capacity_rows.items() if name != coordination_table} == {
+            name: rows for name, rows in prepared_rows.items() if name != coordination_table}
+        reinitialized = capacity_rows[coordination_table]
         assert len(reinitialized) == len(original_coordination)
         # The original SQL JSON ordering includes the version, whose deliberate
         # reset can change row order. Compare every identity field canonically.

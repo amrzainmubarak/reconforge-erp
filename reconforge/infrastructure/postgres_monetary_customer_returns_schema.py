@@ -625,11 +625,14 @@ BEGIN
  number:=upper(i)||'-'||slot;
  native_id:='GLE-'||left(encode(sha256(convert_to(origin_owner.workspace_id||'|'||number,'UTF8')),'hex'),16);
  SELECT * INTO entry_owner FROM reconforge.finance_entries WHERE tenant_id=t AND id=member.entry_id;
- snapshot:=reconforge.fr_snapshot(t,member.entry_id,origin_owner.organization_id,origin_owner.legal_entity_id);
+ IF plan_owner.phase=2 THEN
+  snapshot:=reconforge.monetary_posted_close(t,member.entry_id,member.posting_effect_id,origin_owner.organization_id,origin_owner.legal_entity_id);
+ ELSE snapshot:=reconforge.fr_snapshot(t,member.entry_id,origin_owner.organization_id,origin_owner.legal_entity_id);END IF;
  SELECT actor_id INTO reviewer FROM reconforge.customer_partial_return_monetary_events WHERE tenant_id=t AND plan_id=i AND operation='review';
  SELECT actor_id INTO poster FROM reconforge.customer_partial_return_monetary_events WHERE tenant_id=t AND plan_id=i AND operation='post';
  PERFORM reconforge.monetary_return_assert(slot IS NOT NULL AND member.entry_id=native_id AND entry_owner.id=native_id
-  AND entry_owner.entry_number=number AND member.snapshot=snapshot AND member.validation_digest=reconforge.irp_digest(snapshot)
+  AND entry_owner.entry_number=number AND member.snapshot=snapshot
+  AND member.validation_digest=(CASE WHEN plan_owner.phase=2 THEN entry_owner.validation_digest ELSE reconforge.irp_digest(snapshot) END)
   AND member.validation_digest=(SELECT item.value->>'validation_digest' FROM jsonb_array_elements(plan_owner.payload->'entries') item(value)
    WHERE item.value->>'purpose'=$3)
   AND(entry_owner.workspace_id,entry_owner.period_id,entry_owner.posting_date,entry_owner.journal_id)
@@ -684,7 +687,6 @@ BEGIN
    AND(effect_owner.currency_code,effect_owner.currency_precision,effect_owner.currency_rounding_policy,effect_owner.currency_registry_version,effect_owner.currency_registry_digest)
     =(entry_owner.currency_code,entry_owner.currency_precision,entry_owner.currency_rounding_policy,entry_owner.currency_registry_version,entry_owner.currency_registry_digest),
    'Posted correction effects require exact seals, all three humans and original inverse affinity');
-  PERFORM reconforge.monetary_posted_close(t,member.entry_id,member.posting_effect_id,origin_owner.organization_id,origin_owner.legal_entity_id);
   PERFORM reconforge.monetary_return_assert(NOT EXISTS(SELECT 1 FROM reconforge.finance_posting_effects inverse
    WHERE inverse.tenant_id=t AND inverse.reverses_effect_id=effect_owner.id AND NOT EXISTS(
     SELECT 1 FROM reconforge.customer_partial_return_monetary_entries inverse_member
@@ -1079,11 +1081,14 @@ BEGIN
    AND jsonb_array_length(expected_lines)=0 AND link_owner.posting_effect_id IS NULL,
    'Only an exact zero-turnover foreign collection may omit its functional journal');
  ELSE
-  snapshot:=reconforge.fr_snapshot(t,plan_owner.entry_id,origin_owner.organization_id,origin_owner.legal_entity_id);
+  IF plan_owner.phase=2 THEN
+   snapshot:=reconforge.monetary_posted_close(t,plan_owner.entry_id,link_owner.posting_effect_id,origin_owner.organization_id,origin_owner.legal_entity_id);
+  ELSE snapshot:=reconforge.fr_snapshot(t,plan_owner.entry_id,origin_owner.organization_id,origin_owner.legal_entity_id);END IF;
   inverse_effect:=CASE WHEN plan_owner.kind='reverse_revaluation' THEN equation->>'original_posting_effect_id' ELSE NULL END;
   PERFORM reconforge.monetary_return_assert(entry_owner.id IS NOT NULL AND entry_owner.entry_number=upper(i)
    AND v->>'schema_version'=(CASE WHEN plan_owner.kind IN('revalue','reverse_revaluation') THEN'operational-fx-plan-v2' ELSE'operational-fx-plan-v1' END)
-   AND v->'snapshot'=snapshot AND v->>'validation_digest'=reconforge.irp_digest(snapshot)
+   AND v->'snapshot'=snapshot
+   AND v->>'validation_digest'=(CASE WHEN plan_owner.phase=2 THEN entry_owner.validation_digest ELSE reconforge.irp_digest(snapshot) END)
    AND entry_owner.external_reference=(CASE WHEN inverse_effect IS NOT NULL THEN inverse_effect ELSE'FX:'||source_owner.id||':'||plan_owner.kind END)
    AND entry_owner.source_type=(CASE WHEN inverse_effect IS NOT NULL THEN'Generated' ELSE'Manual' END)
    AND entry_owner.reverses_posting_id IS NOT DISTINCT FROM inverse_effect
@@ -1138,7 +1143,6 @@ BEGIN
       WHERE inverse_plan.tenant_id=t AND inverse_plan.source_id=source_owner.id AND inverse_plan.kind='reverse_revaluation' AND inverse_plan.phase=2
       AND inverse_plan.payload#>>'{equation,original_revaluation_id}'=i AND inverse_link.posting_effect_id=inverse.id)),
     'Posted FX must retain its exact real sealed effect; generic inverse ownership is forbidden');
-   PERFORM reconforge.monetary_posted_close(t,entry_owner.id,effect_owner.id,origin_owner.organization_id,origin_owner.legal_entity_id);
   END IF;
   IF plan_owner.kind='settle' THEN
    SELECT * INTO receipt_owner FROM reconforge.ar_receipts WHERE tenant_id=t AND id=link_owner.receipt_id;
@@ -1946,7 +1950,7 @@ END $mr149$;
 """
 
 EFFECT_SQL = r"""
-CREATE FUNCTION reconforge.monetary_posted_close(t TEXT,i TEXT,f TEXT,o TEXT,e TEXT) RETURNS VOID
+CREATE FUNCTION reconforge.monetary_posted_close(t TEXT,i TEXT,f TEXT,o TEXT,e TEXT) RETURNS JSONB
  LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
 DECLARE entry_owner RECORD;effect_owner RECORD;snapshot JSONB;
 BEGIN
@@ -1973,6 +1977,7 @@ BEGIN
    AND outbox_owner.payload=audit_owner.metadata_json||jsonb_build_object('audit_event_id',audit_owner.id)
    AND(outbox_owner.workspace_id,outbox_owner.organization_id,outbox_owner.legal_entity_id)=(entry_owner.workspace_id,o,e)),
   'Actual FinancePosting ownership requires the complete native reviewed seal, captured policy, all three humans and original audit/outbox');
+ RETURN snapshot;
 END $mr149$;
 """
 

@@ -1599,6 +1599,7 @@ include tests/test_postgres_inventory_transfer_read_authority.py
 include tests/test_postgres_inventory_transfer_concurrency.py
 include tests/test_inventory_transfer.py
 include tests/test_inventory_transfer_api_contract.py
+include tests/test_inventory_transfer_v4_public_projection.py
 include docs/modules/inventory-transfer.yaml
 include docs/inventory-transfer.md
 include tests/inventory_transfer_browser.py

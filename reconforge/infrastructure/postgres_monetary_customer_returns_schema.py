@@ -95,7 +95,7 @@ def _stock_body(name: str, following: str) -> str:
 
 
 def _stock_physical() -> str:
-    """Retain the accepted native issue proof, with an explicit L policy."""
+    """Retain native source facts; live capacity belongs to the owner wrapper."""
     definition = _retained_zero_stock_close()
     body = definition[definition.index("AS $$") + 5:definition.rindex("$$;")]
     body = body[:body.index(" IF d.invoice_id IS NOT NULL THEN")]
@@ -113,12 +113,23 @@ def _stock_physical() -> str:
     body = re.sub(r"\bd\.currency_code\b", "(d.source#>>'{functional_policy,currency_code}')", body)
     body = body.replace("reconforge.sales_revenue_policy_matches(", "reconforge.monetary_stock_policy_matches(")
     body = body.replace("r IS NULL", "r.order_id IS NULL").replace("r IS NOT NULL", "r.order_id IS NOT NULL")
+    body = _replace_once(body,
+        " IF r.order_id IS NOT NULL THEN PERFORM reconforge.stock_sales_capacity(t,d.workspace_id,d.legal_entity_id,d.location_id,d.item_id); END IF;\n", "")
     body = body.replace("claim IS NULL", "claim.order_id IS NULL").replace("claim IS NOT NULL", "claim.order_id IS NOT NULL")
     body = body.replace("entry IS NULL", "entry.id IS NULL")
     body += """
  IF d.cogs_effect_id IS NOT NULL THEN PERFORM reconforge.monetary_posted_close(t,d.cogs_entry_id,d.cogs_effect_id,d.organization_id,d.legal_entity_id);END IF;
 """
     return "CREATE FUNCTION reconforge.monetary_stock_physical_close(t TEXT,target TEXT) RETURNS VOID LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$\n" + body + "END $mr149$;\n"
+
+
+def _retained_stock_source() -> str:
+    """Keep the full148 zero Stock proof without re-entering live capacity."""
+    value = _retained_zero_stock_close()
+    value = _replace_once(value, "CREATE FUNCTION reconforge.customer_partial_return_zero_stock_close(",
+        "CREATE FUNCTION reconforge.monetary_retained_zero_stock_source_close(")
+    return _replace_once(value,
+        " IF r IS NOT NULL THEN PERFORM reconforge.stock_sales_capacity(t,d.workspace_id,d.legal_entity_id,d.location_id,d.item_id); END IF;\n", "")
 
 
 def _stock_admit() -> str:
@@ -1477,9 +1488,9 @@ BEGIN
   'movement_id',stock_owner.movement_id,'valuation_id',stock_owner.valuation_id,'cost_admission_policy',stock_owner.issue_plan->>'cost_admission_policy',
   'monetary_origin',origin,'balance',balance,'collection',collection,'events',events);
 END $mr149$;
-CREATE FUNCTION reconforge.monetary_stock_close(t TEXT,target TEXT) RETURNS VOID
+CREATE FUNCTION reconforge.monetary_stock_source_close(t TEXT,target TEXT) RETURNS VOID
  LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
-<<monetary_stock_close>>
+<<monetary_stock_source_close>>
 DECLARE stock_owner RECORD;origin_owner RECORD;invoice_owner RECORD;member RECORD;command_owner RECORD;prior_event RECORD;
  source JSONB;actual JSONB;balance JSONB;history JSONB;recognition RECORD;initial_review RECORD;collection_owner RECORD;
  expected_status TEXT;next_status TEXT;version INTEGER:=0;stage INTEGER;
@@ -1530,7 +1541,7 @@ BEGIN
     AND audit_owner.action='stock_sales.'||member.operation AND audit_owner.metadata_json=jsonb_build_object('source_digest',stock_owner.source_digest,'version',version,'status',member.status))
    AND jsonb_array_length(command_owner.result->'events')=version AND NOT EXISTS(
     SELECT 1 FROM jsonb_array_elements(command_owner.result->'events') saved WHERE NOT EXISTS(SELECT 1 FROM reconforge.stock_sales_events actual_event
-     WHERE actual_event.tenant_id=t AND actual_event.order_id=target AND actual_event.version<=monetary_stock_close.version
+     WHERE actual_event.tenant_id=t AND actual_event.order_id=target AND actual_event.version<=monetary_stock_source_close.version
      AND saved=jsonb_build_object('version',actual_event.version,'actor_id',actual_event.actor_id,'operation',actual_event.operation,
       'reason',actual_event.reason,'status',actual_event.status,'audit_event_id',actual_event.audit_event_id))),
    'Every Stock lifecycle version must retain its exact native actor, immutable request, public acknowledgement and audit prefix');
@@ -1587,6 +1598,23 @@ BEGIN
    OR(recognition.phase>=1 AND invoice_owner.approved_by=(SELECT username FROM reconforge.identity_users WHERE tenant_id=t AND id=initial_review.reviewer_actor_id)
     AND invoice_owner.approved_at IS NOT NULL)),
   'Actual native AR state and complete cash membership must preserve exact credit-adjusted ownership without generic allocation bypass');
+END $mr149$;
+"""
+
+STOCK_CLOSE_SQL = r"""
+CREATE FUNCTION reconforge.monetary_stock_close(t TEXT,target TEXT) RETURNS VOID
+ LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
+DECLARE stock_owner RECORD;reservation_owner RECORD;
+BEGIN
+ -- Full original/effect/history proof is also usable by native cost evidence.
+ -- Current owner closure additionally retains the original live capacity law,
+ -- including pre-origin stages and consumed or released reservations.
+ PERFORM reconforge.monetary_stock_source_close(t,target);
+ SELECT * INTO stock_owner FROM reconforge.stock_sales_orders WHERE tenant_id=t AND id=target;
+ SELECT * INTO reservation_owner FROM reconforge.stock_sales_reservations WHERE tenant_id=t AND order_id=target;
+ IF reservation_owner.order_id IS NOT NULL THEN
+  PERFORM reconforge.stock_sales_capacity(t,stock_owner.workspace_id,stock_owner.legal_entity_id,stock_owner.location_id,stock_owner.item_id);
+ END IF;
 END $mr149$;
 """
 
@@ -2019,8 +2047,8 @@ CREATE FUNCTION reconforge.monetary_stock_version() RETURNS INTEGER
  LANGUAGE sql IMMUTABLE SET search_path=pg_catalog AS $cr149$ SELECT 149 $cr149$;
 """
 
-NATIVE_FUNCTION_SQL = "\n".join((HISTORY_SQL, EFFECT_SQL, ORIGINAL_EQUATION_SQL, STOCK_ADMISSION_SQL, STOCK_PHYSICAL_SQL,
-    ORIGIN_SQL, BALANCE_SQL, POSTING_SQL, FX_SQL, PARTIAL_SQL, PUBLIC_SQL, GUARD_SQL, NAMESPACE_SQL,
+NATIVE_FUNCTION_SQL = "\n".join((HISTORY_SQL, EFFECT_SQL, ORIGINAL_EQUATION_SQL, STOCK_ADMISSION_SQL, STOCK_PHYSICAL_SQL, _retained_stock_source(),
+    ORIGIN_SQL, BALANCE_SQL, POSTING_SQL, FX_SQL, PARTIAL_SQL, PUBLIC_SQL, STOCK_CLOSE_SQL, GUARD_SQL, NAMESPACE_SQL,
     PHYSICAL_FUNCTION_SQL, TRANSFER_FUNCTION_SQL, MARKER_SQL))
 
 _NATIVE_TABLES = (

@@ -9,6 +9,15 @@ import re
 
 import pytest
 
+from reconforge.infrastructure.postgres_customer_partial_return_rounding_schema import UPGRADE_SQL as ROUNDING_SQL
+from reconforge.infrastructure.postgres_customer_partial_return_transfer_hooks import UPGRADE_SQL as CORRECTION_SQL
+from reconforge.infrastructure.postgres_customer_partial_return_zero_stock_hooks import (
+    _stock_close as retained_zero_stock_close,
+)
+from reconforge.infrastructure.postgres_customer_partial_returns_schema import UPGRADE_SQL as PARTIAL_OWNER_SQL
+from reconforge.infrastructure.postgres_inventory_quantity_source_ownership import UPGRADE_SQL as QUANTITY_SQL
+from reconforge.infrastructure.postgres_inventory_transfer_schema import OWNER_SQL as TRANSFER_OWNER_SQL
+from reconforge.infrastructure.postgres_monetary_customer_returns_schema import DOWNGRADE_SQL as NATIVE_DOWNGRADE_SQL
 from reconforge.infrastructure.postgres_monetary_customer_returns_schema import NATIVE_FUNCTION_SQL
 from reconforge.infrastructure.postgres_monetary_inventory_shared_hooks import (
     _ZERO_FIFO_QUANTITY,
@@ -17,6 +26,7 @@ from reconforge.infrastructure.postgres_monetary_inventory_shared_hooks import (
     UPGRADED_FUNCTIONS,
     preflight,
 )
+from reconforge.infrastructure.postgres_monetary_stock_shared_hooks import UPGRADED_FUNCTIONS as STOCK_FUNCTIONS
 from reconforge.infrastructure.postgres_monetary_stock_shared_hooks import _body
 
 
@@ -48,7 +58,7 @@ def test_every_emitted_function_qualified_local_binds_an_explicit_declare_block(
 
 
 @pytest.mark.parametrize("name,expected", [
-    ("monetary_stock_close", ["monetary_stock_close.version"]),
+    ("monetary_stock_source_close", ["monetary_stock_source_close.version"]),
     ("monetary_return_native_close", [
         "monetary_return_native_close.entry_id", "monetary_return_native_close.invoice_id",
         "monetary_return_native_close.movement_id",
@@ -124,8 +134,8 @@ def test_zero_fifo_source_proof_is_conditional_and_precedes_the_unchanged_global
     assert "set_config" not in body and "EXCEPTION WHEN" not in body and "has_table_privilege" not in body
 
 
-def test_quantity_function_is_the_only_additional_retained_profile_and_restores_exact_body() -> None:
-    assert len(ORIGINAL_FUNCTIONS) == len(UPGRADED_FUNCTIONS) == 10
+def test_quantity_and_legacy_fact_proof_profiles_restore_exact_original_bodies() -> None:
+    assert len(ORIGINAL_FUNCTIONS) == len(UPGRADED_FUNCTIONS) == 11
     original = ORIGINAL_FUNCTIONS["inventory_quantity_free_fifo"]
     upgraded = UPGRADED_FUNCTIONS["inventory_quantity_free_fifo"]
     header = original.split("AS $quantity$", 1)[0]
@@ -134,6 +144,108 @@ def test_quantity_function_is_the_only_additional_retained_profile_and_restores_
     assert original.replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1) in DOWNGRADE_SQL
     for definition, is_upgraded in ((original, False), (upgraded, True)):
         assertion = preflight(upgraded=is_upgraded)
-        assert assertion.count("Retained physical execution contract drift") == 10
+        assert assertion.count("Retained physical execution contract drift") == 11
         assert "inventory_quantity_free_fifo(text,text,text,text)" in assertion
         assert hashlib.sha256(_body(definition)[1].encode()).hexdigest() in assertion
+
+
+def _function_bodies(*sources: str) -> dict[str, str]:
+    """Read generated bodies in installation order; later replacements win."""
+    functions = {}
+    for source in sources:
+        for definition in re.split(r"(?=CREATE(?: OR REPLACE)? FUNCTION reconforge\.)", source):
+            name = re.match(r"CREATE(?: OR REPLACE)? FUNCTION reconforge\.([a-z_0-9]+)\(", definition)
+            if name is None:
+                continue
+            delimiter = re.search(r"\bAS\s+(\$[a-z_0-9]*\$)", definition, re.I)
+            assert delimiter is not None
+            functions[name[1]] = definition[delimiter.end():definition.index(delimiter[1], delimiter.end())]
+    return functions
+
+
+def _proof_call_graph(functions: dict[str, str]) -> dict[str, set[str]]:
+    graph = {name: set(re.findall(r"reconforge\.([a-z_0-9]+)\(", body)) for name, body in functions.items()}
+    # The original adoption loop sees only Posted movements. Its direct close
+    # call is explicitly phase2; phase1 uses native_admit, never generic close.
+    # Model that actual finite state, without deleting the live phase1 guard.
+    for name in ("it1_stock_origins", "monetary_transfer_stock_origins"):
+        assert "IF source.phase=2 THEN PERFORM reconforge.it1_close(t,source.id);" in functions[name]
+        assert "PERFORM reconforge.it1_native_admit(t,physical.head,source.native_creation_json->'head','inventory_movements:UPDATE');" in functions[name]
+        graph[name].remove("it1_close")
+        graph[name].add("it1_close@posted")
+    live_capacity = "   PERFORM reconforge.inventory_quantity_check_capacity(t,s.workspace_id,s.legal_entity_id,s.item_id,s.from_location_id);"
+    assert functions["it1_close"].count(live_capacity) == 1
+    assert "IF phase=1 THEN PERFORM reconforge.it1_assert(c.state='Active'" in functions["it1_close"]
+    posted_close = functions["it1_close"].replace(live_capacity, "", 1)
+    graph["it1_close@posted"] = set(re.findall(r"reconforge\.([a-z_0-9]+)\(", posted_close))
+    return graph
+
+
+def _reachable(graph: dict[str, set[str]], start: str) -> set[str]:
+    seen: set[str] = set()
+    pending = list(graph.get(start, set()))
+    while pending:
+        name = pending.pop()
+        if name not in seen:
+            seen.add(name)
+            pending.extend(graph.get(name, set()) - seen)
+    return seen
+
+
+def test_source_physical_proof_and_full_source_body_are_exact_except_capacity_extraction_and_label() -> None:
+    functions = _function_bodies(NATIVE_FUNCTION_SQL)
+    assert len(functions) == 55
+    old_full = functions["monetary_stock_source_close"].replace("monetary_stock_source_close", "monetary_stock_close")
+    assert hashlib.sha256(old_full.encode()).hexdigest() == "3b6fc98713b56b8380f85835bb8ecba5f3c30df8fd90396bc90b93921e6f811e"
+    physical = functions["monetary_stock_physical_close"]
+    anchor = "MESSAGE='Reservation phase differs from source owner.';\n END IF;\n"
+    capacity = " IF r.order_id IS NOT NULL THEN PERFORM reconforge.stock_sales_capacity(t,d.workspace_id,d.legal_entity_id,d.location_id,d.item_id); END IF;\n"
+    assert physical.count(anchor) == 1 and "stock_sales_capacity" not in physical
+    assert hashlib.sha256(physical.replace(anchor, anchor + capacity, 1).encode()).hexdigest() == "c2cb58bf322f73f4e0fa728add6580de7baff2ee757b076d03922823b8e9e056"
+    wrapper = functions["monetary_stock_close"]
+    assert wrapper.index("PERFORM reconforge.monetary_stock_source_close(t,target);") < wrapper.index("IF reservation_owner.order_id IS NOT NULL THEN") < wrapper.index("PERFORM reconforge.stock_sales_capacity(")
+    assert "RETURN;" not in wrapper and "origin_owner" not in wrapper and "reservation_owner.state" not in wrapper
+    assert NATIVE_DOWNGRADE_SQL.index("DROP FUNCTION reconforge.monetary_stock_close(TEXT,TEXT);") < NATIVE_DOWNGRADE_SQL.index("DROP FUNCTION reconforge.monetary_stock_source_close(TEXT,TEXT);")
+    retained_proof = _function_bodies(retained_zero_stock_close())["customer_partial_return_zero_stock_close"]
+    retained_capacity = " IF r IS NOT NULL THEN PERFORM reconforge.stock_sales_capacity(t,d.workspace_id,d.legal_entity_id,d.location_id,d.item_id); END IF;\n"
+    assert functions["monetary_retained_zero_stock_source_close"] == retained_proof.replace(retained_capacity, "", 1)
+    old_consumption = ORIGINAL_FUNCTIONS["customer_partial_return_zero_consumption"]
+    proof_consumption = UPGRADED_FUNCTIONS["customer_partial_return_zero_consumption"]
+    assert proof_consumption.replace("CREATE OR REPLACE FUNCTION", "CREATE FUNCTION", 1).replace(
+        "monetary_retained_zero_stock_source_close", "customer_partial_return_zero_stock_close") == old_consumption
+    assert old_consumption.replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1) in DOWNGRADE_SQL
+
+
+def test_complete_cost_proof_graph_exposes_both_old_cycles_and_retains_live_owner_capacity() -> None:
+    functions = _function_bodies(QUANTITY_SQL, TRANSFER_OWNER_SQL, PARTIAL_OWNER_SQL, CORRECTION_SQL, ROUNDING_SQL,
+        NATIVE_FUNCTION_SQL, "\n".join(STOCK_FUNCTIONS.values()), "\n".join(UPGRADED_FUNCTIONS.values()))
+    graph = _proof_call_graph(functions)
+    reachable = _reachable(graph, "inventory_quantity_free_fifo")
+    assert {"monetary_transfer_stock_origins", "monetary_stock_source_close", "monetary_stock_physical_close",
+            "monetary_zero_consumption", "monetary_stock_zero_facts", "monetary_stock_zero_plan", "it1_cost_originals",
+            "customer_partial_return_transfer_correction_dispatch", "monetary_transfer_correction", "monetary_partial_close",
+            "monetary_stock_prefix", "monetary_fx_close", "it1_native_admit",
+            "monetary_retained_zero_stock_source_close", "customer_partial_return_zero_consumption"} <= reachable
+    assert not {"stock_sales_capacity", "inventory_quantity_check_capacity", "inventory_quantity_free_fifo", "monetary_stock_close"} & reachable
+    # These retained external leaves were independently reviewed as pure or
+    # SELECT-only (including the finite SELECT-only IRP artifact dispatcher).
+    # Keep the boundary closed: a newly unresolved helper requires review.
+    assert reachable - set(graph) == {
+        "collection_invoice_close", "customer_partial_return_invoice_credited", "customer_partial_return_native_source",
+        "customer_return_authority", "customer_return_credited", "customer_return_inverse_entry", "fr_snapshot", "fx_assert",
+        "fx_convert", "fx_event", "fx_minor", "fx_object", "fx_policy", "fx_rate", "irp_assert_complete", "irp_canonical",
+        "irp_digest", "irp_scope", "irp_text", "irp_timestamp", "sales_revenue_actor", "sales_revenue_policy_matches", "stock_sales_stage",
+    }
+    assert "stock_sales_capacity" in _reachable(graph, "monetary_stock_close")
+    assert "monetary_stock_close" in graph["monetary_return_native_close"]
+    assert "monetary_stock_close" in graph["stock_sales_close"]
+    # Reconstruct the witnessed pre-fix calls: both must expose the real cycle.
+    old = dict(functions)
+    old["monetary_stock_close"] = old["monetary_stock_source_close"]
+    old["monetary_stock_physical_close"] += " PERFORM reconforge.stock_sales_capacity(t,d.workspace_id,d.legal_entity_id,d.location_id,d.item_id);"
+    old["monetary_transfer_stock_origins"] = old["monetary_transfer_stock_origins"].replace("monetary_stock_source_close", "monetary_stock_close")
+    old["customer_partial_return_zero_consumption"] = _function_bodies(ORIGINAL_FUNCTIONS["customer_partial_return_zero_consumption"])["customer_partial_return_zero_consumption"]
+    old_graph = _proof_call_graph(old)
+    for entry in ("monetary_transfer_stock_origins", "monetary_zero_consumption"):
+        assert {"stock_sales_capacity", "inventory_quantity_check_capacity", "inventory_quantity_free_fifo"} <= _reachable(old_graph, entry)
+    assert {"stock_sales_capacity", "inventory_quantity_check_capacity", "inventory_quantity_free_fifo"} <= _reachable(old_graph, "customer_partial_return_zero_consumption")

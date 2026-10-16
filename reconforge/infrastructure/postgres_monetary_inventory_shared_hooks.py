@@ -18,7 +18,7 @@ from reconforge.infrastructure.postgres_customer_partial_return_shared_hooks imp
 from reconforge.infrastructure.postgres_customer_partial_return_transfer_hooks import (
     UPGRADED_FUNCTIONS as TRANSFER_FUNCTIONS,
 )
-from reconforge.infrastructure.postgres_customer_partial_return_zero_stock_hooks import ADMISSION_SQL
+from reconforge.infrastructure.postgres_customer_partial_return_zero_stock_hooks import ADMISSION_SQL, FACTS_SQL
 from reconforge.infrastructure.postgres_customer_partial_return_zero_stock_hooks import (
     UPGRADED_FUNCTIONS as ZERO_STOCK_FUNCTIONS,
 )
@@ -59,6 +59,7 @@ ORIGINAL_FUNCTIONS = {
     "it1_cost_originals": ROUNDING_TRANSFER_FUNCTIONS["it1_cost_originals"],
     "it1_stock_origins": TRANSFER_FUNCTIONS["it1_stock_origins"],
     "inventory_quantity_free_fifo": _definition("inventory_quantity_free_fifo", QUANTITY_SQL, "$quantity$"),
+    "customer_partial_return_zero_consumption": _definition("customer_partial_return_zero_consumption", FACTS_SQL, "$cr148zs$"),
 }
 _SIGNATURES = {
     "inventory_cost_layer_guard": ("", "trigger", "v", (), True),
@@ -71,6 +72,7 @@ _SIGNATURES = {
     "it1_cost_originals": ("text,jsonb", "void", "s", ("t", "cost"), False),
     "it1_stock_origins": ("text,text,text,text,text", "void", "v", ("t", "w", "o", "e", "i"), False),
     "inventory_quantity_free_fifo": ("text,text,text,text", "numeric", "s", ("t", "w", "e", "i"), False),
+    "customer_partial_return_zero_consumption": ("text,text", "jsonb", "s", ("t", "i"), False),
 }
 
 
@@ -244,13 +246,16 @@ UPGRADED_FUNCTIONS = {
     "it1_cost_originals": _prepend("it1_cost_originals", _COST_ORIGINALS),
     "it1_stock_origins": _prepend("it1_stock_origins", _STOCK_ORIGINS),
     "inventory_quantity_free_fifo": _free_fifo(),
+    "customer_partial_return_zero_consumption": _replace(ORIGINAL_FUNCTIONS["customer_partial_return_zero_consumption"],
+        "reconforge.customer_partial_return_zero_stock_close(t,owned.id)",
+        "reconforge.monetary_retained_zero_stock_source_close(t,owned.id)").replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1),
 }
 if set(ORIGINAL_FUNCTIONS) != set(_SIGNATURES) or set(UPGRADED_FUNCTIONS) != set(_SIGNATURES):
     raise ValueError("The finite physical dispatch inventory differs.")
 
 
 def preflight(*, upgraded: bool) -> str:
-    """Reject drift in all ten exact bodies and their execution attributes."""
+    """Reject drift in all eleven exact bodies and their execution attributes."""
     functions = UPGRADED_FUNCTIONS if upgraded else ORIGINAL_FUNCTIONS
     checks = []
     for name, (arguments, returns, volatility, names, definer) in _SIGNATURES.items():

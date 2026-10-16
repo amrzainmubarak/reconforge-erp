@@ -192,7 +192,7 @@ def _origins() -> str:
     AND physical.head->>'source_type'='Generated' AND physical.head->>'source_reference'=monetary_stock.id
     AND physical.from_location_id=monetary_stock.location_id AND physical.to_location_id IS NULL,
     'Cost-v4 fixed Stock adoption must preserve exact original scope and physical quantity');
-   PERFORM reconforge.monetary_stock_close(t,monetary_stock.id);
+   PERFORM reconforge.monetary_stock_source_close(t,monetary_stock.id);
   ELSIF physical.head->>'movement_number'~'^CR2(R)?-[A-F0-9]{32}$' THEN""")
 
 

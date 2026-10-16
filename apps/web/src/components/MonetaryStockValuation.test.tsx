@@ -96,3 +96,24 @@ it("clears selected evidence across an authentication revision and hides it with
   rendered.rerender(<MonetaryStockValuation locale="en" scope={source.scope} stock={stock} options={options} identity={{ ...identity, permissions: identity.permissions.filter(permission => permission !== "inventory.read") }} externallyLocked={false} readOnly={false} onLockChange={onLock} onChanged={onChanged} />);
   expect(screen.queryByRole("form")).not.toBeInTheDocument(); expect(screen.getByRole("alert")).toHaveTextContent(text("en", "denied")); expect(fetcher).toHaveBeenCalledTimes(1);
 });
+
+it("retains the loaded original inverse witness across response loss and a same-actor session revision", async () => {
+  const active = { ...stock, balance: { ...stock.balance!, active_revaluation_plan_id: fixture.id } };
+  const inverse = { ...fixture, id: `FX1-${"2".repeat(32)}`, kind: "reverse_revaluation", original_id: fixture.id,
+    posting_date: "2026-10-16", phase: 0, status: "Prepared", reviewer_actor_id: null, posted_actor_id: null, posting_effect_id: null, reason: "Exact original inverse" };
+  const attempts: string[] = [];
+  const fetcher = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+    if (init?.method === "POST") { attempts.push(String(init.body)); if (attempts.length === 1) throw new TypeError("Lost inverse reply"); return json(inverse); }
+    return json(fixture);
+  }); vi.stubGlobal("fetch", fetcher);
+  const props = { locale: "en" as const, scope: source.scope, stock: active, options, identity, externallyLocked: false, readOnly: false, onLockChange: onLock, onChanged };
+  const rendered = render(<MonetaryStockValuation {...props} />); await load();
+  const form = screen.getByRole("form", { name: text("en", "reverseValuation") });
+  for (const [key, value] of [["period_id", "period"], ["posting_date", "2026-10-16"], ["reason", inverse.reason]] as const) fireEvent.change(within(form).getByLabelText(text("en", key)), { target: { value } });
+  fireEvent.submit(form); await screen.findByRole("button", { name: text("en", "retry") });
+  auth.revision = 2; rendered.rerender(<MonetaryStockValuation {...props} />);
+  expect(screen.queryByRole("region", { name: text("en", "evidence") })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: text("en", "retry") }));
+  await screen.findByRole("heading", { name: `${text("en", "reverse_revaluation")} · ${text("en", "Prepared")}` });
+  expect(attempts).toHaveLength(2); expect(attempts[0]).toBe(attempts[1]); expect(onLock).toHaveBeenLastCalledWith(false);
+});

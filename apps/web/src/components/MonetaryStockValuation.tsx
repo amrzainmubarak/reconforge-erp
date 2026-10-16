@@ -22,6 +22,7 @@ export function MonetaryStockValuation({ locale, scope, stock, options, identity
   const [fields, setFields] = useState({ period_id: "", posting_date: "", reason: "", unrealized_gain_account_code: "", unrealized_loss_account_code: "" });
   const [closing, setClosing] = useState({ rate: "", source: "", effective_at: "" });
   const mounted = useRef(true), epoch = useRef(0), inFlight = useRef(false), pendingActor = useRef<string | null>(null), controller = useRef<AbortController | null>(null), alert = useRef<HTMLParagraphElement>(null), heading = useRef<HTMLHeadingElement>(null);
+  const pendingOriginal = useRef<MonetaryValuation | null>(null);
   const has = (...permissions: string[]) => identity.human && [...READ, ...permissions].every(permission => identity.permissions.includes(permission));
   const current = () => mounted.current && auth.isCurrent(auth.revision), locked = busy || Boolean(pending) || externallyLocked;
   const writable = !readOnly && !stale && !locked && has() && identity.stepUp;
@@ -46,15 +47,16 @@ export function MonetaryStockValuation({ locale, scope, stock, options, identity
   }
   async function send(command: PreparedScopedCommand) {
     if (!auth.session || externallyLocked || inFlight.current || !has() || pendingActor.current !== null && pendingActor.current !== identity.id) return;
+    if (pendingActor.current === null) pendingOriginal.current = plan;
     pendingActor.current = identity.id; inFlight.current = true; ++epoch.current; controller.current?.abort(); setBusy(true); setPending(command); setError(null); onLockChange(true);
     try {
-      const value = await executeMonetaryValuationCommand(auth.session, scope, stock, command);
+      const value = await executeMonetaryValuationCommand(auth.session, scope, stock, command, pendingOriginal.current);
       if (!current()) return;
-      setPlan(value); setId(value.id); setPending(null); pendingActor.current = null; setStale(false); setFields(old => ({ ...old, reason: "" })); onLockChange(false); onChanged(); heading.current?.focus();
+      setPlan(value); setId(value.id); setPending(null); pendingActor.current = null; pendingOriginal.current = null; setStale(false); setFields(old => ({ ...old, reason: "" })); onLockChange(false); onChanged(); heading.current?.focus();
     } catch (caught) {
       if (!current()) return;
       if (!(caught instanceof AdminApiError) || caught.status >= 500) { setError("unknown"); setStale(true); }
-      else { setPending(null); pendingActor.current = null; onLockChange(false); failure(caught); }
+      else { setPending(null); pendingActor.current = null; pendingOriginal.current = null; onLockChange(false); failure(caught); }
     } finally { inFlight.current = false; if (current()) setBusy(false); }
   }
   function submit(path: string, body: Record<string, ScopedJsonValue>) {

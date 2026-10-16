@@ -63,13 +63,16 @@ const equalRate = (first: MonetaryRate, second: unknown) => {
   const row = monetaryObject(second, ["rate", "source", "effective_at"]);
   return first.rate === row.rate && first.source === row.source && first.effective_at === row.effective_at;
 };
-export function monetaryValuationMatchesCommand(plan: MonetaryValuation, command: PreparedScopedCommand, sourceId: string): void {
+export function monetaryValuationMatchesCommand(plan: MonetaryValuation, command: PreparedScopedCommand, sourceId: string, original?: MonetaryValuation | null): void {
   const root = `${monetaryStockRoot}/orders/${encodeURIComponent(sourceId)}`, body = command.body;
   if (command.path === `${root}/valuations` || command.path === `${root}/valuation-reversals`) {
     const inverse = command.path.endsWith("/valuation-reversals");
     if (plan.phase !== 0 || plan.kind !== (inverse ? "reverse_revaluation" : "revalue") || plan.period_id !== body.period_id || plan.posting_date !== body.posting_date || plan.reason !== body.reason) monetaryInvalid();
     if (inverse ? plan.original_id !== body.original_revaluation_id : !equalRate(plan.closing_rate, body.closing_rate)
         || plan.unrealized_gain_account_code !== body.unrealized_gain_account_code || plan.unrealized_loss_account_code !== body.unrealized_loss_account_code) monetaryInvalid();
+    if (inverse && (!original || original.phase !== 2 || original.kind !== "revalue" || original.id !== plan.original_id || original.source_order_id !== plan.source_order_id
+        || !equalRate(plan.closing_rate, original.closing_rate) || plan.unrealized_gain_account_code !== original.unrealized_gain_account_code
+        || plan.unrealized_loss_account_code !== original.unrealized_loss_account_code || monetaryValuationAmounts.some(key => plan.monetary[key] !== original.monetary[key]))) monetaryInvalid();
   } else {
     const expected = `${root}/fx-plans/${plan.id}/`;
     if (command.path !== expected + "review" && command.path !== expected + "post" || plan.phase !== (command.path.endsWith("/review") ? 1 : 2) || plan.plan_digest !== body.expected_plan_digest) monetaryInvalid();
@@ -81,8 +84,8 @@ export async function loadMonetaryValuation(session: BrowserAdminSession, scope:
   const result = monetaryObject(await monetaryRequest(session, scope, path, undefined, signal), ["plan"]);
   const plan = parseMonetaryValuation(result.plan, scope, stock.id, planId); monetaryValuationSource(plan, stock); return plan;
 }
-export async function executeMonetaryValuationCommand(session: BrowserAdminSession, scope: FinanceScope, stock: MonetaryStock, command: PreparedScopedCommand): Promise<MonetaryValuation> {
+export async function executeMonetaryValuationCommand(session: BrowserAdminSession, scope: FinanceScope, stock: MonetaryStock, command: PreparedScopedCommand, original?: MonetaryValuation | null): Promise<MonetaryValuation> {
   if (!isMonetaryValuationPath(command.path, true)) monetaryInvalid();
   const result = monetaryObject(await monetaryRequest(session, scope, command.path, command), ["plan"]);
-  const plan = parseMonetaryValuation(result.plan, scope, stock.id); monetaryValuationSource(plan, stock); monetaryValuationMatchesCommand(plan, command, stock.id); return plan;
+  const plan = parseMonetaryValuation(result.plan, scope, stock.id); monetaryValuationSource(plan, stock); monetaryValuationMatchesCommand(plan, command, stock.id, original); return plan;
 }

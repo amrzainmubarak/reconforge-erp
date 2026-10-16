@@ -55,6 +55,21 @@ it("binds review and post to the same retained plan digest, independent of prepa
   expect(() => monetaryValuationMatchesCommand(value, prepareMonetaryCommand(`${root}/fx-plans/${value.id}/post`, { expected_plan_digest: "f".repeat(64), reason: "Other audit reason" }), stock.id)).toThrow();
 });
 
+it("binds inverse ACK magnitudes, rate and unrealized roles to the exact loaded original rather than mere internal balance", () => {
+  const original = parseMonetaryValuation(fixture, scope, stock.id);
+  const raw = { ...structuredClone(fixture), id: `FX1-${"2".repeat(32)}`, phase: 0, status: "Prepared", reviewer_actor_id: null, posted_actor_id: null, posting_effect_id: null,
+    kind: "reverse_revaluation", original_id: original.id, posting_date: "2026-10-16" };
+  const command = prepareMonetaryCommand(`${root}/valuation-reversals`, { original_revaluation_id: original.id, period_id: raw.period_id, posting_date: raw.posting_date, reason: raw.reason });
+  const valid = parseMonetaryValuation(raw, scope, stock.id);
+  monetaryValuationMatchesCommand(valid, command, stock.id, original);
+  expect(() => monetaryValuationMatchesCommand(valid, command, stock.id)).toThrow();
+  for (const change of [{ monetary: { ...raw.monetary, functional_valued_outstanding_minor: "841", functional_unrealized_gain_minor: "141", functional_turnover_minor: "141" } },
+    { closing_rate: { ...raw.closing_rate, rate: "1.51" } }, { unrealized_gain_account_code: "OTHERGAIN" }]) {
+    const coherent = parseMonetaryValuation({ ...raw, ...change }, scope, stock.id);
+    expect(() => monetaryValuationMatchesCommand(coherent, command, stock.id, original)).toThrow();
+  }
+});
+
 it("admits only the five finite source-bound paths, never generic FX commands or escaped source aliases", () => {
   expect(isMonetaryValuationPath(`${root}/valuations`, true)).toBe(true);
   expect(isMonetaryValuationPath(`${root}/valuation-reversals`, true)).toBe(true);

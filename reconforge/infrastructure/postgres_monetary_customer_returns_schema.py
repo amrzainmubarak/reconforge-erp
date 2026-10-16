@@ -1739,7 +1739,19 @@ DECLARE changed JSONB;origin_owner RECORD;source_owner RECORD;plan_owner RECORD;
  actor TEXT:=current_setting('app.stock_sales_actor_id',true);partial_actor TEXT:=current_setting('app.customer_partial_return_monetary_actor_id',true);
  expected JSONB;prefix JSONB;amount NUMERIC;
 BEGIN
- IF TG_OP='DELETE' THEN RETURN OLD;END IF;changed:=to_jsonb(NEW);
+ IF TG_OP='DELETE' THEN
+  IF TG_TABLE_NAME IN('ar_invoice_lines','ar_receipt_allocations') THEN
+   SELECT * INTO invoice_owner FROM reconforge.ar_invoices WHERE tenant_id=OLD.tenant_id AND id=OLD.invoice_id;
+   IF invoice_owner.organization_id IS NOT NULL AND invoice_owner.legal_entity_id IS NOT NULL THEN
+    PERFORM reconforge.monetary_return_assert(reconforge.irp_scope(invoice_owner.tenant_id,invoice_owner.workspace_id,invoice_owner.organization_id,invoice_owner.legal_entity_id),
+     'Deleting a native invoice child cannot hide original ownership under another current scope');
+   END IF;
+   SELECT * INTO origin_owner FROM reconforge.stock_sales_monetary_origins WHERE tenant_id=OLD.tenant_id AND invoice_id=OLD.invoice_id;
+   PERFORM reconforge.monetary_return_assert(origin_owner.id IS NULL,'Original monetary invoice lines and receipt allocations are immutable history');
+  END IF;
+  RETURN OLD;
+ END IF;
+ changed:=to_jsonb(NEW);
  IF TG_TABLE_NAME IN('ar_invoices','ar_invoice_lines','ar_receipts','ar_receipt_allocations') THEN
   IF TG_TABLE_NAME='ar_invoices' THEN SELECT * INTO invoice_owner FROM reconforge.ar_invoices WHERE tenant_id=NEW.tenant_id AND id=NEW.id;
   ELSIF TG_TABLE_NAME IN('ar_invoice_lines','ar_receipt_allocations') THEN SELECT * INTO invoice_owner FROM reconforge.ar_invoices WHERE tenant_id=NEW.tenant_id AND id=NEW.invoice_id;
@@ -1965,7 +1977,8 @@ _NAMESPACE_TABLES = ("finance_entries", "operational_fx_sources", "operational_f
 NATIVE_TRIGGER_CONTRACTS = tuple(
     [(table, "monetary_immutable", "monetary_return_protect()", 31, False, False, "O") for table in TABLES]
     + [(table, "monetary_owner_complete", "monetary_return_native_close()", 29, True, True, "O") for table in (*TABLES, *_NATIVE_TABLES)]
-    + [(table, "monetary_namespace", "monetary_namespace()", 23, False, False, "O") for table in _NAMESPACE_TABLES]
+    + [(table, "monetary_namespace", "monetary_namespace()", 31 if table in ("ar_invoice_lines", "ar_receipt_allocations") else 23,
+        False, False, "O") for table in _NAMESPACE_TABLES]
 )
 
 

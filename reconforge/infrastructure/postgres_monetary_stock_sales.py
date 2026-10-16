@@ -259,7 +259,9 @@ class PostgresMonetaryStockSalesRepository(PostgresStockSalesRepository):
             row = self._order(identifier)
             self._actor(actor, "read", row)
             self._parents(row, share=True)
-            self._close(identifier)
+            # Keep the full source proof effect-free. The shared _close stays
+            # live for commands, retained command replay and native writes.
+            self.connection.execute("SELECT reconforge.monetary_stock_source_close(%s,%s)", (self.tenant_id, identifier))
             self._actor(actor, "read", row)
             return self._view(identifier)
 

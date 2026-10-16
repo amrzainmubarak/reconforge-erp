@@ -566,5 +566,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
             self._actor(actor, "read", origin)
             origin = self._read_parents(origin)
             self._actor(actor, "read", origin)
-            self.connection.execute("SELECT reconforge.monetary_stock_close(%s,%s)", (self.tenant_id, source_order_id))
+            # Reads prove every retained source/effect without advancing the
+            # live quantity gate owned by command and physical-write paths.
+            self.connection.execute("SELECT reconforge.monetary_stock_source_close(%s,%s)", (self.tenant_id, source_order_id))
             return self._one("SELECT reconforge.monetary_partial_balance(%s,%s) value", (self.tenant_id, origin["id"]))["value"]

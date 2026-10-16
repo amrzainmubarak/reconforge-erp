@@ -160,6 +160,80 @@ def _balance(runtime: ReceiptRuntime, order: dict[str, Any]) -> dict[str, Any]:
         return PostgresMonetaryCustomerPartialReturnsRepository(connection, runtime.tenant).balance(order["id"], SCOPE, actor=actor)
 
 
+def test_actual_monetary_reads_preserve_all_91_original_tables_and_current_authority(receipt_database: tuple[str, str]) -> None:
+    from psycopg import sql
+
+    from tests.customer_partial_return_monetary_posted_oracle import TABLES
+
+    runtime, order = _source(receipt_database, foreign=True)
+    with runtime.actor("maker") as (connection, _, actor):
+        flags = connection.execute("SELECT rolsuper,rolbypassrls,rolcreatedb,rolcreaterole,rolreplication FROM pg_roles WHERE rolname=current_user").fetchone()
+        assert flags is not None and all(type(flags[name]) is bool and not flags[name]
+            for name in ("rolsuper", "rolbypassrls", "rolcreatedb", "rolcreaterole", "rolreplication"))
+        assert len(TABLES) == len(set(TABLES)) == 91
+        secured = connection.execute("""SELECT count(*) n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+            WHERE n.nspname='reconforge' AND c.relname=ANY(%s) AND c.relrowsecurity AND c.relforcerowsecurity
+            AND c.relowner<>current_user::regrole""", (list(TABLES),)).fetchone()
+        assert secured["n"] == 91
+
+        def originals() -> dict[str, list[str]]:
+            result = {}
+            for name in TABLES:
+                rows = connection.execute(sql.SQL("SELECT to_jsonb(r)::text original FROM reconforge.{} r WHERE tenant_id=%s ORDER BY to_jsonb(r)::text LIMIT 4097")
+                    .format(sql.Identifier(name)), (runtime.tenant,)).fetchall()
+                assert len(rows) <= 4096
+                result[name] = [row["original"] for row in rows]
+            return result
+
+        def unchanged(before: dict[str, list[str]]) -> None:
+            after = originals()
+            # Failure output identifies only table names, never original rows.
+            changed_tables = [name for name in TABLES if before[name] != after[name]]
+            assert not changed_tables
+
+        partial = PostgresMonetaryCustomerPartialReturnsRepository(connection, runtime.tenant)
+        stock = _stock(connection, runtime)
+        for _ in range(2):
+            before = originals()
+            balance = partial.balance(order["id"], SCOPE, actor=actor)
+            connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+            unchanged(before)
+            assert (balance["history_version"], balance["transaction_outstanding_minor"], balance["functional_outstanding_minor"]) == (0, "11400", "14250")
+            before = originals()
+            assert stock.get(order["id"], actor=actor) == order
+            connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+            unchanged(before)
+
+        outside = {**SCOPE, "workspace_id": "outside"}
+        before = originals()
+        with pytest.raises(FinancePostingError) as wrong_partial_scope:
+            partial.balance(order["id"], outside, actor=actor)
+        assert wrong_partial_scope.value.code == "operational_scope_denied"
+        unchanged(before)
+        with pytest.raises(FinancePostingError) as wrong_stock_scope:
+            PostgresMonetaryStockSalesRepository(connection, runtime.tenant, **outside,
+                organization_code="ORG", entity_code="ENTITY").get(order["id"], actor=actor)
+        assert wrong_stock_scope.value.code == "sales_scope_denied"
+        unchanged(before)
+
+        # Keep the authenticated principal and actor stale while withdrawing
+        # the persisted permission; the read must still check current authority.
+        with connection.transaction(force_rollback=True):
+            changed = connection.execute("""UPDATE reconforge.identity_role_permissions SET active=FALSE,revoked_at=now(),revoked_by=%s,
+                revocation_reason_code='access_change',lifecycle_version=lifecycle_version+1
+                WHERE tenant_id=%s AND permission_name='finance_core.read' RETURNING permission_name""", (actor.user_id, runtime.tenant)).fetchall()
+            assert changed
+            before = originals()
+            with pytest.raises(FinancePostingError) as partial_permission:
+                partial.balance(order["id"], SCOPE, actor=actor)
+            assert partial_permission.value.code == "operational_actor_denied"
+            unchanged(before)
+            with pytest.raises(FinancePostingError) as stock_permission:
+                stock.get(order["id"], actor=actor)
+            assert stock_permission.value.code == "sales_actor_denied"
+            unchanged(before)
+
+
 @pytest.mark.parametrize("foreign", [False, True], ids=["identity", "foreign"])
 def test_actual_credit_second_collection_partial_refund_inverse_and_final_settlement(receipt_database: tuple[str, str], foreign: bool) -> None:
     runtime, order = _source(receipt_database, foreign=foreign)

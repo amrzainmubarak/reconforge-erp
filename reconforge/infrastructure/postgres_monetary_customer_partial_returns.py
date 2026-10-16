@@ -7,7 +7,8 @@ they never select a monetary allocation, account or source policy.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import asdict
 from typing import Any, NoReturn
 from uuid import uuid4
@@ -125,6 +126,19 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
         self.owner = self.legacy.owner
         self._participant: _MonetaryCustomerReturnPostingParticipant | None = None
         self._reversal_admission: tuple[str, str, str] | None = None
+
+    @contextmanager
+    def _transaction(self) -> Iterator[None]:
+        try:
+            with self.owner._transaction():
+                yield
+        except Exception as exc:
+            if getattr(exc, "sqlstate", None) == "55P03":
+                raise FinancePostingError(
+                    "monetary_return_retryable_conflict",
+                    "The monetary command is contended; retry the same command and exact request after the current operation finishes.",
+                ) from exc
+            raise
 
     def _one(self, query: str, parameters: tuple[Any, ...]) -> dict[str, Any]:
         values = records(self.connection.execute(query, parameters))
@@ -360,7 +374,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
 
     def prepare(self, request: MonetaryPartialReturnPreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
         args = request.payload()
-        with self.owner._transaction():
+        with self._transaction():
             # Scope-only current authority precedes any private origin read.
             self.legacy._authority_locks(actor, "prepare", args)
             origin = self._one("SELECT * FROM reconforge.stock_sales_monetary_origins WHERE tenant_id=%s AND stock_order_id=%s",
@@ -371,7 +385,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
 
     def prepare_refund(self, request: MonetaryPartialRefundPreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
         args = request.payload()
-        with self.owner._transaction():
+        with self._transaction():
             self._plan_authority(args["return_id"], actor, "prepare")
             original = self._row(args["return_id"])
             if original["operation"] != "Return" or original["phase"] != 2:
@@ -380,7 +394,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
 
     def prepare_reversal(self, request: MonetaryPartialReversePreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
         args = request.payload()
-        with self.owner._transaction():
+        with self._transaction():
             self._plan_authority(args["original_id"], actor, "prepare")
             original = self._row(args["original_id"])
             if original["operation"] not in {"Return", "Refund"} or original["phase"] != 2:
@@ -459,7 +473,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
                 (direction * part["quantity_scaled"], direction * part["value_minor"], self.tenant_id, part["cost_layer_id"]))
 
     def _phase(self, identifier: str, operation: str, expected: str, command: str, reason: str, actor: PostingActor) -> dict[str, Any]:
-        with self.owner._transaction():
+        with self._transaction():
             self._plan_authority(identifier, actor, operation)
             plan = self._row(identifier)
             origin = self._origin(plan["source_id"])
@@ -523,7 +537,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
         return self._phase(plan_id, "cancel", expected_plan_digest, command_id, reason, actor)
 
     def get(self, plan_id: str, *, actor: PostingActor) -> dict[str, Any]:
-        with self.owner._transaction():
+        with self._transaction():
             self._plan_authority(plan_id, actor, "read")
             plan = self._row(plan_id)
             origin = self._origin(plan["source_id"])
@@ -535,7 +549,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
             return self._view(plan_id)
 
     def list_plans(self, scope: Mapping[str, Any], *, actor: PostingActor) -> dict[str, Any]:
-        with self.owner._transaction():
+        with self._transaction():
             self.legacy._authority_locks(actor, "read", scope)
             identifiers = records(self.connection.execute("""SELECT id FROM reconforge.customer_partial_return_monetary_plans
                 WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s ORDER BY id LIMIT 200""",
@@ -543,7 +557,7 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
             return {"plans": [self.get(row["id"], actor=actor) for row in identifiers]}
 
     def balance(self, source_order_id: str, scope: Mapping[str, Any], *, actor: PostingActor) -> dict[str, Any]:
-        with self.owner._transaction():
+        with self._transaction():
             self.legacy._authority_locks(actor, "read", scope)
             origin = self._one("SELECT * FROM reconforge.stock_sales_monetary_origins WHERE tenant_id=%s AND stock_order_id=%s",
                                (self.tenant_id, source_order_id))

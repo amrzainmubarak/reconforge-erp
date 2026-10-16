@@ -609,3 +609,92 @@ def test_actual_cr3_zero_cost_restoration_resale_return_and_it1_transfer_keep_or
         encoded = encode_monetary_capture(packet, packet=True)
         with (private / "native-monetary-restituted-cycle-original-v1.json").open("xb") as stream:
             stream.write(encoded)
+
+
+def test_actual_foreign_credit_adjusted_valuation_and_exact_inverse_keep_current_three_humans(
+    receipt_database: tuple[str, str],
+) -> None:
+    runtime, order = _source(receipt_database, foreign=True)
+    order = _collect(runtime, order, 4000, rate="1.3", number="VALUATION-COLLECTION")
+    assert _posted(runtime, _return(runtime, order, 6, 1))["phase"] == 2
+    original_balance = _balance(runtime, order)
+    assert (original_balance["history_version"], original_balance["transaction_outstanding_minor"],
+            original_balance["functional_outstanding_minor"]) == (2, "560", "700")
+    # Independent rational fixture: original 11400*5/4, collection carrying
+    # 4000*5/4, credit 6840*5/4; only the actual remaining 560 is revalued.
+    historical = Fraction(11400 - 4000 - 6840) * Fraction(5, 4)
+    valued = Fraction(560) * Fraction(7, 5)
+    assert historical == 700 and valued == 784 and valued - historical == 84
+    baseline_balances = {key: value for key, value in native_balances(runtime).items() if value}
+    assert baseline_balances == {"INVENTORY": 7200, "CLEARING": -12000, "COGS": 4800, "AR": 700,
+                                 "REVENUE": -5000, "TAX": -700, "CASH": 5200, "GAIN": -200}
+
+    def retained_prefix() -> tuple[list[str], list[str]]:
+        with runtime.actor("maker") as (connection, _, _actor):
+            history = connection.execute("""SELECT to_jsonb(h)::text original
+                FROM reconforge.customer_partial_return_monetary_history h WHERE tenant_id=%s ORDER BY sequence""",
+                (runtime.tenant,)).fetchall()
+            events = connection.execute("""SELECT to_jsonb(e)::text original FROM reconforge.stock_sales_events e
+                WHERE tenant_id=%s AND order_id=%s ORDER BY version""", (runtime.tenant, order["id"])).fetchall()
+            return [row["original"] for row in history], [row["original"] for row in events]
+
+    original_prefix = retained_prefix()
+    with runtime.actor("maker") as (connection, _, actor):
+        owner = _stock(connection, runtime)
+        arguments = {"closing_rate": HistoricalRate("1.4", "Actual current credit-adjusted closing", DAY + "T12:00:00Z"),
+                     "unrealized_gain_account_code": "UGAIN", "unrealized_loss_account_code": "ULOSS",
+                     "period_id": "period", "posting_date": DAY, "reason": "Value actual remaining foreign carrying",
+                     "command_id": "stock-valuation:prepare", "actor": actor}
+        prepared = owner.prepare_valuation(order["id"], **arguments)
+        assert owner.prepare_valuation(order["id"], **arguments) == prepared
+        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    assert prepared["monetary"] == {"transaction_outstanding_minor": "560", "functional_historical_outstanding_minor": "700",
+        "functional_valued_outstanding_minor": "784", "functional_unrealized_gain_minor": "84",
+        "functional_unrealized_loss_minor": "0", "functional_turnover_minor": "84"}
+
+    def publish(plan: dict[str, Any]) -> dict[str, Any]:
+        for operation, human in (("review", "checker"), ("post", "poster")):
+            with runtime.actor(human) as (connection, _, actor):
+                owner = _stock(connection, runtime)
+                method = getattr(owner, operation + "_valuation")
+                arguments = {"expected_plan_digest": plan["plan_digest"], "reason": "Independent actual valuation " + operation,
+                             "command_id": plan["id"] + ":" + operation, "actor": actor}
+                result = method(order["id"], plan["id"], **arguments)
+                assert method(order["id"], plan["id"], **arguments) == result
+                connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+        assert result["phase"] == 2 and result["posting_effect_id"] is not None
+        assert len({result["preparer_actor_id"], result["reviewer_actor_id"], result["posted_actor_id"]}) == 3
+        return result
+
+    posted = publish(prepared)
+    valued_balance = _balance(runtime, order)
+    assert valued_balance["history_version"] == 2 and valued_balance["transaction_outstanding_minor"] == "560"
+    assert valued_balance["functional_outstanding_minor"] == "784"
+    assert valued_balance["active_revaluation_plan_id"] == posted["id"]
+    assert retained_prefix() == original_prefix
+    with runtime.actor("maker") as (connection, _, actor):
+        owner = _stock(connection, runtime)
+        arguments = {"original_revaluation_id": posted["id"], "period_id": "period", "posting_date": DAY,
+                     "reason": "Copy the exact actual closing inverse", "command_id": "stock-valuation:inverse", "actor": actor}
+        inverse = owner.prepare_valuation_reversal(order["id"], **arguments)
+        assert owner.prepare_valuation_reversal(order["id"], **arguments) == inverse
+        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    assert inverse["original_id"] == posted["id"] and inverse["monetary"] == posted["monetary"]
+    assert inverse["closing_rate"] == posted["closing_rate"]
+    reversed_plan = publish(inverse)
+    assert _balance(runtime, order) == original_balance and retained_prefix() == original_prefix
+    assert {key: value for key, value in native_balances(runtime).items() if value} == baseline_balances
+    with runtime.actor("poster") as (connection, _, _actor):
+        assert connection.execute("SELECT reverses_posting_id FROM reconforge.finance_entries WHERE tenant_id=%s AND id=%s",
+            (runtime.tenant, reversed_plan["entry_id"])).fetchone()["reverses_posting_id"] == posted["posting_effect_id"]
+        journals = []
+        for entry_id in (posted["entry_id"], reversed_plan["entry_id"]):
+            journals.append([dict(row) for row in connection.execute("""SELECT account_id,debit_minor,credit_minor
+                FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s ORDER BY line_number""",
+                (runtime.tenant, entry_id)).fetchall()])
+        assert journals[1] == [{**line, "debit_minor": line["credit_minor"], "credit_minor": line["debit_minor"]} for line in journals[0]]
+        assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 8
+        assert connection.execute("SELECT count(*) n FROM reconforge.finance_entry_lines WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 19
+        totals = connection.execute("SELECT sum(debit_minor) dr,sum(credit_minor) cr FROM reconforge.finance_entry_lines WHERE tenant_id=%s",
+            (runtime.tenant,)).fetchone()
+        assert dict(totals) == {"dr": 59368, "cr": 59368}

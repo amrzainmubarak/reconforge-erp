@@ -7,6 +7,7 @@ Independent raw91 qualification is separate from these business regressions.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from fractions import Fraction
 from typing import Any
 
@@ -27,6 +28,7 @@ from reconforge.infrastructure.postgres_monetary_stock_sales import PostgresMone
 from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
 from tests.test_postgres_customer_returns import configure_runtime
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, receipt_database
+from tests.test_postgres_inventory_receipt_posting import request as receipt_request
 from tests.test_postgres_operational_fx_tax import native_balances, seed_fx_masters
 from tests.test_postgres_stock_sales import create_stock_runtime
 
@@ -54,9 +56,20 @@ def _act(runtime: ReceiptRuntime, order: dict[str, Any], operation: str, human: 
 
 
 def _source(database: tuple[str, str], *, foreign: bool, unit_price: int = 1000,
-            original_rate: str = "1.25") -> tuple[ReceiptRuntime, dict[str, Any]]:
-    runtime = create_stock_runtime(database)
+            original_rate: str = "1.25", receipt_total_minor: int = 12000) -> tuple[ReceiptRuntime, dict[str, Any]]:
+    assert type(receipt_total_minor) is int and receipt_total_minor > 0
+    runtime = create_stock_runtime(database, seed_stock=receipt_total_minor == 12000)
     configure_runtime(runtime)
+    if receipt_total_minor != 12000:
+        with runtime.actor("maker") as (_, owner, actor):
+            receipt = owner.prepare_receipt(replace(receipt_request(), total_value_minor=receipt_total_minor),
+                command_id="inbound-prepare", actor=actor)
+        with runtime.actor("checker") as (_, owner, actor):
+            review = owner.review(receipt["plan_id"], command_id="inbound-review", expected_plan_digest=receipt["plan_digest"],
+                reason="Independent exact small original FIFO cost", actor=actor)
+        with runtime.actor("poster") as (_, owner, actor):
+            owner.commit(receipt["plan_id"], command_id="inbound-commit", expected_review_digest=review["review_digest"],
+                reason="Publish genuine positive original cost", actor=actor)
     seed_fx_masters(runtime)
     with runtime.actor("maker") as (connection, _, actor):
         order = _stock(connection, runtime).create(StockOrder("ACTUAL-MONETARY", "FOREIGN" if foreign else "CUSTOMER",
@@ -190,3 +203,82 @@ def test_actual_zero_functional_collection_keeps_positive_transaction_cash_witho
         # The fixed zero case never authorizes omission on a general FX source.
         from reconforge.infrastructure.postgres_operational_fx_tax import PostgresOperationalFxTaxRepository
         PostgresOperationalFxTaxRepository(connection, runtime.tenant)._admit_journal_presence({}, {"entry_id": None})
+
+
+def test_actual_zero_journal_return_cancel_and_exact_merchandise_inverse_keep_physical_governance(receipt_database: tuple[str, str]) -> None:
+    runtime, order = _source(receipt_database, foreign=True, unit_price=1, original_rate="0.25", receipt_total_minor=1)
+
+    def check_stage(version: int, restored_quantity: int, restoration_rows: int) -> None:
+        # Original receipt1 + COGS1 + recognition3. No Return/Inverse can
+        # fabricate an entry for zero L credit and zero apportioned L cost.
+        balances = native_balances(runtime)
+        assert {key: value for key, value in balances.items() if value} == {"CLEARING": -1, "COGS": 1, "AR": 3, "REVENUE": -3}
+        with runtime.actor("poster") as (connection, _, _actor):
+            assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 3
+            assert connection.execute("SELECT count(*) n FROM reconforge.finance_entries WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 3
+            assert connection.execute("SELECT count(*) n FROM reconforge.finance_entry_lines WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 6
+            totals = connection.execute("SELECT COALESCE(sum(debit_minor),0) dr,COALESCE(sum(credit_minor),0) cr "
+                                        "FROM reconforge.finance_entry_lines WHERE tenant_id=%s", (runtime.tenant,)).fetchone()
+            assert dict(totals) == {"dr": 5, "cr": 5}
+            assert connection.execute("SELECT count(*) n FROM reconforge.customer_partial_return_monetary_entries WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
+            layer = connection.execute("SELECT original_quantity_scaled,original_value_minor,remaining_quantity_scaled,remaining_value_minor "
+                                       "FROM reconforge.inventory_cost_layers WHERE tenant_id=%s", (runtime.tenant,)).fetchall()
+            assert len(layer) == 1 and dict(layer[0]) == {"original_quantity_scaled": 10, "original_value_minor": 1,
+                "remaining_quantity_scaled": restored_quantity, "remaining_value_minor": 0}
+            assert connection.execute("SELECT count(*) n FROM reconforge.customer_partial_return_monetary_history WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == version
+            assert connection.execute("SELECT count(*) n FROM reconforge.customer_partial_return_monetary_restorations WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == restoration_rows
+        balance = _balance(runtime, order)
+        assert balance["history_version"] == version and balance["remaining_quantity_scaled"] == str(10 - restored_quantity)
+        assert balance["transaction_outstanding_minor"] == str(11 - restored_quantity) and balance["functional_outstanding_minor"] == "3"
+        assert balance["transaction_refund_due_minor"] == balance["functional_refund_due_minor"] == "0"
+
+    def prepare(command: str) -> dict[str, Any]:
+        args = MonetaryPartialReturnPreparation(**SCOPE, organization_code="ORG", entity_code="ENTITY", source_order_id=order["id"],
+            quantity_scaled=1, period_id="period", posting_date=DAY, reason="Actual zero functional credit and FIFO portion", expected_history_version=0)
+        with runtime.actor("maker") as (connection, _, actor):
+            owner = PostgresMonetaryCustomerPartialReturnsRepository(connection, runtime.tenant)
+            result = owner.prepare(args, command_id=command, actor=actor)
+            assert owner.prepare(args, command_id=command, actor=actor) == result
+            assert result["entries"] == [] and result["quantity_scaled"] == "1"
+            assert (result["monetary"]["transaction_credit_minor"], result["monetary"]["functional_credit_minor"],
+                    result["monetary"]["functional_cost_minor"], result["monetary"]["functional_turnover_minor"]) == ("1", "0", "0", "0")
+            return result
+
+    check_stage(0, 0, 0)
+    cancelled = prepare("zero-return:cancelled-prepare")
+    with pytest.raises(FinancePostingError) as self_cancel:
+        _phase(runtime, cancelled, "cancel", "maker")
+    assert self_cancel.value.code == "monetary_return_phase_denied"
+    check_stage(0, 0, 0)
+    cancelled = _phase(runtime, cancelled, "cancel", "checker")
+    assert cancelled["phase"] == 3 and cancelled["status"] == "Cancelled" and cancelled["entries"] == []
+    check_stage(0, 0, 0)
+
+    posted = _posted(runtime, prepare("zero-return:fresh-prepare"))
+    assert posted["phase"] == 2 and posted["entries"] == [] and posted["movement_id"]
+    assert len({posted["preparer_actor_id"], posted["reviewer_actor_id"], posted["posted_actor_id"]}) == 3
+    check_stage(1, 1, 1)
+    with runtime.actor("poster") as (connection, _, _actor):
+        restoration = connection.execute("SELECT quantity_scaled,value_minor,direction,correction_effect_id,physical_movement_id "
+            "FROM reconforge.customer_partial_return_monetary_restorations WHERE tenant_id=%s AND plan_id=%s", (runtime.tenant, posted["id"])).fetchone()
+        assert dict(restoration) == {"quantity_scaled": 1, "value_minor": 0, "direction": 1, "correction_effect_id": None, "physical_movement_id": posted["movement_id"]}
+        movement = connection.execute("SELECT movement_type,status,source_reference FROM reconforge.inventory_movements WHERE tenant_id=%s AND id=%s",
+                                      (runtime.tenant, posted["movement_id"])).fetchone()
+        assert dict(movement) == {"movement_type": "Receipt", "status": "Posted", "source_reference": posted["id"]}
+    with runtime.actor("maker") as (connection, _, actor):
+        owner = PostgresMonetaryCustomerPartialReturnsRepository(connection, runtime.tenant)
+        args = MonetaryPartialReversePreparation(posted["id"], "period", DAY, "Reverse exact zero functional merchandise operation", 1)
+        inverse = owner.prepare_reversal(args, command_id="zero-return:inverse-prepare", actor=actor)
+        assert owner.prepare_reversal(args, command_id="zero-return:inverse-prepare", actor=actor) == inverse
+    inverse = _posted(runtime, inverse)
+    assert inverse["entries"] == [] and inverse["operation"] == "ReverseReturn" and inverse["original_id"] == posted["id"]
+    assert len({inverse["preparer_actor_id"], inverse["reviewer_actor_id"], inverse["posted_actor_id"]}) == 3
+    check_stage(2, 0, 2)
+    with runtime.actor("poster") as (connection, _, _actor):
+        rows = connection.execute("SELECT direction,quantity_scaled,value_minor,correction_effect_id,original_restoration_plan_id "
+            "FROM reconforge.customer_partial_return_monetary_restorations WHERE tenant_id=%s AND plan_id=%s", (runtime.tenant, inverse["id"])).fetchall()
+        assert len(rows) == 1 and dict(rows[0]) == {"direction": -1, "quantity_scaled": 1, "value_minor": 0,
+            "correction_effect_id": None, "original_restoration_plan_id": posted["id"]}
+        movement = connection.execute("SELECT movement_type,status,source_reference FROM reconforge.inventory_movements WHERE tenant_id=%s AND id=%s",
+                                      (runtime.tenant, inverse["movement_id"])).fetchone()
+        assert dict(movement) == {"movement_type": "Delivery", "status": "Posted", "source_reference": inverse["id"]}

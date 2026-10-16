@@ -173,6 +173,11 @@ def _stock_admit() -> str:
     body = body.replace("TG_TABLE_NAME", "table_name").replace("TG_OP", "operation").replace("NEW.", "native_new.").replace("d:=NEW;", "d:=native_new;")
     body = body.replace("RETURN NEW;", "RETURN;")
     body = body.replace("'stock-sales-order-v1'", "'stock-sales-monetary-order-v2'")
+    body = _replace_once(body,
+        "reconforge.sales_revenue_policy_matches(native_new.tenant_id,\n    q->'monetary_policy',c.currency_code,c.currency_precision,c.currency_rounding_policy,c.currency_registry_version,c.currency_registry_digest)",
+        "reconforge.monetary_full_policy(q->'monetary_policy')=jsonb_build_object('currency_code',c.currency_code,"
+        "'currency_precision',c.currency_precision,'currency_rounding_policy',c.currency_rounding_policy,"
+        "'currency_registry_version',c.currency_registry_version,'currency_registry_digest',c.currency_registry_digest)")
     body = _replace_once(body, "q:=native_new.source;", """q:=native_new.source;
   PERFORM reconforge.monetary_return_assert(reconforge.fx_policy(native_new.tenant_id,reconforge.monetary_full_policy(q->'monetary_policy'))
    AND reconforge.fx_policy(native_new.tenant_id,reconforge.monetary_full_policy(q->'functional_policy'))
@@ -2007,6 +2012,70 @@ ALTER TABLE reconforge.operational_fx_plans ADD CONSTRAINT monetary_fx_journal_p
   AND payload->'snapshot' IS NOT DISTINCT FROM'null'::jsonb AND payload->'validation_digest' IS NOT DISTINCT FROM'null'::jsonb
   AND payload#>'{equation,lines}' IS NOT DISTINCT FROM'[]'::jsonb));
 """
+
+# Exact PostgreSQL 17.11 deparse captured on the owned 149 catalog fixture.
+# actual149-catalog-3fff6c16.json: b4f7bc8de48504375dd79ea41171f1e708580b82670b666ccb36e26b927e8412.
+FX_JOURNAL_CONSTRAINT_EXPRESSION = (
+    "((entry_id IS NOT NULL) OR ((NOT ((payload ->> 'schema_version'::text) IS DISTINCT FROM 'operational-fx-stock-plan-v2'::text)) "
+    "AND (kind = 'settle'::text) AND (NOT ((payload -> 'amount_minor'::text) IS DISTINCT FROM '0'::jsonb)) "
+    "AND (NOT ((payload -> 'entry_id'::text) IS DISTINCT FROM 'null'::jsonb)) "
+    "AND (NOT ((payload -> 'snapshot'::text) IS DISTINCT FROM 'null'::jsonb)) "
+    "AND (NOT ((payload -> 'validation_digest'::text) IS DISTINCT FROM 'null'::jsonb)) "
+    "AND (NOT ((payload #> '{equation,lines}'::text[]) IS DISTINCT FROM '[]'::jsonb))))"
+)
+
+
+def _native_catalog_sql() -> str:
+    tables = ",".join("'" + table + "'" for table in TABLES)
+    prefix = r"""
+DO $mr149_catalog$
+DECLARE relation_name TEXT;relation_oid OID;expected_scope TEXT;plans_oid OID;
+BEGIN
+ expected_scope:=CASE WHEN pg_catalog.pg_function_is_visible('reconforge.irp_scope(text,text,text,text)'::pg_catalog.regprocedure)
+  THEN 'irp_scope(tenant_id, workspace_id, organization_id, legal_entity_id)'
+  ELSE 'reconforge.irp_scope(tenant_id, workspace_id, organization_id, legal_entity_id)' END;
+ FOREACH relation_name IN ARRAY ARRAY["""
+    suffix = r"""] LOOP
+  relation_oid:=pg_catalog.to_regclass('reconforge.'||relation_name);
+  PERFORM reconforge.monetary_return_assert(relation_oid IS NOT NULL
+   AND (SELECT count(*) FROM pg_catalog.pg_policy policy_owner WHERE policy_owner.polrelid=relation_oid)=1
+   AND EXISTS(SELECT 1 FROM pg_catalog.pg_policy policy_owner WHERE policy_owner.polrelid=relation_oid
+    AND policy_owner.polname='scope' AND policy_owner.polcmd='*' AND policy_owner.polpermissive
+    AND policy_owner.polroles=ARRAY[0::oid]
+    AND pg_catalog.pg_get_expr(policy_owner.polqual,policy_owner.polrelid,false)=expected_scope
+    AND pg_catalog.pg_get_expr(policy_owner.polwithcheck,policy_owner.polrelid,false)=expected_scope),
+   'Every monetary relation requires its one exact public scope policy and identical full-scope USING and WITH CHECK');
+ END LOOP;
+ PERFORM reconforge.monetary_return_assert((SELECT count(*) FROM pg_catalog.pg_attribute attribute_owner
+  WHERE (attribute_owner.attrelid,attribute_owner.attname) IN(
+   (pg_catalog.to_regclass('reconforge.operational_fx_plans'),'entry_id'),
+   (pg_catalog.to_regclass('reconforge.operational_fx_links'),'posting_effect_id'))
+  AND attribute_owner.attnum>0 AND NOT attribute_owner.attisdropped AND NOT attribute_owner.attnotnull
+  AND attribute_owner.atttypid='pg_catalog.text'::pg_catalog.regtype)=2,
+  'Only the exact native FX entry and effect text columns may admit an absent zero-turnover journal');
+ plans_oid:=pg_catalog.to_regclass('reconforge.operational_fx_plans');
+ PERFORM reconforge.monetary_return_assert((SELECT count(*) FROM pg_catalog.pg_constraint constraint_owner
+   WHERE constraint_owner.conrelid=plans_oid AND constraint_owner.conname='monetary_fx_journal_presence')=1
+  AND EXISTS(SELECT 1 FROM pg_catalog.pg_constraint constraint_owner
+   WHERE constraint_owner.conrelid=plans_oid AND constraint_owner.conname='monetary_fx_journal_presence'
+   AND constraint_owner.contype='c' AND constraint_owner.convalidated AND NOT constraint_owner.connoinherit
+   AND constraint_owner.conkey=ARRAY[
+    (SELECT attnum FROM pg_catalog.pg_attribute WHERE attrelid=plans_oid AND attname='entry_id' AND NOT attisdropped),
+    (SELECT attnum FROM pg_catalog.pg_attribute WHERE attrelid=plans_oid AND attname='payload' AND NOT attisdropped),
+    (SELECT attnum FROM pg_catalog.pg_attribute WHERE attrelid=plans_oid AND attname='kind' AND NOT attisdropped)]::smallint[]
+   AND pg_catalog.pg_get_expr(constraint_owner.conbin,constraint_owner.conrelid,false)=$mr149_expression$"""
+    expression_tail = r"""$mr149_expression$
+   AND pg_catalog.pg_get_constraintdef(constraint_owner.oid,false)=$mr149_definition$CHECK ("""
+    definition_tail = r""")$mr149_definition$),
+  'The native FX nullable-journal constraint must retain its exact validated zero-settlement expression and column affinity');
+END $mr149_catalog$;
+"""
+    return "".join((prefix, tables, suffix, FX_JOURNAL_CONSTRAINT_EXPRESSION,
+                    expression_tail, FX_JOURNAL_CONSTRAINT_EXPRESSION, definition_tail))
+
+
+NATIVE_CATALOG_SQL = _native_catalog_sql()
+
 
 UPGRADE_SQL = NATIVE_FUNCTION_SQL + NULLABLE_SQL + _trigger_sql()
 

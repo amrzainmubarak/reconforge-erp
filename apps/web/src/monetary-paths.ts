@@ -32,5 +32,11 @@ export function isMonetaryPartialPath(path: string, mutation: boolean): boolean 
 }
 
 export function isMonetaryPath(path: string, mutation: boolean): boolean {
-  return isMonetaryStockPath(path, mutation) || isMonetaryPartialPath(path, mutation);
+  return isMonetaryStockPath(path, mutation) || isMonetaryPartialPath(path, mutation) || isMonetaryValuationPath(path, mutation);
+}
+
+export function isMonetaryValuationPath(path: string, mutation: boolean): boolean {
+  const match = new RegExp(`^${monetaryStockRoot}/orders/([^/?#]+)/(valuations|valuation-reversals|fx-plans/(FX1-[a-f0-9]{32})(?:/(review|post))?)$`).exec(path);
+  if (!match || !segment(match[1])) return false;
+  return mutation ? ["valuations", "valuation-reversals"].includes(match[2]) || Boolean(match[4]) : Boolean(match[3]) && !match[4];
 }

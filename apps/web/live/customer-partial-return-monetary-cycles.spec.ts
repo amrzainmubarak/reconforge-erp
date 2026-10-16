@@ -3,18 +3,21 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import type { MonetaryPartialPlan } from "../src/monetary-partial-returns-data";
 import type { MonetaryStock } from "../src/monetary-stock-data";
+import type { MonetaryValuation } from "../src/monetary-valuation-data";
 import { monetaryTranslate as text, type MonetaryWord } from "../src/monetary-words";
 
 const base = process.env.RECONFORGE_ERP_LIVE_URL, tenant = process.env.RECONFORGE_ERP_TENANT, password = process.env.RECONFORGE_ERP_PASSWORD;
 const selected = process.env.RECONFORGE_MONETARY_CASE, foreign = selected === "foreign";
 const stockRoot = "/api/v2/stock-sales", returnRoot = "/api/v3/customer-partial-returns", day = "2026-10-15";
 const rate = (value: string) => ({ rate: value, source: "Synthetic witnessed monetary spot", effective_at: day + "T12:00:00Z" });
-let source = "", capture = 0;
+let source = "", capture = 0, csrf = "";
 
 async function login(page: Page, person: "maker" | "checker" | "poster") {
   await page.goto(`${base}/admin-audit`);
   for (const [label, value] of [["Tenant ID", tenant!], ["Username", "browser-" + person], ["Password", password!]]) await page.getByLabel(label, { exact: true }).fill(value);
+  const authenticated = page.waitForResponse(value => new URL(value.url()).pathname === "/api/v1/auth/browser/login" && value.request().method() === "POST");
   await page.getByRole("button", { name: "Sign in to administration", exact: true }).click();
+  const signedIn = await authenticated; expect(signedIn.status()).toBe(200); csrf = (await signedIn.json()).csrf_token; expect(typeof csrf).toBe("string");
   await expect(page.getByRole("heading", { name: "Confirm privileged access", exact: true })).toBeVisible();
   await page.getByLabel("Password", { exact: true }).fill(password!);
   const elevated = page.waitForResponse(value => value.url().endsWith("/auth/step-up"));
@@ -67,13 +70,14 @@ async function stockCommand(page: Page, path: string, action: () => Promise<void
   await action(); const reply = await response; expect(reply.status()).toBe(status);
   const result = await reply.json() as MonetaryStock; expect(result.schema_version).toBe("stock-sales-monetary-v2"); return result;
 }
-function observe(kind?: "RetainedReplay" | "ScopeRefusal", plan?: MonetaryPartialPlan, refusal?: { status: number; code: string }) {
+function observe(kind?: "RetainedReplay" | "ScopeRefusal" | "ActiveValuationRefusal", plan?: MonetaryPartialPlan | MonetaryValuation, refusal?: { status: number; code: string }, request?: { method: string; route: string; body: Record<string, unknown> }) {
   const python = process.env.RECONFORGE_MONETARY_PYTHON, runtime = process.env.RECONFORGE_MONETARY_RUNTIME_ROOT;
   expect(Boolean(python && runtime && process.env.RECONFORGE_MONETARY_CUSTODY_ROOT), "Owned private ordinary-role monetary observer is required.").toBe(true);
   execFileSync(python!, ["-m", "tests.customer_partial_return_monetary_browser", "capture"], { cwd: runtime!, stdio: "pipe", timeout: 30_000, maxBuffer: 16_384,
     env: { ...process.env, RECONFORGE_MONETARY_STOCK_SOURCE: source, RECONFORGE_MONETARY_CAPTURE: String(capture), RECONFORGE_MONETARY_OBSERVATION: kind,
-      RECONFORGE_MONETARY_POSTED_PLAN: kind === "RetainedReplay" ? plan!.id : undefined, RECONFORGE_MONETARY_POSTED_DIGEST: kind === "RetainedReplay" ? plan!.plan_digest : undefined,
-      RECONFORGE_MONETARY_REFUSAL_STATUS: refusal ? String(refusal.status) : undefined, RECONFORGE_MONETARY_REFUSAL_CODE: refusal?.code } });
+      RECONFORGE_MONETARY_POSTED_PLAN: kind === "RetainedReplay" || kind === "ActiveValuationRefusal" ? plan!.id : undefined, RECONFORGE_MONETARY_POSTED_DIGEST: kind === "RetainedReplay" || kind === "ActiveValuationRefusal" ? plan!.plan_digest : undefined,
+      RECONFORGE_MONETARY_REFUSAL_STATUS: refusal ? String(refusal.status) : undefined, RECONFORGE_MONETARY_REFUSAL_CODE: refusal?.code,
+      RECONFORGE_MONETARY_REFUSED_REQUEST: request ? JSON.stringify(request) : undefined } });
 }
 async function partialCommand(page: Page, path: string, action: () => Promise<void>, lose = false): Promise<MonetaryPartialPlan> {
   if (!lose) {
@@ -101,7 +105,7 @@ async function stockPhase(page: Page, order: MonetaryStock, person: "maker" | "c
   await fields(form, { reason: "Actual original monetary " + path, ...values });
   return stockCommand(page, `${stockRoot}/orders/${order.id}/${path}`, () => form.getByRole("button", { name: text("en", label), exact: true }).click());
 }
-async function prepareReturn(page: Page, quantity: string) {
+async function returnForm(page: Page, quantity: string) {
   await login(page, "maker"); const section = await partialPage(page);
   const sourceForm = section.getByRole("form", { name: text("en", "sourceLoad"), exact: true });
   await fields(sourceForm, { source_order_id: source });
@@ -109,7 +113,68 @@ async function prepareReturn(page: Page, quantity: string) {
   await sourceForm.getByRole("button", { name: text("en", "sourceLoad"), exact: true }).click(); expect((await balance).status()).toBe(200);
   const form = section.getByRole("form", { name: text("en", "prepareReturn"), exact: true });
   await fields(form, { quantity_scaled: quantity, period_id: "period", posting_date: day, reason: "Actual remaining original tax and cost" });
+  return form;
+}
+async function prepareReturn(page: Page, quantity: string) {
+  const form = await returnForm(page, quantity);
   return partialCommand(page, `${returnRoot}/plans`, () => form.getByRole("button", { name: text("en", "prepareReturn"), exact: true }).click());
+}
+
+async function valuationCommand(page: Page, path: string, action: () => Promise<void>): Promise<MonetaryValuation> {
+  const response = page.waitForResponse(reply => new URL(reply.url()).pathname === path && reply.request().method() === "POST");
+  await action(); const reply = await response; expect(reply.status()).toBe(200);
+  const result = (await reply.json()).plan as MonetaryValuation; expect(result.schema_version).toBe("stock-monetary-valuation-v1"); return result;
+}
+async function valuationPage(page: Page, person: "maker" | "checker" | "poster", plan?: MonetaryValuation) {
+  await login(page, person); const stock = await stockPage(page, source), section = stock.getByRole("region", { name: text("en", "valuationTitle"), exact: true });
+  if (plan) {
+    const form = section.getByRole("form", { name: text("en", "loadValuation"), exact: true });
+    await fields(form, { valuationId: plan.id });
+    const response = page.waitForResponse(reply => new URL(reply.url()).pathname === `${stockRoot}/orders/${source}/fx-plans/${plan.id}` && reply.request().method() === "GET");
+    await form.getByRole("button", { name: text("en", "loadValuation"), exact: true }).click(); expect((await response).status()).toBe(200);
+    await expect(section.getByRole("heading", { name: `${text("en", plan.kind)} · ${text("en", plan.status)}`, exact: true })).toBeVisible();
+  }
+  return section;
+}
+async function valuationPhase(page: Page, plan: MonetaryValuation, phase: "review" | "post") {
+  const section = await valuationPage(page, phase === "review" ? "checker" : "poster", plan), label = phase === "review" ? "reviewValuation" : "postValuation";
+  const form = section.getByRole("form", { name: text("en", label), exact: true }); await fields(form, { reason: "Independent actual source valuation " + phase });
+  return valuationCommand(page, `${stockRoot}/orders/${source}/fx-plans/${plan.id}/${phase}`, () => form.getByRole("button", { name: text("en", label), exact: true }).click());
+}
+async function closeAndReverseCurrentForeignCarrying(page: Page) {
+  const section = await valuationPage(page, "maker");
+  await section.locator("summary").filter({ hasText: text("en", "prepareValuation") }).click();
+  const form = section.getByRole("form", { name: text("en", "prepareValuation"), exact: true });
+  await fields(form, { reason: "Value current credit-adjusted receivable", period_id: "period", posting_date: day, unrealized_gain_account_code: "UGAIN", unrealized_loss_account_code: "ULOSS", rate: "1.50", rateSource: rate("1.50").source, effective_at: rate("1.50").effective_at });
+  let plan = await valuationCommand(page, `${stockRoot}/orders/${source}/valuations`, () => form.getByRole("button", { name: text("en", "prepareValuation"), exact: true }).click());
+  expect(plan.monetary).toEqual({ transaction_outstanding_minor: "560", functional_historical_outstanding_minor: "700", functional_valued_outstanding_minor: "840", functional_unrealized_gain_minor: "140", functional_unrealized_loss_minor: "0", functional_turnover_minor: "140" });
+  plan = await valuationPhase(page, plan, "review"); plan = await valuationPhase(page, plan, "post"); capture = 5; observe();
+  const blocked = await returnForm(page, "4");
+  await expect(blocked.getByRole("button", { name: text("en", "prepareReturn"), exact: true })).toBeDisabled();
+  const body = { command_id: crypto.randomUUID(), source_order_id: source, quantity_scaled: "4", period_id: "period", posting_date: day, reason: "Actual remaining original tax and cost", expected_history_version: 2 };
+  const refused = await page.request.post(`${base}${returnRoot}/plans`, { headers: { "X-ReconForge-Tenant": tenant!, "X-ReconForge-Workspace": "work", "X-ReconForge-Organization": "org", "X-ReconForge-Legal-Entity": "entity", "X-ReconForge-CSRF": csrf }, data: body });
+  expect(refused.status()).toBe(409); const error = (await refused.json()).error; expect(error.code).toBe("monetary_return_state_conflict");
+  observe("ActiveValuationRefusal", plan, { status: refused.status(), code: error.code }, { method: "POST", route: `${returnRoot}/plans`, body });
+  const inverseSection = await valuationPage(page, "maker", plan), inverseForm = inverseSection.getByRole("form", { name: text("en", "reverseValuation"), exact: true });
+  await fields(inverseForm, { reason: "Exact original source closing inverse", period_id: "period", posting_date: day });
+  let inverse = await valuationCommand(page, `${stockRoot}/orders/${source}/valuation-reversals`, () => inverseForm.getByRole("button", { name: text("en", "reverseValuation"), exact: true }).click());
+  expect(inverse.original_id).toBe(plan.id); expect(inverse.monetary).toEqual(plan.monetary); expect(inverse.closing_rate).toEqual(plan.closing_rate);
+  inverse = await valuationPhase(page, inverse, "review"); inverse = await valuationPhase(page, inverse, "post"); capture = 6; observe();
+  expect(inverse.phase).toBe(2);
+  const current = page.getByRole("region", { name: text("en", "stockTitle"), exact: true }).getByRole("region", { name: text("en", "currentBalance"), exact: true });
+  await expect(current).toContainText("5.60 EUR"); await expect(current).toContainText("7.00 USD");
+  for (const locale of ["en", "ar"] as const) {
+    if (locale === "ar") await page.getByRole("button", { name: "Switch language", exact: true }).click();
+    await expect(page.locator("main#main-content")).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
+    await expect(page.getByRole("heading", { name: text(locale, "valuationTitle"), exact: true })).toBeVisible();
+    for (const width of [320, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth))).toBe(0);
+      expect((await new AxeBuilder({ page }).analyze()).violations.map(value => value.id)).toEqual([]);
+    }
+  }
+  await page.getByRole("button", { name: "تبديل اللغة", exact: true }).click();
+  await expect(page.locator("main#main-content")).toHaveAttribute("dir", "ltr");
 }
 async function partialPhase(page: Page, plan: MonetaryPartialPlan, action: "review" | "post" | "cancel", lose = false) {
   await login(page, action === "review" ? "checker" : "poster"); const section = await partialPage(page, plan);
@@ -178,12 +243,14 @@ test("actual monetary Stock v2 and CR3 identity or foreign tax cycle", async ({ 
   capture = 4; const first = await publish(page, await prepareReturn(page, "6"));
   expect([first.monetary.transaction_credit_minor, first.monetary.functional_cost_minor]).toEqual(["6840", "7200"]);
   await readAging(page, first);
-  capture = 5; const parent = await publish(page, await prepareReturn(page, "4"));
+  if (foreign) await closeAndReverseCurrentForeignCarrying(page);
+  const offset = foreign ? 2 : 0;
+  capture = 5 + offset; const parent = await publish(page, await prepareReturn(page, "4"));
   expect([parent.monetary.transaction_credit_minor, parent.monetary.transaction_refund_delta_minor, parent.monetary.functional_refund_delta_minor]).toEqual(["4560", "4000", foreign ? "5000" : "4000"]);
-  capture = 6; await publish(page, await child(page, parent, "refund", "1500", "1.2"));
-  capture = 7; const refund = await publish(page, await child(page, parent, "refund", "2500", "1.3"), true);
-  capture = 8; await publish(page, await child(page, refund, "reverse"));
-  capture = 9; const final = await publish(page, await child(page, parent, "refund", "2500", "1.3"));
+  capture = 6 + offset; await publish(page, await child(page, parent, "refund", "1500", "1.2"));
+  capture = 7 + offset; const refund = await publish(page, await child(page, parent, "refund", "2500", "1.3"), true);
+  capture = 8 + offset; await publish(page, await child(page, refund, "reverse"));
+  capture = 9 + offset; const final = await publish(page, await child(page, parent, "refund", "2500", "1.3"));
   await login(page, "poster"); const finalSection = await partialPage(page, final);
   const residual = finalSection.getByRole("region", { name: text("en", "currentBalance"), exact: true });
   await expect(residual).toContainText(`0.00 ${foreign ? "EUR" : "USD"}`); await expect(residual).toContainText("0.00 USD");

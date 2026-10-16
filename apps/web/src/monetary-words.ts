@@ -1,6 +1,18 @@
 import type { Locale } from "./types";
 
 export const monetaryWords = {
+  valuationTitle: ["Source-owned foreign receivable valuation", "تقييم رصيد العملاء الأجنبي المملوك للمصدر"],
+  valuationBoundary: ["The native owner values the current foreign receivable at a retained closing observation. An inverse copies the original valuation. These operations do not change stock quantities or sale events.", "يقيّم المالك الأصلي رصيد العملاء الأجنبي الحالي بسعر إقفال محفوظ. ينسخ العكس التقييم الأصلي. لا تغيّر هذه العمليات كميات المخزون أو أحداث البيع."],
+  identityValuation: ["Closing FX valuation is unavailable when transaction and functional currencies match.", "لا يتاح تقييم صرف الإقفال عند تطابق عملة المعاملة والعملة الوظيفية."],
+  prepareValuation: ["Prepare source valuation", "إعداد تقييم المصدر"], reverseValuation: ["Prepare exact valuation inverse", "إعداد عكس التقييم الدقيق"],
+  reviewValuation: ["Review source valuation", "مراجعة تقييم المصدر"], postValuation: ["Post source valuation", "ترحيل تقييم المصدر"],
+  loadValuation: ["Load retained source valuation", "تحميل تقييم المصدر المحفوظ"], valuationId: ["Source valuation plan ID", "معرّف خطة تقييم المصدر"],
+  closingRate: ["Closing rate observation", "رصد سعر الإقفال"], revalue: ["Closing valuation", "تقييم الإقفال"], reverse_revaluation: ["Exact valuation inverse", "عكس التقييم الدقيق"],
+  unrealized_gain_account_code: ["Unrealized FX gain account", "حساب ربح الصرف غير المحقق"], unrealized_loss_account_code: ["Unrealized FX loss account", "حساب خسارة الصرف غير المحققة"],
+  transaction_outstanding_minor: ["Current foreign receivable valued", "رصيد العملاء الأجنبي الحالي المقيّم"],
+  functional_historical_outstanding_minor: ["Functional carrying receivable before valuation", "القيمة الدفترية الوظيفية للعملاء قبل التقييم"],
+  functional_valued_outstanding_minor: ["Functional receivable at the closing observation", "رصيد العملاء الوظيفي بسعر الإقفال المرصود"],
+  functional_unrealized_gain_minor: ["Unrealized FX valuation gain", "ربح تقييم الصرف غير المحقق"], functional_unrealized_loss_minor: ["Unrealized FX valuation loss", "خسارة تقييم الصرف غير المحققة"],
   stockTitle: ["Tax and FX inventory sales", "مبيعات المخزون بالضريبة والعملات الأجنبية"],
   stockBoundary: ["New monetary sources retain net-exclusive transaction prices, declared taxes and historical exchange evidence. Inventory and FIFO remain in the functional currency. Existing sales keep their original protocol.", "تحتفظ المصادر النقدية الجديدة بأسعار صافية لا تشمل الضريبة بعملة المعاملة وبالضرائب المعلنة وأدلة الصرف التاريخية. يظل المخزون وFIFO بالعملة الوظيفية. تحتفظ المبيعات القائمة بإصدارها الأصلي."],
   openStock: ["Open tax and FX inventory workflow", "فتح دورة مخزون الضريبة والعملات الأجنبية"], closeStock: ["Close monetary inventory workflow", "إغلاق دورة المخزون النقدية"],

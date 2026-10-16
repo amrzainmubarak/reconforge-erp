@@ -18,13 +18,24 @@ INVOICE = {"command_id": "synthetic-command", "expected_version": 7, "reason": "
            "receivable_account_code": "AR", "revenue_account_code": "REVENUE", "cash_account_code": "CASH", "refund_liability_account_code": "REFUND", "gain_account_code": "GAIN", "loss_account_code": "LOSS", "country_code": "ZZ", "transaction_class": "synthetic-merchandise", "taxes": [], "original_rate": None}
 
 
-def test_real_app_registers_exactly_26_fixed_monetary_routes_and_preserves_legacy_contracts(tmp_path: Path) -> None:
+def test_real_app_registers_exactly_31_fixed_monetary_routes_and_preserves_legacy_contracts(tmp_path: Path) -> None:
     app = create_api_app(tmp_path / "unopened.db")
     operations = registered_http_operations(app)
     contracts = {(row.method, row.path): row for row in app.state.authorization_contracts}
     added = {key: value for key, value in contracts.items() if key[1].startswith(("/api/v2/stock-sales/", "/api/v3/customer-partial-returns/"))}
-    assert len(added) == 26 and all(operations[key] == 1 and row.mode == "all" for key, row in added.items())
+    assert len(added) == 31 and all(operations[key] == 1 and row.mode == "all" for key, row in added.items())
+    valuation_root = "/api/v2/stock-sales/orders/{identifier}/"
+    valuation_permissions = {
+        ("POST", valuation_root + "valuations"): {"finance_core.manage", "receivables.manage"},
+        ("POST", valuation_root + "valuation-reversals"): {"finance_core.manage", "receivables.manage", "finance_core.reverse"},
+        ("GET", valuation_root + "fx-plans/{plan_id}"): set(),
+        ("POST", valuation_root + "fx-plans/{plan_id}/review"): {"finance_core.validate", "receivables.approve"},
+        ("POST", valuation_root + "fx-plans/{plan_id}/post"): {"finance_core.post", "receivables.manage"},
+    }
     for (method, path), row in added.items():
+        if (method, path) in valuation_permissions:
+            assert set(row.permissions) == {"sales.read", "inventory.read", "receivables.read", "finance_core.read"} | valuation_permissions[(method, path)]
+            continue
         old_path = path.replace("/api/v2/stock-sales/", "/api/v1/stock-sales/").replace("/api/v3/customer-partial-returns/", "/api/v1/customer-partial-returns/")
         expected = set(contracts[(method, old_path)].permissions)
         if path.endswith("/collection/prepare"):
@@ -79,3 +90,18 @@ def test_large_minor_and_scaled_units_survive_exactly_and_reversal_has_no_rate_s
     assert stock.CollectionRequest.model_validate({**COLLECTION, "amount_minor": "9007199254740993"}).amount_minor == "9007199254740993"
     with pytest.raises(ValidationError):
         partial.legacy.ReversalRequest.model_validate({**HISTORY, "settlement_rate": None})
+
+
+@pytest.mark.parametrize("extra", [{"amount_minor": "140"}, {"source_order_id": "spoof"}, {"functional_valued_outstanding_minor": "840"}, {"transaction_policy": {}}, {"actor_id": "spoof"}])
+def test_source_valuation_requests_never_accept_client_amount_or_authority(extra) -> None:
+    body = {"command_id": "synthetic-command", "closing_rate": {"rate": "1.50", "source": "Synthetic observation", "effective_at": "2026-10-15T12:00:00Z"}, "period_id": "period", "posting_date": "2026-10-15", "reason": "Close current source residual", "unrealized_gain_account_code": "GAIN", "unrealized_loss_account_code": "LOSS"}
+    with pytest.raises(ValidationError):
+        stock.ValuationRequest.model_validate({**body, **extra})
+
+
+def test_source_valuation_inverse_takes_no_new_rate_and_requires_an_actual_fx_plan_identity() -> None:
+    body = {"command_id": "synthetic-command", "original_revaluation_id": "FX1-" + "1" * 32, "period_id": "period", "posting_date": "2026-10-16", "reason": "Exact inverse"}
+    assert stock.ValuationReversalRequest.model_validate(body).original_revaluation_id == body["original_revaluation_id"]
+    for change in ({"closing_rate": None}, {"original_revaluation_id": "CR3-" + "1" * 32}, {"posting_date": "2026-02-30"}):
+        with pytest.raises(ValidationError):
+            stock.ValuationReversalRequest.model_validate({**body, **change})

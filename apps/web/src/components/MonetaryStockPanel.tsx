@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useBrowserSession } from "../browserSession";
 import { AdminApiError } from "../data";
 import type { FinanceScope } from "../enterprise-finance-data";
@@ -12,6 +12,7 @@ import type { StockStage } from "../stock-sales-data";
 import { stockTranslate } from "../stock-sales-i18n";
 import type { Locale } from "../types";
 import { MonetaryStockEvidence } from "./MonetaryEvidence";
+import { MonetaryStockValuation } from "./MonetaryStockValuation";
 
 const READ = ["sales.read", "inventory.read", "receivables.read", "finance_core.read"];
 const actions: Partial<Record<StockStage, { path: string; label: MonetaryWord; permissions: string[]; kind?: "issue" | "invoice" | "collection"; posting?: boolean }>> = {
@@ -36,13 +37,16 @@ export function MonetaryStockPanel({ locale, scope, identity, externallyLocked, 
   const auth = useBrowserSession(), t = (key: MonetaryWord) => monetaryTranslate(locale, key);
   const [orders, setOrders] = useState<MonetaryStock[]>([]), [options, setOptions] = useState<MonetaryStockOptions | null>(null), [detail, setDetail] = useState<MonetaryStock | null>(null), [selected, setSelected] = useState("");
   const [refresh, setRefresh] = useState(0), [busy, setBusy] = useState(false), [loading, setLoading] = useState(false), [pending, setPending] = useState<PreparedScopedCommand | null>(null), [stale, setStale] = useState(true), [error, setError] = useState<MonetaryWord | null>(null);
+  const [valuationLocked, setValuationLocked] = useState(false);
+  const valuationLock = useCallback((value: boolean) => { setValuationLocked(value); onLockChange(value); }, [onLockChange]);
+  const valuationChanged = useCallback(() => setRefresh(old => old + 1), []);
   const [order, setOrder] = useState({ number: "", customer_code: "", customer_reference: "", item_code: "", warehouse_code: "", location_code: "", quantity: "", unit_price_minor: "", currency_code: "", order_date: "", description: "", discount_basis_points: "0" });
   const [issue, setIssue] = useState({ posting_date: "", period_id: "", policy_code: "" });
   const [invoice, setInvoice] = useState({ invoice_number: "", invoice_date: "", due_date: "", journal_code: "", period_id: "", receivable_account_code: "", revenue_account_code: "", cash_account_code: "", refund_liability_account_code: "", gain_account_code: "", loss_account_code: "", country_code: "", transaction_class: "" });
   const [originalRate, setOriginalRate] = useState(blankRate), [taxes, setTaxes] = useState<MonetaryTaxDeclaration[]>([]), [reason, setReason] = useState("");
   const [collection, setCollection] = useState({ receipt_number: "", receipt_date: "", period_id: "", amount_minor: "" }), [settlementRate, setSettlementRate] = useState(blankRate);
   const mounted = useRef(true), lock = useRef(false), epoch = useRef(0), alert = useRef<HTMLParagraphElement>(null), heading = useRef<HTMLHeadingElement>(null);
-  const current = () => mounted.current && auth.isCurrent(auth.revision), locked = externallyLocked || busy || Boolean(pending);
+  const current = () => mounted.current && auth.isCurrent(auth.revision), locked = externallyLocked || busy || Boolean(pending) || valuationLocked;
   const has = (...permissions: string[]) => identity.human && [...READ, ...permissions].every(permission => identity.permissions.includes(permission));
   const writable = identity.stepUp && has() && !stale && !locked;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; ++epoch.current; onLockChange(false); }; }, [onLockChange]);
@@ -53,7 +57,7 @@ export function MonetaryStockPanel({ locale, scope, identity, externallyLocked, 
     if (caught instanceof AdminApiError && [403, 404].includes(caught.status)) { setOrders([]); setDetail(null); setOptions(null); }
   }
   useEffect(() => {
-    if (!auth.session || !has() || pending || externallyLocked) return;
+    if (!auth.session || !has() || pending || externallyLocked || valuationLocked) return;
     const controller = new AbortController(), generation = ++epoch.current; setLoading(true); setStale(true);
     Promise.all([loadMonetaryStockPage(auth.session, scope, controller.signal), loadMonetaryStockOptions(auth.session, scope, controller.signal),
       selected ? loadMonetaryStock(auth.session, scope, selected, controller.signal) : Promise.resolve(null)]).then(([rows, choices, selectedOrder]) => {
@@ -62,9 +66,9 @@ export function MonetaryStockPanel({ locale, scope, identity, externallyLocked, 
     }).catch(caught => { if (!controller.signal.aborted && generation === epoch.current) fail(caught); })
       .finally(() => { if (current() && !controller.signal.aborted && generation === epoch.current) setLoading(false); });
     return () => { controller.abort(); ++epoch.current; };
-  }, [auth.session, auth.revision, scope, identity, selected, refresh, pending, externallyLocked]);
+  }, [auth.session, auth.revision, scope, identity, selected, refresh, pending, externallyLocked, valuationLocked]);
   async function send(command: PreparedScopedCommand) {
-    if (!auth.session || lock.current || externallyLocked) return;
+    if (!auth.session || lock.current || externallyLocked || valuationLocked) return;
     lock.current = true; ++epoch.current; setLoading(false); setBusy(true); setPending(command); setError(null); onLockChange(true);
     try {
       const result = await executeMonetaryStockCommand(auth.session, scope, command);
@@ -122,6 +126,7 @@ export function MonetaryStockPanel({ locale, scope, identity, externallyLocked, 
       {input("quantity", order.quantity, quantity => setOrder({ ...order, quantity }))}{input("unit_price_minor", order.unit_price_minor, unit_price_minor => setOrder({ ...order, unit_price_minor }))}{input("discount_basis_points", order.discount_basis_points, discount_basis_points => setOrder({ ...order, discount_basis_points }))}
       {input("description", order.description, description => setOrder({ ...order, description }))}{input("order_date", order.order_date, order_date => setOrder({ ...order, order_date }), "date")}<p>{t("transaction")}: <bdi>{order.currency_code}</bdi></p><button disabled={!writable}>{t("create")}</button></form></details>}
     {detail && <section className="panel"><h3><bdi>{detail.number}</bdi> · {stockTranslate(locale, detail.status)}</h3><MonetaryStockEvidence stock={detail} locale={locale} />
+      {detail.balance && <MonetaryStockValuation key={detail.id} locale={locale} scope={scope} stock={detail} options={options} identity={identity} externallyLocked={externallyLocked || busy || Boolean(pending)} readOnly={stale || loading} onLockChange={valuationLock} onChanged={valuationChanged} />}
       {action && <form aria-label={t(action.label)} onSubmit={perform}><h3>{t(action.label)}</h3><div className="reporting-form">{input("reason", reason, setReason)}
         {detail.status === "Reserved" && <>{input("posting_date", issue.posting_date, posting_date => setIssue({ ...issue, posting_date }), "date")}{period(issue.period_id, period_id => setIssue({ ...issue, period_id }))}{select("policy_code", issue.policy_code, policy_code => setIssue({ ...issue, policy_code }), options?.policies.map(row => ({ value: row.policy_code, label: `${row.name} · ${row.journal_code}` })) ?? [])}</>}
         {detail.status === "Delivered" && <>{input("invoice_number", invoice.invoice_number, invoice_number => setInvoice({ ...invoice, invoice_number }))}{input("invoice_date", invoice.invoice_date, invoice_date => setInvoice({ ...invoice, invoice_date }), "date")}{input("due_date", invoice.due_date, due_date => setInvoice({ ...invoice, due_date }), "date")}

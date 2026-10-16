@@ -20,10 +20,10 @@ def runtime(dsn: str = "synthetic-original") -> Any:
 
 
 def stage(monkeypatch: pytest.MonkeyPatch, retained: dict[str, list[str]]) -> None:
-    def snapshot(_runtime, _source, *, index):
-        if type(index) is not int or not 0 <= index < 10:
+    def snapshot(_runtime, _source, *, index, case):
+        if type(index) is not int or not 0 <= index < len(browser._versions(case)):
             raise ValueError("Invalid synthetic index")
-        return {"capture": index, "tables": deepcopy(retained)}, browser.HISTORY_VERSIONS[index]
+        return {"capture": index, "tables": deepcopy(retained)}, browser._versions(case)[index]
     monkeypatch.setattr(browser, "_snapshot", snapshot)
 
 
@@ -31,26 +31,33 @@ def root(tmp_path: Path, case: str = "foreign") -> Path:
     return tmp_path / browser.FAMILY / case
 
 
+def refused_request() -> dict[str, Any]:
+    return {"method": "POST", "route": "/api/v3/customer-partial-returns/plans", "body": {
+        "command_id": "synthetic-refusal-command", "source_order_id": "source", "quantity_scaled": "4", "period_id": "period",
+        "posting_date": "2026-10-15", "reason": "Actual attempted return while valuation is active", "expected_history_version": 2}}
+
+
 def original_cycle(monkeypatch, tmp_path):
     data = tables()
     stage(monkeypatch, data)
     custody = root(tmp_path)
-    for index in range(10):
+    for index in range(12):
         result = browser.capture_monetary_browser(runtime(), "source", custody, case="foreign", index=index)
         assert result["tables"] == 91 and result["independent_financial_and_audit_verification_required"] is True
     return custody, data
 
 
-def test_exact_ten_captures_use_91_tables_without_confusing_capture_and_history(monkeypatch, tmp_path):
+def test_exact_twelve_foreign_captures_use_91_tables_without_confusing_capture_and_history(monkeypatch, tmp_path):
     custody, _data = original_cycle(monkeypatch, tmp_path)
     packet = decode_packet((custody / browser.PACKET).read_bytes())
-    assert packet.tenant_id == "tenant" and packet.source_order_id == "source" and len(packet.captures) == 10
-    assert [capture.index for capture in packet.captures] == list(range(10))
+    assert packet.tenant_id == "tenant" and packet.source_order_id == "source" and len(packet.captures) == 12
+    assert [capture.index for capture in packet.captures] == list(range(12))
     assert browser.HISTORY_VERSIONS == (0, 0, 0, 1, 2, 3, 4, 5, 6, 7)
+    assert browser.FOREIGN_HISTORY_VERSIONS == (0, 0, 0, 1, 2, 2, 2, 3, 4, 5, 6, 7)
     assert all({name for name, _rows in capture.raw_tables} == set(TABLES) for capture in packet.captures)
 
 
-@pytest.mark.parametrize("name", ["arbitrary.json", "committed-capture-10.json", "source.sql", "committed-capture-01.json"])
+@pytest.mark.parametrize("name", ["arbitrary.json", "committed-capture-12.json", "source.sql", "committed-capture-01.json"])
 def test_unknown_or_noncanonical_raw_family_member_refuses_before_assembly(monkeypatch, tmp_path, name):
     custody, _data = original_cycle(monkeypatch, tmp_path)
     (custody / name).write_bytes(b"{}")
@@ -72,7 +79,7 @@ def test_capture_never_overwrites_or_silently_reclassifies_a_retry(monkeypatch, 
         browser.capture_monetary_browser(runtime(), "source", custody, case="foreign", index=2)
 
 
-@pytest.mark.parametrize("index", [True, False, -1, 10, "0", 1.0])
+@pytest.mark.parametrize("index", [True, False, -1, 12, "0", 1.0])
 def test_capture_index_has_no_boolean_float_or_text_coercion(monkeypatch, tmp_path, index):
     stage(monkeypatch, tables())
     with pytest.raises(ValueError):
@@ -87,14 +94,14 @@ def test_only_new_fixed_case_names_and_private_path_layout_are_admitted(tmp_path
 
 def test_all_89_business_tables_remain_exact_and_refused_candidate_is_retained(monkeypatch, tmp_path):
     custody, data = original_cycle(monkeypatch, tmp_path)
-    baseline = (custody / "committed-capture-9.json").read_bytes()
+    baseline = (custody / "committed-capture-11.json").read_bytes()
     data["finance_entry_lines"].append('{"id":"changed","tenant_id":"tenant","debit_minor":1}')
     stage(monkeypatch, data)
     with pytest.raises(ValueError):
-        browser.capture_monetary_browser(runtime(), "source", custody, case="foreign", index=9, observation="ScopeRefusal", refusal={"operation": "ReadSource", "status": 403, "code": "entity_scope_denied"})
+        browser.capture_monetary_browser(runtime(), "source", custody, case="foreign", index=11, observation="ScopeRefusal", refusal={"operation": "ReadSource", "status": 403, "code": "entity_scope_denied"})
     failed = custody.parent.parent / browser.REFUSED / "foreign"
     assert len(list(failed.glob("refused-*.json"))) == 1
-    assert (custody / "committed-capture-9.json").read_bytes() == baseline
+    assert (custody / "committed-capture-11.json").read_bytes() == baseline
     assert not (custody.parent.parent / browser.OBSERVATIONS / "foreign" / "scope-refusal.json").exists()
 
 
@@ -111,7 +118,7 @@ def test_every_prior_audit_original_is_retained_even_though_independent_chain_qu
 def test_scope_refusal_is_a_closed_actual_response_receipt(monkeypatch, tmp_path, refusal):
     custody, _data = original_cycle(monkeypatch, tmp_path)
     with pytest.raises(ValueError):
-        browser.capture_monetary_browser(runtime(), "source", custody, case="foreign", index=9, observation="ScopeRefusal", refusal=refusal)
+        browser.capture_monetary_browser(runtime(), "source", custody, case="foreign", index=11, observation="ScopeRefusal", refusal=refusal)
 
 
 class Result:
@@ -149,13 +156,15 @@ def test_final_restore_uses_exact_91_final_observation_rows_and_stable_repeat_pr
     custody, data = original_cycle(monkeypatch, tmp_path)
     folder = custody.parent.parent / browser.OBSERVATIONS / "foreign"
     folder.mkdir(parents=True)
-    for kind, name in browser.KINDS.items():
-        index = 7 if kind == "RetainedReplay" else 9
+    for kind, name in browser._kinds("foreign").items():
+        index = browser._observation_index("foreign", kind)
+        pinned = kind in {"RetainedReplay", "ActiveValuationRefusal"}
         value = {"schema_version": browser.OBSERVATION_SCHEMA, "kind": kind, "tenant_id": "tenant", "source_order_id": "source", "capture": index,
-                 "history_version": browser.HISTORY_VERSIONS[index], "plan_id": "CRF3-" + "1" * 32 if kind == "RetainedReplay" else None,
-                 "plan_digest": "a" * 64 if kind == "RetainedReplay" else None, "tables": data,
-                 "refusal": {"operation": "ReadSource", "status": 403, "code": "entity_scope_denied"} if kind == "ScopeRefusal" else None}
+                 "history_version": browser.FOREIGN_HISTORY_VERSIONS[index], "plan_id": ("FX1-" if kind == "ActiveValuationRefusal" else "CRF3-") + "1" * 32 if pinned else None,
+                 "plan_digest": "a" * 64 if pinned else None, "tables": data,
+                 "refusal": {"operation": "PrepareReturn", "status": 409, "code": "customer_partial_return_monetary_state_invalid"} if kind == "ActiveValuationRefusal" else {"operation": "ReadSource", "status": 403, "code": "entity_scope_denied"} if kind == "ScopeRefusal" else None}
         (folder / name).write_bytes(_bytes(value, browser.MAX_CAPTURE_BYTES + 4096))
+    (folder / browser.REFUSED_REQUEST).write_bytes(_bytes(refused_request(), 8192))
     first = browser.verify_seeded_monetary_browser(runtime("synthetic-restored"), custody_root=custody, case="foreign", original_app_dsn="synthetic-original")
     second = browser.verify_seeded_monetary_browser(runtime("synthetic-restored"), custody_root=custody, case="foreign", original_app_dsn="synthetic-original")
     assert first == second and len(first["tables"]) == 91 and first["independent_financial_and_audit_verification_required"] is True
@@ -164,3 +173,38 @@ def test_final_restore_uses_exact_91_final_observation_rows_and_stable_repeat_pr
     stage(monkeypatch, data)
     with pytest.raises(ValueError):
         browser.verify_seeded_monetary_browser(runtime("synthetic-restored"), custody_root=custody, case="foreign", original_app_dsn="synthetic-original")
+
+
+def test_identity_keeps_its_original_ten_captures_without_valuation_slots(monkeypatch, tmp_path):
+    stage(monkeypatch, tables())
+    custody = root(tmp_path, "identity")
+    for index in range(10):
+        browser.capture_monetary_browser(runtime(), "source", custody, case="identity", index=index)
+    assert len(decode_packet((custody / browser.PACKET).read_bytes()).captures) == 10
+    assert set(browser._kinds("identity")) == {"RetainedReplay", "ScopeRefusal", "FinalRead"}
+    with pytest.raises(ValueError):
+        browser._observation_index("identity", "ActiveValuationRefusal")
+
+
+@pytest.mark.parametrize("change", [{"source_order_id": "other"}, {"quantity_scaled": 4}, {"quantity_scaled": "5"}, {"expected_history_version": True}, {"expected_history_version": 3}, {"allocation_policy": "override"}, {"reason": "raw\nmessage"}, {"posting_date": "2026-02-30"}])
+def test_refused_active_valuation_request_has_exact_native_intent_not_caller_authority(change):
+    value = refused_request()
+    value["body"].update(change)
+    with pytest.raises(ValueError):
+        browser._request_pin(value, "source")
+
+
+def test_active_valuation_request_receipt_has_no_headers_or_rewritten_route():
+    browser._request_pin(refused_request(), "source")
+    for change in ({"headers": {}}, {"route": "/api/v2/customer-partial-returns/plans"}, {"method": "GET"}):
+        with pytest.raises(ValueError):
+            browser._request_pin({**refused_request(), **change}, "source")
+
+
+def test_actual_fx_plan_digest_comes_from_immutable_payload_not_an_absent_column():
+    class Connection:
+        def execute(self, query, parameters):
+            assert "p.payload->>'plan_digest'" in query and "p.plan_digest" not in query
+            assert parameters == ("tenant", "FX1-" + "1" * 32, "source")
+            return Result([{"phase": 2, "digest": "a" * 64}])
+    browser._plan_pin(Connection(), "tenant", "source", "FX1-" + "1" * 32, "a" * 64)

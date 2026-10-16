@@ -1,5 +1,25 @@
 # Execution State
 
+## M7 final closure mode — frozen requirements (2026-10-16)
+
+The latest human directive freezes M7.7/M7.9; whole M7 stays OPEN. No optional
+scenario, new domain, CPU optimization or throughput comparison is authorized
+in this closure round. Remote Draft140 remains02b3; its terminal CI records
+56 successful and23 failed jobs of79, all originals retained. Accepted139
+remains375, and main plus the primary user's two dirty files are unchanged.
+The coherent local repairs cover the observed financial-owner callback ACL
+regression, exact admin Cash scope and historical-fixture guard overwrites.
+Native5 migration cases pass221.677s onfb5c and selected6 native security cases
+pass395.101s oncd3c. Actual0d2a zero-reuse fails90.431s at a new dispatch alias
+named document shadowing an original RECORD; its failure is not reclassified.
+The limited dispatch_* alias repair is integrated. Required remaining work:
+rerun that same zero-reuse case with its six original raw91 captures, independently
+verify them, run both actual monetary HTTPS/restore cycles, and accept the final
+coherent source through required native/legacy/CI/security/Docker/CodeQL gates.
+No external architectural decision currently blocks these finite repairs.
+
+The following source-qualified checkpoints retain their original limits.
+
 ## Current actual M7 gate (2026-10-16, accepted375 / Draft140)
 
 Whole M7 remains OPEN; the master matrix retains M7.7/M7.9 INCOMPLETE.

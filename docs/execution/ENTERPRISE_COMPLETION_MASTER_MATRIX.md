@@ -8,6 +8,16 @@ receipts remain historical evidence; their broad headings do not close a domain.
 No capability is removed because implementation or external acceptance is hard.
 
 **Current closure: M7 customer partial returns. Major-domain WIP limit: one.**
+**M7 final closure mode:** M7.7 and M7.9 remain `INCOMPLETE`; requirements are
+frozen. The finite blockers are zero-restored-stock reuse/transfer and its
+independent six-stage raw91 proof, corrected legacy/least-privilege compatibility,
+both real monetary HTTPS/restore cycles, and final exact-head mandatory CI.
+Actual0d2a zero-reuse90.431s fails at a dispatch alias/RECORD collision; its
+limited alias repair awaits the same affected case. Migration5/fb5c and selected
+security6/cd3c pass; neither replaces coherent final acceptance. Published02b3
+CI is a retained terminal failure:56 success/23 failure/79 jobs. No optional
+scenario, additional milestone or comparative-performance work is added.
+
 Next: Advanced Manufacturing & Supply Chain, then Global Finance, HCM/Payroll,
 CRM/Sales/Projects/Services, Enterprise Operations/Integration, Enterprise AI.
 The team moves together only after the current domain satisfies every applicable

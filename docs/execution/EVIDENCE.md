@@ -1,5 +1,17 @@
 # ReconForge Execution Evidence Log
 
+## M7 final closure inputs — 2026-10-16
+
+Actualfb5c full migration file5PASS/0skip221.677s and actualcd3c selected security
+6PASS/0skip395.101s retain clean before/after source and successful owned cleanup.
+Independent security closure5637fa99794360d821bb23f66ef31f78fe033352472fef5d3f8848c5a34904d4
+is scoped to those six cases. Actual0d2a zero-reuse1FAIL/0skip90.431s retains the
+document RECORD collision and clean source/cleanup; no complete raw91 packet
+was produced. Published02b3 terminal CI56/23/79 closure21275709af0f8d9c8b398a3f53aae63e56c5b5aa6a1b4428ba289649c19d2239
+remains failed. External four-ref Git bundle A02DAFDB8A53F51E314E964CC7733568F6F22327D286DACE0D3C8139846FFDB8
+verifies against accepted375; checkpoint receipt25b5ed269172d027e3153d6bf46bd78fcdbd32119cf884c8c0407372f23fe75e.
+These are source-qualified components and recovery originals, not M7 acceptance.
+
 ## Actual monetary native components and retained failures — 2026-10-16
 
 Draft140 publishes02b3 above accepted139/375. Native fractional0.1

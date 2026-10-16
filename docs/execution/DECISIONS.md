@@ -1,5 +1,17 @@
 # ReconForge Execution Decisions Log
 
+## Freeze M7 closure and repair only witnessed regressions (2026-10-16)
+
+Keep the agreed M7.7/M7.9 scope fixed. Existing native SS1/FX1 source admission
+and reserved CR3 headers classify each OLD/NEW financial image before new-owner
+directory reads; ordinary FinanceCore retains its existing guards without new
+private monetary SELECT requirements. Keep the AR namespace guard unchanged;
+admin-only Cash fixture restoration must supply the original receipt's scope.
+Verify current149 before any legacy valuation installer can overwrite guards;
+historical raw reinstallation assertions run inside rollback and preserve exact
+catalog profiles. Rename only the new dispatch aliases that collide with
+retained RECORD locals. Never relax timeouts, preflight, accounting or RLS.
+
 ## Owned event admission and explicit bounded retries (2026-10-16)
 
 Skip unrelated audit/outbox object types before querying the monetary owner,

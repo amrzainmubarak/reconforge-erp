@@ -1637,6 +1637,8 @@ include apps/web/src/monetary-valuation-data.test.ts
 include apps/web/src/monetary-valuation-data.ts
 include apps/web/src/monetary-valuation-test-fixture.json
 include apps/web/src/monetary-words.ts
+include apps/web/live/monetary-capture-diagnostics.ts
+include apps/web/src/test/monetary-capture-diagnostics.test.ts
 include docs/adr/0862-fixed-monetary-stock-and-partial-corrections.md
 include reconforge/api/monetary_partial_return_contract.py
 include reconforge/api/monetary_public_contract.py

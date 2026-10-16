@@ -3,8 +3,9 @@
 ## M7 final closure mode — frozen requirements (2026-10-16)
 
 The latest human directive freezes M7.7/M7.9; whole M7 stays OPEN. No optional
-scenario, new domain, CPU optimization or throughput comparison is authorized
-in this closure round. Remote Draft140 remains02b3; its terminal CI records
+scenario, new domain or nonblocking performance comparison is authorized
+in this closure round. Remote Draft140 is15a1149d; its running CI has retained
+native/HTTPS and legacy-compatibility failures. Earlier02b3 terminal CI records
 56 successful and23 failed jobs of79, all originals retained. Accepted139
 remains375, and main plus the primary user's two dirty files are unchanged.
 The coherent local repairs cover the observed financial-owner callback ACL

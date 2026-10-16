@@ -31,6 +31,15 @@ bounded quantity-only cost-proof correction and final native/HTTPS/CI gates
 remain open. Full transfer/Stock admission, financial source ownership and
 global quantity claims retain their existing checks.
 
+The c40c4e15 complete case passes the first return and real zero-cost resale,
+then fails at the resale Return's SQL30s deferred closure (209.619s total).
+Its separately retained second-post diagnostic succeeds32.577s, including
+30.273s deferred work; this is neither that full-case acceptance nor a speed
+comparison. It records224631 recursive canonical-node calls. The bounded
+closure repair preserves every native check and digest byte while using cached
+recursive queries only in new149 functions. Old IRP functions stay unchanged.
+Actual business,18-function migration, HTTPS/restore and final CI remain open.
+
 Next: Advanced Manufacturing & Supply Chain, then Global Finance, HCM/Payroll,
 CRM/Sales/Projects/Services, Enterprise Operations/Integration, Enterprise AI.
 The team moves together only after the current domain satisfies every applicable

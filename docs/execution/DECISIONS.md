@@ -13790,3 +13790,16 @@ Observed SELECT-only statements do not revoke application DML ACLs. Pin actual
 definer/owner/ACL context before changing shared hooks; no invoker-label shortcut
 proves actor RLS. Retain environmental setup failures separately from financial
 test failures. See ADR0859; no147 or partial-stock API/Studio action is added.
+
+### 2026-10-16 — M7 operation-blocking canonical query planning
+
+Keep every current source, request, acknowledgement and financial digest check.
+The real c40 zero-resale Return fails deferred SQL30s; the isolated successful
+post profile records224631 recursive SQL canonical-node calls. New149-only
+immutable invoker helpers retain C-ordered object keys, ordinal arrays, exact
+PostgreSQL scalar text and standard UTF8/SHA256. Cached PL/pgSQL recursive
+queries change no accepted bytes, existing IRP functions or rejection policy.
+The262-vector PostgreSQL differential is diagnostic evidence, not business
+acceptance or a throughput claim. The same actual full case, real nested digest
+equivalence, migration/restore and final-head CI must still pass. Do not skip
+historical hash checks or move them to an unproven birth-time cache.

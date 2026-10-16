@@ -2064,9 +2064,36 @@ CREATE FUNCTION reconforge.monetary_stock_version() RETURNS INTEGER
  LANGUAGE sql IMMUTABLE SET search_path=pg_catalog AS $cr149$ SELECT 149 $cr149$;
 """
 
-NATIVE_FUNCTION_SQL = "\n".join((HISTORY_SQL, EFFECT_SQL, ORIGINAL_EQUATION_SQL, STOCK_ADMISSION_SQL, STOCK_PHYSICAL_SQL, _retained_stock_source(),
+# These immutable helpers retain the existing IRP canonical bytes. PL/pgSQL
+# caches the recursive object/array queries instead of repeatedly planning the
+# SQL-language serializer at every JSON node. Only this revision's new native
+# functions use them; no existing function, stored digest or check is replaced.
+CANONICAL_SQL = r"""
+CREATE FUNCTION reconforge.monetary_canonical(value JSONB) RETURNS TEXT
+ LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog AS $mr149$
+DECLARE result TEXT;
+BEGIN
+ IF value IS NULL THEN RETURN NULL;END IF;
+ CASE jsonb_typeof(value)
+ WHEN 'object' THEN
+  SELECT '{'||COALESCE(string_agg(to_jsonb(k)::text||':'||reconforge.monetary_canonical(v),',' ORDER BY k COLLATE "C"),'')||'}'
+   INTO result FROM jsonb_each(value) e(k,v);
+ WHEN 'array' THEN
+  SELECT '['||COALESCE(string_agg(reconforge.monetary_canonical(v),',' ORDER BY n),'')||']'
+   INTO result FROM jsonb_array_elements(value) WITH ORDINALITY e(v,n);
+ ELSE result:=value::text;
+ END CASE;
+ RETURN result;
+END $mr149$;
+CREATE FUNCTION reconforge.monetary_digest(value JSONB) RETURNS TEXT
+ LANGUAGE sql IMMUTABLE SET search_path=pg_catalog AS $mr149$
+ SELECT encode(sha256(convert_to(reconforge.monetary_canonical(value),'UTF8')),'hex')
+ $mr149$;
+"""
+
+NATIVE_FUNCTION_SQL = "\n".join((CANONICAL_SQL, HISTORY_SQL, EFFECT_SQL, ORIGINAL_EQUATION_SQL, STOCK_ADMISSION_SQL, STOCK_PHYSICAL_SQL, _retained_stock_source(),
     ORIGIN_SQL, BALANCE_SQL, POSTING_SQL, FX_SQL, PARTIAL_SQL, PUBLIC_SQL, STOCK_CLOSE_SQL, GUARD_SQL, NAMESPACE_SQL,
-    PHYSICAL_FUNCTION_SQL, TRANSFER_FUNCTION_SQL, MARKER_SQL))
+    PHYSICAL_FUNCTION_SQL, TRANSFER_FUNCTION_SQL, MARKER_SQL)).replace("reconforge.irp_digest(", "reconforge.monetary_digest(")
 
 _NATIVE_TABLES = (
     "operational_fx_sources", "operational_fx_plans", "operational_fx_reviews", "operational_fx_links", "operational_fx_commands",

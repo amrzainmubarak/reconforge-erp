@@ -17,6 +17,8 @@ MONETARY_REQUIRED = (
     'alembic/versions/0149_postgres_monetary_customer_partial_returns.py',
     'apps/web/live/customer-partial-return-monetary-cycles.spec.ts',
     'apps/web/live/customer-partial-return-monetary.playwright.config.ts',
+    'apps/web/live/monetary-capture-diagnostics.ts',
+    'apps/web/src/test/monetary-capture-diagnostics.test.ts',
     'apps/web/src/components/MonetaryCustomerReturns.tsx',
     'apps/web/src/components/MonetaryEvidence.tsx',
     'apps/web/src/components/MonetaryStockPanel.tsx',

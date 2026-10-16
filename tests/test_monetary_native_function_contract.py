@@ -5,6 +5,7 @@ not exercise the binding of qualified local variables in its first callback.
 """
 
 import hashlib
+import json
 import re
 
 import pytest
@@ -163,6 +164,28 @@ def _function_bodies(*sources: str) -> dict[str, str]:
     return functions
 
 
+def test_cached_serializer_preserves_every_existing_native_check_and_retained_function() -> None:
+    functions = _function_bodies(NATIVE_FUNCTION_SQL)
+    previous = {name: body.replace("reconforge.monetary_digest(", "reconforge.irp_digest(")
+                for name, body in functions.items() if name not in {"monetary_canonical", "monetary_digest"}}
+    # Exact ab4bbaf7 predecessor inventory: only the digest call target changes.
+    assert len(previous) == 56 and len(functions) == 58
+    assert hashlib.sha256(json.dumps(previous, sort_keys=True, separators=(",", ":")).encode()).hexdigest() == (
+        "299256b3a36e2d4eb34d84fcd97673a5dbc7a65fc690d0c10a3d7af2bd338de6")
+    assert sum(body.count("reconforge.monetary_digest(") for body in previous.values()) == 0
+    assert NATIVE_FUNCTION_SQL.count("CREATE FUNCTION reconforge.irp_") == 0
+    assert "reconforge.irp_digest(" not in NATIVE_FUNCTION_SQL
+    canonical = functions["monetary_canonical"]
+    assert "IF value IS NULL THEN RETURN NULL;END IF;" in canonical
+    assert "ORDER BY k COLLATE \"C\"" in canonical and "to_jsonb(k)::text" in canonical
+    assert "WITH ORDINALITY e(v,n)" in canonical and "ORDER BY n" in canonical
+    assert "ELSE result:=value::text;" in canonical
+    assert functions["monetary_digest"].strip() == (
+        "SELECT encode(sha256(convert_to(reconforge.monetary_canonical(value),'UTF8')),'hex')")
+    for name in ("monetary_digest", "monetary_canonical"):
+        assert f"DROP FUNCTION reconforge.{name}(JSONB);" in NATIVE_DOWNGRADE_SQL
+
+
 def test_event_callbacks_classify_each_image_before_any_private_owner_lookup() -> None:
     body = _function_bodies(NATIVE_FUNCTION_SQL)["monetary_return_native_close"]
     start = body.index("  ELSIF TG_TABLE_NAME IN('domain_audit_events','outbox_events') THEN")
@@ -239,10 +262,11 @@ def _reachable(graph: dict[str, set[str]], start: str) -> set[str]:
 
 def test_source_physical_proof_and_full_source_body_are_exact_except_capacity_extraction_and_label() -> None:
     functions = _function_bodies(NATIVE_FUNCTION_SQL)
-    assert len(functions) == 56
-    old_full = functions["monetary_stock_source_close"].replace("monetary_stock_source_close", "monetary_stock_close")
+    assert len(functions) == 58
+    old_full = functions["monetary_stock_source_close"].replace("monetary_stock_source_close", "monetary_stock_close").replace(
+        "reconforge.monetary_digest(", "reconforge.irp_digest(")
     assert hashlib.sha256(old_full.encode()).hexdigest() == "3b6fc98713b56b8380f85835bb8ecba5f3c30df8fd90396bc90b93921e6f811e"
-    physical = functions["monetary_stock_physical_close"]
+    physical = functions["monetary_stock_physical_close"].replace("reconforge.monetary_digest(", "reconforge.irp_digest(")
     anchor = "MESSAGE='Reservation phase differs from source owner.';\n END IF;\n"
     capacity = " IF r.order_id IS NOT NULL THEN PERFORM reconforge.stock_sales_capacity(t,d.workspace_id,d.legal_entity_id,d.location_id,d.item_id); END IF;\n"
     assert physical.count(anchor) == 1 and "stock_sales_capacity" not in physical
@@ -253,7 +277,8 @@ def test_source_physical_proof_and_full_source_body_are_exact_except_capacity_ex
     assert NATIVE_DOWNGRADE_SQL.index("DROP FUNCTION reconforge.monetary_stock_close(TEXT,TEXT);") < NATIVE_DOWNGRADE_SQL.index("DROP FUNCTION reconforge.monetary_stock_source_close(TEXT,TEXT);")
     retained_proof = _function_bodies(retained_zero_stock_close())["customer_partial_return_zero_stock_close"]
     retained_capacity = " IF r IS NOT NULL THEN PERFORM reconforge.stock_sales_capacity(t,d.workspace_id,d.legal_entity_id,d.location_id,d.item_id); END IF;\n"
-    assert functions["monetary_retained_zero_stock_source_close"] == retained_proof.replace(retained_capacity, "", 1)
+    assert functions["monetary_retained_zero_stock_source_close"].replace(
+        "reconforge.monetary_digest(", "reconforge.irp_digest(") == retained_proof.replace(retained_capacity, "", 1)
     old_consumption = ORIGINAL_FUNCTIONS["customer_partial_return_zero_consumption"]
     proof_consumption = UPGRADED_FUNCTIONS["customer_partial_return_zero_consumption"]
     assert proof_consumption.replace("CREATE OR REPLACE FUNCTION", "CREATE FUNCTION", 1).replace(

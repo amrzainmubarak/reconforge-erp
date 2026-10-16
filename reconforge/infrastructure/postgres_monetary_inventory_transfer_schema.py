@@ -127,6 +127,17 @@ def _snapshot() -> str:
     return _replace(value, "'schema_version','inventory-transfer-cost-v1'", "'schema_version','inventory-transfer-cost-v4'")
 
 
+def _quantity_snapshot() -> str:
+    """Keep complete cost evidence without re-adopting unrelated movements.
+
+    Only the global FIFO backing checker calls this read helper. Actual IT1
+    source birth/review and Stock admission retain the full adoption snapshot.
+    """
+    value = _replace(_snapshot(), "CREATE FUNCTION reconforge.monetary_transfer_cost_snapshot(",
+        "CREATE FUNCTION reconforge.monetary_quantity_cost_snapshot(")
+    return _replace(value, " PERFORM reconforge.monetary_transfer_stock_origins(t,w,o,e,i);\n", "")
+
+
 _READ_CORRECTIONS = r"""  PERFORM reconforge.it1_assert(jsonb_typeof(original->'partial_return_corrections')='array'
    AND jsonb_typeof(original->'monetary_return_corrections')='array'
    AND(SELECT count(DISTINCT(value#>>'{restoration,plan_id}',value#>>'{restoration,position}'))
@@ -196,4 +207,4 @@ def _origins() -> str:
   ELSIF physical.head->>'movement_number'~'^CR2(R)?-[A-F0-9]{32}$' THEN""")
 
 
-NATIVE_FUNCTION_SQL = CORRECTION_SQL + _snapshot() + _originals() + _origins()
+NATIVE_FUNCTION_SQL = CORRECTION_SQL + _snapshot() + _quantity_snapshot() + _originals() + _origins()

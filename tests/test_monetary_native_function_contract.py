@@ -117,7 +117,7 @@ def test_zero_fifo_source_proof_is_conditional_and_precedes_the_unchanged_global
     first_private = body.index("FROM reconforge.customer_partial_return_restorations")
     new_tables = body.index("FROM reconforge.customer_partial_return_monetary_restorations")
     ordinary_exclusion = body.index("IF restitution_quantity<=0 THEN CONTINUE;END IF;")
-    snapshot = body.index("quantity_cost:=reconforge.it1_cost_snapshot(")
+    snapshot = body.index("quantity_cost:=reconforge.monetary_quantity_cost_snapshot(")
     originals = body.index("PERFORM reconforge.it1_cost_originals(t,quantity_cost)")
     current_layer = body.index("quantity_members=1 AND quantity_source->'layer'=zero_candidate.layer_json")
     signed = body.index("PERFORM reconforge.it1_assert(restitution_quantity>0,")
@@ -126,7 +126,7 @@ def test_zero_fifo_source_proof_is_conditional_and_precedes_the_unchanged_global
     assert loop < relevance < first_private < new_tables < ordinary_exclusion < snapshot < originals < current_layer < signed < add < claimed
     assert "WHERE dispatch_consumption.tenant_id=dispatch_layer.tenant_id AND dispatch_consumption.cost_layer_id=dispatch_layer.id)" in body[relevance:first_private]
     assert "dispatch_layer.remaining_quantity_scaled>0 AND dispatch_layer.remaining_value_minor=0" in body[loop:new_tables]
-    assert body.count("quantity_cost:=reconforge.it1_cost_snapshot(") == 1
+    assert body.count("quantity_cost:=reconforge.monetary_quantity_cost_snapshot(") == 1
     assert body.count("remaining:=remaining+") == 1
     assert body.count("RETURN remaining-claimed;") == 1
     # The original positive-only prefix performs no private restitution reads.
@@ -194,7 +194,7 @@ def _reachable(graph: dict[str, set[str]], start: str) -> set[str]:
 
 def test_source_physical_proof_and_full_source_body_are_exact_except_capacity_extraction_and_label() -> None:
     functions = _function_bodies(NATIVE_FUNCTION_SQL)
-    assert len(functions) == 55
+    assert len(functions) == 56
     old_full = functions["monetary_stock_source_close"].replace("monetary_stock_source_close", "monetary_stock_close")
     assert hashlib.sha256(old_full.encode()).hexdigest() == "3b6fc98713b56b8380f85835bb8ecba5f3c30df8fd90396bc90b93921e6f811e"
     physical = functions["monetary_stock_physical_close"]
@@ -220,13 +220,15 @@ def test_complete_cost_proof_graph_exposes_both_old_cycles_and_retains_live_owne
     functions = _function_bodies(QUANTITY_SQL, TRANSFER_OWNER_SQL, PARTIAL_OWNER_SQL, CORRECTION_SQL, ROUNDING_SQL,
         NATIVE_FUNCTION_SQL, "\n".join(STOCK_FUNCTIONS.values()), "\n".join(UPGRADED_FUNCTIONS.values()))
     graph = _proof_call_graph(functions)
-    reachable = _reachable(graph, "inventory_quantity_free_fifo")
+    quantity_reachable = _reachable(graph, "inventory_quantity_free_fifo")
+    reachable = quantity_reachable | _reachable(graph, "it1_cost_snapshot")
     assert {"monetary_transfer_stock_origins", "monetary_stock_source_close", "monetary_stock_physical_close",
             "monetary_zero_consumption", "monetary_stock_zero_facts", "monetary_stock_zero_plan", "it1_cost_originals",
             "customer_partial_return_transfer_correction_dispatch", "monetary_transfer_correction", "monetary_partial_close",
             "monetary_stock_prefix", "monetary_fx_close", "it1_native_admit",
             "monetary_retained_zero_stock_source_close", "customer_partial_return_zero_consumption"} <= reachable
     assert not {"stock_sales_capacity", "inventory_quantity_check_capacity", "inventory_quantity_free_fifo", "monetary_stock_close"} & reachable
+    assert not {"it1_stock_origins", "monetary_transfer_stock_origins", "it1_native_admit"} & quantity_reachable
     # These retained external leaves were independently reviewed as pure or
     # SELECT-only (including the finite SELECT-only IRP artifact dispatcher).
     # Keep the boundary closed: a newly unresolved helper requires review.
@@ -241,6 +243,7 @@ def test_complete_cost_proof_graph_exposes_both_old_cycles_and_retains_live_owne
     assert "monetary_stock_close" in graph["stock_sales_close"]
     # Reconstruct the witnessed pre-fix calls: both must expose the real cycle.
     old = dict(functions)
+    old["inventory_quantity_free_fifo"] = old["inventory_quantity_free_fifo"].replace("monetary_quantity_cost_snapshot", "it1_cost_snapshot")
     old["monetary_stock_close"] = old["monetary_stock_source_close"]
     old["monetary_stock_physical_close"] += " PERFORM reconforge.stock_sales_capacity(t,d.workspace_id,d.legal_entity_id,d.location_id,d.item_id);"
     old["monetary_transfer_stock_origins"] = old["monetary_transfer_stock_origins"].replace("monetary_stock_source_close", "monetary_stock_close")
@@ -249,3 +252,17 @@ def test_complete_cost_proof_graph_exposes_both_old_cycles_and_retains_live_owne
     for entry in ("monetary_transfer_stock_origins", "monetary_zero_consumption"):
         assert {"stock_sales_capacity", "inventory_quantity_check_capacity", "inventory_quantity_free_fifo"} <= _reachable(old_graph, entry)
     assert {"stock_sales_capacity", "inventory_quantity_check_capacity", "inventory_quantity_free_fifo"} <= _reachable(old_graph, "customer_partial_return_zero_consumption")
+
+
+def test_quantity_snapshot_omits_only_adoption_and_has_no_other_admission_callsite() -> None:
+    functions = _function_bodies(ROUNDING_SQL, NATIVE_FUNCTION_SQL, "\n".join(UPGRADED_FUNCTIONS.values()))
+    full = functions["monetary_transfer_cost_snapshot"]
+    quantity = functions["monetary_quantity_cost_snapshot"]
+    adoption = " PERFORM reconforge.monetary_transfer_stock_origins(t,w,o,e,i);\n"
+    assert full.count(adoption) == 1 and quantity == full.replace(adoption, "", 1)
+    callers = {name for name, body in functions.items() if "reconforge.monetary_quantity_cost_snapshot(" in body}
+    assert callers == {"inventory_quantity_free_fifo"}
+    assert "PERFORM reconforge.it1_cost_originals(t,quantity_cost);" in functions["inventory_quantity_free_fifo"]
+    for name in ("monetary_stock_zero_cost", "customer_partial_return_zero_stock_cost"):
+        assert "cost:=reconforge.it1_cost_snapshot(t,w,o,e,i);" in functions[name]
+    assert "DROP FUNCTION reconforge.monetary_quantity_cost_snapshot(TEXT,TEXT,TEXT,TEXT,TEXT);" in NATIVE_DOWNGRADE_SQL

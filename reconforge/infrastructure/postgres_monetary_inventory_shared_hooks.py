@@ -200,7 +200,7 @@ _ZERO_FIFO_QUANTITY = r""" -- Positive-valued backing above remains the original
   ) retained;
   IF restitution_quantity<=0 THEN CONTINUE;END IF;
   IF quantity_cost IS NULL THEN
-   quantity_cost:=reconforge.it1_cost_snapshot(t,w,zero_candidate.organization_id,e,i);
+   quantity_cost:=reconforge.monetary_quantity_cost_snapshot(t,w,zero_candidate.organization_id,e,i);
    PERFORM reconforge.it1_assert(quantity_cost->>'schema_version' IN('inventory-transfer-cost-v3','inventory-transfer-cost-v4'),
     'Zero FIFO backing requires its explicit complete native restitution cost policy');
    PERFORM reconforge.it1_cost_originals(t,quantity_cost);

@@ -73,11 +73,13 @@ def installation_preflight_sql() -> str:
     )
 
     statements = [function_preflight(NATIVE_FUNCTION_SQL), stock_preflight(upgraded=True), physical_preflight(upgraded=True)]
-    statements.append("DO $cr149catalog$ DECLARE profile JSONB;BEGIN SELECT catalog.profile INTO profile FROM ("
-        + MONETARY_SCHEMA_SQL + ") catalog; IF profile IS NULL OR (SELECT count(*) FROM jsonb_object_keys(profile))<>18 OR EXISTS("
+    catalog_preflight = (
+        "DO $cr149catalog$ DECLARE profile JSONB;BEGIN SELECT catalog.profile INTO profile FROM ("
+        "@@MONETARY_SCHEMA_SQL@@) catalog; IF profile IS NULL OR (SELECT count(*) FROM jsonb_object_keys(profile))<>18 OR EXISTS("
         "SELECT 1 FROM jsonb_each(profile) flag WHERE flag.value IS DISTINCT FROM 'true'::jsonb) THEN "
         "RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_partial_return_monetary_owner',"
         "MESSAGE='Monetary native storage or report execution contract drift'; END IF; END $cr149catalog$;\n")
+    statements.append(catalog_preflight.replace("@@MONETARY_SCHEMA_SQL@@", MONETARY_SCHEMA_SQL))
     names: set[tuple[str, str]] = set()
     for table, name, signature, kind, deferred, initially_deferred, enabled in NATIVE_TRIGGER_CONTRACTS:
         if (re.fullmatch(r"[a-z][a-z0-9_]*", table) is None or re.fullmatch(r"[a-z][a-z0-9_]*", name) is None

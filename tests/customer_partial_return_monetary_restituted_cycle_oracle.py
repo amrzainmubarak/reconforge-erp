@@ -418,6 +418,9 @@ def _transfers(capture: Any, original: Any, *, expected_count: int, pool: Any) -
                 and _minor(source["quantity_scaled"], positive=True) == 1
                 and type(source["quantity_precision"]) is int and source["quantity_precision"] == 1
                 and source["item_id"] == _one(capture, "stock_sales_orders", id=original.source["source_order_id"])["item_id"])
+        _same(body["scope"], {key: value for key, value in original.scope.items() if key != "tenant_id"})
+        for key in ("item_id", "uom_id", "quantity_precision", "quantity_scaled", "from_location_id", "to_location_id", "period_id", "posting_date", "number", "native_movement_id", "creator_actor_id"):
+            _same(body[key], source[key])
         people = [source[key] for key in ("creator_actor_id", "reviewer_actor_id", "poster_actor_id")]
         require(all(type(person) is str and bool(person) for person in people) and len(set(people)) == 3)
         events = sorted((row for row in capture.rows("inventory_transfer_events") if row["transfer_id"] == source["id"]), key=lambda row: _minor(row["version"], positive=True))
@@ -442,6 +445,9 @@ def _transfers(capture: Any, original: Any, *, expected_count: int, pool: Any) -
             response = command["response_json"]
             require(response["source"]["id"] == source["id"] and response["source"]["source_digest"] == source["source_digest"]
                     and response["source"]["row_version"] == index and response["source"]["phase"] == index - 1)
+            _same(response["native_response"], response["source"]["native_response"])
+            _same(response["native_response"], source["posted_native_json"] if index == 3 else source["native_creation_json"])
+            _same(response["source"]["review_cost_snapshot"], None if index == 1 else pool)
         movement = _one(capture, "inventory_movements", id=source["native_movement_id"])
         _scope(movement, original.scope)
         line = _one(capture, "inventory_movement_lines", movement_id=movement["id"])
@@ -452,6 +458,18 @@ def _transfers(capture: Any, original: Any, *, expected_count: int, pool: Any) -
                 and _minor(line["quantity_scaled"], positive=True) == 1 and type(line["quantity_precision"]) is int and line["quantity_precision"] == 1
                 and line["from_location_id"] == source["from_location_id"] and line["to_location_id"] == source["to_location_id"])
         _native(capture, movement["id"], source["posted_native_json"])
+        created = source["native_creation_json"]
+        require(type(created) is dict and set(created) == {"head", "lines", "audit", "outbox"}
+                and created["head"]["status"] == "Draft" and _minor(created["head"]["row_version"], positive=True) == 1)
+        mutable = {"status", "posted_by", "posted_at", "post_reason", "updated_at", "row_version"}
+        _same({key: value for key, value in created["head"].items() if key not in mutable},
+              {key: value for key, value in movement.items() if key not in mutable})
+        _same(created["lines"], source["posted_native_json"]["lines"])
+        require(bool(created["audit"]) and bool(created["outbox"]))
+        for event in created["audit"]:
+            _same(event, _one(capture, "domain_audit_events", id=event["id"]))
+        for event in created["outbox"]:
+            _same(event, {key: _one(capture, "outbox_events", event_id=event["event_id"])[key] for key in OUTBOX_FIELDS})
         claim = _one(capture, "inventory_transfer_claims", transfer_id=source["id"])
         release = _one(capture, "inventory_transfer_releases", transfer_id=source["id"])
         guard = _one(capture, "inventory_quantity_source_guards", id=claim["id"])
@@ -543,6 +561,13 @@ def qualify_raw_cycle(packet: RestitutedPacket) -> dict[str, Any]:
             physical.add(stock["movement_id"])
             events = base.verify_history_rows(capture, source)
             require(len(events) == expected_events and all(event["kind"] == "Return" and event["quantity_scaled"] == 1 for event in events))
+            if events:
+                event = events[0]
+                require(event["monetary"]["transaction_credit_minor"] == (1 if first == 0 else 114)
+                        and event["monetary"]["functional_credit_minor"] == (0 if first == 0 else 114)
+                        and event["monetary"]["functional_cost_minor"] == 0)
+                restoration = _one(capture, "customer_partial_return_monetary_restorations", origin_id=source.origin_id)
+                require(_minor(restoration["consumption_count_at_restore"], positive=True) == (1 if first == 0 else 2))
             allowed.update(base.verify_posted_journal_rows(capture, source, events))
             physical.update(base.verify_physical_rows(capture, source, events))
             closing, active = base.verify_valuation_rows(capture, source, events)

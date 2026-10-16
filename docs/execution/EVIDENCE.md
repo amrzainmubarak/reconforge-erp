@@ -1,5 +1,32 @@
 # ReconForge Execution Evidence Log
 
+## Actual monetary native components and retained failures — 2026-10-16
+
+Draft140 publishes02b3 above accepted139/375. Native fractional0.1
+return/cancellation/inverse1PASS/0skip97.422s closes independently at
+cfad773e518704c75486f95e38c939a9e34154f462319ef1134e48e17e92e6e4.
+Identity credit/second collection/refund/inverse/final settlement1PASS/0skip
+278.255s closes at5a1df580e6ececc64c28d96cd7b0541d4af5e865b3cc3182a82f98309c0e46ad.
+Both bind4447 source files, actual XML/plugin, ordinary-role fixture and cleanup.
+The c14a zero-functional collection case also executes1PASS/0skip85.930s.
+Foreign02b3 fails at final refund after history6: SQL30s QueryCanceled,
+1FAIL/0skip509.042s, unchanged source and successful owned cleanup; no timeout
+increase or relabeling. Originals reside in the existing external
+`m7-monetary-native-20261016-v1-private/` custody directory.
+
+Hosted02b3 CI38842843088 retains legacy79 catalog and unassigned IT1 layer
+failures. Security38842843086 retains two B608 failures; failed-log custody is
+4709cd104b18e15bef4d9b96304e9ffa6de9f6b2daf7f6d3ac5e6a6e5539918e.
+Closed-template repair preserves generated SQL120510 bytes/SHA
+0e4a49313a65781a7be7d76ed9d921786afa3bab49870b9c8e3d9b59ff2a73b5;
+independent equality peer15dc853bc3946497a9e063f1ba19374f263ed58826a573b5565bd0145b990300.
+Actual current-head RLS-owner, fixed legacy/native, HTTPS/raw91/restore and final
+CI remain pending. F9 frontend1095 PASS/typecheck/build component closure
+2261612ae5880f7985c79bd85f594104dfb41ce0101d1add03baf14c1fac8ffd
+does not substitute for those gates. Independent diagnostic profile review
+b8779f7616e7f024af47cdb8f8de9435604950388fde6781970d091cd6246798
+preserves11.507→15.082s/no gain, recursive counters and actor30s/default90s limits.
+
 ## Actual149 integration gate — 2026-10-16
 
 Owned empty migration roundtrip22699f7d passes one mandatory case/zero skips:

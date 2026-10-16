@@ -51,6 +51,33 @@ even a newly born unrecognized monetary Draft, new FX original or retained new
 evidence before destructive DDL. An empty148/149 round trip must restore exact
 old body bytes and metadata.
 
+## Migration authorization and runtime grants
+
+The downgrade preflight sets transaction-local `row_security=off` before its
+first retained-row query. This does not disable FORCE RLS or confer BYPASSRLS:
+a migration owner subject to those policies receives a permission error instead
+of mistaking hidden retained rows for an empty database. Destructive DDL must
+not follow that refusal. The ordinary DDL-owner regression is a required gate.
+
+Revision149 introduces seven new relation ACLs. Before resuming application
+traffic, the operator must grant the intended runtime/reporting role SELECT on
+the seven monetary relations declared in `postgres_monetary_stock_schema.py`.
+The legacy148 application ACLs alone are insufficient because invoker-native
+checks also inspect the new ownership tables for legacy commands. Enabling
+monetary commands additionally requires their appropriate relation write grants
+and the existing human authorization/SoD contracts. No grant to PUBLIC or
+automatic human-role grant is introduced. A reporting role needs no new writes.
+The populated148 compatibility test proves preserved rows and ACKs AFTER its
+explicit new relation grants; it does not prove an unchanged-ACL upgrade.
+
+For posted native entries, one common verifier returns the actual snapshot it
+has read and checked. Its retained equality chain binds the actual effect,
+snapshot hash and actual entry validation digest. Posted owner checks reuse that
+same snapshot and digest while retaining their ownership, exact lines, phase,
+audit and outbox checks. Unposted entries retain their separate snapshot/hash
+calculation. There is no caller-supplied snapshot, cache or additional privilege.
+Actual runtime qualification is required after this materialization change.
+
 ## Acceptance boundary
 
 Required proof includes actual identity and foreign Stock originals, repeated

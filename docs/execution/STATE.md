@@ -1,20 +1,31 @@
 # Execution State
 
-## Current actual M7 gate (2026-10-16, source6f81a58b)
+## Current actual M7 gate (2026-10-16, accepted375 / Draft140)
 
 Whole M7 remains OPEN; the master matrix retains M7.7/M7.9 INCOMPLETE.
 Complete native149, source/phase/history/physical/FX owners, API/Studio and
-mandatory native/HTTPS CI wiring are integrated unpublished. Actual empty
+mandatory native/HTTPS CI wiring are published in Draft140 above unchanged139.
+Actual02b3 fractional0.1 return/cancellation/inverse passes1/0skip97.422s;
+identity credit/second collection/refund/inverse/final-settlement passes1/0skip
+278.255s. Independent component closures cfad773e and5a1df580 bind source,
+original XML, mandatory plugin and owned cleanup. Actual c14a positive transaction
+cash/zero functional journal case passes1/0skip85.930s. Foreign02b3 reaches
+history6 but final refund fails closed at the existing30s SQL limit; its509.042s
+negative and successful source/fixture cleanup remain preserved.
+Actual empty
 148→149→148→149 and retained installer replays pass22699f7d, preserving all16
-old function OIDs/ACLs/attributes and original downgrade bytes. An owned347-table
-catalog capture is retained and its temporary DB removed. Later identity-cycle
-gates fail closed on a PL/pgSQL binding, then compact-versus-captured monetary
-policy compatibility. The physical proof's coherent policy repair is underway.
-No actual monetary financial/HTTPS/restore acceptance is claimed. Cb0b0's raw91
-reader and B's source-bound bridge pass synthetic/component gates only. Failed
-originals remain external under `m7-monetary-native-20261016-v1-private`.
-Security has13 collected cases. Actual financial, security, populated upgrade,
-HTTPS/restore and final CI remain required. The older checkpoints are historical.
+old function OIDs/ACLs/attributes and original downgrade bytes on that exact
+earlier source. A347-table catalog capture is retained with its temporary DB
+removed. Hosted02b3 CI preserves real legacy79 catalog and IT1 alias failures;
+Security preserves two Bandit B608 failures. The verifier template repair emits
+the exact same120510 SQL bytes. The RLS downgrade refusal guard and reviewed
+posted-snapshot reuse repair are integrated; their new native gates remain open.
+The strict legacy79/86 capture adapter and ordinary DDL-owner regression are
+under independent review. Actual raw91 chronological financial proof, monetary
+HTTPS/restore, security13 and final coherent CI remain required. Full frontend
+component proof1095 PASS/typecheck/build is bound to unchanged F9 UI bytes.
+No whole-M7, country, production or comparable-performance acceptance is claimed.
+All old failures remain external; the following checkpoints are historical.
 
 ## Current M7 integration and recovered workspaces (2026-10-16)
 

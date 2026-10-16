@@ -1,5 +1,17 @@
 # ReconForge Execution Decisions Log
 
+## Refusal-first migration and shared actual posting snapshots (2026-10-16)
+
+ADR0862 now makes new-relation runtime ACLs an explicit149 upgrade prerequisite;
+populated148 evidence does not imply unchanged-ACL compatibility. Downgrade must
+fail when FORCE RLS hides retained rows from a non-bypass DDL owner. Keep the
+transaction-local refusal guard and require an actual owner regression. Reuse
+only the actual snapshot/hash already checked by the common posted verifier;
+retain every owner-specific seal, scope, line, audit and outbox check. No cached
+transaction marker, supplied financial fact or relaxed timeout is introduced.
+The observed foreign final-refund30s failure justifies this bounded repair;
+single diagnostic11.507/15.082s samples establish no performance improvement.
+
 ## Fixed monetary originals and safe retained installers (2026-10-16)
 
 ADR0862 fixes new Stock F/L source ownership, current credit-adjusted AR,

@@ -145,6 +145,7 @@ END $cr149storage$;
 
 DOWNGRADE_PREFLIGHT_SQL = r"""
 DO $cr149storage$ BEGIN
+ PERFORM set_config('row_security','off',true);
  IF EXISTS(SELECT 1 FROM reconforge.stock_sales_orders WHERE source->>'schema_version'='stock-sales-monetary-order-v2')
  OR EXISTS(SELECT 1 FROM reconforge.stock_sales_commands WHERE request->>'protocol_version'='2' OR result->>'schema_version'='stock-sales-monetary-v2')
  OR EXISTS(SELECT 1 FROM reconforge.operational_fx_sources WHERE payload->>'schema_version'='operational-fx-stock-source-v2')

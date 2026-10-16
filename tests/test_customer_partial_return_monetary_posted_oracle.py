@@ -120,7 +120,7 @@ def original_tables(*, foreign: bool = True) -> dict[str, list[str]]:
         return value
 
     cogs = effect("cogs-effect", "cogs-entry", [("cogs", 12000, 0), ("inventory", 0, 12000)], "stock")
-    revenue = effect("revenue-effect", "revenue-entry", [("receivable", gross, 0), ("revenue", 0, local_net), ("tax", 0, local_tax)], "recognition")
+    revenue = effect("revenue-effect", "revenue-entry", [("receivable", gross, 0), ("revenue", 0, local_net), ("tax", 0, local_tax)], "FX:fx-source:recognize")
     consumed = {"tenant_id": "tenant", "id": "consumed", "workspace_id": "work", "valuation_line_id": "valuation-line", "cost_layer_id": "layer", "quantity_scaled": 10, "value_minor": 12000}
     typed_consumed = {"position": 1, "original_consumption_id": "consumed", "original_valuation_line_id": "valuation-line", "cost_layer_id": "layer", "quantity_scaled": 10, "value_minor": 12000}
     dimensions = {account: {} for account in (*roles.values(), "tax")}
@@ -255,7 +255,7 @@ def history_tables() -> tuple[dict[str, list[str]], list[dict[str, Any]]]:
                       payload=event, original_sequence=event["original_sequence"], previous_digest=event["previous_history_fingerprint"], event_digest=reader._digest(event))
         if event["kind"] == "Collection":
             record.update(stock_fx_plan_id="collection", partial_plan_id=None)
-            fx_plan = {"tenant_id": "tenant", "workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity", "id": "collection", "source_id": "fx-source", "kind": "settle", "phase": 2,
+            fx_plan = {"tenant_id": "tenant", "workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity", "id": "collection", "source_id": "fx-source", "kind": "settle", "phase": 2, "sequence": 1,
                        "payload": {"equation": {"monetary_event": event}}}
             tables["operational_fx_plans"].append(json.dumps(fx_plan, sort_keys=True))
             tables["operational_fx_plans"].sort()
@@ -365,7 +365,8 @@ def posted_tables() -> dict[str, list[str]]:
             number = plan_id.upper() + "-" + suffix
             entry_id = "collection-entry" if event["kind"] == "Collection" else "GLE-" + hashlib.sha256(("work|" + number).encode()).hexdigest()[:16]
             effect_id = "effect-" + str(event["sequence"]) + "-" + purpose
-            header = {**header_template, "id": entry_id, "entry_number": number, "external_reference": original_effect if inverse else plan_id,
+            reference = "FX:fx-source:settle" if event["kind"] == "Collection" else original_effect if inverse else plan_id
+            header = {**header_template, "id": entry_id, "entry_number": number, "external_reference": reference,
                       "source_type": "Generated" if inverse else "Manual", "reverses_posting_id": original_effect}
             lines = [{"line_number": n, "account_id": a, "description": "", "debit_minor": dr, "credit_minor": cr, "dimensions": {}}
                      for n, (a, dr, cr) in enumerate(vectors, 1)]
@@ -476,6 +477,83 @@ def test_balanced_finance_cannot_hide_a_wrong_physical_or_original_fifo_owner(ta
     assert len(reader.verify_posted_journal_rows(capture, original, events)) == 9
     with pytest.raises(reader.MonetaryRawRefusal):
         reader.verify_physical_rows(capture, original, events)
+
+
+def valuation_tables() -> dict[str, list[str]]:
+    raw = physical_tables()
+    tables = {name: [json.loads(text) for text in values] for name, values in raw.items()}
+    source = reader.verify_original_rows(original_capture(raw), source_order_id="stock")
+    events = literal_foreign_events(source)
+    for identifier, kind in (("unreal-gain", "Income"), ("unreal-loss", "Expense")):
+        tables["finance_accounts"].append({"tenant_id": "tenant", "workspace_id": "work", "id": identifier, "account_code": identifier.upper().replace("-", "_"), "account_type": kind})
+    equation: dict[str, Any] = {"foreign_before_minor": 10840, "historical_before_minor": 13550, "foreign_outstanding_minor": 560, "historical_outstanding_minor": 700,
+                               "valued_outstanding_minor": 840, "unrealized_fx_minor": 140, "amount_minor": 140,
+                               "closing_rate": {"rate": "1.50", "source": "Synthetic closing observation", "effective_at": "2026-10-15T12:00:00Z"},
+                               "unrealized_gain_account_code": "UNREAL_GAIN", "unrealized_loss_account_code": "UNREAL_LOSS",
+                               "monetary_history_basis": {"source_fingerprint": source.fingerprint, "history_version": 2, "history_fingerprint": reader._digest(events[1])},
+                               "lines": [{"account_code": "RECEIVABLE", "debit_minor": 140, "credit_minor": 0}, {"account_code": "UNREAL_GAIN", "debit_minor": 0, "credit_minor": 140}]}
+    template = tables["finance_posting_effects"][0]
+    original_plan: dict[str, Any] = {}
+    parent_effect: str | None = None
+    for sequence, inverse in ((2, False), (3, True)):
+        plan_id = "FX1-" + ("b" if inverse else "a") * 32
+        effect_id = "valuation-inverse-effect" if inverse else "valuation-effect"
+        number = plan_id.upper()
+        entry_id = "GLE-" + hashlib.sha256(("work|" + number).encode()).hexdigest()[:16]
+        observed = equation
+        if inverse:
+            observed = {"original_revaluation_id": original_plan["id"], "original_plan_digest": original_plan["payload"]["plan_digest"],
+                        "original_posting_effect_id": parent_effect, "original_equation_digest": reader._digest(equation), "unrealized_fx_minor": -140, "amount_minor": 140,
+                        "lines": [{"account_code": "RECEIVABLE", "debit_minor": 0, "credit_minor": 140}, {"account_code": "UNREAL_GAIN", "debit_minor": 140, "credit_minor": 0}]}
+        vectors = [("receivable", 0, 140), ("unreal-gain", 140, 0)] if inverse else [("receivable", 140, 0), ("unreal-gain", 0, 140)]
+        header = {**template["snapshot_json"]["entry"], "id": entry_id, "entry_number": number, "external_reference": parent_effect if inverse else "FX:fx-source:revalue",
+                  "source_type": "Generated" if inverse else "Manual", "reverses_posting_id": parent_effect if inverse else None}
+        lines = [{"line_number": n, "account_id": account, "description": "", "debit_minor": dr, "credit_minor": cr, "dimensions": {}} for n, (account, dr, cr) in enumerate(vectors, 1)]
+        snapshot = {"schema_version": "finance-entry-review-v1", "entry": header, "lines": lines}
+        digest = reader._digest(snapshot)
+        effect = {**template, "id": effect_id, "entry_id": entry_id, "source_kind": "Reversal" if inverse else "Manual", "source_id": parent_effect if inverse else entry_id,
+                  "reverses_effect_id": parent_effect if inverse else None, "snapshot_json": snapshot, "validation_digest": digest, "audit_event_id": effect_id + "-audit", "outbox_event_id": effect_id + "-outbox"}
+        tables["finance_posting_effects"].append(effect)
+        tables["finance_entries"].append({**{key: value for key, value in header.items() if key not in {"organization_id", "legal_entity_id"}}, "tenant_id": "tenant", "status": "Validated", "validator_actor_id": "checker",
+                                         "validation_digest": digest, "validation_contract_version": "finance-entry-review-v1", "total_debit_minor": 140, "total_credit_minor": 140})
+        for n, line in enumerate(lines, 1):
+            tables["finance_entry_lines"].append({key: value for key, value in {**line, "tenant_id": "tenant", "id": entry_id + "-" + str(n), "entry_id": entry_id, "currency_code": "USD"}.items() if key != "dimensions"})
+        tables["domain_audit_events"].append({"tenant_id": "tenant", "id": effect["audit_event_id"]})
+        tables["outbox_events"].append({"tenant_id": "tenant", "event_id": effect["outbox_event_id"]})
+        body = {"id": plan_id, "source_id": "fx-source", "schema_version": "operational-fx-plan-v2", "kind": "reverse_revaluation" if inverse else "revalue", "sequence": sequence,
+                "entry_id": entry_id, "equation": observed, "amount_minor": 140, "snapshot": snapshot, "preparer_actor_id": "maker", "posting_date": "2026-10-15"}
+        body["plan_digest"] = reader._digest(body)
+        body["validation_digest"] = digest
+        native = {"tenant_id": "tenant", "workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity", "id": plan_id, "source_id": "fx-source", "kind": body["kind"], "sequence": sequence, "phase": 2, "entry_id": entry_id, "payload": body}
+        tables["operational_fx_plans"].append(native)
+        tables["operational_fx_links"].append({"tenant_id": "tenant", "plan_id": plan_id, "posting_effect_id": effect_id, "receipt_id": None, "posted_actor_id": "poster"})
+        tables["operational_fx_reviews"].append({"tenant_id": "tenant", "plan_id": plan_id, "reviewer_actor_id": "checker"})
+        if not inverse:
+            original_plan, parent_effect = native, effect_id
+    return {name: sorted(json.dumps(row, sort_keys=True) for row in rows) for name, rows in tables.items()}
+
+
+def test_closing_valuation_uses_credit_adjusted_560_700_and_exact140_inverse() -> None:
+    capture = original_capture(valuation_tables())
+    original = reader.verify_original_rows(capture, source_order_id="stock")
+    events = reader.verify_history_rows(capture, original)
+    assert reader.verify_valuation_rows(capture, original, events) == (("valuation-effect", "valuation-inverse-effect"), None)
+    assert len(events) == 7  # Closing valuation does not invent monetary history.
+
+
+@pytest.mark.parametrize("field,bad", [("foreign_outstanding_minor", 7400), ("historical_outstanding_minor", 9250), ("valued_outstanding_minor", 841), ("unrealized_fx_minor", 141)])
+def test_resealed_valuation_must_use_actual_component_credit_adjusted_carrying(field: str, bad: int) -> None:
+    tables = valuation_tables()
+    plans = [json.loads(text) for text in tables["operational_fx_plans"]]
+    native = next(row for row in plans if row["kind"] == "revalue")
+    native["payload"]["equation"][field] = bad
+    native["payload"]["plan_digest"] = reader._digest({key: value for key, value in native["payload"].items() if key not in {"plan_digest", "validation_digest"}})
+    tables["operational_fx_plans"] = sorted(json.dumps(row, sort_keys=True) for row in plans)
+    capture = original_capture(tables)
+    original = reader.verify_original_rows(capture, source_order_id="stock")
+    events = reader.verify_history_rows(capture, original)
+    with pytest.raises(reader.MonetaryRawRefusal):
+        reader.verify_valuation_rows(capture, original, events)
 
 
 def test_inventory_is_exact_old79_plus_five_fx_and_seven_monetary_tables() -> None:

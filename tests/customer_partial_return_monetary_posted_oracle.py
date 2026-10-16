@@ -1,10 +1,11 @@
 """Strict raw contract for the new monetary original/posted-cycle evidence.
 
-This first layer preserves all 91 tables and exact PostgreSQL row texts. Passing
-it establishes a bounded, tenant-bound input contract, not source ownership,
-journal correctness, current authority, a posted cycle or native acceptance.
-The independent arithmetic reference and later native row joins remain separate
-from this decoder. No production code or older financial reader is imported.
+The decoder preserves all 91 tables and exact PostgreSQL row texts. Separate
+stages join original Stock/AR/FX/FIFO facts and independently derive history,
+posted journals and physical corrections. The decoder alone establishes only a
+bounded input contract. No complete-cycle/native acceptance marker is emitted;
+actual source custody, chronology, observations and restore remain required.
+No production code or older financial reader is imported.
 """
 from __future__ import annotations
 
@@ -447,8 +448,8 @@ def verify_original_rows(capture: Capture, *, source_order_id: str) -> OriginalF
     foreign, local = _policy(declared["monetary_policy"]), _policy(declared["functional_policy"])
     require((foreign["registry_version"], foreign["registry_digest"]) == (local["registry_version"], local["registry_digest"]))
     quantity, precision = _minor(stock["quantity_scaled"], positive=True), stock["quantity_precision"]
-    require(type(precision) is int and 0 <= precision <= 6 and source["quantity_precision"] == precision
-            and source["quantity_scaled"] == quantity and declared["quantity_scaled"] == quantity
+    require(type(precision) is int and 0 <= precision <= 6 and type(source["quantity_precision"]) is int and source["quantity_precision"] == precision
+            and _minor(source["quantity_scaled"], positive=True) == quantity and _minor(declared["quantity_scaled"], positive=True) == quantity
             and type(declared["quantity"]) is str and re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", declared["quantity"]) is not None
             and Fraction(declared["quantity"]) == Fraction(quantity, 10 ** precision))
     unit, discount = _minor(declared["unit_price_minor"], positive=True), _minor(declared["discount_basis_points"])
@@ -504,12 +505,12 @@ def verify_original_rows(capture: Capture, *, source_order_id: str) -> OriginalF
         gross += cut
         converted = _nearest(gross * exchange * scale)
         functional_cut = converted - functional_gross
-        require(retained == {**tax, "foreign_tax_minor": cut, "functional_tax_minor": functional_cut})
+        require(_digest(retained) == _digest({**tax, "foreign_tax_minor": cut, "functional_tax_minor": functional_cut}))
         components.append((cut, functional_cut))
         functional_gross = converted
     require((_minor(invoice["subtotal_minor"]), _minor(invoice["tax_minor"]), _minor(invoice["total_minor"])) == (net, gross - net, gross)
             and _minor(line["tax_minor"]) == gross - net
-            and [equation[key] for key in ("foreign_net_minor", "foreign_tax_minor", "foreign_gross_minor", "functional_net_minor", "functional_gross_minor")]
+            and [_minor(equation[key]) for key in ("foreign_net_minor", "foreign_tax_minor", "foreign_gross_minor", "functional_net_minor", "functional_gross_minor")]
             == [net, gross - net, gross, local_net, functional_gross])
     kinds = {"receivable": "Asset", "revenue": "Income", "cash": "Asset", "gain": "Income", "loss": "Expense", "refund_liability": "Liability", "inventory": "Asset", "cogs": "Expense"}
     require(type(roles) is dict and set(roles) == {key + "_account_id" for key in kinds} and len(set(roles.values())) == 8)
@@ -532,7 +533,8 @@ def verify_original_rows(capture: Capture, *, source_order_id: str) -> OriginalF
             and type(recognition["phase"]) is int and recognition["phase"] == 2)
     expected = [(roles["receivable_account_id"], functional_gross, 0)]
     expected.extend((part["account_id"], 0, part["functional_minor"]) for part in typed if part["functional_minor"])
-    revenue = _effect(capture, link["posting_effect_id"], scope=scope, policy=_full_policy(local), expected=expected, external_reference=recognition["id"])
+    revenue = _effect(capture, link["posting_effect_id"], scope=scope, policy=_full_policy(local), expected=expected,
+                      external_reference="FX:" + fx["id"] + ":recognize")
     require(revenue["entry_id"] == recognition["entry_id"])
     consumptions = source["consumptions"]
     require(type(consumptions) is list and 1 <= len(consumptions) <= 32
@@ -821,7 +823,7 @@ def verify_posted_journal_rows(capture: Capture, original: OriginalFinancial,
                 continue
             require(len(vectors) == 1)
             effect = _effect(capture, link["posting_effect_id"], scope=original.scope, policy=policy, expected=vectors[0][1],
-                             external_reference=plan["id"], expected_dimensions=dimensions)
+                             external_reference="FX:" + origin["fx_source_id"] + ":settle", expected_dimensions=dimensions)
             require(effect["entry_id"] == plan["entry_id"] and link["posted_actor_id"] == effect["posted_actor_id"])
             effect_ids.append(effect["id"])
             continue
@@ -929,3 +931,87 @@ def verify_physical_rows(capture: Capture, original: OriginalFinancial,
         require((_minor(layer["remaining_quantity_scaled"]), _minor(layer["remaining_value_minor"])) == (quantity, value)
                 and 0 <= quantity <= layer["original_quantity_scaled"] and 0 <= value <= layer["original_value_minor"])
     return tuple(movement_ids)
+
+
+def verify_valuation_rows(capture: Capture, original: OriginalFinancial,
+                          events: tuple[dict[str, Any], ...]) -> tuple[tuple[str, ...], str | None]:
+    """Independently value the witnessed credit-adjusted carrying, then invert."""
+    origin = _one(capture, "stock_sales_monetary_origins", id=original.origin_id)
+    plans = sorted((row for row in capture.rows("operational_fx_plans") if row["source_id"] == origin["fx_source_id"]),
+                   key=lambda row: _minor(row["sequence"]))
+    active: str | None = None
+    effects: list[str] = []
+    foreign, local = original.source["transaction_policy"], original.source["functional_policy"]
+    for sequence, native in enumerate(plans):
+        _scope(native, original.scope)
+        require(_minor(native["sequence"]) == sequence and type(native["phase"]) is int and native["phase"] == 2)
+        kind = native["kind"]
+        if kind in {"recognize", "settle"}:
+            require((kind == "recognize") == (sequence == 0))
+            continue
+        require(kind in {"revalue", "reverse_revaluation"} and foreign["currency_code"] != local["currency_code"])
+        body = native["payload"]
+        require(body["source_id"] == origin["fx_source_id"] and body["id"] == native["id"] and body["kind"] == kind
+                and body["sequence"] == sequence and body["entry_id"] == native["entry_id"]
+                and body["plan_digest"] == _digest({key: value for key, value in body.items() if key not in {"plan_digest", "validation_digest"}}))
+        equation = body["equation"]
+        if kind == "revalue":
+            require(active is None)
+            basis = equation["monetary_history_basis"]
+            require(type(basis) is dict and set(basis) == {"source_fingerprint", "history_version", "history_fingerprint"}
+                    and basis["source_fingerprint"] == original.fingerprint)
+            version = _minor(basis["history_version"])
+            require(version <= len(events))
+            prefix = list(events[:version])
+            state = prefix[-1]["after"] if prefix else _initial(original)
+            seed = {"contract": "customer-partial-return-monetary-original-v3", "source_fingerprint": original.fingerprint,
+                    "allocation_policy": "remaining-dual-currency-v1", "alignment_policy": "historical-carrying-component-alignment-v1"}
+            require(basis["history_fingerprint"] == _digest(prefix[-1] if prefix else seed))
+            outstanding, carrying = _minor(state["transaction_outstanding_minor"], positive=True), _minor(state["functional_outstanding_minor"])
+            valued = _nearest(Fraction(outstanding * 10 ** local["precision"], 10 ** foreign["precision"]) * _rate(equation["closing_rate"], day=body["posting_date"]))
+            delta = valued - carrying
+            require(delta != 0)
+            gain = _one(capture, "finance_accounts", workspace_id=original.scope["workspace_id"], account_code=equation["unrealized_gain_account_code"])
+            loss = _one(capture, "finance_accounts", workspace_id=original.scope["workspace_id"], account_code=equation["unrealized_loss_account_code"])
+            forbidden = {*original.roles.values(), *(part["account_id"] for part in original.source["components"])}
+            require(gain["id"] != loss["id"] and gain["account_type"] == "Income" and loss["account_type"] == "Expense"
+                    and gain["id"] not in forbidden and loss["id"] not in forbidden)
+            amount = abs(delta)
+            expected_lines = [(original.roles["receivable_account_id"], max(delta, 0), max(-delta, 0)),
+                              (gain["id"] if delta > 0 else loss["id"], max(-delta, 0), max(delta, 0))]
+            expected_equation = {"foreign_before_minor": sum(f for f, _ in original.components) - outstanding,
+                                 "historical_before_minor": sum(v for _, v in original.components) - carrying,
+                                 "foreign_outstanding_minor": outstanding, "historical_outstanding_minor": carrying,
+                                 "valued_outstanding_minor": valued, "unrealized_fx_minor": delta,
+                                 "closing_rate": equation["closing_rate"], "unrealized_gain_account_code": gain["account_code"],
+                                 "unrealized_loss_account_code": loss["account_code"], "amount_minor": amount,
+                                 "monetary_history_basis": basis,
+                                 "lines": [{"account_code": _one(capture, "finance_accounts", id=account)["account_code"], "debit_minor": dr, "credit_minor": cr} for account, dr, cr in expected_lines]}
+            require(_digest(equation) == _digest(expected_equation))
+            original_effect = None
+            active = native["id"]
+        else:
+            require(active is not None and equation["original_revaluation_id"] == active)
+            parent = _one(capture, "operational_fx_plans", id=active)
+            parent_link = _one(capture, "operational_fx_links", plan_id=active)
+            prior = parent["payload"]["equation"]
+            expected_equation = {"original_revaluation_id": active, "original_plan_digest": parent["payload"]["plan_digest"],
+                                 "original_posting_effect_id": parent_link["posting_effect_id"], "original_equation_digest": _digest(prior),
+                                 "unrealized_fx_minor": -prior["unrealized_fx_minor"], "amount_minor": prior["amount_minor"],
+                                 "lines": [{"account_code": line["account_code"], "debit_minor": line["credit_minor"], "credit_minor": line["debit_minor"]} for line in prior["lines"]]}
+            require(_digest(equation) == _digest(expected_equation) and _day(body["posting_date"]) >= _day(parent["payload"]["posting_date"]))
+            expected_lines = [(_one(capture, "finance_accounts", workspace_id=original.scope["workspace_id"], account_code=line["account_code"])["id"], line["debit_minor"], line["credit_minor"]) for line in expected_equation["lines"]]
+            original_effect = parent_link["posting_effect_id"]
+            active = None
+        link = _one(capture, "operational_fx_links", plan_id=native["id"])
+        effect = _effect(capture, link["posting_effect_id"], scope=original.scope, policy=_full_policy(local), expected=expected_lines,
+                         external_reference=original_effect if original_effect is not None else "FX:" + origin["fx_source_id"] + ":revalue",
+                         expected_dimensions={account: {} for account, _, _ in expected_lines})
+        review = _one(capture, "operational_fx_reviews", plan_id=native["id"])
+        entry = _one(capture, "finance_entries", id=native["entry_id"])
+        require(body["amount_minor"] == equation["amount_minor"] and effect["entry_id"] == native["entry_id"] and effect["reverses_effect_id"] == original_effect
+                and body["snapshot"] == effect["snapshot_json"] and body["validation_digest"] == effect["validation_digest"]
+                and entry["preparer_actor_id"] == body["preparer_actor_id"] and entry["validator_actor_id"] == review["reviewer_actor_id"]
+                and effect["posted_actor_id"] == link["posted_actor_id"])
+        effects.append(effect["id"])
+    return tuple(effects), active

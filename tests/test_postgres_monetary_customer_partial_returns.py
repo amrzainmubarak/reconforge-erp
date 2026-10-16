@@ -7,8 +7,11 @@ Independent raw91 qualification is separate from these business regressions.
 
 from __future__ import annotations
 
+import os
+import stat
 from dataclasses import replace
 from fractions import Fraction
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -315,7 +318,52 @@ def test_actual_zero_journal_return_cancel_and_exact_merchandise_inverse_keep_ph
 
 
 def test_actual_cr3_zero_cost_restoration_resale_return_and_it1_transfer_keep_original_lineage(receipt_database: tuple[str, str]) -> None:
+    from psycopg import sql
+
+    from tests.customer_partial_return_monetary_posted_oracle import TABLES
+
+    destination = os.environ.get("RECONFORGE_PARTIAL_REMAINDER_PRIVATE_OUTPUT")
+    private = Path(destination) if destination else None
+    if private is not None:
+        if not private.is_absolute() or not private.is_dir():
+            raise AssertionError("An explicit existing private custody directory is required.")
+        for candidate in (private, *private.parents):
+            if candidate.is_symlink() or getattr(candidate.lstat(), "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                raise AssertionError("Private custody ancestry must remain owned and unlinked.")
     runtime, original = _source(receipt_database, foreign=True, unit_price=10, original_rate="0.25", receipt_total_minor=1, fractional=True)
+    captures: list[dict[str, Any]] = []
+    source_ids = [original["id"]]
+
+    def capture(checkpoint: str) -> None:
+        if private is None:
+            return
+        with runtime.actor("poster") as (connection, _, _actor):
+            flags = connection.execute("SELECT rolsuper,rolbypassrls,rolcreatedb,rolcreaterole,rolreplication FROM pg_roles WHERE rolname=current_user").fetchone()
+            assert flags is not None and all(type(flags[name]) is bool and not flags[name]
+                for name in ("rolsuper", "rolbypassrls", "rolcreatedb", "rolcreaterole", "rolreplication"))
+            assert len(TABLES) == len(set(TABLES)) == 91
+            secured = connection.execute("""SELECT count(*) n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+                WHERE n.nspname='reconforge' AND c.relname=ANY(%s) AND c.relrowsecurity AND c.relforcerowsecurity
+                AND c.relowner<>current_user::regrole""", (list(TABLES),)).fetchone()
+            assert secured["n"] == 91
+            parents = connection.execute("SELECT id,customer_id,invoice_id FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=ANY(%s)",
+                                         (runtime.tenant, source_ids)).fetchall()
+            assert len(parents) == len(source_ids)
+            for table, column in (("ar_customers", "customer_id"), ("ar_invoices", "invoice_id"), ("stock_sales_orders", "id")):
+                for identifier in sorted({row[column] for row in parents if row[column] is not None}):
+                    held = connection.execute(sql.SQL("SELECT id FROM reconforge.{} WHERE tenant_id=%s AND id=%s FOR SHARE")
+                        .format(sql.Identifier(table)), (runtime.tenant, identifier)).fetchall()
+                    assert len(held) == 1
+            assert len(connection.execute("SELECT tenant_id FROM reconforge.domain_audit_ledger_state WHERE tenant_id=%s FOR SHARE", (runtime.tenant,)).fetchall()) == 1
+            tables = {}
+            for name in TABLES:
+                rows = connection.execute(sql.SQL("SELECT to_jsonb(r)::text original FROM reconforge.{} r WHERE tenant_id=%s ORDER BY to_jsonb(r)::text LIMIT 4097")
+                    .format(sql.Identifier(name)), (runtime.tenant,)).fetchall()
+                assert len(rows) <= 4096
+                tables[name] = [row["original"] for row in rows]
+            value = {"checkpoint": checkpoint, "tables": tables}
+            assert len(canonical_json(value).encode("utf-8")) <= 4 * 1024 * 1024
+            captures.append(value)
 
     def finance(effects: int, lines: int, turnover: int) -> None:
         with runtime.actor("poster") as (connection, _, _actor):
@@ -337,12 +385,14 @@ def test_actual_cr3_zero_cost_restoration_resale_return_and_it1_transfer_keep_or
             return consumed[0]["original"], history[0]["original"]
 
     finance(3, 6, 5)
+    capture("Original")
     old_return = _posted(runtime, _return(runtime, original, 1, 0))
     assert old_return["entries"] == [] and old_return["movement_id"]
     assert (old_return["monetary"]["transaction_credit_minor"], old_return["monetary"]["functional_credit_minor"],
             old_return["monetary"]["functional_cost_minor"]) == ("1", "0", "0")
     frozen_originals = retained_originals()
     finance(3, 6, 5)
+    capture("OldZeroReturn")
 
     # This is a new fixed monetary Stock source, not a synthetic zero journal
     # or a repricing of the original EUR commercial line.
@@ -372,6 +422,8 @@ def test_actual_cr3_zero_cost_restoration_resale_return_and_it1_transfer_keep_or
         "functional_net_minor", "functional_tax_minor", "functional_gross_minor")) == ("100", "14", "114", "100", "14", "114")
     finance(4, 9, 119)
     assert retained_originals() == frozen_originals
+    source_ids.append(resale["id"])
+    capture("ResaleInvoiced")
 
     with runtime.actor("maker") as (connection, _, actor):
         request = MonetaryPartialReturnPreparation(**SCOPE, organization_code="ORG", entity_code="ENTITY", source_order_id=resale["id"],
@@ -387,6 +439,7 @@ def test_actual_cr3_zero_cost_restoration_resale_return_and_it1_transfer_keep_or
         assert len({plan["preparer_actor_id"], plan["reviewer_actor_id"], plan["posted_actor_id"]}) == 3
     finance(5, 12, 233)
     assert retained_originals() == frozen_originals
+    capture("ResaleReturned")
 
     with runtime.actor("poster") as (connection, _, _actor):
         consumed = connection.execute("""SELECT c.* FROM reconforge.inventory_layer_consumptions c
@@ -439,6 +492,7 @@ def test_actual_cr3_zero_cost_restoration_resale_return_and_it1_transfer_keep_or
         assert transfer["source"]["cost_snapshot"] == pool
     transfer = transfer_phase(runtime, transfer_phase(runtime, transfer, "review", "checker"), "post", "poster")
     assert transfer["source"]["phase"] == 2
+    capture("TransferPosted")
     with runtime.actor("maker") as (connection, _, actor):
         assert transfer_physical(connection, runtime) == {"MAIN/STOCK": 0, "SECOND/STOCK": 1}
         native = transfer["source"]
@@ -447,6 +501,7 @@ def test_actual_cr3_zero_cost_restoration_resale_return_and_it1_transfer_keep_or
             command_id="cr3-zero-transfer:inverse", actor=actor)
     inverse = transfer_phase(runtime, transfer_phase(runtime, inverse, "review", "checker"), "post", "poster")
     assert inverse["source"]["phase"] == 2 and inverse["source"]["original"]["id"] == transfer["source"]["id"]
+    capture("TransferInversePosted")
     with runtime.actor("poster") as (connection, _, _actor):
         assert transfer_physical(connection, runtime) == {"MAIN/STOCK": 1, "SECOND/STOCK": 0}
         assert connection.execute("SELECT reconforge.it1_cost_snapshot(%s,'work','org','entity',%s) value", (runtime.tenant, item)).fetchone()["value"] == pool
@@ -472,3 +527,11 @@ def test_actual_cr3_zero_cost_restoration_resale_return_and_it1_transfer_keep_or
     assert _phase(runtime, inverse_plan, "cancel", "poster")["phase"] == 3
     assert retained_originals() == frozen_originals
     finance(5, 12, 233)
+    if private is not None:
+        assert [value["checkpoint"] for value in captures] == ["Original", "OldZeroReturn", "ResaleInvoiced", "ResaleReturned", "TransferPosted", "TransferInversePosted"]
+        packet = {"schema_version": "customer-partial-return-monetary-restituted-cycle-input-v1", "tenant_id": runtime.tenant,
+                  "original_source_order_id": original["id"], "resale_source_order_id": resale["id"], "captures": captures}
+        encoded = canonical_json(packet)
+        assert len(encoded.encode("utf-8")) <= 64 * 1024 * 1024
+        with (private / "native-monetary-restituted-cycle-original-v1.json").open("x", encoding="utf-8", newline="\n") as stream:
+            stream.write(encoded + "\n")

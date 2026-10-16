@@ -21,7 +21,15 @@ from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuth
 from reconforge.platform.common import current_server_principal, server_principal_context
 from tests.customer_partial_return_monetary_posted_oracle import TABLES
 from tests.test_postgres_inventory_receipt_posting import receipt_database
-from tests.test_postgres_monetary_customer_partial_returns import DAY, SCOPE, _phase, _posted, _return, _source
+from tests.test_postgres_monetary_customer_partial_returns import (
+    DAY,
+    SCOPE,
+    _collect,
+    _phase,
+    _posted,
+    _return,
+    _source,
+)
 
 _ = receipt_database
 
@@ -42,6 +50,25 @@ def _business_digest(runtime):
             for row in rows:
                 result.update(hashlib.sha256(row["original"].encode()).digest())
     return result.hexdigest()
+
+
+@pytest.mark.parametrize("table", ["ar_invoice_lines", "ar_receipt_allocations"])
+@pytest.mark.parametrize("wrong_scope", [False, True], ids=["original-scope", "hidden-origin-scope"])
+def test_actual_sql_cannot_delete_original_monetary_ar_children(receipt_database, table, wrong_scope):
+    runtime, order = _source(receipt_database, foreign=True)
+    order = _collect(runtime, order, 4000, rate="1.30", number="IMMUTABLE-AR-CHILD")
+    invoice_id = order["monetary_origin"]["invoice_id"]
+    before = _business_digest(runtime)
+    with pytest.raises(psycopg.errors.CheckViolation) as refused, runtime.actor("poster") as (connection, _, _actor):
+        assert connection.execute(sql.SQL("SELECT count(*) n FROM reconforge.{} WHERE tenant_id=%s AND invoice_id=%s")
+            .format(sql.Identifier(table)), (runtime.tenant, invoice_id)).fetchone()["n"] == 1
+        if wrong_scope:
+            connection.execute("SELECT set_config('app.workspace_id','wrong-workspace',true)")
+        connection.execute(sql.SQL("DELETE FROM reconforge.{} WHERE tenant_id=%s AND invoice_id=%s")
+            .format(sql.Identifier(table)), (runtime.tenant, invoice_id))
+        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    assert refused.value.diag.constraint_name == "customer_partial_return_monetary_owner"
+    assert _business_digest(runtime) == before
 
 
 @pytest.mark.parametrize("attack", ["origin-balance", "history-update", "phase-forgery", "fifo-forgery"])

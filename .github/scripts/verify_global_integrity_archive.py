@@ -54,9 +54,12 @@ MONETARY_REQUIRED = (
     'reconforge/infrastructure/postgres_monetary_stock_schema.py',
     'reconforge/infrastructure/postgres_monetary_stock_shared_hooks.py',
     'tests/customer_partial_return_monetary_browser.py',
+    'tests/customer_partial_return_monetary_browser_reader.py',
     'tests/customer_partial_return_monetary_oracle.py',
     'tests/customer_partial_return_monetary_posted_oracle.py',
     'tests/test_customer_partial_return_monetary_browser.py',
+    'tests/test_customer_partial_return_monetary_browser_reader.py',
+    'tests/test_ci_monetary_browser_contract.py',
     'tests/test_customer_partial_return_monetary_oracle.py',
     'tests/test_customer_partial_return_monetary_posted_oracle.py',
     'tests/test_monetary_api_transport.py',
@@ -75,6 +78,8 @@ MONETARY_REQUIRED = (
 )
 
 HELPERS = (
+    "customer_partial_return_monetary_browser", "customer_partial_return_monetary_browser_reader",
+    "customer_partial_return_monetary_posted_oracle", "customer_partial_return_monetary_oracle",
     "commercial_collections_browser", "erp_landed_cost_browser", "stock_commerce_browser_seed",
     "fixed_assets_browser_seed", "erp_procurement_enterprise_browser", "enterprise_financial_snapshot_browser",
     "customer_returns_browser", "customer_partial_returns_browser", "customer_partial_return_browser_reader",

@@ -20,8 +20,15 @@ failures. Security38842843086 retains two B608 failures; failed-log custody is
 Closed-template repair preserves generated SQL120510 bytes/SHA
 0e4a49313a65781a7be7d76ed9d921786afa3bab49870b9c8e3d9b59ff2a73b5;
 independent equality peer15dc853bc3946497a9e063f1ba19374f263ed58826a573b5565bd0145b990300.
-Actual current-head RLS-owner, fixed legacy/native, HTTPS/raw91/restore and final
-CI remain pending. F9 frontend1095 PASS/typecheck/build component closure
+Actual3d7bad5a roundtrip and ordinary DDL-owner refusal execute2PASS/0skip
+63.407s; independent nine-original closure61908f1340268b1426aaae16fb9dc059298a594d7c40315b9c7d69e3084c742f
+binds unchanged source, real savepoint DROP rollback,42501 refusal before DROP
+and successful owned cleanup. Actual598212e2 foreign cycle executes1PASS/0skip
+411.655s after the reviewed shared-snapshot repair, with unchanged source and
+successful child/dataset cleanup. The old509.042s final-refund failure remains
+separate; no controlled comparative speed claim follows. Fixed legacy/native,
+updated security17, HTTPS/raw91/restore and final coherent CI remain pending.
+F9 frontend1095 PASS/typecheck/build component closure
 2261612ae5880f7985c79bd85f594104dfb41ce0101d1add03baf14c1fac8ffd
 does not substitute for those gates. Independent diagnostic profile review
 b8779f7616e7f024af47cdb8f8de9435604950388fde6781970d091cd6246798

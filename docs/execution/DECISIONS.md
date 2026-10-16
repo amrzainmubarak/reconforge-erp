@@ -1,5 +1,18 @@
 # ReconForge Execution Decisions Log
 
+## Owned event admission and explicit bounded retries (2026-10-16)
+
+Skip unrelated audit/outbox object types before querying the monetary owner,
+checking OLD and NEW independently. Exempt outbox administrative updates only
+when the complete envelope is unchanged after removing the nine existing
+delivery fields; identity, payload, scope, lease floor and future fields remain
+protected by the existing immutable/fencing guards. Grant no financial reads to
+unrelated workers. Translate only SQLSTATE55P03 after the owner transaction or
+savepoint has rolled back into monetary_return_retryable_conflict. Preserve its
+original cause, all other errors and existing5s/10s bounds. The user explicitly
+retries the exact saved command/body after contention; never create a new key or
+automatically retry. Every retry repeats current authority admission.
+
 ## Refusal-first migration and shared actual posting snapshots (2026-10-16)
 
 ADR0862 now makes new-relation runtime ACLs an explicit149 upgrade prerequisite;

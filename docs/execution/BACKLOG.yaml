@@ -9,7 +9,7 @@ snapshot:
   evidence_base_commit: "37518287126e0f630e726592dda8cc981faa2a96"
   policy_change_commit: "the commit containing this file"
   published: true
-  publication: "Accepted bounded M7 v1/v2 remains Draft139/375 CI74/74 above preserved M6-M1/Wave5 dependencies. Draft140/02b3 publishes the still-open M7 monetary contract: fractional and identity native components pass, foreign final refund fails SQL30s; hosted Security and legacy failures preserved. Reviewed safe downgrade, exact-SQL template, IT1 alias and snapshot reuse repairs require fresh coherent acceptance. Raw91/HTTPS/restore and final CI remain required; no next domain or performance claim."
+  publication: "Accepted bounded M7 v1/v2 remains Draft139/375 CI74/74 above preserved M6-M1/Wave5 dependencies. Draft140 monetary contract stays OPEN. Original02b3 SQL30s, hosted Security/legacy/browser failures are preserved. Actual5982 foreign full cycle now passes1/0skip411.655s; actual3d7 empty roundtrip and non-bypass DDL-owner refusal pass2/0skip63.407s (peer61908f13). Closed catalog adapters, fixture ACL restoration, owned-event admission and rollback-before-explicit-retry repairs are integrated. Updated security17, raw91/HTTPS/restore and final coherent CI remain required; no next domain or comparable-performance claim."
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 

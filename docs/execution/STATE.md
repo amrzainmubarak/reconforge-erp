@@ -19,10 +19,16 @@ earlier source. A347-table catalog capture is retained with its temporary DB
 removed. Hosted02b3 CI preserves real legacy79 catalog and IT1 alias failures;
 Security preserves two Bandit B608 failures. The verifier template repair emits
 the exact same120510 SQL bytes. The RLS downgrade refusal guard and reviewed
-posted-snapshot reuse repair are integrated; their new native gates remain open.
-The strict legacy79/86 capture adapter and ordinary DDL-owner regression are
-under independent review. Actual raw91 chronological financial proof, monetary
-HTTPS/restore, security13 and final coherent CI remain required. Full frontend
+posted-snapshot reuse repair are integrated. Actual598212e2 foreign cycle now
+passes1/0skip411.655s, including the final refund within the unchanged30s actor
+statement limit; source, child-job cleanup and owned-database cleanup pass.
+Actual3d7bad5a empty roundtrip plus non-bypass DDL-owner refusal pass2/0skip
+63.407s, independently qualified at61908f13. The original509.042s failure stays
+retained; different pass/fail outcomes establish no comparable speed gain.
+Closed legacy79/86 and67/74 adapters, explicit fixture-only ACL restoration,
+owned-event callback admission and rollback-before-retryable-conflict are
+integrated. Actual raw91 chronological financial proof, monetary HTTPS/restore,
+updated17-case security and final coherent CI remain required. Full frontend
 component proof1095 PASS/typecheck/build is bound to unchanged F9 UI bytes.
 No whole-M7, country, production or comparable-performance acceptance is claimed.
 All old failures remain external; the following checkpoints are historical.

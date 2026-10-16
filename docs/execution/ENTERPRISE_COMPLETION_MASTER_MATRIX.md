@@ -11,7 +11,31 @@ No capability is removed because implementation or external acceptance is hard.
 **M7 final closure mode:** M7.7 and M7.9 remain `INCOMPLETE`; requirements are
 frozen.
 
-**Latest verified checkpoint (2026-10-16):** remote Draft140 is
+**Current closure checkpoint (2026-10-16):** remote Draft140 is
+`63f74155d8225812482a3c88da239cd545deb6bf`. Its five witnessed CI failures are
+four required HTTPS cases and one historical empty-rollback fixture. All eight
+monetary native shards, Docker, CodeQL and exact-head manual Security pass;
+whole-CI completion and M7 acceptance are not inferred. Actual native zero
+restitution/resale/return/forward-and-inverse transfer passes1/0skip248.031s;
+the19-retained-function149 migration passes5/0skip106.152s. Current independent
+raw91 qualification derives5effects/12lines/Dr=Cr233, identical-I/-I-O proofs
+and3 tamper refusals. Its retained launcher-path metadata error has a separate
+trusted correction; the original refusal and originals are not rewritten.
+The escaped-envelope repair passes snapshot reading, but identity/foreign now
+refuse the unchanged-business observation. A bounded actual all91-table check
+proves an authorized balance GET changes only version in the two quantity
+coordination rows; every other table remains byte-identical. This is a real
+read-side effect, not permission to omit those rows from evidence. Two exact
+read paths are being corrected to the existing full source proof; all command
+and physical-write live-capacity guards remain. The old fixture is corrected
+in local81519d64 and its same actual failing case passes1/0skip48.873s.
+Legacy zero/restituted HTTPS still exceed15s; a reviewed internal quantity-proof
+consolidation retains every original predicate and current-row reread while
+removing duplicate native callbacks within one invocation. Actual operating
+gates, final-source HTTPS/347-table restore and coherent CI remain required.
+No timeout, financial control, observer equality or frozen scope is relaxed.
+
+**Retained0d5 checkpoint:** remote Draft140 was
 `0d5a7d2a23be230ad54e9888c33940804aa54c1c`, whose final CI is **75 success /
 4 failure / 79 jobs**, with no skipped/cancelled job. The four failures are
 required HTTPS cases: legacy zero/restituted POST waits exceed15s without a

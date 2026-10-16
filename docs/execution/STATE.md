@@ -4,7 +4,21 @@
 
 The latest human directive freezes M7.7/M7.9; whole M7 stays OPEN. No optional
 scenario, new domain or nonblocking performance comparison is authorized
-in this closure round. Remote Draft140 is0d5a7d2a, with terminal CI75 success/
+in this closure round. Remote Draft140 is63f74155. Actual native zero-reuse
+passes1/0skip248.031s,19-function149 migration5/0skip106.152s, and independent
+raw91/I-I-O/3tampers derives5effects/12lines/Dr=Cr233. All eight monetary native
+CI shards, Docker, CodeQL and manual Security5/5 pass. Five witnessed CI failures
+remain negative: four HTTPS cases and the historical quantity-gate fixture.
+That same fixture passes1/0skip48.873s after local81519d64's test-only repair.
+The fixed envelope now passes snapshot reading. A separate actual all91 check
+proves balance GET changes only the two quantity-gate version fields; read-path
+source-proof correction is under independent review. Legacy zero/restituted
+still exceed the unchanged15s POST bound; reviewed same-invocation full-proof
+consolidation must pass actual operation gates. Final-source HTTPS/347-table
+restore and coherent CI remain OPEN. No observer equality or control is relaxed.
+Main and the two primary dirty file hashes remain unchanged.
+
+Retained predecessor0d5a7d2a has terminal CI75 success/
 4 failure/79 jobs; local reader-only integration is00c3ce16. Actual zero-reuse
 passes1/0skip403.578s, legacy compatibility3/0skip103.825s and migration149
 5/0skip101.405s, with source/cleanup verified. Independent corrected IRP reader

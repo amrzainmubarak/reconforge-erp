@@ -1,5 +1,34 @@
 # ReconForge Execution Evidence Log
 
+## M7 exact63 and bounded closure diagnoses — 2026-10-16
+
+- Actual native zero-reuse63f7-v10 passes1/0skip248.031s and current migration
+  five-63f7-v2 passes5/0skip106.152s; source/driver/Job/owned cleanup pass.
+  Independent `independent-zero-lineage-63f7-v10-raw91-v2-private/qualification-closure.json`
+  SHA`2ad363c817c11af8587b84a839c64457c79d56eac51450883e29efc3c19fc987`
+  binds6captures/91tables/5effects/12lines/Dr=Cr233, equal-I/-I-O and3 propagated
+  tamper refusals. Original launcher-path mismatch/refusal is retained and the
+  separate Root correction SHA`b74df8fd25ffcace74f713daef768a927c955777daeb2aa4ebf459ea66dbd197`
+  explicitly records the custody limit; no original was rewritten.
+- `actual-monetary-balance-diff-63f7-v1.json`
+  SHA`66d660378f3bccea8451d2e6ff44d4125c35b6b3d89e91f9196beca7562f4b08`
+  records actual authorized foreign-source balance GET: only version in the
+  same two inventory_quantity_claim_gates rows changes; all other90 tables
+  remain exact. Raw private SHA`275fc943fd4bbd82f6e6f4676e3ab5ca0bb1c7940544f21b07b05963fabfbbc2`.
+  Diagnostic1PASS/0skip39.984s; controller600/SQL30/source/driver/Job/cleanup pass.
+  This proves a read-side effect, not the hidden HTTPS predicate or M7 closure.
+- Root81519d64 integrates fixture-only95ac4f06. The same actual historical
+  customer rollback/populated-refusal case passes1/0skip48.873s under the
+  retained finite legacy controller. Its original63 failure remains negative.
+- Exact63 manual Security independent closure
+  `m7-monetary-hosted-63f74155-v1-private/manual-security-independent-v1-private/qualification-closure.json`
+  SHA`25df4394a8375e2e4ee67622c7d89c1c715eeb6bcf05afb5ab881a4edda0ae3a`:
+  official5/5,0Critical/High,9Medium/1Negligible; image/SBOM/Grype hashes match,
+  Gitleaks history/tree empty,65/68 package license metadata, no legal claim.
+  Four exact HTTPS first-cause artifacts remain negative; triage receipt
+  SHA`ef4596c22ff5845e7071664f096f4448b020505d1d8f8a59124823b7f8c5901c`.
+  These components do not close M7; current-head native/HTTPS/restore/CI gates remain.
+
 ## M7 actual0d5 closure components and retained final blockers — 2026-10-16
 
 - `m7-monetary-native-20261016-v1-private/root-native-closure-components-0d5a-v1.json`

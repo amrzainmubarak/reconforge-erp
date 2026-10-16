@@ -1855,8 +1855,17 @@ DECLARE changed JSONB;previous JSONB;current_row JSONB;tenant TEXT;stock_id TEXT
  member RECORD;origin_owner RECORD;candidate RECORD;reference TEXT;affected JSONB:='[]'::jsonb;
 BEGIN
  IF TG_OP<>'INSERT' THEN previous:=to_jsonb(OLD);END IF;IF TG_OP<>'DELETE' THEN current_row:=to_jsonb(NEW);END IF;
+ IF TG_TABLE_NAME='outbox_events' AND TG_OP='UPDATE'
+ AND(previous-ARRAY['status','attempt_count','available_at','claimed_at','claimed_by','published_at','last_error','dead_lettered_at','lease_generation'])
+  IS NOT DISTINCT FROM(current_row-ARRAY['status','attempt_count','available_at','claimed_at','claimed_by','published_at','last_error','dead_lettered_at','lease_generation']) THEN
+  RETURN NEW;
+ END IF;
  FOR changed IN SELECT previous WHERE previous IS NOT NULL UNION SELECT current_row WHERE current_row IS NOT NULL LOOP
   tenant:=changed->>'tenant_id';entry_id:=NULL;movement_id:=NULL;invoice_id:=NULL;plan_id:=NULL;origin_id:=NULL;stock_id:=NULL;
+  IF(TG_TABLE_NAME='domain_audit_events' AND COALESCE(changed->>'object_type','') NOT IN('operational_finance','stock_sales'))
+   OR(TG_TABLE_NAME='outbox_events' AND COALESCE(changed->>'aggregate_type','') NOT IN('operational_finance','stock_sales')) THEN
+   CONTINUE;
+  END IF;
   IF TG_TABLE_NAME='stock_sales_monetary_origins' THEN stock_id:=changed->>'stock_order_id';
   ELSIF TG_TABLE_NAME='customer_partial_return_monetary_plans' THEN origin_id:=changed->>'origin_id';
   ELSIF TG_TABLE_NAME IN('customer_partial_return_monetary_history','customer_partial_return_monetary_restorations') THEN origin_id:=changed->>'origin_id';

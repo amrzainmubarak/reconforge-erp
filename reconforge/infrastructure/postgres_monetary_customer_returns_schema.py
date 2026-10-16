@@ -1048,7 +1048,8 @@ BEGIN
   AND reconforge.fx_minor(v->'sequence') AND(v->>'sequence')::integer=plan_owner.sequence
   AND v->>'currency_code'=policy->>'currency_code' AND v->'currency_precision'=policy->'currency_precision',
   'The reused FX plan must preserve its exact fixed source, scope, identity and immutable financial seal');
- FOR prior IN SELECT * FROM reconforge.operational_fx_plans WHERE tenant_id=t AND source_id=source_owner.id AND sequence<plan_owner.sequence ORDER BY sequence LOOP
+ FOR prior IN SELECT previous_plan.* FROM reconforge.operational_fx_plans previous_plan
+  WHERE previous_plan.tenant_id=t AND previous_plan.source_id=source_owner.id AND previous_plan.sequence<plan_owner.sequence ORDER BY previous_plan.sequence LOOP
   PERFORM reconforge.monetary_return_assert(prior.sequence=sequence AND prior.phase=2 AND prior.payload->>'posting_date'<=v->>'posting_date',
    'Native FX operations require contiguous posted prior ownership');sequence:=sequence+1;
   IF prior.kind='revalue' THEN active:=prior.id;ELSIF prior.kind='reverse_revaluation' THEN active:=NULL;END IF;

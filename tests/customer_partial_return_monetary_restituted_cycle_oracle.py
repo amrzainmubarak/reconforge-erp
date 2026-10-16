@@ -297,6 +297,10 @@ def _stock_physical(capture: Any, original: Any) -> None:
     for operation in ("prepare-issue", "review-issue", "deliver"):
         event = _one(capture, "stock_sales_events", order_id=stock["id"], operation=operation)
         actors.append(_identity(event["actor_id"]))
+        audit = _one(capture, "domain_audit_events", id=event["audit_event_id"])
+        require(audit["actor_user_id"] == event["actor_id"] and audit["object_type"] == "stock_sales"
+                and audit["object_id"] == stock["id"] and audit["action"] == "stock_sales." + operation
+                and audit["metadata_json"] == {"source_digest": stock["source_digest"], "version": event["version"], "status": event["status"]})
     require(len(set(actors)) == 3 and actors[0] == stock["issue_plan"]["preparer_actor_id"]
             and actors[1] == stock["issue_reviewer_id"])
     document = _one(capture, "inventory_valuation_documents", id=stock["valuation_id"])
@@ -307,6 +311,12 @@ def _stock_physical(capture: Any, original: Any) -> None:
     reservations = [row for row in capture.rows("stock_sales_reservations") if row["order_id"] == stock["id"]]
     claims = [row for row in capture.rows("stock_sales_issue_claims") if row["order_id"] == stock["id"]]
     require(len(reservations) == len(claims) == 1 and reservations[0]["state"] == claims[0]["state"] == "Consumed")
+    _scope(reservations[0], original.scope)
+    _scope(claims[0], {key: value for key, value in original.scope.items() if key != "organization_id"})
+    require(reservations[0]["location_id"] == stock["location_id"] and reservations[0]["item_id"] == claims[0]["item_id"] == stock["item_id"]
+            and _minor(reservations[0]["quantity_scaled"], positive=True) == stock["quantity_scaled"]
+            and claims[0]["entry_id"] == stock["cogs_entry_id"] and claims[0]["plan_digest"] == _digest(stock["issue_plan"]))
+    _same(claims[0]["payload"], stock["issue_plan"])
 
 
 def _origin_memberships(capture: Any, original: Any) -> None:

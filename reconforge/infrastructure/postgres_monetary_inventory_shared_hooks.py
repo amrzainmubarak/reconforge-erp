@@ -110,29 +110,29 @@ _ZERO_LAYER = r""" IF NEW.remaining_quantity_scaled>0 AND NEW.remaining_value_mi
  AND reconforge.monetary_return_zero_layer_admitted(NEW.tenant_id,NEW.id,
   CASE WHEN TG_OP='INSERT' THEN NULL ELSE to_jsonb(OLD) END,to_jsonb(NEW),TG_OP) THEN RETURN NEW;END IF;
 """
-_ZERO_ACTIVE = r""" IF EXISTS(SELECT 1 FROM reconforge.inventory_valuation_documents document
- JOIN reconforge.inventory_movements movement ON(movement.tenant_id,movement.id)=(document.tenant_id,document.movement_id)
- JOIN reconforge.stock_sales_orders fixed ON(fixed.tenant_id,fixed.id)=(movement.tenant_id,movement.source_reference)
- WHERE document.tenant_id=t AND document.id=d AND fixed.source->>'schema_version'='stock-sales-monetary-order-v2') THEN
+_ZERO_ACTIVE = r""" IF EXISTS(SELECT 1 FROM reconforge.inventory_valuation_documents dispatch_document
+ JOIN reconforge.inventory_movements dispatch_movement ON(dispatch_movement.tenant_id,dispatch_movement.id)=(dispatch_document.tenant_id,dispatch_document.movement_id)
+ JOIN reconforge.stock_sales_orders dispatch_stock ON(dispatch_stock.tenant_id,dispatch_stock.id)=(dispatch_movement.tenant_id,dispatch_movement.source_reference)
+ WHERE dispatch_document.tenant_id=t AND dispatch_document.id=d AND dispatch_stock.source->>'schema_version'='stock-sales-monetary-order-v2') THEN
   RETURN reconforge.monetary_stock_zero_active(t,d);
  END IF;
 """
-_ZERO_PLAN = r""" IF EXISTS(SELECT 1 FROM reconforge.stock_sales_orders fixed WHERE fixed.tenant_id=t AND fixed.id=i
- AND fixed.source->>'schema_version'='stock-sales-monetary-order-v2') THEN
+_ZERO_PLAN = r""" IF EXISTS(SELECT 1 FROM reconforge.stock_sales_orders dispatch_stock WHERE dispatch_stock.tenant_id=t AND dispatch_stock.id=i
+ AND dispatch_stock.source->>'schema_version'='stock-sales-monetary-order-v2') THEN
   PERFORM reconforge.monetary_stock_zero_plan(t,i);RETURN;
  END IF;
 """
-_COST_SNAPSHOT = r""" IF EXISTS(SELECT 1 FROM reconforge.customer_partial_return_monetary_restorations restoration
- JOIN reconforge.inventory_cost_layers dispatch_layer ON(dispatch_layer.tenant_id,dispatch_layer.id)=(restoration.tenant_id,restoration.cost_layer_id)
+_COST_SNAPSHOT = r""" IF EXISTS(SELECT 1 FROM reconforge.customer_partial_return_monetary_restorations dispatch_restoration
+ JOIN reconforge.inventory_cost_layers dispatch_layer ON(dispatch_layer.tenant_id,dispatch_layer.id)=(dispatch_restoration.tenant_id,dispatch_restoration.cost_layer_id)
  WHERE dispatch_layer.tenant_id=t AND dispatch_layer.workspace_id=w AND dispatch_layer.legal_entity_id=e AND dispatch_layer.item_id=i)
  OR EXISTS(SELECT 1 FROM reconforge.inventory_cost_layers dispatch_layer
- JOIN reconforge.inventory_layer_consumptions consumed ON(consumed.tenant_id,consumed.cost_layer_id)=(dispatch_layer.tenant_id,dispatch_layer.id)
- JOIN reconforge.inventory_valuation_lines detail ON(detail.tenant_id,detail.id)=(consumed.tenant_id,consumed.valuation_line_id)
- JOIN reconforge.inventory_valuation_documents document ON(document.tenant_id,document.id)=(detail.tenant_id,detail.valuation_document_id)
- JOIN reconforge.inventory_movements movement ON(movement.tenant_id,movement.id)=(document.tenant_id,document.movement_id)
- JOIN reconforge.stock_sales_orders fixed ON(fixed.tenant_id,fixed.id)=(movement.tenant_id,movement.source_reference)
+ JOIN reconforge.inventory_layer_consumptions dispatch_consumed ON(dispatch_consumed.tenant_id,dispatch_consumed.cost_layer_id)=(dispatch_layer.tenant_id,dispatch_layer.id)
+ JOIN reconforge.inventory_valuation_lines dispatch_detail ON(dispatch_detail.tenant_id,dispatch_detail.id)=(dispatch_consumed.tenant_id,dispatch_consumed.valuation_line_id)
+ JOIN reconforge.inventory_valuation_documents dispatch_document ON(dispatch_document.tenant_id,dispatch_document.id)=(dispatch_detail.tenant_id,dispatch_detail.valuation_document_id)
+ JOIN reconforge.inventory_movements dispatch_movement ON(dispatch_movement.tenant_id,dispatch_movement.id)=(dispatch_document.tenant_id,dispatch_document.movement_id)
+ JOIN reconforge.stock_sales_orders dispatch_stock ON(dispatch_stock.tenant_id,dispatch_stock.id)=(dispatch_movement.tenant_id,dispatch_movement.source_reference)
  WHERE dispatch_layer.tenant_id=t AND dispatch_layer.workspace_id=w AND dispatch_layer.legal_entity_id=e AND dispatch_layer.item_id=i
- AND fixed.source->>'schema_version'='stock-sales-monetary-order-v2') THEN
+ AND dispatch_stock.source->>'schema_version'='stock-sales-monetary-order-v2') THEN
   RETURN reconforge.monetary_transfer_cost_snapshot(t,w,o,e,i);
  END IF;
 """
@@ -140,13 +140,13 @@ _COST_ORIGINALS = r""" IF cost->>'schema_version'='inventory-transfer-cost-v4' T
   PERFORM reconforge.monetary_transfer_cost_originals(t,cost);RETURN;
  END IF;
 """
-_STOCK_ORIGINS = r""" IF EXISTS(SELECT 1 FROM reconforge.inventory_movements movement
- JOIN reconforge.inventory_movement_lines detail ON(detail.tenant_id,detail.movement_id)=(movement.tenant_id,movement.id)
- WHERE(movement.tenant_id,movement.workspace_id,movement.organization_id,movement.legal_entity_id,detail.item_id)=(t,w,o,e,i)
- AND movement.source_type='Generated' AND(movement.movement_number~'^CR3(R)?-[A-F0-9]{32}$'
- OR EXISTS(SELECT 1 FROM reconforge.stock_sales_orders fixed
-  WHERE(fixed.tenant_id,fixed.id)=(movement.tenant_id,movement.source_reference)
-  AND fixed.source->>'schema_version'='stock-sales-monetary-order-v2'))) THEN
+_STOCK_ORIGINS = r""" IF EXISTS(SELECT 1 FROM reconforge.inventory_movements dispatch_movement
+ JOIN reconforge.inventory_movement_lines dispatch_detail ON(dispatch_detail.tenant_id,dispatch_detail.movement_id)=(dispatch_movement.tenant_id,dispatch_movement.id)
+ WHERE(dispatch_movement.tenant_id,dispatch_movement.workspace_id,dispatch_movement.organization_id,dispatch_movement.legal_entity_id,dispatch_detail.item_id)=(t,w,o,e,i)
+ AND dispatch_movement.source_type='Generated' AND(dispatch_movement.movement_number~'^CR3(R)?-[A-F0-9]{32}$'
+ OR EXISTS(SELECT 1 FROM reconforge.stock_sales_orders dispatch_stock
+  WHERE(dispatch_stock.tenant_id,dispatch_stock.id)=(dispatch_movement.tenant_id,dispatch_movement.source_reference)
+  AND dispatch_stock.source->>'schema_version'='stock-sales-monetary-order-v2'))) THEN
   PERFORM reconforge.monetary_transfer_stock_origins(t,w,o,e,i);RETURN;
  END IF;
 """

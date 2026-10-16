@@ -59,7 +59,7 @@ def test_native_physical_and_transfer_execution_profiles_are_closed_without_defa
     # This qualification covers emitted function membership/metadata only.
     # The mandatory native149 gate executes source/GL/FIFO/restore behavior.
     assertion = function_preflight(PHYSICAL_SQL + TRANSFER_SQL)
-    assert assertion.count("Monetary native execution contract drift") == 12
+    assert assertion.count("Monetary native execution contract drift") == 13
     with pytest.raises(ValueError, match="overloaded"):
         function_preflight(PHYSICAL_SQL + TRANSFER_SQL + PHYSICAL_SQL)
 

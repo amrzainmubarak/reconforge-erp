@@ -24,6 +24,13 @@ security6/cd3c pass; neither replaces coherent final acceptance. Published02b3
 CI is a retained terminal failure:56 success/23 failure/79 jobs. No optional
 scenario, additional milestone or comparative-performance work is added.
 
+Published15a1149d removes the witnessed stack cycle but the same required case
+fails127.946s at SQL30s. Its separate25.396s post diagnostic isolates repeated
+all-physical adoption during quantity backing; it is not cycle acceptance. The
+bounded quantity-only cost-proof correction and final native/HTTPS/CI gates
+remain open. Full transfer/Stock admission, financial source ownership and
+global quantity claims retain their existing checks.
+
 Next: Advanced Manufacturing & Supply Chain, then Global Finance, HCM/Payroll,
 CRM/Sales/Projects/Services, Enterprise Operations/Integration, Enterprise AI.
 The team moves together only after the current domain satisfies every applicable

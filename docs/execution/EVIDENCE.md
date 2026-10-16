@@ -2,6 +2,16 @@
 
 ## M7 final closure inputs — 2026-10-16
 
+Actual15a1149d same-case1FAIL/0skip127.946s records QueryCanceled at SQL30s;
+negative9a3003822d4e2f64b53c2cde238a56f603fbf694648309052feefce1eb6e268e
+binds unchanged4450 source files, executed launcher and successful owned cleanup.
+No raw6 packet exists. A separate actual first-post diagnostic at the same head
+passes25.3956597s: post1.4610361s, exact replay0.3130779s, deferred flush23.3611514s.
+PG counters show15 cost snapshots and15 all-physical adoption calls; nested
+inclusive timings must not be added. Driver retains actor30s/five false flags,
+source/cleanup true; diagnostic closureef4958390353bdb82d7a3be1d2d9c1d79886f9354cda441b1d7a35b625b13e2d
+does not establish native-cycle financial acceptance or a comparative speed gain.
+
 Actual3e834c3c same-case rerun1FAIL/0skip100.848s retains StatementTooComplex
 stack exhaustion. The exact path is FIFO→cost snapshot→monetary Stock source
 close→physical close→current capacity→FIFO; zero-consumption facts also reach

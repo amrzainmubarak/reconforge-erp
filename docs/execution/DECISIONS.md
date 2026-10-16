@@ -1,5 +1,19 @@
 # ReconForge Execution Decisions Log
 
+## Keep global FIFO quantity evidence within its cost boundary (2026-10-16)
+
+The actual15a1 SQL30s failure and retained function profile identify repeated
+whole-physical adoption inside the new zero-FIFO backing check. Generate one
+fixed quantity-only snapshot from the same complete cost factory, omitting only
+its final all-physical adoption call. Keep every receipt/layer/consumption,
+signed correction, actual effect, native zero admission and residual assertion;
+keep the existing full originals reader and exact current-layer equality. Its
+sole production caller is free-FIFO, never Stock/IT1 admission or stored source
+evidence. Actual transfer snapshots, current Stock/physical/quantity owners,
+claims, locks and30s bound stay unchanged. Native inventory becomes56 functions,
+42 trigger bindings and18 retained exact profiles. No cache, flag, new relation
+or permission grant is introduced. Re-execute the same required native case.
+
 ## Break the witnessed source-proof/current-capacity cycle (2026-10-16)
 
 The3e834c3c actual stack trace supersedes the incomplete static no-cycle review.

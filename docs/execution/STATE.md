@@ -29,6 +29,13 @@ every current command/deferred capacity check and all accounting/source guards.
 The source regression also catches the retained v3 zero-consumption fallback
 before DB execution. Preserve that full historical proof separately while its
 legacy current Stock close keeps capacity; retained-function custody becomes18.
+Actual15a1149d removes the stack cycle but fails1/0skip127.946s on the unchanged
+SQL30s bound during the first zero Return; negative9a300382 is retained. The
+bounded same-post diagnostic passes25.396s with cleanup/source unchanged, including
+23.361s deferred closure and15 repeated whole-physical cost adoption calls. This
+is not native-cycle acceptance or a speed comparison. Restrict the FIFO quantity
+proof to the exact existing cost factory minus only its final all-physical adoption
+call; keep full originals, every live owner/adoption guard and global claims.
 Required remaining work is to rerun that same zero-reuse case with its six original raw91 captures, independently
 verify them, run both actual monetary HTTPS/restore cycles, and accept the final
 coherent source through required native/legacy/CI/security/Docker/CodeQL gates.

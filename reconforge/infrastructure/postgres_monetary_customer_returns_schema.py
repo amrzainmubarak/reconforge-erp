@@ -1924,18 +1924,35 @@ BEGIN
     JOIN reconforge.operational_fx_links fx_link ON(fx_link.tenant_id,fx_link.plan_id)=(fx_plan.tenant_id,fx_plan.id)
     WHERE fixed.tenant_id=tenant AND fx_link.receipt_id=changed->>'id';
   ELSIF TG_TABLE_NAME IN('domain_audit_events','outbox_events') THEN
-   FOR candidate IN SELECT fixed.stock_order_id FROM reconforge.stock_sales_monetary_origins fixed
-    JOIN reconforge.customer_partial_return_monetary_plans partial_plan ON(partial_plan.tenant_id,partial_plan.origin_id)=(fixed.tenant_id,fixed.id)
-    JOIN reconforge.customer_partial_return_monetary_events event_owner ON(event_owner.tenant_id,event_owner.plan_id)=(partial_plan.tenant_id,partial_plan.id)
-    WHERE fixed.tenant_id=tenant AND(event_owner.audit_event_id=changed->>'id' OR event_owner.outbox_event_id=changed->>'event_id')
-    UNION SELECT fixed.stock_order_id FROM reconforge.stock_sales_monetary_origins fixed
-    JOIN reconforge.operational_fx_plans fx_plan ON(fx_plan.tenant_id,fx_plan.source_id)=(fixed.tenant_id,fixed.fx_source_id)
-    LEFT JOIN reconforge.operational_fx_reviews fx_review ON(fx_review.tenant_id,fx_review.plan_id)=(fx_plan.tenant_id,fx_plan.id)
-    LEFT JOIN reconforge.operational_fx_links fx_link ON(fx_link.tenant_id,fx_link.plan_id)=(fx_plan.tenant_id,fx_plan.id)
-    WHERE fixed.tenant_id=tenant AND(changed->>'id' IN(fx_plan.audit_event_id,fx_review.audit_event_id,fx_link.audit_event_id)
-     OR changed->>'event_id' IN(fx_plan.outbox_event_id,fx_review.outbox_event_id,fx_link.outbox_event_id)) LOOP
-    affected:=affected||jsonb_build_array(jsonb_build_array(tenant,candidate.stock_order_id));
-   END LOOP;
+   -- Classify each immutable envelope image before reading a financial owner.
+   -- Legacy operational plans share this event type but never own FX metadata.
+   reference:=CASE WHEN TG_TABLE_NAME='domain_audit_events' THEN changed->>'object_id' ELSE changed->>'aggregate_id' END;
+   IF(CASE WHEN TG_TABLE_NAME='domain_audit_events' THEN changed->>'object_type' ELSE changed->>'aggregate_type' END)='stock_sales' THEN
+    SELECT fixed.id INTO stock_id FROM reconforge.stock_sales_orders fixed
+     WHERE fixed.tenant_id=tenant AND fixed.id=reference AND fixed.source->>'schema_version'='stock-sales-monetary-order-v2';
+    IF stock_id IS NULL THEN CONTINUE;END IF;
+   ELSIF COALESCE(reference,'')~'^(CR3|CRF3|CR3R|CRF3R)-[0-9a-f]{32}$' THEN
+    FOR candidate IN SELECT fixed.stock_order_id FROM reconforge.stock_sales_monetary_origins fixed
+     JOIN reconforge.customer_partial_return_monetary_plans partial_plan ON(partial_plan.tenant_id,partial_plan.origin_id)=(fixed.tenant_id,fixed.id)
+     JOIN reconforge.customer_partial_return_monetary_events event_owner ON(event_owner.tenant_id,event_owner.plan_id)=(partial_plan.tenant_id,partial_plan.id)
+     WHERE fixed.tenant_id=tenant AND(event_owner.audit_event_id=changed->>'id' OR event_owner.outbox_event_id=changed->>'event_id') LOOP
+     affected:=affected||jsonb_build_array(jsonb_build_array(tenant,candidate.stock_order_id));
+    END LOOP;
+   ELSIF COALESCE(reference,'')~'^FX1-[0-9a-f]{32}$' THEN
+    IF NOT EXISTS(SELECT 1 FROM reconforge.operational_fx_plans native_plan
+     JOIN reconforge.operational_fx_sources native_source ON(native_source.tenant_id,native_source.id)=(native_plan.tenant_id,native_plan.source_id)
+     WHERE native_plan.tenant_id=tenant AND native_plan.id=reference
+     AND native_source.payload->>'schema_version'='operational-fx-stock-source-v2') THEN CONTINUE;END IF;
+    FOR candidate IN SELECT fixed.stock_order_id FROM reconforge.stock_sales_monetary_origins fixed
+     JOIN reconforge.operational_fx_plans fx_plan ON(fx_plan.tenant_id,fx_plan.source_id)=(fixed.tenant_id,fixed.fx_source_id)
+     LEFT JOIN reconforge.operational_fx_reviews fx_review ON(fx_review.tenant_id,fx_review.plan_id)=(fx_plan.tenant_id,fx_plan.id)
+     LEFT JOIN reconforge.operational_fx_links fx_link ON(fx_link.tenant_id,fx_link.plan_id)=(fx_plan.tenant_id,fx_plan.id)
+     WHERE fixed.tenant_id=tenant AND(changed->>'id' IN(fx_plan.audit_event_id,fx_review.audit_event_id,fx_link.audit_event_id)
+      OR changed->>'event_id' IN(fx_plan.outbox_event_id,fx_review.outbox_event_id,fx_link.outbox_event_id)) LOOP
+     affected:=affected||jsonb_build_array(jsonb_build_array(tenant,candidate.stock_order_id));
+    END LOOP;
+   ELSE CONTINUE;
+   END IF;
   END IF;
   IF plan_id IS NOT NULL THEN SELECT owned.origin_id INTO origin_id FROM reconforge.customer_partial_return_monetary_plans owned WHERE owned.tenant_id=tenant AND owned.id=plan_id;END IF;
   IF origin_id IS NOT NULL THEN SELECT owned.stock_order_id INTO stock_id FROM reconforge.stock_sales_monetary_origins owned WHERE owned.tenant_id=tenant AND owned.id=origin_id;END IF;

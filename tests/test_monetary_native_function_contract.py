@@ -163,6 +163,51 @@ def _function_bodies(*sources: str) -> dict[str, str]:
     return functions
 
 
+def test_event_callbacks_classify_each_image_before_any_private_owner_lookup() -> None:
+    body = _function_bodies(NATIVE_FUNCTION_SQL)["monetary_return_native_close"]
+    start = body.index("  ELSIF TG_TABLE_NAME IN('domain_audit_events','outbox_events') THEN")
+    event = body[start:body.index("  IF plan_id IS NOT NULL THEN", start)]
+    stock, correction = event.split("   ELSIF COALESCE(reference,'')~'^(CR3|CRF3|CR3R|CRF3R)-[0-9a-f]{32}$' THEN")
+    correction, fx = correction.split("   ELSIF COALESCE(reference,'')~'^FX1-[0-9a-f]{32}$' THEN")
+    assert "THEN changed->>'object_id' ELSE changed->>'aggregate_id' END" in stock
+    assert "THEN changed->>'object_type' ELSE changed->>'aggregate_type' END)='stock_sales'" in stock
+    assert set(re.findall(r"(?:FROM|JOIN) reconforge\.([a-z_]+)", stock)) == {"stock_sales_orders"}
+    assert "fixed.source->>'schema_version'='stock-sales-monetary-order-v2'" in stock
+    assert "IF stock_id IS NULL THEN CONTINUE;END IF;" in stock
+    assert "operational_fx_" not in correction
+    assert "event_owner.audit_event_id=changed->>'id' OR event_owner.outbox_event_id=changed->>'event_id'" in correction
+    fx_source = fx.index("native_source.payload->>'schema_version'='operational-fx-stock-source-v2'")
+    assert "native_plan.id=reference" in fx[:fx_source]
+    assert fx_source < fx.index("THEN CONTINUE;END IF;") < fx.index("FROM reconforge.stock_sales_monetary_origins")
+    assert "changed->>'id' IN(fx_plan.audit_event_id,fx_review.audit_event_id,fx_link.audit_event_id)" in fx
+    assert "changed->>'event_id' IN(fx_plan.outbox_event_id,fx_review.outbox_event_id,fx_link.outbox_event_id)" in fx
+    assert "   ELSE CONTINUE;\n   END IF;" in fx
+    assert "RETURN" not in event and "UNION" not in event
+    assert body.index("FOR changed IN SELECT previous WHERE previous IS NOT NULL UNION SELECT current_row WHERE current_row IS NOT NULL LOOP") < start
+    assert body.index("PERFORM reconforge.monetary_stock_close(candidate.tenant_id,candidate.stock_order_id);") > start
+
+
+def test_legacy_operational_ids_cannot_enter_the_new_event_owner_queries() -> None:
+    body = _function_bodies(NATIVE_FUNCTION_SQL)["monetary_return_native_close"]
+    event = body[body.index("  ELSIF TG_TABLE_NAME IN('domain_audit_events','outbox_events') THEN"):body.index("  IF plan_id IS NOT NULL THEN")]
+    expressions = re.findall(r"ELSIF COALESCE\(reference,''\)~'([^']+)' THEN", event)
+    assert len(expressions) == 2
+    for prefix in ("OPS1", "CR1", "CRF1", "CR1R", "CRF1R", "CR2", "CRF2", "CR2R", "CRF2R"):
+        assert not any(re.fullmatch(pattern, prefix + "-" + "a" * 32) for pattern in expressions)
+    for prefix in ("CR3", "CRF3", "CR3R", "CRF3R", "FX1"):
+        assert sum(re.fullmatch(pattern, prefix + "-" + "a" * 32) is not None for pattern in expressions) == 1
+
+
+def test_event_dispatch_change_preserves_finance_admission_and_delivery_envelope_guards() -> None:
+    body = _function_bodies(NATIVE_FUNCTION_SQL)["monetary_return_native_close"]
+    finance = body[body.index("  IF entry_id IS NOT NULL THEN"):body.index("  IF movement_id IS NOT NULL THEN")]
+    delivery = body[body.index(" IF TG_TABLE_NAME='outbox_events' AND TG_OP='UPDATE'"):body.index(" FOR changed IN")]
+    # B554 finance admission and the prior nine-field delivery guard are fixed
+    # byte contracts; neither surface belongs to this event-only repair.
+    assert hashlib.sha256(finance.encode()).hexdigest() == "095bb662dbbbeda979e8ecd2699c7d41f2c6fc6025b8622442308f473d55c0f4"
+    assert hashlib.sha256(delivery.encode()).hexdigest() == "59f12ca824c593c5d4fba312be2a6fb93fbc952a94d08024fc9c5ee52e004a8b"
+
+
 def _proof_call_graph(functions: dict[str, str]) -> dict[str, set[str]]:
     graph = {name: set(re.findall(r"reconforge\.([a-z_0-9]+)\(", body)) for name, body in functions.items()}
     # The original adoption loop sees only Posted movements. Its direct close

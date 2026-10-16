@@ -59,15 +59,29 @@ def test_actual_sql_cannot_delete_original_monetary_ar_children(receipt_database
     order = _collect(runtime, order, 4000, rate="1.30", number="IMMUTABLE-AR-CHILD")
     invoice_id = order["monetary_origin"]["invoice_id"]
     before = _business_digest(runtime)
-    with pytest.raises(psycopg.errors.CheckViolation) as refused, runtime.actor("poster") as (connection, _, _actor):
-        assert connection.execute(sql.SQL("SELECT count(*) n FROM reconforge.{} WHERE tenant_id=%s AND invoice_id=%s")
-            .format(sql.Identifier(table)), (runtime.tenant, invoice_id)).fetchone()["n"] == 1
+    selected = sql.SQL("SELECT count(*) n FROM reconforge.{} WHERE tenant_id=%s AND invoice_id=%s").format(sql.Identifier(table))
+    deleted = sql.SQL("DELETE FROM reconforge.{} WHERE tenant_id=%s AND invoice_id=%s RETURNING invoice_id").format(sql.Identifier(table))
+    with runtime.actor("poster") as (connection, _, _actor):
+        assert connection.execute(selected, (runtime.tenant, invoice_id)).fetchone()["n"] == 1
         if wrong_scope:
             connection.execute("SELECT set_config('app.workspace_id','wrong-workspace',true)")
-        connection.execute(sql.SQL("DELETE FROM reconforge.{} WHERE tenant_id=%s AND invoice_id=%s")
-            .format(sql.Identifier(table)), (runtime.tenant, invoice_id))
-        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
-    assert refused.value.diag.constraint_name == "customer_partial_return_monetary_owner"
+            assert connection.execute(selected, (runtime.tenant, invoice_id)).fetchone()["n"] == 0
+            cursor = connection.execute(deleted, (runtime.tenant, invoice_id))
+            assert cursor.fetchall() == [] and cursor.rowcount == 0
+            connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+        else:
+            expected = psycopg.errors.RaiseException if table == "ar_invoice_lines" else psycopg.errors.CheckViolation
+            with pytest.raises(expected) as refused, connection.transaction():
+                connection.execute(deleted, (runtime.tenant, invoice_id))
+                connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+            if table == "ar_invoice_lines":
+                assert refused.value.sqlstate == "P0001"
+                assert refused.value.diag.message_primary == "approved receivable invoice lines are immutable"
+                assert refused.value.diag.constraint_name is None
+            else:
+                assert refused.value.sqlstate == "23514"
+                assert refused.value.diag.constraint_name == "customer_partial_return_monetary_owner"
+            assert connection.execute(selected, (runtime.tenant, invoice_id)).fetchone()["n"] == 1
     assert _business_digest(runtime) == before
 
 

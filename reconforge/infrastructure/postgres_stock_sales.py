@@ -119,13 +119,17 @@ class PostgresStockSalesRepository:
             raise FinancePostingError("stock_sales_source_missing", "Source is absent from the selected scope.")
         return dict(row)
 
+    def _permission_union_allowed(self, operation: str, permissions: frozenset[str]) -> bool:
+        """Keep the legacy closed permission boundary for delegated owners."""
+        return (OPERATION_PERMISSIONS.get(operation, READ) <= permissions
+                <= frozenset().union(*OPERATION_PERMISSIONS.values()))
+
     def _authority_locks(self, actor: PostingActor, operation: str, *, permissions: frozenset[str] | None = None) -> None:
         """Pin current authority before source, command and quantity waits."""
         default = OPERATION_PERMISSIONS.get(operation, READ)
         if permissions is None:
             permissions = default
-        elif (type(permissions) is not frozenset or not default <= permissions
-                or not permissions <= frozenset().union(*OPERATION_PERMISSIONS.values())):
+        elif type(permissions) is not frozenset or not self._permission_union_allowed(operation, permissions):
             raise FinancePostingError("sales_actor_denied", "Only a complete finite owner permission union is supported.")
         for permission in sorted(permissions):
             actor.require(permission, mutation=operation != "read")

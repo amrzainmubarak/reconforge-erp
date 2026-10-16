@@ -17,6 +17,8 @@ from reconforge.infrastructure.postgres_monetary_customer_partial_returns import
 )
 from reconforge.infrastructure.postgres_monetary_stock_sales import (
     OPERATION_PERMISSIONS,
+    READ,
+    VALUATION_PERMISSIONS,
     PostgresMonetaryStockSalesRepository,
     _StockFxOwner,
     book_carrying,
@@ -333,3 +335,107 @@ def test_partial_public_reads_pin_parent_prefix_and_recheck_book_authority_after
         assert owner.balance("stock", origin, actor=actor) == {"id": "stock"}
     assert calls == ["plan authority" if operation == "get" else "scope authority",
                      ("book authority", 700), "customer/invoice/stock SHARE", ("book authority", 840), "close", "view"]
+
+
+class AuthorityCursor:
+    description: list[Any] = []
+
+    def __init__(self, rows: list[dict[str, Any]]) -> None:
+        self.rows = rows
+
+    def fetchone(self) -> dict[str, Any] | None:
+        return self.rows[0] if self.rows else None
+
+    def fetchall(self) -> list[dict[str, Any]]:
+        return self.rows
+
+
+def locked_authority_owner(monkeypatch: pytest.MonkeyPatch, *, missing_reverse: bool = False) -> tuple[Any, PostingActor, list[Any]]:
+    """Run the real authority lock path; only PostgreSQL transport is synthetic."""
+    import reconforge.infrastructure.postgres_stock_sales as legacy
+
+    owner = object.__new__(PostgresMonetaryStockSalesRepository)
+    owner.tenant_id = "tenant"
+    owner.scope = {"workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity"}
+    permissions = frozenset().union(*OPERATION_PERMISSIONS.values(), *VALUATION_PERMISSIONS.values())
+    actor = PostingActor("actor", "human", permissions, step_up_active=True)
+    calls: list[Any] = []
+    principal = SimpleNamespace(user=SimpleNamespace(id=actor.user_id, username=actor.username, disabled=False),
+                                principal_type="user", step_up_active=True)
+    monkeypatch.setattr(legacy, "current_server_principal", lambda: principal)
+    owner.authority = SimpleNamespace(_actor=lambda actual, permission, **kwargs: calls.append(("policy", permission, kwargs)))
+
+    def execute(query: str, args: Any) -> AuthorityCursor:
+        calls.append(("query", query, args))
+        if "identity_users" in query:
+            return AuthorityCursor([{"id": actor.user_id}])
+        if "identity_user_roles" in query:
+            return AuthorityCursor([{"permission_name": permission} for permission in args[2]
+                if not (missing_reverse and permission == "finance_core.reverse")])
+        if "SELECT DISTINCT scope_type" in query:
+            return AuthorityCursor([{"scope_type": "workspace"}, {"scope_type": "organization"}, {"scope_type": "legal_entity"}])
+        if "principal_scope_grants" in query:
+            return AuthorityCursor([{"scope_type": kind, "scope_id": owner.scope[field]} for kind, field in
+                (("workspace", "workspace_id"), ("organization", "organization_id"), ("legal_entity", "legal_entity_id"))])
+        return AuthorityCursor([])
+
+    owner.connection = SimpleNamespace(execute=execute)
+    return owner, actor, calls
+
+
+@pytest.mark.parametrize("permissions", [*VALUATION_PERMISSIONS.values(),
+    VALUATION_PERMISSIONS["review"] | {"finance_core.reverse"},
+    VALUATION_PERMISSIONS["post"] | {"finance_core.reverse"}])
+def test_declared_valuation_unions_reach_all_current_authority_locks(permissions: frozenset[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    owner, actor, calls = locked_authority_owner(monkeypatch)
+    owner._authority_locks(actor, "read", permissions=permissions)
+    assert {call[1] for call in calls if call[0] == "policy"} == permissions
+    queries = [call for call in calls if call[0] == "query"]
+    assert len(queries) == 4
+    assert all("FOR SHARE" in queries[index][1] for index in (0, 1, 3))
+    assert set(queries[1][2][2]) == permissions
+    assert "revoked_at IS NULL" in queries[3][1]
+
+
+def test_real_inverse_authority_reaches_source_and_actor_binding(monkeypatch: pytest.MonkeyPatch) -> None:
+    owner, actor, calls = locked_authority_owner(monkeypatch)
+    monkeypatch.setattr(owner, "_order", lambda identifier: {"id": identifier})
+    monkeypatch.setattr(owner, "_actor", lambda actual, operation, row: calls.append(("source authority", actual, operation, row)))
+    monkeypatch.setattr(owner, "_origin", lambda identifier: {"id": "origin"})
+    assert owner._valuation_authority("stock", actor, "prepare_reversal") == {"id": "origin"}
+    assert any(call[:2] == ("policy", "finance_core.reverse") for call in calls)
+    assert any(call[0] == "source authority" for call in calls)
+    assert any(call[0] == "query" and "app.stock_sales_actor_id" in call[1] for call in calls)
+
+
+def test_inverse_declared_union_does_not_bypass_persisted_reverse_permission(monkeypatch: pytest.MonkeyPatch) -> None:
+    owner, actor, calls = locked_authority_owner(monkeypatch, missing_reverse=True)
+    with pytest.raises(FinancePostingError) as caught:
+        owner._authority_locks(actor, "read", permissions=VALUATION_PERMISSIONS["prepare_reversal"])
+    assert caught.value.code == "sales_actor_denied"
+    assert any(call[:2] == ("policy", "finance_core.reverse") for call in calls)
+    assert len([call for call in calls if call[0] == "query"]) == 2
+
+
+@pytest.mark.parametrize(("operation", "permissions"), [
+    ("read", READ - {"sales.read"}), ("read", READ | {"unregistered.permission"}),
+    ("read", frozenset().union(*VALUATION_PERMISSIONS.values())),
+    ("read", set(VALUATION_PERMISSIONS["prepare_reversal"])),
+    ("read", tuple(VALUATION_PERMISSIONS["prepare_reversal"])),
+    ("reserve", VALUATION_PERMISSIONS["prepare_reversal"]),
+    ("unknown", READ), ("prepare-collection", LEGACY_PERMISSIONS["prepare-collection"]),
+])
+def test_unregistered_incomplete_wrong_type_or_cross_operation_union_refuses_before_queries(operation: str, permissions: Any) -> None:
+    owner = object.__new__(PostgresMonetaryStockSalesRepository)
+    with pytest.raises(FinancePostingError) as caught:
+        owner._authority_locks(PostingActor("actor", "human", frozenset()), operation, permissions=permissions)
+    assert caught.value.code == "sales_actor_denied"
+
+
+def test_legacy_union_boundary_remains_exact_and_never_admits_reverse() -> None:
+    owner = object.__new__(PostgresStockSalesRepository)
+    allowed = frozenset().union(*LEGACY_PERMISSIONS.values())
+    for operation in ["read", "unknown", *LEGACY_PERMISSIONS]:
+        default = LEGACY_PERMISSIONS.get(operation, READ)
+        for selected in (default, allowed, default - {"sales.read"}, default | {"finance_core.reverse"}):
+            assert owner._permission_union_allowed(operation, selected) == (default <= selected <= allowed)

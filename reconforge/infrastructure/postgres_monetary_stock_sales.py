@@ -107,7 +107,18 @@ class PostgresMonetaryStockSalesRepository(PostgresStockSalesRepository):
 
     def _authority_locks(self, actor: PostingActor, operation: str, *, permissions: frozenset[str] | None = None) -> None:
         selected = OPERATION_PERMISSIONS.get(operation, READ) if permissions is None else permissions
-        super()._authority_locks(actor, operation, permissions=frozenset(selected))
+        super()._authority_locks(actor, operation, permissions=selected)
+
+    def _permission_union_allowed(self, operation: str, permissions: frozenset[str]) -> bool:
+        # Valuation phases share the existing current-authority lock path, but
+        # only this fixed owner declares the additional reversal permission.
+        if operation == "read":
+            declared = {*VALUATION_PERMISSIONS.values(),
+                VALUATION_PERMISSIONS["review"] | {"finance_core.reverse"},
+                VALUATION_PERMISSIONS["post"] | {"finance_core.reverse"}}
+            return permissions in declared
+        return (operation in OPERATION_PERMISSIONS and permissions == OPERATION_PERMISSIONS[operation]
+                and super()._permission_union_allowed(operation, permissions))
 
     def _origin(self, identifier: str) -> dict[str, Any] | None:
         values = records(self.connection.execute("""SELECT * FROM reconforge.stock_sales_monetary_origins

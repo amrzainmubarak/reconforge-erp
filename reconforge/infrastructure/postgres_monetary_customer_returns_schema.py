@@ -663,7 +663,7 @@ BEGIN
   PERFORM reconforge.monetary_return_assert(effect_owner.id IS NOT NULL AND effect_owner.entry_id=member.entry_id
    AND effect_owner.snapshot_json=snapshot AND effect_owner.validation_digest=member.validation_digest
    AND effect_owner.posted_actor_id=poster AND poster<>reviewer AND poster<>entry_owner.preparer_actor_id
-   AND effect_owner.source_id=entry_owner.id AND effect_owner.purpose='operational_posting'
+   AND effect_owner.source_id=COALESCE(entry_owner.reverses_posting_id,entry_owner.id) AND effect_owner.purpose='operational_posting'
    AND effect_owner.source_kind=(CASE WHEN member.original_effect_id IS NULL THEN'Manual' ELSE'Reversal' END)
    AND effect_owner.validation_contract_version='finance-entry-review-v1' AND entry_owner.validation_contract_version='finance-entry-review-v1'
    AND(effect_owner.workspace_id,effect_owner.organization_id,effect_owner.legal_entity_id)=(origin_owner.workspace_id,origin_owner.organization_id,origin_owner.legal_entity_id)
@@ -1113,7 +1113,7 @@ BEGIN
    PERFORM reconforge.monetary_return_assert(effect_owner.id IS NOT NULL AND effect_owner.entry_id=entry_owner.id AND effect_owner.snapshot_json=snapshot
     AND effect_owner.validation_digest=v->>'validation_digest' AND effect_owner.posted_actor_id=link_owner.posted_actor_id
     AND(effect_owner.workspace_id,effect_owner.organization_id,effect_owner.legal_entity_id)=(origin_owner.workspace_id,origin_owner.organization_id,origin_owner.legal_entity_id)
-    AND effect_owner.source_id=entry_owner.id AND effect_owner.purpose='operational_posting'
+    AND effect_owner.source_id=COALESCE(entry_owner.reverses_posting_id,entry_owner.id) AND effect_owner.purpose='operational_posting'
     AND effect_owner.source_kind=(CASE WHEN inverse_effect IS NULL THEN'Manual' ELSE'Reversal' END)
     AND effect_owner.validation_contract_version='finance-entry-review-v1' AND entry_owner.validation_contract_version='finance-entry-review-v1'
     AND(effect_owner.currency_code,effect_owner.currency_precision,effect_owner.currency_rounding_policy,effect_owner.currency_registry_version,effect_owner.currency_registry_digest)=
@@ -1923,7 +1923,7 @@ BEGIN
  snapshot:=reconforge.fr_snapshot(t,i,o,e);
  PERFORM reconforge.monetary_return_assert(entry_owner.id IS NOT NULL AND effect_owner.id IS NOT NULL
   AND entry_owner.status='Validated' AND entry_owner.validation_contract_version='finance-entry-review-v1'
-  AND effect_owner.entry_id=i AND effect_owner.source_id=i AND effect_owner.purpose='operational_posting'
+  AND effect_owner.entry_id=i AND effect_owner.source_id=COALESCE(entry_owner.reverses_posting_id,i) AND effect_owner.purpose='operational_posting'
   AND effect_owner.source_kind=(CASE WHEN entry_owner.reverses_posting_id IS NULL THEN'Manual' ELSE'Reversal' END)
   AND effect_owner.reverses_effect_id IS NOT DISTINCT FROM entry_owner.reverses_posting_id
   AND effect_owner.validation_contract_version='finance-entry-review-v1' AND effect_owner.snapshot_json=snapshot

@@ -266,6 +266,15 @@ for _phase, _permission in (("prepare", "receivables.manage"), ("review", "recei
         frozenset(_CRITICAL_ROUTE_CONTRACTS[_route][1]), _permission
     )
 
+for _method, _path, _permissions in (
+    ("POST", "/valuations", ("finance_core.manage", "receivables.manage")),
+    ("POST", "/valuation-reversals", ("finance_core.manage", "finance_core.reverse", "receivables.manage")),
+    ("GET", "/fx-plans/{plan_id}", ()),
+    ("POST", "/fx-plans/{plan_id}/review", ("finance_core.validate", "receivables.approve")),
+    ("POST", "/fx-plans/{plan_id}/post", ("finance_core.post", "receivables.manage")),
+):
+    _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v2/stock-sales/orders/{identifier}" + _path)] = _erp_contract(_STOCK_READ, *_permissions)
+
 _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/stock-sales/commerce/orders")] = _erp_contract(_STOCK_READ, "sales.manage")
 for _operation, _permissions in {
     "submit": ("sales.manage",), "approve": ("sales.approve",),

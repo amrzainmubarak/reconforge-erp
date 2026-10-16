@@ -197,6 +197,16 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
         self.connection.execute("SELECT reconforge.monetary_stock_close(%s,%s)", (self.tenant_id, row["id"]))
         return stock._history(row["id"])
 
+    def _read_parents(self, origin: Mapping[str, Any]) -> dict[str, Any]:
+        stock = self._stock(origin)
+        row = stock._order(origin["stock_order_id"])
+        if row["source"]["schema_version"] != SOURCE_SCHEMA or row["invoice_id"] != origin["invoice_id"]:
+            _fail("source_changed", "The current Stock source and native invoice no longer identify this original.")
+        # Keep all subsequent VOLATILE closure/projection statements on one
+        # committed economic prefix, in the same order as monetary writers.
+        stock._parents(row, share=True)
+        return self._origin(origin["id"])
+
     def _command(self, context: Mapping[str, Any], operation: str, command: str, actor: PostingActor,
                  request: Mapping[str, Any]) -> tuple[str, dict[str, Any] | None]:
         text(command, "command_id", maximum=140)
@@ -516,7 +526,11 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
         with self.owner._transaction():
             self._plan_authority(plan_id, actor, "read")
             plan = self._row(plan_id)
-            self._actor(actor, "read", self._origin(plan["source_id"]))
+            origin = self._origin(plan["source_id"])
+            self._actor(actor, "read", origin)
+            origin = self._read_parents(origin)
+            self._row(plan_id)
+            self._actor(actor, "read", origin)
             self.connection.execute("SELECT reconforge.monetary_partial_close(%s,%s)", (self.tenant_id, plan_id))
             return self._view(plan_id)
 
@@ -535,6 +549,8 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
                                (self.tenant_id, source_order_id))
             if any(origin[key] != scope[key] for key in ("workspace_id", "organization_id", "legal_entity_id")):
                 _fail("scope_denied", "The native monetary source belongs to another current scope.")
+            self._actor(actor, "read", origin)
+            origin = self._read_parents(origin)
             self._actor(actor, "read", origin)
             self.connection.execute("SELECT reconforge.monetary_stock_close(%s,%s)", (self.tenant_id, source_order_id))
             return self._one("SELECT reconforge.monetary_partial_balance(%s,%s) value", (self.tenant_id, origin["id"]))["value"]

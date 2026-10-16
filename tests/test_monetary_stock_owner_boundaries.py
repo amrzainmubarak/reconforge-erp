@@ -4,6 +4,7 @@ These checks exercise adapters as a system under test. They do not replace
 native RLS, SQL closure, finance effects or migration evidence.
 """
 
+from contextlib import nullcontext
 from types import SimpleNamespace
 from typing import Any
 
@@ -11,6 +12,9 @@ import pytest
 
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor
 from reconforge.domain.monetary_customer_returns import MonetaryHistory, apply_monetary_event, prepare_monetary_event
+from reconforge.infrastructure.postgres_monetary_customer_partial_returns import (
+    PostgresMonetaryCustomerPartialReturnsRepository,
+)
 from reconforge.infrastructure.postgres_monetary_stock_sales import (
     OPERATION_PERMISSIONS,
     PostgresMonetaryStockSalesRepository,
@@ -281,3 +285,51 @@ def test_prospective_zero_issue_has_no_missing_native_evidence_or_boolean_cost_f
     with pytest.raises(FinancePostingError) as caught:
         owner._issue_authority(source_row(), cost, None, PostingActor("actor", "human", frozenset()))
     assert caught.value.code == "stock_monetary_evidence_invalid"
+
+
+@pytest.mark.parametrize("operation", ["get", "balance"])
+def test_partial_public_reads_pin_parent_prefix_and_recheck_book_authority_after_wait(
+    operation: str, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    owner = object.__new__(PostgresMonetaryCustomerPartialReturnsRepository)
+    owner.tenant_id = "tenant"
+    owner.owner = SimpleNamespace(_transaction=nullcontext)
+    calls: list[Any] = []
+    origin = {"id": "origin", "stock_order_id": "stock", "invoice_id": "invoice",
+              "workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity", "book": 700}
+    current_origin = {**origin, "book": 840}
+    row = {"source": {"schema_version": "stock-sales-monetary-order-v2"}, "invoice_id": "invoice"}
+    held = False
+
+    def parents(actual: Any, *, share: bool) -> None:
+        nonlocal held
+        assert actual is row and share
+        held = True
+        calls.append("customer/invoice/stock SHARE")
+
+    stock = SimpleNamespace(_order=lambda identifier: row, _parents=parents)
+    owner.connection = SimpleNamespace(execute=lambda query, args: calls.append("close"))
+    owner.legacy = SimpleNamespace(_authority_locks=lambda *args: calls.append("scope authority"))
+    monkeypatch.setattr(owner, "_plan_authority", lambda *args: calls.append("plan authority"))
+    monkeypatch.setattr(owner, "_stock", lambda actual: stock)
+    monkeypatch.setattr(owner, "_row", lambda identifier: {"source_id": "origin"})
+    monkeypatch.setattr(owner, "_origin", lambda identifier: current_origin if held else origin)
+    monkeypatch.setattr(owner, "_actor", lambda actor, name, actual: calls.append(("book authority", actual["book"])))
+    monkeypatch.setattr(owner, "_view", lambda identifier: calls.append("view") or {"id": identifier})
+
+    def one(query: str, args: Any) -> dict[str, Any]:
+        if "SELECT * FROM" in query:
+            assert not held
+            return origin
+        assert held
+        calls.append("view")
+        return {"value": {"id": "stock"}}
+
+    monkeypatch.setattr(owner, "_one", one)
+    actor = PostingActor("actor", "human", frozenset())
+    if operation == "get":
+        assert owner.get("plan", actor=actor) == {"id": "plan"}
+    else:
+        assert owner.balance("stock", origin, actor=actor) == {"id": "stock"}
+    assert calls == ["plan authority" if operation == "get" else "scope authority",
+                     ("book authority", 700), "customer/invoice/stock SHARE", ("book authority", 840), "close", "view"]

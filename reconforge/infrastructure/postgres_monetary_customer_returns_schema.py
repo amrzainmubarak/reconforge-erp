@@ -1848,7 +1848,7 @@ CREATE FUNCTION reconforge.monetary_return_native_close() RETURNS TRIGGER
  LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog AS $mr149$
 <<monetary_return_native_close>>
 DECLARE changed JSONB;previous JSONB;current_row JSONB;tenant TEXT;stock_id TEXT;entry_id TEXT;movement_id TEXT;invoice_id TEXT;plan_id TEXT;origin_id TEXT;
- member RECORD;origin_owner RECORD;candidate RECORD;reference TEXT;
+ member RECORD;origin_owner RECORD;candidate RECORD;reference TEXT;affected JSONB:='[]'::jsonb;
 BEGIN
  IF TG_OP<>'INSERT' THEN previous:=to_jsonb(OLD);END IF;IF TG_OP<>'DELETE' THEN current_row:=to_jsonb(NEW);END IF;
  FOR changed IN SELECT previous WHERE previous IS NOT NULL UNION SELECT current_row WHERE current_row IS NOT NULL LOOP
@@ -1893,7 +1893,7 @@ BEGIN
     LEFT JOIN reconforge.operational_fx_links fx_link ON(fx_link.tenant_id,fx_link.plan_id)=(fx_plan.tenant_id,fx_plan.id)
     WHERE fixed.tenant_id=tenant AND(changed->>'id' IN(fx_plan.audit_event_id,fx_review.audit_event_id,fx_link.audit_event_id)
      OR changed->>'event_id' IN(fx_plan.outbox_event_id,fx_review.outbox_event_id,fx_link.outbox_event_id)) LOOP
-    PERFORM reconforge.monetary_stock_close(tenant,candidate.stock_order_id);
+    affected:=affected||jsonb_build_array(jsonb_build_array(tenant,candidate.stock_order_id));
    END LOOP;
   END IF;
   IF plan_id IS NOT NULL THEN SELECT owned.origin_id INTO origin_id FROM reconforge.customer_partial_return_monetary_plans owned WHERE owned.tenant_id=tenant AND owned.id=plan_id;END IF;
@@ -1910,7 +1910,7 @@ BEGIN
     WHERE fixed.tenant_id=tenant AND fx_plan.entry_id=monetary_return_native_close.entry_id
     UNION SELECT fixed.id FROM reconforge.stock_sales_orders fixed WHERE fixed.tenant_id=tenant AND fixed.cogs_entry_id=monetary_return_native_close.entry_id
      AND fixed.source->>'schema_version'='stock-sales-monetary-order-v2' LOOP
-    PERFORM reconforge.monetary_stock_close(tenant,candidate.stock_order_id);
+    affected:=affected||jsonb_build_array(jsonb_build_array(tenant,candidate.stock_order_id));
    END LOOP;
    SELECT entry.external_reference INTO reference FROM reconforge.finance_entries entry WHERE entry.tenant_id=tenant AND entry.id=monetary_return_native_close.entry_id;
    IF reference~'^(CR3|CRF3|CR3R|CRF3R)-[0-9a-f]{32}$' THEN
@@ -1935,7 +1935,11 @@ BEGIN
      AND fixed.source->>'schema_version'='stock-sales-monetary-order-v2';
    END IF;
   END IF;
-  IF stock_id IS NOT NULL THEN PERFORM reconforge.monetary_stock_close(tenant,stock_id);END IF;
+  IF stock_id IS NOT NULL THEN affected:=affected||jsonb_build_array(jsonb_build_array(tenant,stock_id));END IF;
+ END LOOP;
+ FOR candidate IN SELECT DISTINCT (affected_item.value->>0) COLLATE "C" AS tenant_id,(affected_item.value->>1) COLLATE "C" AS stock_order_id
+  FROM jsonb_array_elements(affected) affected_item(value) ORDER BY 1,2 LOOP
+  PERFORM reconforge.monetary_stock_close(candidate.tenant_id,candidate.stock_order_id);
  END LOOP;
  IF TG_OP='DELETE' THEN RETURN OLD;END IF;RETURN NEW;
 END $mr149$;

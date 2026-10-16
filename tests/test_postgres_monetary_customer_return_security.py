@@ -10,7 +10,7 @@ import psycopg
 import pytest
 from psycopg import sql
 
-from reconforge.domain.finance_posting import FinancePostingError
+from reconforge.domain.finance_posting import FinancePostingError, canonical_json
 from reconforge.domain.monetary_customer_partial_return_commands import MonetaryPartialReturnPreparation
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository
@@ -113,30 +113,56 @@ def test_actual_direct_sql_cannot_forge_monetary_native_state(receipt_database, 
 def test_actual_concurrent_preparation_has_one_reserved_business_effect(receipt_database, same_command):
     runtime, order = _source(receipt_database, foreign=True)
     ready = Barrier(2)
+    request = MonetaryPartialReturnPreparation(**SCOPE, organization_code="ORG", entity_code="ENTITY", source_order_id=order["id"],
+        quantity_scaled=6, period_id="period", posting_date=DAY, reason="Exact competing monetary intent", expected_history_version=0)
+
+    def prepare_exact(connection, actor, number):
+        connection.execute("SET LOCAL lock_timeout='5s'")
+        connection.execute("SET LOCAL statement_timeout='10s'")
+        return PostgresMonetaryCustomerPartialReturnsRepository(connection, runtime.tenant).prepare(request,
+            command_id="concurrent-return" + ("" if same_command else str(number)), actor=actor)
 
     def contender(number):
         try:
             with runtime.actor("maker") as (connection, _, actor):
-                connection.execute("SET LOCAL lock_timeout='5s'")
-                connection.execute("SET LOCAL statement_timeout='10s'")
                 ready.wait(timeout=5)
-                request = MonetaryPartialReturnPreparation(**SCOPE, organization_code="ORG", entity_code="ENTITY", source_order_id=order["id"],
-                    quantity_scaled=6, period_id="period", posting_date=DAY, reason="Exact competing monetary intent", expected_history_version=0)
-                return PostgresMonetaryCustomerPartialReturnsRepository(connection, runtime.tenant).prepare(request,
-                    command_id="concurrent-return" + ("" if same_command else str(number)), actor=actor)
+                return number, "prepared", prepare_exact(connection, actor, number)
         except FinancePostingError as exc:
-            assert exc.code == "monetary_return_state_conflict"
-            return None
+            if exc.code == "monetary_return_retryable_conflict":
+                assert getattr(exc.__cause__, "sqlstate", None) == "55P03"
+                return number, "retryable-conflict", None
+            assert exc.code == "monetary_return_state_conflict" and not same_command
+            return number, "state-conflict", None
 
     with ThreadPoolExecutor(max_workers=2) as workers:
         outcomes = list(workers.map(contender, (1, 2)))
+    prepared = [(number, value) for number, kind, value in outcomes if kind == "prepared"]
+    assert prepared
+    winner_number, saved_ack = prepared[0]
     if same_command:
-        assert outcomes[0] is not None and outcomes[0] == outcomes[1]
+        assert all(canonical_json(value) == canonical_json(saved_ack) for _number, value in prepared)
     else:
-        assert sum(value is not None for value in outcomes) == 1
+        assert len(prepared) == 1
+    # Both contenders are terminal. These are explicit, fresh-transaction
+    # retries of identical intent and keys, never an automatic financial retry.
+    before_retry = _business_digest(runtime)
+    for number in (1, 2):
+        with runtime.actor("maker") as (connection, _, actor):
+            if same_command or number == winner_number:
+                assert canonical_json(prepare_exact(connection, actor, number)) == canonical_json(saved_ack)
+            else:
+                with pytest.raises(FinancePostingError) as refused, connection.transaction():
+                    prepare_exact(connection, actor, number)
+                assert refused.value.code == "monetary_return_state_conflict"
+        assert _business_digest(runtime) == before_retry
     with runtime.actor("maker") as (connection, _, _actor):
         assert connection.execute("SELECT count(*) n FROM reconforge.customer_partial_return_monetary_plans WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
+        assert connection.execute("SELECT count(*) n FROM reconforge.customer_partial_return_monetary_commands WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
+        assert connection.execute("SELECT count(*) n FROM reconforge.customer_partial_return_monetary_events WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
         assert connection.execute("SELECT count(*) n FROM reconforge.customer_partial_return_monetary_history WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
+        assert connection.execute("""SELECT count(*) n FROM reconforge.finance_posting_effects effect
+            JOIN reconforge.customer_partial_return_monetary_entries entry ON(entry.tenant_id,entry.entry_id)=(effect.tenant_id,effect.entry_id)
+            WHERE entry.tenant_id=%s""", (runtime.tenant,)).fetchone()["n"] == 0
 
 
 def test_actual_failure_after_first_real_gl_effect_rolls_back_and_exact_retry_succeeds(receipt_database, monkeypatch):

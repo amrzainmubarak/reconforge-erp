@@ -30,9 +30,9 @@ BEGIN
  SELECT * INTO origin FROM reconforge.stock_sales_monetary_origins WHERE tenant_id=t AND id=owned.origin_id;
  SELECT * INTO stock FROM reconforge.stock_sales_orders WHERE tenant_id=t AND id=origin.stock_order_id;
  SELECT * INTO post_event FROM reconforge.customer_partial_return_monetary_events WHERE tenant_id=t AND plan_id=i AND operation='post';
- SELECT * INTO history_owner FROM reconforge.customer_partial_return_monetary_history WHERE tenant_id=t AND origin_id=origin.id AND plan_id=i;
+ SELECT * INTO history_owner FROM reconforge.customer_partial_return_monetary_history WHERE tenant_id=t AND origin_id=origin.id AND partial_plan_id=i;
  PERFORM reconforge.it1_assert(restoration.plan_id IS NOT NULL AND owned.id IS NOT NULL AND origin.id IS NOT NULL
-  AND stock.id IS NOT NULL AND post_event.plan_id IS NOT NULL AND history_owner.plan_id IS NOT NULL
+  AND stock.id IS NOT NULL AND post_event.plan_id IS NOT NULL AND history_owner.partial_plan_id IS NOT NULL
   AND owned.phase=2 AND owned.operation IN('Return','ReverseReturn')
   AND(restoration.origin_id,restoration.workspace_id,restoration.organization_id,restoration.legal_entity_id)
    =(origin.id,origin.workspace_id,origin.organization_id,origin.legal_entity_id)
@@ -84,7 +84,7 @@ _CAPTURE_CORRECTIONS = r"""  corrections:='[]'::jsonb;monetary_corrections:='[]'
    SELECT COALESCE(jsonb_agg(reconforge.monetary_transfer_correction(t,r.plan_id,r.position)
     ORDER BY r.origin_id COLLATE "C",history_owner.sequence,r.position),'[]'::jsonb) INTO monetary_corrections
     FROM reconforge.customer_partial_return_monetary_restorations r JOIN reconforge.customer_partial_return_monetary_history history_owner
-    ON(history_owner.tenant_id,history_owner.plan_id)=(r.tenant_id,r.plan_id) WHERE r.tenant_id=t AND r.cost_layer_id=layer.id;
+    ON(history_owner.tenant_id,history_owner.partial_plan_id)=(r.tenant_id,r.plan_id) WHERE r.tenant_id=t AND r.cost_layer_id=layer.id;
    PERFORM reconforge.it1_assert(jsonb_array_length(corrections)+jsonb_array_length(monetary_corrections)=population
     AND octet_length((corrections||monetary_corrections)::text)<=1048576,'Every visible correction requires exact retained history ownership');
    correction_count:=correction_count+population;

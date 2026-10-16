@@ -1,5 +1,19 @@
 # ReconForge Execution Decisions Log
 
+## Break the witnessed source-proof/current-capacity cycle (2026-10-16)
+
+The3e834c3c actual stack trace supersedes the incomplete static no-cycle review.
+Keep the complete canonical Stock, event/command/audit, FX, history, AR, physical
+and finance source proof in an explicit leaf source-close function. Transfer
+originals and zero-consumption facts use source proof without live capacity.
+The existing public Stock close retains its signature and executes complete
+source proof followed by the exact original reservation-presence capacity check,
+including pre-origin and consumed/released reservation stages. Every current
+command and deferred owner still uses the live close. No caller flag, GUC,
+cache, relaxed RLS, stack increase or timeout increase may cut the cycle.
+This one required source helper makes the native function inventory54; retained
+original functions17, trigger bindings42 and raw capture tables91 stay fixed.
+
 ## Preserve global quantity controls for zero-cost restitution (2026-10-16)
 
 The actual6aeffb13 IT1 capacity refusal is a required M7 reuse/transfer defect,

@@ -15,8 +15,10 @@ both real monetary HTTPS/restore cycles, and final exact-head mandatory CI.
 Actual0d2a zero-reuse90.431s fails at a dispatch alias/RECORD collision; its
 limited alias repair succeeds on that path in6aeffb13, whose194.168s attempt
 instead refuses IT1 capacity because the shared quantity sum excludes genuine
-restored Q1/V0 stock. Both failures are retained; the bounded shared eligibility
-repair and same-case six-stage proof remain required. Migration5/fb5c and selected
+restored Q1/V0 stock. The subsequent3e834c3c attempt fails100.848s on a witnessed
+source-proof/current-capacity recursion; its source peer conclusion is withdrawn.
+All failures are retained. Source-proof separation, the same-case six-stage proof
+and17-function migration roundtrip remain required. Migration5/fb5c and selected
 security6/cd3c pass; neither replaces coherent final acceptance. Published02b3
 CI is a retained terminal failure:56 success/23 failure/79 jobs. No optional
 scenario, additional milestone or comparative-performance work is added.

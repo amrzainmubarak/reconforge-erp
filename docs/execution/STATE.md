@@ -20,6 +20,12 @@ are retained; no complete six-stage raw91 packet exists. The bounded repair must
 preserve original units, positive-layer sums and all unreleased global claims,
 admitting zero-value quantity only through current native restitution proof.
 The migration custody inventory now includes that17th retained function.
+The next actual3e834c3c attempt fails1/0skip100.848s with stack-depth exhaustion:
+FIFO proof reaches Stock live capacity through both transfer-source closure and
+zero-consumption facts. Source, saved executed launcher and owned cleanup remain
+unchanged; no raw packet exists. The source review's earlier no-cycle judgement
+is withdrawn. Separate full historical source proof from live capacity, retaining
+every current command/deferred capacity check and all accounting/source guards.
 Required remaining work is to rerun that same zero-reuse case with its six original raw91 captures, independently
 verify them, run both actual monetary HTTPS/restore cycles, and accept the final
 coherent source through required native/legacy/CI/security/Docker/CodeQL gates.

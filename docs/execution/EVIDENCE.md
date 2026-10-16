@@ -2,6 +2,16 @@
 
 ## M7 final closure inputs — 2026-10-16
 
+Actual3e834c3c same-case rerun1FAIL/0skip100.848s retains StatementTooComplex
+stack exhaustion. The exact path is FIFO→cost snapshot→monetary Stock source
+close→physical close→current capacity→FIFO; zero-consumption facts also reach
+physical close. The earlier source peer's no-cycle conclusion is withdrawn.
+Native controller reports source unchanged, child exit1, empty Job Object and
+successful owned cleanup. The launcher was written/hashed before executing its
+exact saved file; its before/after hashes match and exit1 is retained at
+launcher-after SHA6bc07da598a309784b9aca3ca7a82b1638ecd2f069d0dd6fe682f103608d1cdc.
+No actual six-stage packet was produced; the independent qualifier was not run.
+
 Actual6aeffb13 zero-reuse1FAIL/0skip194.168s reaches IT1 review and refuses
 inventory_transfer_capacity_conflict: the shared FIFO quantity sum excludes
 the actual Q1/V0 restored layer. Owned cleanup and unchanged source pass;

@@ -13,7 +13,10 @@ frozen. The finite blockers are zero-restored-stock reuse/transfer and its
 independent six-stage raw91 proof, corrected legacy/least-privilege compatibility,
 both real monetary HTTPS/restore cycles, and final exact-head mandatory CI.
 Actual0d2a zero-reuse90.431s fails at a dispatch alias/RECORD collision; its
-limited alias repair awaits the same affected case. Migration5/fb5c and selected
+limited alias repair succeeds on that path in6aeffb13, whose194.168s attempt
+instead refuses IT1 capacity because the shared quantity sum excludes genuine
+restored Q1/V0 stock. Both failures are retained; the bounded shared eligibility
+repair and same-case six-stage proof remain required. Migration5/fb5c and selected
 security6/cd3c pass; neither replaces coherent final acceptance. Published02b3
 CI is a retained terminal failure:56 success/23 failure/79 jobs. No optional
 scenario, additional milestone or comparative-performance work is added.

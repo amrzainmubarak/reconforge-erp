@@ -13,7 +13,14 @@ Native5 migration cases pass221.677s onfb5c and selected6 native security cases
 pass395.101s oncd3c. Actual0d2a zero-reuse fails90.431s at a new dispatch alias
 named document shadowing an original RECORD; its failure is not reclassified.
 The limited dispatch_* alias repair is integrated. Required remaining work:
-rerun that same zero-reuse case with its six original raw91 captures, independently
+Actual6aeffb13 rerun fails1/0skip194.168s at IT1 review: the authoritative
+shared FIFO quantity sum excludes genuine Q1/V0 restored stock. Its clean source,
+owned cleanup and negative closure039c6f1752233dc433f621c3ea6fcf37cf05eef5bad2c7f912ec1b7bc8173361
+are retained; no complete six-stage raw91 packet exists. The bounded repair must
+preserve original units, positive-layer sums and all unreleased global claims,
+admitting zero-value quantity only through current native restitution proof.
+The migration custody inventory now includes that17th retained function.
+Required remaining work is to rerun that same zero-reuse case with its six original raw91 captures, independently
 verify them, run both actual monetary HTTPS/restore cycles, and accept the final
 coherent source through required native/legacy/CI/security/Docker/CodeQL gates.
 No external architectural decision currently blocks these finite repairs.

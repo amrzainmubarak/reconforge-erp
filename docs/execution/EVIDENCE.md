@@ -2,6 +2,14 @@
 
 ## M7 final closure inputs — 2026-10-16
 
+Actual6aeffb13 zero-reuse1FAIL/0skip194.168s reaches IT1 review and refuses
+inventory_transfer_capacity_conflict: the shared FIFO quantity sum excludes
+the actual Q1/V0 restored layer. Owned cleanup and unchanged source pass;
+negative closure039c6f1752233dc433f621c3ea6fcf37cf05eef5bad2c7f912ec1b7bc8173361
+retains the original failure. No complete raw91 packet or independent financial
+acceptance follows. Four-ref external bundle79bc787ada2c2e51fcda2447ef9150832a9035393eaab6eb112a52d00278faeb
+verifies at6aeffb13; all earlier negative originals remain preserved.
+
 Actualfb5c full migration file5PASS/0skip221.677s and actualcd3c selected security
 6PASS/0skip395.101s retain clean before/after source and successful owned cleanup.
 Independent security closure5637fa99794360d821bb23f66ef31f78fe033352472fef5d3f8848c5a34904d4

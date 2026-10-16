@@ -1,5 +1,17 @@
 # ReconForge Execution Decisions Log
 
+## Preserve global quantity controls for zero-cost restitution (2026-10-16)
+
+The actual6aeffb13 IT1 capacity refusal is a required M7 reuse/transfer defect,
+not an optional expansion. Extend only149's retained shared FIFO quantity
+dispatch, without modifying historical migrations. Preserve exact original unit
+checks, positive-layer sum, global unreleased claims and insufficient-backing
+refusal. Admit an actual zero-value layer once only after exact current native
+cost-v3/v4 proof and positive signed active restitution; ordinary zero residuals
+stay excluded. Keep invoker/STABLE attributes, OID/owner/ACL and exact DOWN body.
+Retained-function custody becomes17; new functions53, bindings42 and raw tables91
+remain unchanged. No extra grants, local capacity bypass or timeout increase.
+
 ## Freeze M7 closure and repair only witnessed regressions (2026-10-16)
 
 Keep the agreed M7.7/M7.9 scope fixed. Existing native SS1/FX1 source admission

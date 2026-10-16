@@ -26,6 +26,9 @@ zero-consumption facts. Source, saved executed launcher and owned cleanup remain
 unchanged; no raw packet exists. The source review's earlier no-cycle judgement
 is withdrawn. Separate full historical source proof from live capacity, retaining
 every current command/deferred capacity check and all accounting/source guards.
+The source regression also catches the retained v3 zero-consumption fallback
+before DB execution. Preserve that full historical proof separately while its
+legacy current Stock close keeps capacity; retained-function custody becomes18.
 Required remaining work is to rerun that same zero-reuse case with its six original raw91 captures, independently
 verify them, run both actual monetary HTTPS/restore cycles, and accept the final
 coherent source through required native/legacy/CI/security/Docker/CodeQL gates.

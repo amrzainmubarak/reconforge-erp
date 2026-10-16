@@ -11,8 +11,14 @@ source proof followed by the exact original reservation-presence capacity check,
 including pre-origin and consumed/released reservation stages. Every current
 command and deferred owner still uses the live close. No caller flag, GUC,
 cache, relaxed RLS, stack increase or timeout increase may cut the cycle.
-This one required source helper makes the native function inventory54; retained
-original functions17, trigger bindings42 and raw capture tables91 stay fixed.
+The regression graph also exposes the retained v3 zero-consumption fallback
+through its old full Stock close. Preserve its complete original source proof
+in a second capacity-free helper, changing only149's retained zero-consumption
+proof call. Actual legacy Stock commands keep their original live capacity law.
+The two required source helpers make the native function inventory55; retained
+original functions18 include exact old zero-consumption identity/profile/DOWN.
+Trigger bindings42 and raw capture tables91 stay fixed. This is compatibility
+for the already-supported source family, not a new business scenario.
 
 ## Preserve global quantity controls for zero-cost restitution (2026-10-16)
 

@@ -25,15 +25,15 @@ async function login(page: Page, person: "maker" | "checker" | "poster") {
 }
 async function fields(form: Locator, values: Partial<Record<MonetaryWord, string>>) {
   for (const [key, value] of Object.entries(values)) {
-    const input = form.getByLabel(text("en", key as MonetaryWord), { exact: true });
-    if (await input.evaluate(node => node.tagName === "SELECT")) await input.selectOption(value!);
-    else await input.fill(value!);
+    const name = text("en", key as MonetaryWord), select = form.getByRole("combobox", { name, exact: true });
+    if (await select.count()) await select.selectOption(value!);
+    else await form.getByLabel(name, { exact: true }).fill(value!);
   }
 }
 async function stockPage(page: Page, id?: string) {
   await page.getByRole("navigation", { name: "Primary navigation", exact: true }).getByRole("button", { name: "Product sales", exact: true }).click();
   const scope = page.getByRole("group", { name: "Working scope", exact: true });
-  for (const [label, value] of [["Workspace", "work"], ["Organization", "org"], ["Legal entity", "entity"]]) await scope.getByLabel(label, { exact: true }).selectOption(value);
+  for (const [label, value] of [["Workspace", "work"], ["Organization", "org"], ["Legal entity", "entity"]]) await scope.getByRole("combobox", { name: label, exact: true }).selectOption(value);
   const initial = page.waitForResponse(reply => new URL(reply.url()).pathname === "/api/v1/stock-sales/orders" && reply.request().method() === "GET");
   await scope.getByRole("button", { name: "Load selected scope", exact: true }).click(); expect((await initial).status()).toBe(200);
   const loaded = page.waitForResponse(reply => new URL(reply.url()).pathname === `${stockRoot}/orders` && reply.request().method() === "GET");
@@ -42,7 +42,7 @@ async function stockPage(page: Page, id?: string) {
   await expect(section.getByText(text("en", "loading"), { exact: true })).toHaveCount(0);
   if (id) {
     const response = page.waitForResponse(reply => new URL(reply.url()).pathname === `${stockRoot}/orders/${id}` && reply.request().method() === "GET");
-    await section.getByLabel(text("en", "selectStock"), { exact: true }).selectOption(id); expect((await response).status()).toBe(200);
+    await section.getByRole("combobox", { name: text("en", "selectStock"), exact: true }).selectOption(id); expect((await response).status()).toBe(200);
     await expect(section.getByText(text("en", "loading"), { exact: true })).toHaveCount(0);
   }
   return section;

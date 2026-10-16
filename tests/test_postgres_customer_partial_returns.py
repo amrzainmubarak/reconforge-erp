@@ -9,10 +9,12 @@ import os
 import stat
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 from dataclasses import replace
 from fractions import Fraction
 from pathlib import Path
 from queue import Queue
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -42,6 +44,22 @@ from tests.test_postgres_stock_sales import repository as stock_repository
 _ = receipt_database, two_layer_source
 SCOPE = {"workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity"}
 SETTLEMENT_TABLES = tuple(sorted((*TABLES, "customer_partial_return_allocation_witnesses")))
+SETTLEMENT_MONETARY_TABLES = tuple(sorted((
+    "stock_sales_monetary_origins", "customer_partial_return_monetary_plans",
+    "customer_partial_return_monetary_entries", "customer_partial_return_monetary_events",
+    "customer_partial_return_monetary_history", "customer_partial_return_monetary_restorations",
+    "customer_partial_return_monetary_commands",
+)))
+
+
+def settlement_catalog_extensions(observed: tuple[str, ...]) -> tuple[str, ...]:
+    """Classify only the complete legacy family or its exact additive149 family."""
+    assert len(SETTLEMENT_TABLES) == len(set(SETTLEMENT_TABLES)) == 79
+    if observed == SETTLEMENT_TABLES:
+        return ()
+    if observed == tuple(sorted((*SETTLEMENT_TABLES, *SETTLEMENT_MONETARY_TABLES))):
+        return SETTLEMENT_MONETARY_TABLES
+    raise AssertionError("Native settlement originals require exact legacy79 or complete monetary149 additions.")
 
 
 def create_partial_runtime(database: tuple[str, str], paid: int = 10000, *, quantity: str | None = None) -> tuple[ReceiptRuntime, str, str]:
@@ -314,17 +332,27 @@ def settlement_originals(runtime: ReceiptRuntime, checkpoint: str) -> dict[str, 
 
     state = {}
     with runtime.actor("maker") as (connection, _, _actor):
-        tables = connection.execute("""SELECT table_name FROM information_schema.tables
-            WHERE table_schema='reconforge' AND table_type='BASE TABLE'
-            AND table_name ~ '^(customer_return_|customer_partial_return_|commercial_collection_|stock_|finance_|ar_|inventory_|operational_finance_|domain_audit_|outbox_)'
-            ORDER BY table_name""").fetchall()
-        assert len(SETTLEMENT_TABLES) == len(set(SETTLEMENT_TABLES)) == 79
-        if tuple(row["table_name"] for row in tables) != SETTLEMENT_TABLES:
-            raise AssertionError("Native settlement originals require the exact 79-table family.")
-        for row in tables:
-            state[row["table_name"]] = tuple(value["original"] for value in connection.execute(sql.SQL(
+        tables = connection.execute("""SELECT c.relname::text AS table_name,c.relkind::text AS relation_kind
+            FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+            WHERE n.nspname='reconforge'
+            AND c.relname ~ '^(customer_return_|customer_partial_return_|commercial_collection_|stock_|finance_|ar_|inventory_|operational_finance_|domain_audit_|outbox_)'
+            AND(c.relkind IN('r','p') OR c.relname::text=ANY(%s::text[]))
+            ORDER BY c.relname COLLATE "C"
+            """, (list(SETTLEMENT_MONETARY_TABLES),)).fetchall()
+        if any(row["relation_kind"] != "r" for row in tables):
+            raise AssertionError("Native settlement relations require their ordinary native table kind.")
+        extras = settlement_catalog_extensions(tuple(row["table_name"] for row in tables))
+        for name in extras:
+            populated = connection.execute(sql.SQL(
+                "SELECT EXISTS(SELECT 1 FROM reconforge.{} WHERE tenant_id=%s AND workspace_id=%s "
+                "AND organization_id=%s AND legal_entity_id=%s) AS populated"
+            ).format(sql.Identifier(name)), (runtime.tenant, *SCOPE.values())).fetchone()
+            if populated is None or type(populated["populated"]) is not bool or populated["populated"]:
+                raise AssertionError("Legacy settlement capture requires empty monetary149 tables in its tenant and scope.")
+        for name in SETTLEMENT_TABLES:
+            state[name] = tuple(value["original"] for value in connection.execute(sql.SQL(
                 "SELECT to_jsonb(r)::text original FROM reconforge.{} r WHERE tenant_id=%s ORDER BY to_jsonb(r)::text"
-            ).format(sql.Identifier(row["table_name"])), (runtime.tenant,)).fetchall())
+            ).format(sql.Identifier(name)), (runtime.tenant,)).fetchall())
     destination = settlement_private_directory()
     if destination is not None:
         assert checkpoint in {"split-before-credit", "split-after-credit", "split-after-2000", "split-after-refusal",
@@ -482,3 +510,113 @@ def test_credit_post_precedes_waiting_cash_prepare_and_rechecks_the_committed_re
     with runtime.actor("maker") as (connection, _, _actor):
         assert connection.execute("SELECT count(*) n FROM reconforge.commercial_collection_plans WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
         assert connection.execute("SELECT count(*) n FROM reconforge.ar_receipts WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
+
+
+@pytest.mark.parametrize("extended", [False, True])
+def test_settlement_catalog_accepts_only_complete_supported_families(extended: bool) -> None:
+    names = tuple(sorted((*SETTLEMENT_TABLES, *SETTLEMENT_MONETARY_TABLES))) if extended else SETTLEMENT_TABLES
+    assert settlement_catalog_extensions(names) == (SETTLEMENT_MONETARY_TABLES if extended else ())
+
+
+@pytest.mark.parametrize("damage", [*SETTLEMENT_MONETARY_TABLES, "legacy-missing", "unknown", "duplicate", "unordered"])
+def test_settlement_catalog_refuses_partial_unknown_and_duplicate_families(damage: str) -> None:
+    names = list(sorted((*SETTLEMENT_TABLES, *SETTLEMENT_MONETARY_TABLES)))
+    if damage in SETTLEMENT_MONETARY_TABLES:
+        names.remove(damage)
+    elif damage == "legacy-missing":
+        names.remove(SETTLEMENT_TABLES[0])
+    elif damage == "unknown":
+        names.append("customer_partial_return_unreviewed_future")
+        names.sort()
+    elif damage == "duplicate":
+        names.append(names[-1])
+    else:
+        names.reverse()
+    with pytest.raises(AssertionError, match="exact legacy79"):
+        settlement_catalog_extensions(tuple(names))
+
+
+class _SettlementCaptureCatalog:
+    """Pure query witness only; this class does not establish native RLS proof."""
+
+    def __init__(self, extended: bool, populated: dict[str, Any], kinds: dict[str, str] | None = None) -> None:
+        self.names = tuple(sorted((*SETTLEMENT_TABLES, *SETTLEMENT_MONETARY_TABLES))) if extended else SETTLEMENT_TABLES
+        self.populated = populated
+        self.kinds = kinds or {}
+        self.checked: list[str] = []
+        self.captured: list[str] = []
+
+    def execute(self, query: Any, parameters: Any = None) -> Any:
+        if isinstance(query, str):
+            assert "pg_catalog.pg_class" in query and "information_schema" not in query
+            assert parameters == (list(SETTLEMENT_MONETARY_TABLES),)
+            return SimpleNamespace(fetchall=lambda: [
+                {"table_name": name, "relation_kind": self.kinds.get(name, "r")} for name in self.names
+            ])
+        statement = query.as_string()
+        name = statement.split('reconforge."')[1].split('"')[0]
+        if statement.startswith("SELECT EXISTS("):
+            assert parameters == ("synthetic-settlement", "work", "org", "entity")
+            assert name in SETTLEMENT_MONETARY_TABLES
+            self.checked.append(name)
+            value = self.populated.get(name, False)
+            if isinstance(value, Exception):
+                raise value
+            return SimpleNamespace(fetchone=lambda: {"populated": value})
+        assert parameters == ("synthetic-settlement",) and name in SETTLEMENT_TABLES
+        assert self.checked == (list(SETTLEMENT_MONETARY_TABLES) if len(self.names) == 86 else [])
+        self.captured.append(name)
+        return SimpleNamespace(fetchall=lambda: [{"original": name + ": exact opaque PostgreSQL row text"}])
+
+
+@pytest.mark.parametrize("extended", [False, True])
+def test_settlement_capture_keeps_original79_after_closed_empty_extension_check(
+    monkeypatch: pytest.MonkeyPatch, extended: bool,
+) -> None:
+    catalog = _SettlementCaptureCatalog(extended, {})
+    runtime: Any = SimpleNamespace(tenant="synthetic-settlement", actor=lambda _who: nullcontext((catalog, None, None)))
+    monkeypatch.delenv("RECONFORGE_PARTIAL_CYCLE_PRIVATE_OUTPUT", raising=False)
+    result = settlement_originals(runtime, "split-before-credit")
+    assert tuple(result) == SETTLEMENT_TABLES and len(result) == 79
+    assert result == {name: (name + ": exact opaque PostgreSQL row text",) for name in SETTLEMENT_TABLES}
+    assert catalog.captured == list(SETTLEMENT_TABLES)
+    assert catalog.checked == (list(SETTLEMENT_MONETARY_TABLES) if extended else [])
+
+
+@pytest.mark.parametrize("name,value", [*((name, True) for name in SETTLEMENT_MONETARY_TABLES),
+                                        (SETTLEMENT_MONETARY_TABLES[0], 0),
+                                        (SETTLEMENT_MONETARY_TABLES[0], "false"),
+                                        (SETTLEMENT_MONETARY_TABLES[0], None)])
+def test_settlement_capture_refuses_nonempty_or_untyped_new_owner_before_original_capture(
+    monkeypatch: pytest.MonkeyPatch, name: str, value: Any,
+) -> None:
+    catalog = _SettlementCaptureCatalog(True, {name: value})
+    runtime: Any = SimpleNamespace(tenant="synthetic-settlement", actor=lambda _who: nullcontext((catalog, None, None)))
+    monkeypatch.delenv("RECONFORGE_PARTIAL_CYCLE_PRIVATE_OUTPUT", raising=False)
+    with pytest.raises(AssertionError, match="empty monetary149"):
+        settlement_originals(runtime, "split-before-credit")
+    assert name in catalog.checked and catalog.captured == []
+
+
+@pytest.mark.parametrize("kind", ["v", "p", "S"])
+def test_settlement_capture_never_treats_wrong_kind_monetary_relations_as_absent(
+    monkeypatch: pytest.MonkeyPatch, kind: str,
+) -> None:
+    catalog = _SettlementCaptureCatalog(True, {}, {SETTLEMENT_MONETARY_TABLES[0]: kind})
+    runtime: Any = SimpleNamespace(tenant="synthetic-settlement", actor=lambda _who: nullcontext((catalog, None, None)))
+    monkeypatch.delenv("RECONFORGE_PARTIAL_CYCLE_PRIVATE_OUTPUT", raising=False)
+    with pytest.raises(AssertionError, match="native table kind"):
+        settlement_originals(runtime, "split-before-credit")
+    assert catalog.checked == catalog.captured == []
+
+
+@pytest.mark.parametrize("name", SETTLEMENT_MONETARY_TABLES)
+def test_settlement_capture_refuses_missing_new_owner_select_without_legacy_fallback(
+    monkeypatch: pytest.MonkeyPatch, name: str,
+) -> None:
+    catalog = _SettlementCaptureCatalog(True, {name: PermissionError("New owner SELECT refused")})
+    runtime: Any = SimpleNamespace(tenant="synthetic-settlement", actor=lambda _who: nullcontext((catalog, None, None)))
+    monkeypatch.delenv("RECONFORGE_PARTIAL_CYCLE_PRIVATE_OUTPUT", raising=False)
+    with pytest.raises(PermissionError, match="SELECT refused"):
+        settlement_originals(runtime, "split-before-credit")
+    assert name in catalog.checked and catalog.captured == []

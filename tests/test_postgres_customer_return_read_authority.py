@@ -38,6 +38,7 @@ from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRe
 from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 from reconforge.infrastructure.postgres_stock_sales import PostgresStockSalesRepository
 from reconforge.platform.common import ServerPrincipal, current_server_principal, server_principal_context
+from tests.test_postgres_customer_returns import legacy_customer_return_capture_tables
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, receipt_database
 from tests.test_postgres_stock_sales import create_stock_runtime
 
@@ -157,12 +158,10 @@ def _return_request(source: dict[str, Any]) -> CustomerReturnPreparation:
 def _original_tables(runtime: KwdRuntime) -> dict[str, str]:
     # This ordinary SQL custody snapshot does not authenticate a retired human.
     with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, **SCOPE) as connection:
-        tables = connection.execute("""SELECT table_name FROM information_schema.tables WHERE table_schema='reconforge'
-            AND table_type='BASE TABLE' AND table_name ~ '^(customer_return_|stock_|finance_|ar_|inventory_|operational_finance_|domain_audit_|outbox_)'
-            ORDER BY table_name""").fetchall()
-        return {row["table_name"]: connection.execute(sql.SQL(
+        tables = legacy_customer_return_capture_tables(connection, runtime.tenant, SCOPE)
+        return {table: connection.execute(sql.SQL(
             "SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text),'[]'::jsonb)::text value FROM reconforge.{} r WHERE tenant_id=%s")
-            .format(sql.Identifier(row["table_name"])), (runtime.tenant,)).fetchone()["value"] for row in tables}
+            .format(sql.Identifier(table)), (runtime.tenant,)).fetchone()["value"] for table in tables}
 
 
 def _retain(name: str, value: Any) -> None:

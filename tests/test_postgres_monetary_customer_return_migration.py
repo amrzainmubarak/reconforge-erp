@@ -163,7 +163,7 @@ def test_actual_retained_posted148_v2_source_and_ack_survive149_upgrade(populate
 
 
 def test_actual_empty_roundtrip_preserves_original_oids_acl_and_exact_execution_attributes(receipt_database):
-    admin_dsn, _ = receipt_database
+    admin_dsn, app_dsn = receipt_database
     _revision(admin_dsn, "downgrade", OLD)
     with psycopg.connect(admin_dsn, row_factory=dict_row) as admin:
         before = _profiles(admin)
@@ -188,6 +188,14 @@ def test_actual_empty_roundtrip_preserves_original_oids_acl_and_exact_execution_
         assert _profiles(admin) == before
         assert verify_monetary_installation_if_present(admin) is False
     _revision(admin_dsn, "upgrade", NEW)
+    # The roundtrip recreated these tables after the module fixture's grants.
+    # Restore only that owned fixture role's explicit admission for later tests.
+    role = psycopg.conninfo.conninfo_to_dict(app_dsn)["user"]
+    assert type(role) is str and role
+    with psycopg.connect(admin_dsn) as admin:
+        for name in MONETARY_TABLES:
+            admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{} TO {}")
+                          .format(sql.Identifier(name), sql.Identifier(role)))
 
 
 def test_actual_new_native_function_and_force_rls_drift_refuse_without_repair(receipt_database):

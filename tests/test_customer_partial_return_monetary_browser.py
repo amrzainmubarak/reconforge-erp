@@ -47,6 +47,63 @@ def original_cycle(monkeypatch, tmp_path):
     return custody, data
 
 
+@pytest.mark.parametrize("error,cause", [
+    (ValueError("private-row-content"), "observation_contract_refused"),
+    (RuntimeError("postgresql://private-user:private-value@host/private-db"), "observer_failed"),
+])
+def test_capture_failure_retains_raw_trace_privately_without_publishing_exception_text(monkeypatch, tmp_path, error, cause):
+    monkeypatch.setenv("RECONFORGE_MONETARY_CUSTODY_ROOT", str(root(tmp_path)))
+    monkeypatch.setenv("RECONFORGE_MONETARY_CASE", "foreign")
+    try:
+        raise error
+    except Exception as original:
+        safe = browser._capture_failure(original)
+    assert set(safe) == {"schema_version", "cause", "stage", "line", "trace_retained", "trace_bytes", "trace_sha256", "trace_truncated"}
+    assert safe["cause"] == cause and safe["trace_retained"] is True
+    assert str(error) not in str(safe) and "private-db" not in str(safe)
+    files = list((tmp_path / browser.REFUSED / "foreign").iterdir())
+    assert len(files) == 1 and files[0].name.startswith("capture-python-")
+    raw = files[0].read_bytes()
+    assert str(error).encode() in raw and len(raw) == safe["trace_bytes"] <= browser.FAILURE_TRACE_BYTES
+    assert browser.hashlib.sha256(raw).hexdigest() == safe["trace_sha256"]
+
+
+def test_capture_failure_bound_and_invalid_custody_never_publish_raw_lower_cause(monkeypatch, tmp_path):
+    monkeypatch.setenv("RECONFORGE_MONETARY_CUSTODY_ROOT", str(root(tmp_path)))
+    monkeypatch.setenv("RECONFORGE_MONETARY_CASE", "foreign")
+    safe = browser._capture_failure(ValueError("private-value" * 3000))
+    assert safe["trace_truncated"] is True and safe["trace_bytes"] == browser.FAILURE_TRACE_BYTES
+    monkeypatch.setenv("RECONFORGE_MONETARY_CUSTODY_ROOT", str(tmp_path / "wrong-family" / "foreign"))
+    safe = browser._capture_failure(RuntimeError("private-value"))
+    assert safe["trace_retained"] is False and safe["trace_sha256"] is None and safe["trace_bytes"] == 0
+    assert "private-value" not in str(safe)
+
+
+def test_capture_cli_failure_keeps_exit_two_and_reports_closed_pg_cause_without_raw_output(monkeypatch, tmp_path, capsys):
+    from psycopg.errors import QueryCanceled
+
+    monkeypatch.setattr(browser.argparse.ArgumentParser, "parse_args", lambda _self: None)
+    for name, value in {"RECONFORGE_GFO_APP_DSN": "private-dsn", "RECONFORGE_ERP_TENANT": "private-tenant",
+                        "RECONFORGE_ERP_PASSWORD": "private-value", "RECONFORGE_MONETARY_STOCK_SOURCE": "private-source",
+                        "RECONFORGE_MONETARY_CUSTODY_ROOT": str(root(tmp_path)), "RECONFORGE_MONETARY_CASE": "foreign",
+                        "RECONFORGE_MONETARY_CAPTURE": "5"}.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setattr(browser, "ReceiptRuntime", lambda *_args: runtime())
+    monkeypatch.setattr(browser, "PostgresSettings", lambda **_kwargs: None)
+    monkeypatch.setattr(browser, "PostgresConnectionFactory", lambda *_args: None)
+
+    def refused(*_args, **_kwargs):
+        raise QueryCanceled("private-value postgresql://private-user:private-value@host/private-db")
+
+    monkeypatch.setattr(browser, "capture_monetary_browser", refused)
+    assert browser.main() == 2
+    output = capsys.readouterr()
+    assert output.err == "" and "private-value" not in output.out and "postgresql" not in output.out
+    safe = browser.parse_json_document(output.out, policy=browser.LOAD_POLICY, reject_fractional_numbers=True)
+    assert safe["cause"] == "statement_cancelled" and safe["stage"] == "capture_dispatch" and safe["line"] > 0
+    assert safe["trace_retained"] is True
+
+
 def test_exact_twelve_foreign_captures_use_91_tables_without_confusing_capture_and_history(monkeypatch, tmp_path):
     custody, _data = original_cycle(monkeypatch, tmp_path)
     packet = decode_packet((custody / browser.PACKET).read_bytes())

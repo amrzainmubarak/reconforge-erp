@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
+import { retainCaptureFailure } from "./monetary-capture-diagnostics";
 import type { MonetaryPartialPlan } from "../src/monetary-partial-returns-data";
 import type { MonetaryStock } from "../src/monetary-stock-data";
 import type { MonetaryValuation } from "../src/monetary-valuation-data";
@@ -73,11 +74,14 @@ async function stockCommand(page: Page, path: string, action: () => Promise<void
 function observe(kind?: "RetainedReplay" | "ScopeRefusal" | "ActiveValuationRefusal", plan?: MonetaryPartialPlan | MonetaryValuation, refusal?: { status: number; code: string }, request?: { method: string; route: string; body: Record<string, unknown> }) {
   const python = process.env.RECONFORGE_MONETARY_PYTHON, runtime = process.env.RECONFORGE_MONETARY_RUNTIME_ROOT;
   expect(Boolean(python && runtime && process.env.RECONFORGE_MONETARY_CUSTODY_ROOT), "Owned private ordinary-role monetary observer is required.").toBe(true);
-  execFileSync(python!, ["-m", "tests.customer_partial_return_monetary_browser", "capture"], { cwd: runtime!, stdio: "pipe", timeout: 30_000, maxBuffer: 16_384,
+  try { execFileSync(python!, ["-m", "tests.customer_partial_return_monetary_browser", "capture"], { cwd: runtime!, stdio: "pipe", timeout: 30_000, maxBuffer: 16_384,
     env: { ...process.env, RECONFORGE_MONETARY_STOCK_SOURCE: source, RECONFORGE_MONETARY_CAPTURE: String(capture), RECONFORGE_MONETARY_OBSERVATION: kind,
       RECONFORGE_MONETARY_POSTED_PLAN: kind === "RetainedReplay" || kind === "ActiveValuationRefusal" ? plan!.id : undefined, RECONFORGE_MONETARY_POSTED_DIGEST: kind === "RetainedReplay" || kind === "ActiveValuationRefusal" ? plan!.plan_digest : undefined,
       RECONFORGE_MONETARY_REFUSAL_STATUS: refusal ? String(refusal.status) : undefined, RECONFORGE_MONETARY_REFUSAL_CODE: refusal?.code,
-      RECONFORGE_MONETARY_REFUSED_REQUEST: request ? JSON.stringify(request) : undefined } });
+      RECONFORGE_MONETARY_REFUSED_REQUEST: request ? JSON.stringify(request) : undefined } }); }
+  catch (error) {
+    throw retainCaptureFailure(error, { case: foreign ? "foreign" : "identity", capture, observation: kind ?? "CommittedCapture" }, process.env.RECONFORGE_MONETARY_CUSTODY_ROOT!);
+  }
 }
 async function partialCommand(page: Page, path: string, action: () => Promise<void>, lose = false): Promise<MonetaryPartialPlan> {
   if (!lose) {

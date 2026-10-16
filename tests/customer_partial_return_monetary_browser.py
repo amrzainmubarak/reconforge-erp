@@ -10,11 +10,14 @@ import argparse
 import hashlib
 import os
 import re
+import sys
+import traceback
 from datetime import date
 from pathlib import Path
 from typing import Any, cast
 from uuid import uuid4
 
+from psycopg import Error as PostgresError
 from psycopg import sql
 
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, PostgresTenantBoundary
@@ -46,6 +49,49 @@ FOREIGN_HISTORY_VERSIONS = (0, 0, 0, 1, 2, 2, 2, 3, 4, 5, 6, 7)
 REFUSED_REQUEST = "active-valuation-refused-request.json"
 AUDIT = frozenset({"domain_audit_events", "domain_audit_ledger_state"})
 MAX_ROWS = 4096
+FAILURE_TRACE_BYTES = 8192
+_FAILURE_STAGES = {"main": "capture_dispatch", "_root": "custody_boundary", "_files": "custody_membership",
+                   "_load": "existing_capture_decode", "_snapshot": "snapshot_read", "_plan_pin": "posted_plan_affinity",
+                   "_unchanged_business": "observation_business_binding", "_request_pin": "refused_request_binding",
+                   "capture_monetary_browser": "capture_contract", "assemble_monetary_browser": "packet_assembly"}
+
+
+def _capture_failure(error: Exception) -> dict[str, Any]:
+    """Retain the raw failure privately; publish only a closed diagnostic."""
+    cause = "observation_contract_refused" if isinstance(error, (ValueError, TypeError, KeyError)) else "observer_failed"
+    current: BaseException | None = error
+    seen: set[int] = set()
+    for _ in range(8):
+        if current is None or id(current) in seen:
+            break
+        seen.add(id(current))
+        if isinstance(current, PostgresError):
+            cause = {"57014": "statement_cancelled", "42501": "permission_denied", "23514": "native_constraint_refused",
+                     "55P03": "lock_unavailable", "40P01": "deadlock_refused", "40001": "serialization_refused"}.get(current.sqlstate or "", "database_failure")
+            break
+        current = current.__cause__ or current.__context__
+    stage, line = "capture_dispatch", 0
+    frame = error.__traceback__
+    while frame is not None:
+        if frame.tb_frame.f_globals.get("__name__") == __name__ and frame.tb_frame.f_code.co_name in _FAILURE_STAGES:
+            stage, line = _FAILURE_STAGES[frame.tb_frame.f_code.co_name], frame.tb_lineno
+        frame = frame.tb_next
+    result: dict[str, Any] = {"schema_version": "monetary-capture-python-failure-v1", "cause": cause, "stage": stage,
+                              "line": line, "trace_retained": False, "trace_bytes": 0, "trace_sha256": None, "trace_truncated": False}
+    try:
+        root = _root(Path(os.environ["RECONFORGE_MONETARY_CUSTODY_ROOT"]), os.environ["RECONFORGE_MONETARY_CASE"])
+        failed = _storage(root.parent.parent / REFUSED / root.name)
+        require(len(list(failed.iterdir())) < 16)
+        original = "".join(traceback.format_exception(error)).encode("utf-8", errors="replace")
+        raw = original[:FAILURE_TRACE_BYTES]
+        _retain(failed / ("capture-python-" + uuid4().hex + ".traceback.bin"), raw)
+        result.update(trace_retained=True, trace_bytes=len(raw), trace_sha256=hashlib.sha256(raw).hexdigest(),
+                      trace_truncated=len(original) > len(raw))
+    except Exception:
+        # Diagnostics must never replace the original failure with a path,
+        # credential, raw SQL exception, or a successful capture indication.
+        result["trace_retained"] = False
+    return result
 
 
 def _versions(case: str) -> tuple[int, ...]:
@@ -328,8 +374,8 @@ def main() -> int:
         capture_monetary_browser(runtime, os.environ["RECONFORGE_MONETARY_STOCK_SOURCE"], Path(os.environ["RECONFORGE_MONETARY_CUSTODY_ROOT"]),
             case=os.environ["RECONFORGE_MONETARY_CASE"], index=int(os.environ["RECONFORGE_MONETARY_CAPTURE"]), observation=kind,
             plan_id=os.environ.get("RECONFORGE_MONETARY_POSTED_PLAN"), plan_digest=os.environ.get("RECONFORGE_MONETARY_POSTED_DIGEST"), refusal=refusal, request=request)
-    except Exception:
-        print("Private monetary committed-row observation refused.")
+    except Exception as error:
+        sys.stdout.buffer.write(_bytes(_capture_failure(error), 2048) + b"\n")
         return 2
     return 0
 

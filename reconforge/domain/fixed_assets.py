@@ -89,7 +89,7 @@ class AssetAcquisition:
 
 
 def accounting_lines(asset: dict[str, object], kind: str, *, accumulated: int = 0,
-                     depreciation: int = 0, proceeds: int = 0) -> list[AccountingLine]:
+                     depreciation: int = 0, proceeds: int = 0, impairment: int = 0) -> list[AccountingLine]:
     cost = exact_minor(asset["cost_minor"], "cost")
     exact_minor(accumulated, "accumulated", zero=True)
     if accumulated > cost:
@@ -109,6 +109,13 @@ def accounting_lines(asset: dict[str, object], kind: str, *, accumulated: int = 
             raise FinancePostingError("asset_state_invalid", "Depreciation exceeds the retained depreciable basis.")
         add("expense", debit=depreciation)
         add("accumulated", credit=depreciation)
+    elif kind == "impair":
+        loss = impairment or depreciation
+        exact_minor(loss, "impairment")
+        if accumulated + loss > cost - exact_minor(asset["salvage_minor"], "salvage", zero=True):
+            raise FinancePostingError("asset_state_invalid", "Impairment exceeds the remaining depreciable carrying basis.")
+        add("loss", debit=loss)
+        add("accumulated", credit=loss)
     elif kind == "dispose":
         exact_minor(proceeds, "proceeds", zero=True)
         carrying = cost - accumulated

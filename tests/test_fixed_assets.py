@@ -49,3 +49,21 @@ def test_completed_service_months_and_catchup_are_exact() -> None:
     for month, posted in (("2026-01", "2026-01-31"), ("2025-12", "2026-02-01"), ("2026-13", "2027-02-01")):
         with pytest.raises(FinancePostingError):
             eligible_months("2026-01-15", month, posted, 36)
+
+
+def test_impairment_accounting_recognizes_loss_and_updates_accumulated() -> None:
+    asset = {"cost_minor": 10000, "salvage_minor": 1000, **{key + "_account_code": key.upper()
+             for key in ("asset", "accumulated", "expense", "cash", "gain", "loss")}}
+    lines = accounting_lines(asset, "impair", accumulated=3000, impairment=2500)
+    by_account = {row["account_code"]: int(row["debit_minor"]) - int(row["credit_minor"]) for row in lines}
+    assert sum(by_account.values()) == 0
+    assert by_account["LOSS"] == 2500
+    assert by_account["ACCUMULATED"] == -2500
+
+
+def test_impairment_exceeding_carrying_basis_is_refused() -> None:
+    asset = {"cost_minor": 10000, "salvage_minor": 1000, **{key + "_account_code": key.upper()
+             for key in ("asset", "accumulated", "expense", "cash", "gain", "loss")}}
+    # Maximum depreciable basis is 10000 - 1000 = 9000. Accumulated is 8000, so max impairment is 1000.
+    with pytest.raises(FinancePostingError):
+        accounting_lines(asset, "impair", accumulated=8000, impairment=1001)

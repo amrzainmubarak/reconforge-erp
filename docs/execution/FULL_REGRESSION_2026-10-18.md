@@ -163,3 +163,10 @@ workspace error boundary before invoice posting. Both failures remain negative;
 bounded browser-console bytes will be retained only in a separate private
 diagnostic directory, never in public reports or financial originals. Timeouts,
 retries, business acceptance and independent-reader predicates remain unchanged.
+
+The separate clean5924 diagnostic fails at the original invoice POST response
+deadline, rather than the earlier workspace render. No console error occurs.
+Page exceptions are now retained through the same private bounded writer too.
+The846d generic CI tests finish, but publication inspection refuses its stale
+148-file/head149 expectation. The inspector now requires149 files/head150;
+the archive itself must still satisfy the complete linear-chain check.

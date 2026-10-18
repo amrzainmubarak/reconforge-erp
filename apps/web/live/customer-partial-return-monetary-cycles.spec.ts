@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
-import { retainCaptureFailure } from "./monetary-capture-diagnostics";
+import { retainBrowserError, retainCaptureFailure } from "./monetary-capture-diagnostics";
 import type { MonetaryPartialPlan } from "../src/monetary-partial-returns-data";
 import type { MonetaryStock } from "../src/monetary-stock-data";
 import type { MonetaryValuation } from "../src/monetary-valuation-data";
@@ -242,6 +242,7 @@ test("actual monetary Stock v2 and CR3 identity or foreign tax cycle", async ({ 
   test.setTimeout(600_000);
   expect(Boolean(base && tenant && password && ["identity", "foreign"].includes(selected ?? "")), "Owned native149 HTTPS fixture and fixed case are required.").toBe(true);
   let pageErrors = 0; page.on("pageerror", () => { ++pageErrors; });
+  page.on("console", message => { if (message.type() === "error") retainBrowserError(message.text(), process.env.RECONFORGE_MONETARY_CUSTODY_ROOT ?? ""); });
   await login(page, "maker"); const section = await stockPage(page), create = section.getByRole("form", { name: text("en", "create"), exact: true });
   await fields(create, { number: "MONETARY-" + selected!.toUpperCase(), customer_code: foreign ? "FOREIGN" : "CUSTOMER", customer_reference: "MONETARY-PO", item_code: "ITEM", warehouse_code: "MAIN", location_code: "STOCK", quantity: "10", unit_price_minor: "1000", discount_basis_points: "0", description: "Synthetic original taxed merchandise", order_date: day });
   let order = await stockCommand(page, `${stockRoot}/orders`, () => create.getByRole("button", { name: text("en", "create"), exact: true }).click(), 201);

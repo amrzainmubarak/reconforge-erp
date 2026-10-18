@@ -3,12 +3,29 @@ import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync 
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { retainCaptureFailure } from "../../live/monetary-capture-diagnostics";
+import { retainBrowserError, retainCaptureFailure } from "../../live/monetary-capture-diagnostics";
 
 const folders: string[] = [];
 const original = "native-customer-partial-return-monetary-originals";
 const failed = "native-customer-partial-return-monetary-failed-observation-originals";
 const checkpoint = { case: "foreign", capture: 5, observation: "CommittedCapture" } as const;
+
+it("retains browser exception bytes outside financial originals with a finite private capacity", () => {
+  const f = fixture(), raw = "private-browser-value-".repeat(1000);
+  for (let index = 0; index < 16; ++index) expect(retainBrowserError(raw, f.root)).toBe(true);
+  expect(retainBrowserError(raw, f.root)).toBe(false);
+  expect(readdirSync(f.root)).toEqual([]);
+  const folder = join(f.base, "monetary-browser-runtime-errors");
+  for (const name of readdirSync(folder)) expect(readFileSync(join(folder, name))).toEqual(Buffer.from(raw).subarray(0, 16384));
+});
+
+it("refuses browser diagnostic traversal and linked private ancestors", () => {
+  const f = fixture(), target = join(f.base, "browser-target"), link = join(f.base, "browser-link");
+  mkdirSync(target); symlinkSync(target, link, process.platform === "win32" ? "junction" : "dir");
+  expect(retainBrowserError("private-value", join(link, original, "foreign"))).toBe(false);
+  expect(retainBrowserError("private-value", "relative/foreign")).toBe(false);
+  expect(readdirSync(target)).toEqual([]);
+});
 function fixture() {
   const base = mkdtempSync(join(tmpdir(), "monetary-capture-test-")); folders.push(base);
   const root = join(base, original, "foreign"); mkdirSync(root, { recursive: true });

@@ -15,6 +15,20 @@ const hash = (value: Buffer) => createHash("sha256").update(value).digest("hex")
 
 export type CaptureCheckpoint = { case: "identity" | "foreign"; capture: number; observation: string };
 
+/** Browser exceptions can include source values: retain bounded bytes privately only. */
+export function retainBrowserError(message: string, custodyRoot: string): boolean {
+  try {
+    directory(custodyRoot);
+    if (!["identity", "foreign"].includes(basename(custodyRoot)) || basename(dirname(custodyRoot)) !== family) return false;
+    const folder = join(dirname(dirname(custodyRoot)), "monetary-browser-runtime-errors");
+    directory(folder); mkdirSync(folder, { recursive: true, mode: 0o700 }); directory(folder);
+    const members = readdirSync(folder);
+    if (members.length >= 16 || members.some(name => { const stat = lstatSync(join(folder, name)); return stat.isSymbolicLink() || !stat.isFile(); })) return false;
+    writeFileSync(join(folder, randomUUID() + ".bin"), Buffer.from(message).subarray(0, limit), { flag: "wx", mode: 0o600 });
+    return true;
+  } catch { return false; }
+}
+
 function directory(path: string): void {
   if (!isAbsolute(path) || path.split(/[\\/]/).includes("..")) throw new Error("Private capture diagnostic boundary refused.");
   for (let item = path; ; item = dirname(item)) {

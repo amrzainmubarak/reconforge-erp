@@ -154,3 +154,12 @@ body/definer/overload attacks refuse without changing the poisoned catalog.
 An actual150 audit smoke case passes1/0skip; registry5 pass, and both offline
 migration directions emit successfully. Complete final-source browser, restore,
 independent-I/-I-O and CI acceptance remain mandatory.
+
+On clean846d0a6f the actual zero cycle now passes completely:296.813s wall,
+169.388s browser,1 expected/0 skip/0 flaky, populated347-table head150 restore
+and byte-equal independent isolated proofs. Its source and built Studio remain
+unchanged. The two monetary attempts on that source instead reach the generic
+workspace error boundary before invoice posting. Both failures remain negative;
+bounded browser-console bytes will be retained only in a separate private
+diagnostic directory, never in public reports or financial originals. Timeouts,
+retries, business acceptance and independent-reader predicates remain unchanged.

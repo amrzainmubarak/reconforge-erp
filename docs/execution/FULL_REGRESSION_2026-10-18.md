@@ -121,3 +121,11 @@ local HTTPS pass20 cases, zero failures, and8 existing fixture-dependent skips
 owned by the dedicated CI jobs (77.50s test,79.103s wall). The ab789 foreign
 browser reduces overflow to18px but remains negative; structural-only dimensions
 will identify the remaining element without publishing field values.
+
+Actual04af foreign diagnostics reproduce10px overflow on Windows (same mandatory
+320px zero-overflow predicate): the surrounding stock form's paragraph reaches
+330px and fieldset328px. Its intrinsic grid/control widths, rather than monetary
+values, exceed available width. The scoped stock CSS now bounds those minima
+and inline margins and wraps controls; production build passes. Complete foreign
+acceptance on the corrected build remains required. All negative captures,
+source bindings and owned-container cleanup are retained.

@@ -1,5 +1,15 @@
 # ReconForge Execution Decisions Log
 
+## Contain the existing stock form's intrinsic width (2026-10-18)
+
+Actual clean04af foreign diagnostics locate the remaining320px overflow in the
+existing stock form: its fieldset reaches328px and a grid paragraph330px on
+Windows (10px page overflow); hosted ab789 records18px. Bound the fieldset's
+intrinsic minimum, inline margins and grid floor, and allow its real controls to
+shrink within their available width. Keep all content visible and retain the
+same zero-overflow, viewport, RTL and axe predicates. Monetary containment alone
+did not fix the surrounding legacy stock form. No financial behavior changes.
+
 ## Persist the actual scoped refusal (2026-10-18; ADR0865)
 
 Keep the independent reader's required denied-policy witness. The actual native

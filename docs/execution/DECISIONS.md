@@ -1,5 +1,17 @@
 # ReconForge Execution Decisions Log
 
+## Isolate regression fixtures rather than weaken financial guards (2026-10-18; ADR0864)
+
+Keep local CLI tests independent of an ambient PostgreSQL DSN. Use a fresh
+unprivileged login for the AR test's explicit absence-of-grants assertions.
+Use unique service-account test tenants and the existing transactional,
+tenant-scoped cleanup mechanism for their dependent audit rows. Preserve the
+documented server workflow refusal (ADR0637) in the live service-account test,
+matching its existing non-live counterpart. These are test-only changes;
+application authorization, immutable evidence and financial SQL remain intact.
+Native checks retain their existing fail-closed mandatory gate and use isolated
+synthetic databases. No new skip/xfail or production cleanup path is introduced.
+
 ## One primary checkout by explicit user directive (2026-10-18; ADR0863)
 
 Use `F:\reconforge-erp` for ongoing development and use local branches for

@@ -14,6 +14,13 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-REGRESSION-20261018
+    depends_on: [AMR-WORKSPACE-20261018]
+    priority: P1
+    area: quality-and-test-isolation
+    title: Complete the interrupted full regression and repair reproduced test failures in the primary checkout
+    status: in_progress
+    exit_evidence: "FULL_REGRESSION_2026-10-18.md; retain the complete unfiltered result and missing-prerequisite errors; verify repaired TLS, least-privilege AR and service-account cleanup tests; complete appropriate native CI gates without adding skips or relaxing financial/security assertions."
   - id: AMR-WORKSPACE-20261018
     depends_on: []
     priority: P1

@@ -1,5 +1,20 @@
 # Execution State
 
+## Full regression follow-up — 2026-10-18, in progress
+
+The user requested completion of the previously interrupted full pytest run
+and repair of observed failures, exclusively in the primary checkout. The
+unfiltered 11,096-case run is continuing to completion; its unconfigured native
+fixture errors are retained rather than accepted as passes. Separate mandatory
+native checks use the existing CI selection and isolated synthetic PostgreSQL
+databases. Three environment/order-dependent API test defects were reproduced:
+local TLS inherited the server DSN, an AR privilege assertion inherited another
+test's grants, and service-account cleanup omitted audit dependencies while its
+workflow assertion contradicted ADR0637. The repaired live AR/service cases
+pass (2 cases), as do 36 related API/cleanup checks and the TLS reproduction.
+Ruff and Mypy (828 application files) pass. Full-source acceptance is pending.
+See [the follow-up record](FULL_REGRESSION_2026-10-18.md) and ADR0864.
+
 ## Single working directory — 2026-10-18
 
 All current work is consolidated in `F:\reconforge-erp`, on local branch

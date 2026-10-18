@@ -93,6 +93,24 @@ _DOMAIN_AUDIT_TRIGGER = ImmutableTrigger("domain_audit_events", "domain_audit_ev
 
 RLS_TENANT_CLEANUP_PLAN = PostgresTenantCleanupPlan(tables=(_TENANTS,))
 
+SERVICE_ACCOUNT_TENANT_CLEANUP_PLAN = PostgresTenantCleanupPlan(
+    tables=(
+        TenantScopedTable("service_account_events"),
+        TenantScopedTable("service_account_credentials"),
+        TenantScopedTable("service_account_permissions"),
+        TenantScopedTable("service_accounts"),
+        TenantScopedTable("identity_permissions"),
+        TenantScopedTable("domain_audit_events"),
+        TenantScopedTable("outbox_events"),
+        TenantScopedTable("domain_audit_ledger_state"),
+        _TENANTS,
+    ),
+    immutable_triggers=(
+        ImmutableTrigger("service_account_events", "trg_service_account_events_append_only"),
+        _DOMAIN_AUDIT_TRIGGER,
+    ),
+)
+
 PAYABLES_TENANT_CLEANUP_PLAN = PostgresTenantCleanupPlan(
     tables=(
         TenantScopedTable("ap_payment_link_reversal_commands"),

@@ -1,5 +1,20 @@
 # ReconForge Execution Evidence Log
 
+## Full regression follow-up, ongoing — 2026-10-18
+
+Evidence root: `output/full-regression-20261018T014707Z` in the primary checkout.
+`environment.json` records the exact unfiltered command, source and Python
+3.12.13 runtime. Its full run has not been stopped. `tls-failure-reproduction.log`
+retains the ambient-server-DSN failure; `tls-repaired.xml` proves the correction.
+`native-api-failures.xml` retains the inherited-grant assertion and audit-FK
+cleanup failures. `native-api-repaired-final.xml` passes both actual native
+AR/service cases; `repaired-api-and-cleanup.xml` passes 36 related cases with
+three explicitly deselected live cases owned by separate invocations. Ruff and
+Mypy pass. A secondary all-in-one PostgreSQL diagnostic was replaced by the
+existing CI-native selection with isolated databases; that interrupted diagnostic
+is not accepted as a full-suite success. Complete-run and native results remain
+pending. No application source or financial migration was changed.
+
 ## Primary workspace consolidation — 2026-10-18
 
 Integrated source `bfc138a13c05513dc5c6e7bf23c81f013a0df123` is now in the primary

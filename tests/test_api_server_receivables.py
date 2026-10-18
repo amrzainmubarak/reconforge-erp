@@ -29,12 +29,13 @@ from tests.postgres_test_hygiene import RECEIVABLES_TENANT_CLEANUP_PLAN, cleanup
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
 def test_live_server_receivables_http_lifecycle_is_scoped_exact_and_human_governed(
-    tmp_path: Path, monkeypatch: Any
+    tmp_path: Path, monkeypatch: Any, isolated_postgres_runtime_role: str,
 ) -> None:
     pytest.importorskip("psycopg")
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
     app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
+    assert app_user == isolated_postgres_runtime_role
     if not re.fullmatch(r"[a-z_][a-z0-9_]{0,62}", app_user):
         pytest.fail("RECONFORGE_TEST_POSTGRES_APP_USER is required and must be a safe role name")
 

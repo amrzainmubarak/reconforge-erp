@@ -309,6 +309,9 @@ def test_same_origin_web_root_is_host_bounded_and_security_header_closed(tmp_pat
 
 
 def test_api_serve_binds_direct_tls_web_root_and_exact_hosts(monkeypatch: Any, tmp_path: Path) -> None:
+    # This exercises the local CLI profile, even when the surrounding suite
+    # provides a PostgreSQL service for its separate server-profile tests.
+    monkeypatch.delenv("RECONFORGE_POSTGRES_DSN", raising=False)
     db_path = tmp_path / "hosted-cli.db"
     run_migrations(db_path)
     web_root = tmp_path / "dist"

@@ -5,6 +5,7 @@ import re
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,6 +14,7 @@ from reconforge.api import create_api_app
 from reconforge.api.server_identity import AuthenticatedServerRequest, request_tenant_id
 from reconforge.auth.models import LocalUser
 from reconforge.db import run_migrations
+from tests.postgres_test_hygiene import SERVICE_ACCOUNT_TENANT_CLEANUP_PLAN, cleanup_postgres_test_tenants_as_admin
 
 
 def test_service_principal_http_me_safe_permission_human_denial_logout_and_tenant_scope(
@@ -137,14 +139,8 @@ def test_live_service_credential_http_auth_policy_tenant_and_logout(tmp_path: Pa
     factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
     admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
     admin = admin_factory.connect()
-    tenant_a, tenant_b = "service_http_a", "service_http_b"
-    tables = (
-        "service_account_events",
-        "service_account_credentials",
-        "service_account_permissions",
-        "service_accounts",
-        "identity_permissions",
-    )
+    token = uuid4().hex[:12]
+    tenant_a, tenant_b = f"service_http_a_{token}", f"service_http_b_{token}"
     root = tmp_path / "tenants"
     root.mkdir()
     for tenant in (tenant_a, tenant_b):
@@ -154,18 +150,9 @@ def test_live_service_credential_http_auth_policy_tenant_and_logout(tmp_path: Pa
             install_postgres_rls_schema(admin)
             admin.execute(POSTGRES_IDENTITY_SCHEMA_SQL)
             admin.execute(POSTGRES_SERVICE_ACCOUNT_SCHEMA_SQL)
-            admin.execute(
-                "ALTER TABLE reconforge.service_account_events DISABLE TRIGGER trg_service_account_events_append_only"
+            cleanup_postgres_test_tenants_as_admin(
+                admin, tenant_ids=(tenant_a, tenant_b), plan=SERVICE_ACCOUNT_TENANT_CLEANUP_PLAN,
             )
-            for table in tables:
-                admin.execute(
-                    f"DELETE FROM reconforge.{table} WHERE tenant_id IN (%s,%s)",  # nosec B608 - fixed allowlist
-                    (tenant_a, tenant_b),
-                )
-            admin.execute(
-                "ALTER TABLE reconforge.service_account_events ENABLE TRIGGER trg_service_account_events_append_only"
-            )
-            admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b))
             admin.execute(
                 "INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)",
                 (tenant_a, tenant_a, tenant_b, tenant_b),
@@ -208,14 +195,13 @@ def test_live_service_credential_http_auth_policy_tenant_and_logout(tmp_path: Pa
         )
         headers = {"X-ReconForge-Tenant": tenant_a, "Authorization": f"Bearer {issued.token}"}
         assert client.get("/api/v1/auth/me", headers=headers).json()["principal_type"] == "service_account"
-        assert (
-            client.get(
-                "/api/v1/workflow/transitions",
-                headers=headers,
-                params={"object_type": "reconciliation"},
-            ).status_code
-            == 200
+        workflow = client.get(
+            "/api/v1/workflow/transitions", headers=headers, params={"object_type": "reconciliation"},
         )
+        # db.read admits the principal, but the server boundary deliberately
+        # refuses to fall back to a tenant's local workflow state machine.
+        assert workflow.status_code == 501
+        assert workflow.json()["error"]["code"] == "workflow_server_backend_unavailable"
         assert client.get("/api/v1/audit/events", headers=headers).status_code == 403
         assert (
             client.post(
@@ -243,18 +229,8 @@ def test_live_service_credential_http_auth_policy_tenant_and_logout(tmp_path: Pa
             )
     finally:
         try:
-            with admin.transaction():
-                admin.execute(
-                    "ALTER TABLE reconforge.service_account_events DISABLE TRIGGER trg_service_account_events_append_only"
-                )
-                for table in tables:
-                    admin.execute(
-                        f"DELETE FROM reconforge.{table} WHERE tenant_id IN (%s,%s)",  # nosec B608 - fixed allowlist
-                        (tenant_a, tenant_b),
-                    )
-                admin.execute(
-                    "ALTER TABLE reconforge.service_account_events ENABLE TRIGGER trg_service_account_events_append_only"
-                )
-                admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b))
+            cleanup_postgres_test_tenants_as_admin(
+                admin, tenant_ids=(tenant_a, tenant_b), plan=SERVICE_ACCOUNT_TENANT_CLEANUP_PLAN,
+            )
         finally:
             admin.close()

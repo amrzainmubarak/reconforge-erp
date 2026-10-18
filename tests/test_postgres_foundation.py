@@ -30,6 +30,8 @@ from tests.postgres_test_hygiene import (
     PAYABLES_TENANT_CLEANUP_PLAN,
     RECEIVABLES_TENANT_CLEANUP_PLAN,
     RLS_TENANT_CLEANUP_PLAN,
+    SERVICE_ACCOUNT_TENANT_CLEANUP_PLAN,
+    PostgresTenantCleanupPlan,
     cleanup_postgres_test_tenants_as_admin,
 )
 
@@ -116,13 +118,14 @@ class _CleanupAdminConnection:
         return _CleanupCursor()
 
 
-def test_admin_postgres_test_cleanup_is_scoped_and_restores_immutable_trigger() -> None:
+@pytest.mark.parametrize("plan", [PAYABLES_TENANT_CLEANUP_PLAN, SERVICE_ACCOUNT_TENANT_CLEANUP_PLAN])
+def test_admin_postgres_test_cleanup_is_scoped_and_restores_immutable_trigger(plan: PostgresTenantCleanupPlan) -> None:
     admin = _CleanupAdminConnection()
 
     cleanup_postgres_test_tenants_as_admin(
         admin,
         tenant_ids=("payables_a_test", "payables_b_test"),
-        plan=PAYABLES_TENANT_CLEANUP_PLAN,
+        plan=plan,
     )
 
     assert admin.events == ["begin", "commit"]
@@ -147,14 +150,15 @@ def test_admin_postgres_test_cleanup_is_scoped_and_restores_immutable_trigger() 
     assert disabled_at < first_delete_at < constraints_checked_at < enabled_at
 
 
-def test_admin_postgres_test_cleanup_surfaces_delete_failures_and_rolls_back_trigger_state() -> None:
+@pytest.mark.parametrize("plan", [PAYABLES_TENANT_CLEANUP_PLAN, SERVICE_ACCOUNT_TENANT_CLEANUP_PLAN])
+def test_admin_postgres_test_cleanup_surfaces_delete_failures_and_rolls_back_trigger_state(plan: PostgresTenantCleanupPlan) -> None:
     admin = _CleanupAdminConnection(fail_on="DELETE FROM reconforge.domain_audit_events")
 
     with pytest.raises(RuntimeError, match="synthetic cleanup failure"):
         cleanup_postgres_test_tenants_as_admin(
             admin,
             tenant_ids=("payables_a_test",),
-            plan=PAYABLES_TENANT_CLEANUP_PLAN,
+            plan=plan,
         )
 
     assert admin.events == ["begin", "rollback"]

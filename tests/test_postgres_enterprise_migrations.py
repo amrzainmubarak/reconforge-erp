@@ -19,7 +19,7 @@ from tests.test_postgres_inventory_receipt_posting import receipt_database as en
 
 _ = enterprise_database
 ROOT = Path(__file__).parents[1]
-HEAD = "0149_pg_monetary_partial_returns"
+HEAD = "0150_pg_native_query_plans"
 TABLES = (
     "stock_sales_monetary_origins", "customer_partial_return_monetary_plans", "customer_partial_return_monetary_entries",
     "customer_partial_return_monetary_events", "customer_partial_return_monetary_history",

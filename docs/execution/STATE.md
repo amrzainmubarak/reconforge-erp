@@ -3,7 +3,8 @@
 ## Full regression follow-up — 2026-10-18, in progress
 
 The user requested completion of the previously interrupted full pytest run
-and repair of observed failures, exclusively in the primary checkout. The
+and repair of observed failures, exclusively in the primary checkout on
+`amr/full-regression-20261018`. The
 unfiltered 11,096-case run completed: 9652 passed, 886 skipped, 3 failed and 555
 errors in 2039.88s. All 558 negative outcomes require the missing native fixture;
 they are retained rather than accepted as passes. Separate mandatory
@@ -13,13 +14,17 @@ local TLS inherited the server DSN, an AR privilege assertion inherited another
 test's grants, and service-account cleanup omitted audit dependencies while its
 workflow assertion contradicted ADR0637. The repaired live AR/service cases
 pass (2 cases), as do 36 related API/cleanup checks and the TLS reproduction.
-Ruff and Mypy (828 application files) pass. Both hosted generic Python profiles
-pass (9581 each). Three integration failures remain under repair: responsive
-monetary overflow, independent monetary reader refusal, and a timed-out partial
-return POST. Read admission now waits for the current plan/balance and avoids
-redundant catalog reloads after typed command responses; regression and actual
-browser acceptance are being verified. Full-source acceptance is pending.
-See [the follow-up record](FULL_REGRESSION_2026-10-18.md) and ADR0864.
+The UI passes1109 tests. Current-read admission restores actual hosted
+restituted/refund/ordinary cycles; the surrounding stock form's width repair
+passes the foreign valuation viewport/RTL/axe stage. Native3/0skip proves the
+actual scope refusal is now audited without changing business rows (ADR0865).
+The zero cycle's late inverse and a later foreign post still exceed15s.
+Revision0150 retains the exact three native query equations with reusable plans;
+its controlled late-inverse diagnostic takes13.109s versus21.234s. Native7/0skip
+verifies pre-upgrade bytes, current scope,347-table row preservation, exact
+rollback, reinstall and poisoned-catalog refusal (ADR0866). Ruff and Mypy
+(829 files) pass. Complete final-source HTTPS/restore/independent proofs and
+coherent CI remain pending. See [the follow-up record](FULL_REGRESSION_2026-10-18.md).
 
 ## Single working directory — 2026-10-18
 

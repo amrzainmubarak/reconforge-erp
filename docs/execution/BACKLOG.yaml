@@ -1,5 +1,5 @@
 schema_version: 2
-updated_at: "2026-10-16"
+updated_at: "2026-10-18"
 phase: "Enterprise ERP v1.0 — Functional Completion"
 active_sprint: "M7 FINAL CLOSURE: frozen M7.7/M7.9; only witnessed correctness and compatibility blockers; then exact-head HTTPS/restore/CI acceptance; no optional expansion or comparative benchmarks"
 completion_source_of_truth: "docs/execution/ENTERPRISE_COMPLETION_MASTER_MATRIX.md"
@@ -20,7 +20,7 @@ tasks:
     area: quality-and-test-isolation
     title: Complete the interrupted full regression and repair reproduced test failures in the primary checkout
     status: in_progress
-    exit_evidence: "FULL_REGRESSION_2026-10-18.md; retain the complete unfiltered result and missing-prerequisite errors; verify repaired TLS, least-privilege AR and service-account cleanup tests; complete appropriate native CI gates without adding skips or relaxing financial/security assertions."
+    exit_evidence: "FULL_REGRESSION_2026-10-18.md; retain the complete unfiltered result and missing-prerequisite errors; verify TLS, least-privilege AR and service-account cleanup; ADR0865 actual scope-denial audit; ADR0866 revision0150 byte/scope/rollback parity; complete final-source HTTPS/restore/independent proofs and coherent CI without adding skips, increasing timeouts or relaxing financial/security assertions."
   - id: AMR-WORKSPACE-20261018
     depends_on: []
     priority: P1

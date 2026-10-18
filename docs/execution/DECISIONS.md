@@ -1,5 +1,15 @@
 # ReconForge Execution Decisions Log
 
+## Version query preparation rather than omit financial checks (2026-10-18; ADR0866)
+
+The actual zero cycle's sixth economic operation still exceeds15s after read
+admission repair. Its native21.234s profile identifies repeated scope, canonical
+and review queries. The finite three-query diagnostic takes13.109s with all
+closures retained. Revision0150 keeps their exact equations, current invoker
+scope and ABI, using reusable plans and canonical recursion. Do not ship the
+insufficient JIT-only experiment or cache authorization/data/proofs. Preserve
+the old migrations and exact rollback. Actual final-source gates remain required.
+
 ## Contain the existing stock form's intrinsic width (2026-10-18)
 
 Actual clean04af foreign diagnostics locate the remaining320px overflow in the

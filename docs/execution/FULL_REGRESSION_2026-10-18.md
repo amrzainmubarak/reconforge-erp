@@ -129,3 +129,28 @@ values, exceed available width. The scoped stock CSS now bounds those minima
 and inline margins and wraps controls; production build passes. Complete foreign
 acceptance on the corrected build remains required. All negative captures,
 source bindings and owned-container cleanup are retained.
+
+## Versioned native query preparation
+
+The corrected stock form passes the foreign valuation viewport/RTL/axe stage
+on b1c4ccf2; its next monetary Return POST still exceeds15s. Hosted dadf5006
+restituted, refund and ordinary cycles now pass, including their native restore
+and original verification. The zero cycle fails its sixth economic operation,
+the cost-restoration inverse (not its first return).
+
+The genuine zero sequence's controlled profile takes21.234s, of which19.609s
+are deferred native checks:10382 scope calls,71645 canonical nodes,96 review
+snapshots. JIT-off18.859s and scope-only18.844s are retained insufficient
+experiments. The finite three-query implementation takes13.109s while retaining
+all closures. Revision0150 leaves prior migrations, values, predicates, invoker
+context and financial bytes intact; it reuses query preparation and preserves
+the canonical equations. ADR0866 records scope, official references and rollback.
+
+The actual migration differential passes7/0skip (122.18s pytest,124.5s wall):
+old SQL vectors and a real posted plan, prepared-session live scope changes,
+review bytes, all business rows, non-function catalog, OID/owner/ACL/attributes,
+reinstallation, exact149 rollback and old acknowledgement readability. Six
+body/definer/overload attacks refuse without changing the poisoned catalog.
+An actual150 audit smoke case passes1/0skip; registry5 pass, and both offline
+migration directions emit successfully. Complete final-source browser, restore,
+independent-I/-I-O and CI acceptance remain mandatory.

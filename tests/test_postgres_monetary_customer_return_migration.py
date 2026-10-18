@@ -25,11 +25,21 @@ from reconforge.infrastructure.postgres_inventory_receipt_posting_schema import 
 from reconforge.infrastructure.postgres_monetary_installation import verify_monetary_installation_if_present
 from reconforge.infrastructure.postgres_monetary_stock_schema import DOWNGRADE_PREFLIGHT_SQL, DROP_STORAGE_SQL
 from reconforge.infrastructure.postgres_monetary_stock_schema import TABLES as MONETARY_TABLES
+from reconforge.infrastructure.postgres_native_query_plans import (
+    DOWNGRADE_SQL as QUERY_DOWNGRADE_SQL,
+)
+from reconforge.infrastructure.postgres_native_query_plans import (
+    REVISION as QUERY_REVISION,
+)
+from reconforge.infrastructure.postgres_native_query_plans import (
+    UPGRADE_SQL as QUERY_UPGRADE_SQL,
+)
 from reconforge.platform.common import PlatformError
 from tests.gfo_browser_restore import database_snapshot
 from tests.test_postgres_customer_partial_return_rounding import (
     create_remainder_runtime,
     phase_v2,
+    post_v2,
     prepare_v2,
 )
 from tests.test_postgres_customer_partial_returns import SETTLEMENT_TABLES
@@ -338,3 +348,115 @@ def test_actual_force_rls_ddl_owner_cannot_misread_hidden_draft_as_safe_downgrad
         assert _profiles(admin) == profiles_before and verify_monetary_installation_if_present(admin) is True
         assert admin.execute(all_profiles_sql).fetchall() == all_profiles_before
     assert database_snapshot(admin_dsn) == before
+
+
+def _query_profiles(connection):
+    return connection.execute("""SELECT p.oid,p.proname,p.proowner,p.proacl,p.prolang,p.prorettype,p.prokind,
+        p.prosecdef,p.proisstrict,p.proretset,p.provolatile,p.proparallel,p.proconfig,p.proargnames,p.prosrc
+        FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='reconforge'
+        AND p.proname IN('irp_scope','irp_canonical','fr_snapshot') ORDER BY p.proname""").fetchall()
+
+
+def _query_scope_matrix(connection, tenant, entry):
+    connection.execute("SELECT set_config('app.tenant_id',%s,false)", (tenant,))
+    values = []
+    for workspace, organization, entity in [('work','org','entity'), ('wrong','org','entity'),
+                                           ('work','org','wrong'), ('','',''), ('work','org','entity')]:
+        connection.execute("SELECT set_config('app.workspace_id',%s,false),set_config('app.organization_id',%s,false),"
+                           "set_config('app.legal_entity_id',%s,false),set_config('app.entity_id',%s,false)",
+                           (workspace,organization,entity,entity))
+        for _ in range(8):  # Reuse actual prepared statements, then change current GUCs.
+            for args in [(tenant,'work','org','entity'), (tenant,'wrong','org','entity'),
+                         (tenant,'work','wrong','entity'), (tenant,'work','org','wrong'),
+                         ('wrong-tenant','work','org','entity'), (None,'work','org','entity')]:
+                values.append(connection.execute("SELECT reconforge.irp_scope(%s,%s,%s,%s) result",args).fetchone()['result'])
+            values.append(connection.execute("SELECT reconforge.fr_snapshot(%s,%s,%s,%s)::text result",
+                                             (tenant,entry,'org','entity')).fetchone()['result'])
+    assert values[0] is True and values[-7] is True
+    assert values[56] is False  # Same inputs under the subsequently denied workspace.
+    return values
+
+
+def test_actual150_preserves_preexisting_financial_bytes_invoker_scope_and_exact_rollback(receipt_database):
+    from reconforge.infrastructure.postgres_customer_partial_returns import PostgresCustomerPartialReturnsRepository
+    from reconforge.infrastructure.postgres_financial_reporting_schema import (
+        install_postgres_financial_reporting_schema,
+    )
+    from reconforge.infrastructure.postgres_native_query_plans import verify_native_query_plans_if_present
+
+    admin_dsn, app_dsn = receipt_database
+    _revision(admin_dsn,'downgrade',NEW)
+    runtime, source = create_remainder_runtime(receipt_database,zero=True)
+    plan = post_v2(runtime,prepare_v2(runtime,source,1,0,'pre150-original-return'))
+    with psycopg.connect(admin_dsn,row_factory=dict_row) as admin:
+        before_profiles = _query_profiles(admin)
+        entry = admin.execute('SELECT id FROM reconforge.finance_entries WHERE tenant_id=%s ORDER BY id LIMIT 1',
+                              (runtime.tenant,)).fetchone()['id']
+        originals = [row['original'] for row in admin.execute("SELECT payload::text original FROM reconforge.customer_partial_return_plans WHERE tenant_id=%s",
+                                                            (runtime.tenant,))]
+    vectors = [None,'null','true','false','0','-0.0000','1.2300','1e20','-1e-20',
+               *[json.dumps({'index':i,'quoted':'عربي\\\n"','array':[i,{'z':str(i),'a':None}], 'empty':{}},ensure_ascii=False)
+                 for i in range(64)],*originals]
+    with psycopg.connect(app_dsn,row_factory=dict_row,autocommit=True) as ordinary:
+        flags = ordinary.execute('SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user').fetchone()
+        assert flags == {'rolsuper':False,'rolbypassrls':False}
+        old_values = ordinary.execute("SELECT reconforge.irp_canonical(v::jsonb) value,reconforge.irp_digest(v::jsonb) digest "
+                                     "FROM unnest(%s::text[]) WITH ORDINALITY input(v,n) ORDER BY n",(vectors,)).fetchall()
+        assert old_values[0] == {'value':None,'digest':None} and old_values[1]['value'] == 'null'
+        old_scope = _query_scope_matrix(ordinary,runtime.tenant,entry)
+        before = database_snapshot(admin_dsn)
+        _revision(admin_dsn,'upgrade',QUERY_REVISION)
+        assert ordinary.execute("SELECT reconforge.irp_canonical(v::jsonb) value,reconforge.irp_digest(v::jsonb) digest "
+                                "FROM unnest(%s::text[]) WITH ORDINALITY input(v,n) ORDER BY n",(vectors,)).fetchall() == old_values
+        assert _query_scope_matrix(ordinary,runtime.tenant,entry) == old_scope
+        after = database_snapshot(admin_dsn)
+        assert after['head'] == QUERY_REVISION and after['tables'] == before['tables']
+        assert {k:v for k,v in after['objects'].items() if k!='functions'} == {k:v for k,v in before['objects'].items() if k!='functions'}
+        with psycopg.connect(admin_dsn,row_factory=dict_row) as admin:
+            assert verify_native_query_plans_if_present(admin) is True
+            after_profiles = _query_profiles(admin)
+            assert len(before_profiles) == len(after_profiles) == 3
+            assert [{k:v for k,v in row.items() if k not in {'prosrc','prolang'}} for row in before_profiles] == [
+                {k:v for k,v in row.items() if k not in {'prosrc','prolang'}} for row in after_profiles]
+            install_postgres_financial_reporting_schema(admin)
+            install_postgres_inventory_receipt_posting_schema(admin)
+            assert _query_profiles(admin) == after_profiles
+        _revision(admin_dsn,'downgrade',NEW)
+        assert database_snapshot(admin_dsn) == before
+        with psycopg.connect(admin_dsn,row_factory=dict_row) as admin:
+            assert _query_profiles(admin) == before_profiles
+        _revision(admin_dsn,'upgrade',QUERY_REVISION)
+        assert _query_scope_matrix(ordinary,runtime.tenant,entry) == old_scope
+    with runtime.actor('poster') as (connection,_,actor):
+        retained = PostgresCustomerPartialReturnsRepository(connection,runtime.tenant,protocol_version=2).get(plan['id'],actor=actor)
+        assert retained == plan
+
+
+@pytest.mark.parametrize('direction',['upgrade','downgrade'])
+@pytest.mark.parametrize('attack',['body','definer','overload'])
+def test_actual150_refuses_unknown_query_catalog_before_any_replacement(receipt_database,direction,attack):
+    admin_dsn,_ = receipt_database
+    _revision(admin_dsn,'upgrade',QUERY_REVISION)
+    if direction == 'upgrade':
+        _revision(admin_dsn,'downgrade',NEW)
+    class RollbackPoison(Exception):
+        pass
+    with psycopg.connect(admin_dsn,row_factory=dict_row) as admin:
+        clean = _query_profiles(admin)
+        with pytest.raises(RollbackPoison), admin.transaction():
+            if attack == 'body':
+                admin.execute("CREATE OR REPLACE FUNCTION reconforge.irp_scope(t TEXT,w TEXT,o TEXT,e TEXT) RETURNS BOOLEAN "
+                              "LANGUAGE sql STABLE SET search_path=pg_catalog AS 'SELECT true'")
+            elif attack == 'definer':
+                admin.execute('ALTER FUNCTION reconforge.fr_snapshot(TEXT,TEXT,TEXT,TEXT) SECURITY DEFINER')
+            else:
+                admin.execute("CREATE FUNCTION reconforge.irp_scope(TEXT) RETURNS BOOLEAN LANGUAGE sql AS 'SELECT true'")
+            poisoned = _query_profiles(admin)
+            with pytest.raises(psycopg.errors.CheckViolation) as refused, admin.transaction():
+                admin.execute(QUERY_UPGRADE_SQL if direction=='upgrade' else QUERY_DOWNGRADE_SQL)
+            assert refused.value.diag.constraint_name == 'native_query_plan_contract'
+            assert _query_profiles(admin) == poisoned
+            raise RollbackPoison
+        assert _query_profiles(admin) == clean
+    if direction == 'upgrade':
+        _revision(admin_dsn,'upgrade',QUERY_REVISION)

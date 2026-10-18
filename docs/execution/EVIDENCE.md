@@ -1,5 +1,24 @@
 # ReconForge Execution Evidence Log
 
+## Blocking late inverse and versioned query plans — 2026-10-18
+
+`hosted/dad-remainder-zero-artifact.zip` is hash-verified negative evidence at
+the sixth economic operation, its cost-restoration inverse. The same posted
+native sequence is retained in `legacy-late-post-profile/result.json`:21.234s,
+19.609s deferred checks. JIT-off18.859s and scope-only18.844s remain insufficient
+diagnostics. `legacy-late-post-query-plans-profile/result.json` records13.109s,
+11.610s deferred checks, retaining all current closures. All use the same pinned
+PostgreSQL17.11 image and2CPU/1GiB bounds; none is a throughput claim.
+
+`native-query-plans-smoke.xml` passes actual audited scope refusal on revision150.
+`native-query-plans-migration.xml` passes7/0skip in122.18s pytest/124.5s wall:
+old-SQL canonical/review/current-scope parity through a prepared session,
+complete row-hash preservation, exact rollback and old acknowledgement, OIDs,
+ownership/ACL/attributes, legacy reinstall and six poisoned-catalog refusals.
+`native-query-plan-registry.xml` passes5 revision checks. Offline upgrade/down
+emission both succeed with SHA256s recorded in`native-query-offline-results.json`.
+Final-source actual15s operations, independent proofs, restore and CI are pending.
+
 ## Monetary scope-denial audit reproduction — 2026-10-18
 
 `owned-identity-read-admission/report.json` retains actual1/0skip browser success

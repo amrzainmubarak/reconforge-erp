@@ -337,5 +337,13 @@ DROP FUNCTION reconforge.fr_close_trigger(),reconforge.fr_command_close(TEXT,TEX
 
 
 def install_postgres_financial_reporting_schema(connection: Any) -> None:
+    from reconforge.infrastructure.postgres_native_query_plans import (
+        restore_financial_snapshot_after_reinstall,
+        verify_native_query_plans_if_present,
+    )
+
     with connection.transaction():
+        planned = verify_native_query_plans_if_present(connection)
         connection.execute(UPGRADE_SQL)
+        if planned:
+            restore_financial_snapshot_after_reinstall(connection)

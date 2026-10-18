@@ -39,7 +39,9 @@ test.each(["malformed", "wrong-selected-invoice", "gross", "invoice-date", "cohe
   if (kind === "coherent-due-date") { value.currency_groups[0].items[0].due_date = "2026-10-30"; value.currency_groups[0].items[0].days_overdue = 16; }
   vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(kind === "denied" ? { error: { code: "permission_denied", message: "PRIVATE" } } : value), { status: kind === "denied" ? 403 : 200 })));
   render(<BrowserSessionProvider><Harness /></BrowserSessionProvider>); fireEvent.click(screen.getByText("Session")); start();
-  const alert = await screen.findByRole("alert"); expect(alert).toHaveFocus(); expect(alert).not.toHaveTextContent("PRIVATE"); expect(screen.queryByRole("region", { name: "Authorized receivables aging result" })).not.toBeInTheDocument();
+  const alert = await screen.findByRole("alert");
+  await waitFor(() => expect(alert).toHaveFocus());
+  expect(alert).not.toHaveTextContent("PRIVATE"); expect(screen.queryByRole("region", { name: "Authorized receivables aging result" })).not.toBeInTheDocument();
   expect(denied).toHaveBeenCalledTimes(kind === "denied" ? 1 : 0);
 });
 test.each(["scope", "session", "financial-lock"])("a late response cannot restore data after %s changes", async kind => {

@@ -1,5 +1,17 @@
 # ReconForge Execution Decisions Log
 
+## Review and admit PR141 into main only after final checks (2026-10-18)
+
+The user explicitly requests review, conditional merge into main and an updated
+primary checkout. Retarget the existing PR from its integration parent to main,
+preserve its history and integrate the current main before final checks.
+Keep the original4ff88aff web failure; do not reuse099d's green CI as acceptance
+of a successor. ADR0868 uses existing effect-aware assertion waits for three
+focus checks, preserving accessibility and all financial predicates. Keep the
+two preexisting local edits backed up. No worktree or administrative merge
+bypass is allowed. The final-head check inventory and merge receipt belong in
+`output/pr141-merge-review`.
+
 ## Accept the frozen required regression profiles (2026-10-18)
 
 Accept code099d for this regression follow-up after79/79 CI jobs, same-source

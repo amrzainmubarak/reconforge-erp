@@ -1,5 +1,15 @@
 # Execution State
 
+## PR141 integration policy — 2026-10-18
+
+Review/merge target is main, as explicitly requested. Keep all work in this
+primary checkout and fast-forward local main only after the reviewed final
+candidate's required checks pass. ADR0868 corrects three component assertions
+that observe focus before the existing React effect. The original4ff88aff web
+failure, backed-up local edits, successor checks and eventual merge receipt are
+retained in `output/pr141-merge-review`. Earlier099d results remain bound to
+099d; no later-head or whole-M7 acceptance is inferred from them.
+
 ## Full regression follow-up — 2026-10-18, completed for required profiles
 
 The interrupted regression is completed from `F:\reconforge-erp`, exclusively

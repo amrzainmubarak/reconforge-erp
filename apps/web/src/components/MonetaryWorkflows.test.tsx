@@ -75,7 +75,8 @@ it("retains the exact versioned post command after response loss, blocks other a
   fireEvent.change(within(form).getByLabelText(text("en", "reason")), { target: { value: "Third independent person" } });
   fireEvent.click(within(form).getByRole("button", { name: text("en", "post") }));
   await screen.findByRole("button", { name: text("en", "retry") });
-  expect(attempts).toHaveLength(1); expect(onLock).toHaveBeenLastCalledWith(true); expect(screen.getByRole("alert")).toHaveFocus();
+  expect(attempts).toHaveLength(1); expect(onLock).toHaveBeenLastCalledWith(true);
+  await waitFor(() => expect(screen.getByRole("alert")).toHaveFocus());
   expect(screen.getByRole("button", { name: text("en", "refresh") })).toBeDisabled();
   const count = fetcher.mock.calls.length;
   view.rerender(<MonetaryCustomerReturns locale="ar" scope={scope} identity={identity} externallyLocked={false} onLockChange={onLock} />);
@@ -109,7 +110,7 @@ it("retains a contended CR3 command for an explicit same-body human retry in bot
   await screen.findByRole("button", { name: text("en", "retry") });
   expect(screen.getByRole("alert")).toHaveTextContent("Another operation is using a required resource.");
   expect(screen.getByRole("alert")).not.toHaveTextContent(text("en", "unknown"));
-  expect(screen.getByRole("alert")).toHaveFocus();
+  await waitFor(() => expect(screen.getByRole("alert")).toHaveFocus());
   expect(screen.getByRole("button", { name: text("en", "refresh") })).toBeDisabled();
   expect(screen.getByRole("combobox", { name: text("en", "selectPlan") })).toBeDisabled();
   expect(within(form).getByLabelText(text("en", "reason"))).toBeDisabled();

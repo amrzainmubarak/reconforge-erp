@@ -1,5 +1,25 @@
 # ReconForge Execution Evidence Log
 
+## PR141 pre-merge review and component focus race — 2026-10-18
+
+`output/pr141-merge-review/web-failed-4ff88aff.log` retains CI39109318110's
+actual1110-pass/1-failure web result. The assertion observes the retry button
+before the existing alert focus effect. Preexisting local edits and both file
+copies are backed up in the same evidence directory. Effect-aware assertions
+pass all33 cases across the two files in12.26s; web typecheck and build pass.
+`web-full-after-focus.log` passes1111 cases across103 files in98.05s.
+ADR0868 records the finite correction and conditional merge policy.
+
+Static review covers scoped permission enforcement, financial lock admission,
+revision0150 preflight/rollback, finite fixture grants, current-read UI admission
+and private diagnostics. Clarification: the monetary reader's raw capture cap
+in this PR grows beyond the former4MiB and is derived from its existing64MiB
+packet ceiling; its256KiB per-row bound and exact financial/tamper predicates
+remain. This is a bounded capacity change, not an unchanged raw-byte budget.
+The original099d closure remains evidence for099d only. Final merge requires
+fresh successor checks against main, whose preliminary merge-tree is conflict
+free and identical to the current candidate file tree.
+
 ## Final frozen regression closure — 2026-10-18
 
 Verified `099d5dde4d113a8df2a1df35325c4a51ff6b87c3` passes CI39103245278

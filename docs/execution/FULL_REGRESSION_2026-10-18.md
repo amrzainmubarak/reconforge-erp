@@ -55,6 +55,15 @@ recovery evidence remain. The primary checkout is the only Git worktree.
 
 ## Historical attempts and negative evidence
 
+Subsequent PR141 review: documentation-only head4ff88aff has an actual web
+focus-assertion failure despite its unchanged application tree. Its1110-pass/
+1-failure result is retained, rather than masked by099d's success. ADR0868 waits
+for the existing React focus effect with the original assertion deadline.
+Final successor CI is required before the user-authorized main merge.
+Also, the monetary raw capture capacity in this PR is explicitly increased
+within the existing64MiB packet ceiling; references below to unchanged budgets
+do not mean that the former4MiB raw capture cap was retained.
+
 The chronological entries below retain their original source-qualified pending
 states and failures. The final099d verification above supersedes pending gates;
 earlier negative outcomes remain negative.

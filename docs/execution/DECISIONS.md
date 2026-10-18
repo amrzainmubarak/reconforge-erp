@@ -1,5 +1,23 @@
 # ReconForge Execution Decisions Log
 
+## Accept the frozen required regression profiles (2026-10-18)
+
+Accept code099d for this regression follow-up after79/79 CI jobs, same-source
+Security/Docker/CodeQL,30 hash-verified browser/restores with equal source trees,
+both monetary independent proofs, and unchanged-source local194/314 profiles
+pass. Record exact generic9583 passes/663 inherited prerequisite skips per
+Python version. Do not sum overlapping profiles or promote the earlier
+mixed-head864-case cohort to final-head evidence. The189 additional cases came
+from literal-selector inventory; dynamic parity selections can overlap.
+
+Keep the original failure evidence and heavy/network/OS/earlier Windows limits.
+Do not infer whole-M7, release, production, certification or throughput approval.
+Publish the machine-readable closure and finish with documentation-only status
+edits; tested application, migration, workflow and test bytes remain099d.
+Remove only task-owned synthetic fixture containers after identity/label checks,
+remove expired credential files and preserve recovery artifacts. Continue using
+the primary checkout without worktrees, as requested.
+
 ## Complete the skipped live inventory before accepting the baseline (2026-10-18)
 
 Use isolated migrated databases and fresh ordinary roles for the previously

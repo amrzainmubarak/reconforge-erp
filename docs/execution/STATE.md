@@ -1,44 +1,38 @@
 # Execution State
 
-## Full regression follow-up — 2026-10-18, in progress
+## Full regression follow-up — 2026-10-18, completed for required profiles
 
-The user requested completion of the previously interrupted full pytest run
-and repair of observed failures, exclusively in the primary checkout on
-`amr/full-regression-20261018`. The
-unfiltered 11,096-case run completed: 9652 passed, 886 skipped, 3 failed and 555
-errors in 2039.88s. All 558 negative outcomes require the missing native fixture;
-they are retained rather than accepted as passes. Separate mandatory
-native checks use the existing CI selection and isolated synthetic PostgreSQL
-databases. Three environment/order-dependent API test defects were reproduced:
-local TLS inherited the server DSN, an AR privilege assertion inherited another
-test's grants, and service-account cleanup omitted audit dependencies while its
-workflow assertion contradicted ADR0637. The repaired live AR/service cases
-pass (2 cases), as do 36 related API/cleanup checks and the TLS reproduction.
-The UI passes1109 tests. Current-read admission restores actual hosted
-restituted/refund/ordinary cycles; the surrounding stock form's width repair
-passes the foreign valuation viewport/RTL/axe stage. Native3/0skip proves the
-actual scope refusal is now audited without changing business rows (ADR0865).
-The zero cycle's late inverse and a later foreign post still exceed15s.
-Revision0150 retains the exact three native query equations with reusable plans;
-its controlled late-inverse diagnostic takes13.109s versus21.234s. Native7/0skip
-verifies pre-upgrade bytes, current scope,347-table row preservation, exact
-rollback, reinstall and poisoned-catalog refusal (ADR0866). Ruff and Mypy
-(829 files) pass. Clean846d/20250 hosted zero, restituted and both monetary
-cycles now pass their unchanged HTTPS/347-table restore/independent proofs.
-Publication closure passes with the corrected149-file/head150 expectation.
-Web CI passes1111 cases; Python3.11/3.12 both pass on20250.
+The interrupted regression is completed from `F:\reconforge-erp`, exclusively
+in the primary checkout on `amr/full-regression-20261018`. No worktree was created.
+Frozen code `099d5dde4d113a8df2a1df35325c4a51ff6b87c3` passes CI39103245278:
+79/79 successful jobs, including all mandatory native shards and the aggregate.
+Same-source Security, Docker and CodeQL pass. Python3.11 and3.12 each pass9583
+cases with663 inherited prerequisite skips. Web passes1111 component cases and
+19 general E2E cases. All30 hash-verified enterprise browser/recovery reports
+pass; the two monetary cycles include347-table restores and byte-identical
+independent isolated proofs. Source merge/head trees match.
 
-The skipped-live inventory then exposes147 passes/42 failures in189 additional
-cases. Eight stale fixture cases now pass with fresh ordinary roles. Explicit
-AR provisioning reveals three real currency-binding/customer deadlocks;
-canonical admission order fixes all34 AR cases (ADR0867). Four additional
-restore-fence/crash/drain cases pass. Both AR files and eight fixture regressions
-are mandatory in CI; final-source composed validation remains required.
-The local97-file native cohort finishes864/0failure/0skip across recorded
-per-file heads; final coherent CI remains the acceptance boundary. The stale
-enterprise migration count is corrected and its actual roundtrip passes.
-Extra Windows monetary15s response failures and optional heavy/network/OS
-prerequisites remain separately retained. See [the follow-up record](FULL_REGRESSION_2026-10-18.md).
+Frozen local native profiles pass194 cases/75 modules/834.141s and314 receivables
+cases/15 modules/281.234s, both zero failures/errors/skips and unchanged099d
+source. These profiles overlap and are not summed. Ruff, Mypy829, Bandit,
+dependency checks, typecheck/build and full package publication closure pass.
+Repairs cover fixture isolation/finite grants, current-read admission,320px
+layout, actual scoped-denial audit, versioned native query preparation and four
+AR binding-before-customer admission calls that eliminate witnessed deadlocks.
+All original financial, authorization, restore and independent-reader gates,
+timeouts, resource bounds and retry policies remain in place.
+
+The initial unconfigured full-run failures, intermediate failures and mixed-head
+864-case cohort remain source-qualified history. Generic skips and heavy1M/10M,
+public-network and OS prerequisites are not relabeled as passes. Earlier extra
+Windows monetary browser deadline/render negatives remain historical; no final
+Windows browser rerun is claimed. Whole M7 remains INCOMPLETE. Final status
+documentation does not change tested runtime/test/workflow sources.
+
+Both owned local PostgreSQL fixtures and expired credentials are removed;
+recovery evidence is retained. See [the full record](FULL_REGRESSION_2026-10-18.md)
+and [machine-readable closure](FULL_REGRESSION_2026-10-18.json), SHA256
+`b31aaa17ecca21d4382a43bd5f8f5315290d68d30f899626dfeb82cbee86f6d3`.
 
 ## Single working directory — 2026-10-18
 

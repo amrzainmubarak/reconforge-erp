@@ -1,9 +1,63 @@
 # Full regression follow-up — 2026-10-18
 
-Status: in progress. Work is exclusively in `F:\reconforge-erp`, on
-`amr/full-regression-20261018`, without new worktrees. Existing migrations through
-149 remain unchanged. Revision150 changes query preparation; API scope audit,
-monetary UI and AR binding-admission corrections require composed validation.
+Status: completed for the required regression profiles. Work is exclusively in
+`F:\reconforge-erp`, on `amr/full-regression-20261018`, without new worktrees.
+The accepted code is `099d5dde4d113a8df2a1df35325c4a51ff6b87c3`.
+Existing migrations through149 remain unchanged. This closes the regression
+follow-up, without changing the broader M7 completion status.
+
+## Final verification on the frozen code
+
+[CI39103245278](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/39103245278)
+completes **79/79 jobs successfully**, including every mandatory server-boundary
+shard and its aggregate gate. Security39103245269, Docker39103245273 and
+CodeQL39103245270 also complete successfully on the same099d code.
+
+| Profile | Final result | Duration |
+| --- | --- | --- |
+| Generic Python3.11 | 9583 passed;663 inherited prerequisite skips | 909.66s pytest |
+| Generic Python3.12 | 9583 passed;663 inherited prerequisite skips | 1053.18s pytest |
+| Frozen additional native selection,75 isolated modules | 194 passed;zero failures/errors/skips | 834.141s wall |
+| Complete receivables group,15 isolated modules | 314 passed;zero failures/errors/skips | 281.234s wall |
+| Web components | 1111 passed across103 files | CI log retained |
+| General hosted browser suite | 19 passed | CI log retained |
+| Enterprise browser/recovery reports | 30/30 passed;zero skips/flakes | Per-report timings retained |
+
+The two local native profiles overlap and are not summed. Their XML case
+identities, per-command099d source and unchanged-source results are verified.
+All30 hosted artifact ZIPs match their GitHub SHA256 digests. Their checkout
+merge `a42b6bee278eba1a448f6a35d117be4d57e74f90` and tested099d head have the
+same tree `e154dcbf6b639118779ee87f14842c368cb7e3a7`.
+Every browser report passes its native restore at the unchanged2CPU/1GiB bounds.
+Both monetary identity/foreign reports restore347 populated tables and pass
+independent isolated `-I`/`-I -O` proofs, valid audit chains, immutable originals
+and unchanged observed business rows. No raw financial rows are published.
+
+Ruff, Mypy (829 files), Bandit, dependency checks and web typecheck/build pass.
+The099d package build and full sdist/wheel publication inspection pass; closure
+SHA256 is `eb20ad53c5226f352b5407616ae8ed9b691078d2c28739fc89fdf12e1b66031d`.
+The machine-readable [final evidence](FULL_REGRESSION_2026-10-18.json) has SHA256
+`b31aaa17ecca21d4382a43bd5f8f5315290d68d30f899626dfeb82cbee86f6d3`.
+Raw logs, negative predecessors and hash-verified artifacts remain under
+`output/full-regression-20261018T014707Z`.
+
+Generic prerequisite skips are not accepted as passes; the configured mandatory
+profiles supply separate live evidence. Existing heavy1M/10M and public-network
+opt-ins remain outside this baseline. Earlier extra Windows monetary browser
+deadline/render failures remain historical negatives, without a claimed final
+Windows browser rerun. No production, certification or throughput claim follows.
+The final status commit changes documentation only; runtime, migrations, tests
+and workflow sources remain identical to099d. CI results above refer to099d.
+
+Both task-owned local PostgreSQL containers and their expired credential files
+are removed after verified identity/ownership checks. Cleanup receipts and all
+recovery evidence remain. The primary checkout is the only Git worktree.
+
+## Historical attempts and negative evidence
+
+The chronological entries below retain their original source-qualified pending
+states and failures. The final099d verification above supersedes pending gates;
+earlier negative outcomes remain negative.
 
 ## Completed initial run and remaining integration failures
 
@@ -174,8 +228,10 @@ the archive itself must still satisfy the complete linear-chain check.
 ## Complete the inherited live prerequisites
 
 The665 local generic skips are inventoried by node and existing CI selectors,
-including their `-k` filters. The uncovered PostgreSQL selection contains189
-cases in70 files. Its actual migrated, per-file isolated run records147 passes,
+including their literal `-k` filters. That static inventory identifies189
+additional cases in70 files; dynamic parity-array selections can overlap, so
+this does not establish their absence from all CI. The actual migrated,
+per-file isolated run records147 passes,
 42 failures, zero skips (1495.36s). Eight fixture cases lack current finite role
 grants or provision tenants through the runtime instead of the administrator.
 The other34 AR cases lack their declared migrated application-role profile.

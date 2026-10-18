@@ -1,5 +1,32 @@
 # ReconForge Execution Evidence Log
 
+## Final frozen regression closure — 2026-10-18
+
+Verified `099d5dde4d113a8df2a1df35325c4a51ff6b87c3` passes CI39103245278
+79/79 jobs, Security39103245269, Docker39103245273 and CodeQL39103245270.
+Python3.11:9583 passed/663 inherited prerequisite skips/909.66s; Python3.12:
+9583/663/1053.18s. Web1111/103 files and19 general E2E pass. All30 downloaded
+enterprise browser/recovery artifacts match GitHub SHA256s and pass unchanged
+native restore/resource/skip/flake gates. Mergea42b6bee and099d trees both equal
+`e154dcbf6b639118779ee87f14842c368cb7e3a7`. Both monetary originals pass347-table
+restore, audit integrity, immutable originals and isolated byte-equal I/I-O proofs.
+
+Local `final-additional-native` passes194/0fail/error/skip across75 isolated
+modules in834.141s; `final-receivables-shard` passes314/0fail/error/skip across15
+modules in281.234s. XML identities and per-command099d source are verified.
+Profiles overlap; counts are not added. Full final package publication closure
+SHA256: `eb20ad53c5226f352b5407616ae8ed9b691078d2c28739fc89fdf12e1b66031d`.
+Ruff/Mypy829/Bandit and dependency/web checks pass.
+
+[Machine-readable closure](FULL_REGRESSION_2026-10-18.json) SHA256:
+`b31aaa17ecca21d4382a43bd5f8f5315290d68d30f899626dfeb82cbee86f6d3`.
+Raw evidence remains in `output/full-regression-20261018T014707Z`.
+`native-fixture-cleanup.json` and `post-profile/cleanup.json` record removal of
+only the two identity/label-verified owned containers and expired credential
+files. One primary worktree remains. Final status edits are documentation only.
+Retain earlier failures and optional/Windows limits exactly as qualified in the
+[full report](FULL_REGRESSION_2026-10-18.md); broader M7 stays INCOMPLETE.
+
 ## Skipped-live completion and actual AR deadlock — 2026-10-18
 
 Under `output/full-regression-20261018T014707Z`, `additional-native/result.json`

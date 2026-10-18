@@ -19,8 +19,8 @@ tasks:
     priority: P1
     area: quality-and-test-isolation
     title: Complete the interrupted full regression and repair reproduced test failures in the primary checkout
-    status: in_progress
-    exit_evidence: "FULL_REGRESSION_2026-10-18.md; retained unfiltered negative and configured native cohorts; eight fresh-role fixture regressions and34 actual AR cases pass; ADR0865 audited scope denial, ADR0866 revision0150 byte/scope/rollback parity, ADR0867 binding/customer admission order; whole successor CI and frozen composed proof required. Preserve optional prerequisites and Windows timing negatives without relaxing gates."
+    status: completed
+    exit_evidence: "FULL_REGRESSION_2026-10-18.md/.json; frozen099d CI39103245278 passes79/79 jobs; same-source Security/Docker/CodeQL pass; Python9583/663 inherited prerequisite skips per3.11/3.12; web1111 plus19 E2E;30 hash-verified browser/restores including both monetary independent I/I-O proofs and347 tables; local194/0skip and314/0skip overlapping profiles; package closure passes. Original negatives, optional heavy/network/OS limits and earlier Windows timing negatives retained. Documentation-only status closure; wholeM7 stays INCOMPLETE."
   - id: AMR-WORKSPACE-20261018
     depends_on: []
     priority: P1

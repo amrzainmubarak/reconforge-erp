@@ -1,5 +1,20 @@
 # Execution State
 
+## Single working directory — 2026-10-18
+
+All current work is consolidated in `F:\reconforge-erp`, on local branch
+`amr/single-workspace-20261018`, from integrated source `bfc138a13c05513dc5c6e7bf23c81f013a0df123`
+(750 commits beyond the former primary checkout). Four secondary worktrees
+were removed after patch-equivalence and backup verification; 46 stale
+registrations were pruned. Do not create further worktrees (ADR0863).
+The two former primary SQL-assembly edits are preserved in a stash, patch and
+original-file copies; their emitted SQL was unchanged, and the newer source
+already separates the migration fragments. The recovery bundle and retained
+artifacts are indexed in [the consolidation record](WORKSPACE_CONSOLIDATION_2026-10-18.md).
+176 selected Python tests and 1106 web tests pass, together with Ruff, Mypy,
+web typecheck/build and diff validation. Full pytest was stopped after 439.729s
+and is incomplete. Historical M7 acceptance blockers below remain open.
+
 ## M7 final closure mode — frozen requirements (2026-10-16)
 
 The latest human directive freezes M7.7/M7.9; whole M7 stays OPEN. No optional

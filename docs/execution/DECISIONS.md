@@ -1,5 +1,18 @@
 # ReconForge Execution Decisions Log
 
+## One primary checkout by explicit user directive (2026-10-18; ADR0863)
+
+Use `F:\reconforge-erp` for ongoing development and use local branches for
+isolation. Retire secondary worktrees only after verifying their changes are
+represented in the integrated source and preserving their Git heads, primary
+local edits and non-cache artifacts. The verified recovery bundle covers all
+51 previously registered heads, including detached heads, and the primary stash.
+The previous primary edits only reorganized static SQL fragments: identical
+emitted SQL was verified against their original base. The latest integrated
+source already includes that assembly pattern and subsequent financial fixes;
+reapplying the old patch would conflict with newer source. Preserve the old
+bytes for recovery instead. See [the execution record](WORKSPACE_CONSOLIDATION_2026-10-18.md).
+
 ## Keep global FIFO quantity evidence within its cost boundary (2026-10-16)
 
 The actual15a1 SQL30s failure and retained function profile identify repeated

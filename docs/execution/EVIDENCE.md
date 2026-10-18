@@ -1,5 +1,18 @@
 # ReconForge Execution Evidence Log
 
+## Primary workspace consolidation — 2026-10-18
+
+Integrated source `bfc138a13c05513dc5c6e7bf23c81f013a0df123` is now in the primary
+directory. All distinct patches in the three leaf worktrees have equivalents
+in that source (`git cherry` reports only `-` entries). Four actual worktrees
+and 46 stale registrations were removed; final `git worktree list --porcelain`
+contains only `F:/reconforge-erp`. Bundle verification, all 51 recorded head
+memberships, primary stash retention and individual artifact SHA256 checks pass.
+Ruff, Mypy (828 files), 176 selected Python tests, web typecheck, 1106 web tests,
+web build and `git diff --check` pass. Full pytest was deliberately stopped
+after 439.729s at approximately 17% and is incomplete, not accepted. Raw logs,
+recovery details and command durations are in the [consolidation record](WORKSPACE_CONSOLIDATION_2026-10-18.md).
+
 ## M7 exact63 and bounded closure diagnoses — 2026-10-16
 
 - Actual native zero-reuse63f7-v10 passes1/0skip248.031s and current migration

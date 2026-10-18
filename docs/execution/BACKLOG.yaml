@@ -14,6 +14,13 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-WORKSPACE-20261018
+    depends_on: []
+    priority: P1
+    area: development-workspace
+    title: Consolidate current work into the primary directory and retire secondary worktrees
+    status: completed
+    exit_evidence: "WORKSPACE_CONSOLIDATION_2026-10-18.md; verified Git bundle, stash and artifact hashes; four worktrees removed and 46 stale registrations pruned; one checkout remains; 176 selected Python and 1106 web tests pass. Full pytest incomplete."
   - id: AMR-ENTERPRISE-M7-NATIVE-SOURCE-015
     depends_on: [AMR-ENTERPRISE-CR2-CONTRACT-014, AMR-ENTERPRISE-M6-COLLECTION-LOCK-014]
     priority: P0

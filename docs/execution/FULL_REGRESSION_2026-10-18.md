@@ -1,8 +1,38 @@
 # Full regression follow-up — 2026-10-18
 
 Status: in progress. Work is exclusively in `F:\reconforge-erp`, on
-`amr/full-regression-20261018`, without new worktrees. Application source and
-financial migrations remain identical to the consolidated `bfc138a1` source.
+`amr/full-regression-20261018`, without new worktrees. Python financial source
+and migrations remain identical to the consolidated `bfc138a1` source so far;
+the monetary UI now has a scoped responsive-layout correction under verification.
+
+## Completed initial run and remaining integration failures
+
+The unfiltered Windows run completed in 2039.88 pytest seconds (2045.400 wall
+seconds): 9652 passed, 886 skipped, 3 failed and 555 setup errors. Every one of
+the 558 negative outcomes is the same missing
+`RECONFORGE_TEST_POSTGRES_ADMIN_DSN` prerequisite. All affected files belong to
+the existing 97-file mandatory-native CI selection. The remaining generic
+profile accounts for 9577 passes and 665 existing prerequisite skips.
+
+Draft PR141, Actions run39089488421, tests head `0d74989b` through merge
+`f071c836`; their Git trees both equal
+`667a86071b1698bf883fa727f34b0dd737e988c0`. Both Python profiles pass9581 cases
+with663 existing prerequisite skips. Python3.11 takes858.68s; Python3.12
+takes1131.74s. Security, Docker and CodeQL pass. Three actual integration gates
+remain negative: restituted Return POST exceeds the unchanged15s bound;
+foreign monetary valuation has428px page overflow at320px; identity monetary
+browser and347-table restore pass before independent original verification
+refuses. Their original job logs and hash-verified artifacts are retained.
+
+The responsive correction constrains monetary grid children, form controls,
+long identifiers and evidence to their container while keeping table scrolling
+and all values visible. The existing actual foreign-cycle viewport/RTL/axe
+assertions remain unchanged.28 monetary component tests, typecheck and build
+pass; the actual corrected cycle is still pending. A closed diagnostic adds
+only a reader stage and source line on refusal.45 reader/CI-contract tests pass,
+including private-value non-disclosure tests. No financial guard, timeout,
+reader budget, retry or skip policy is relaxed. Backend operation profiling and
+complete successor-source integration acceptance remain required.
 
 ## Full-run provenance
 

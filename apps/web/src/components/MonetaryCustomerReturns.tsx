@@ -1,3 +1,4 @@
+import "./MonetaryWorkflows.css";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { BudgetIdentity } from "../budget-control-data";
 import { useBrowserSession } from "../browserSession";
@@ -99,7 +100,7 @@ export function MonetaryCustomerReturns({ locale, scope, identity, externallyLoc
   }
   const input = (key: MonetaryWord, value: string, change: (value: string) => void) => <label>{t(key)}<input required disabled={locked} maxLength={key === "reason" ? 500 : 200} type={key === "posting_date" ? "date" : "text"} inputMode={key === "quantity_scaled" || key === "amount_minor" ? "numeric" : undefined} value={value} onChange={event => change(event.target.value)} /></label>;
   const independent = plan && plan.preparer_actor_id !== identity.id, third = independent && plan.reviewer_actor_id !== identity.id;
-  return <section aria-label={t("partialTitle")} dir={locale === "ar" ? "rtl" : "ltr"}><h2>{t("partialTitle")}</h2><p>{t("partialBoundary")}</p><p>{t("duties")}</p>
+  return <section className="monetary-workflow" aria-label={t("partialTitle")} dir={locale === "ar" ? "rtl" : "ltr"}><h2>{t("partialTitle")}</h2><p>{t("partialBoundary")}</p><p>{t("duties")}</p>
     {error && <p role="alert" ref={alert} tabIndex={-1}>{t(error)}</p>}{(loading || busy) && <p role="status">{t("loading")}</p>}
     {pending && !busy && <aside role="status"><p>{t(error === "retryableConflict" ? "retryableConflict" : "unknown")}</p><button disabled={externallyLocked} onClick={() => void send(pending)}>{t("retry")}</button></aside>}
     <section className="panel"><button disabled={locked} onClick={() => setRefresh(old => old + 1)}>{t("refresh")}</button><label>{t("selectPlan")}<select disabled={locked} value={plan?.id ?? ""} onChange={event => { ++generation.current; const value = plans.find(item => item.id === event.target.value) ?? null; setPlan(value); setSource(value?.source_order_id ?? ""); setBalance(null); setError(null); }}><option value="">—</option>{plans.map(value => <option key={value.id} value={value.id}>{t(value.operation)} · {t(value.status)} · {value.id}</option>)}</select></label>{!plans.length && !loading && <p>{t("emptyPlans")}</p>}</section>

@@ -1,5 +1,16 @@
 # ReconForge Execution Decisions Log
 
+## Keep evidence visible and reader refusals diagnosable (2026-10-18)
+
+The actual foreign monetary browser gate found428px overflow at320px. Scope
+grid containment, control sizing and identifier wrapping to the monetary
+components; keep evidence-table scrolling and the existing viewport/RTL checks.
+For the identity reader refusal after successful browser/restore, publish only
+a closed source-stage label and line number. Exception messages, tracebacks,
+financial values and credentials remain private. The independent reader,
+digest pins, file budgets and all acceptance predicates are unchanged. Its
+15s operation limit remains mandatory while backend latency is investigated.
+
 ## Isolate regression fixtures rather than weaken financial guards (2026-10-18; ADR0864)
 
 Keep local CLI tests independent of an ambient PostgreSQL DSN. Use a fresh

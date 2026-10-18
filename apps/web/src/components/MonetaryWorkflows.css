@@ -1,0 +1,17 @@
+.monetary-workflow { min-inline-size: 0; max-inline-size: 100%; }
+.monetary-workflow :where(div, section, form, fieldset, label, details, dl, dt, dd, ul, li) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.monetary-workflow :where(p, h2, h3, h4, dt, dd, li, summary, bdi, time) { overflow-wrap: anywhere; }
+.monetary-workflow :where(input, select, button) {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  inline-size: 100%;
+}
+.monetary-workflow button { white-space: normal; }
+.monetary-workflow .reporting-table { min-inline-size: 0; max-inline-size: 100%; overflow-x: auto; }
+@media (max-width: 40rem) {
+  .monetary-workflow dl { grid-template-columns: minmax(0, 1fr); }
+}

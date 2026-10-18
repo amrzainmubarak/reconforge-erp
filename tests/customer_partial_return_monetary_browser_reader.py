@@ -35,6 +35,25 @@ POLICY = StructuredDocumentPolicy(max_file_bytes=MAX_PACKET, max_nodes=100_000, 
 _require, _same_typed, _encode, _regular, _file = common._require, common._same_typed, common._encode, custody._regular, custody._file
 EXECUTION_NAMES = common.EXECUTION_NAMES
 
+_REFUSAL_STAGES = {
+    "_family": "custody_inputs", "_tables": "raw_rows_contract", "_decode": "structured_input",
+    "_proof": "independent_proof", "verify_monetary_original_rows": "isolated_reader",
+    "require_monetary_original_binding": "custody_binding",
+}
+
+
+def monetary_refusal_location(error: Exception) -> dict[str, Any]:
+    """Publish only a closed source location; messages and locals stay private."""
+    stage, line = "reader_dispatch", 0
+    frame = error.__traceback__
+    while frame is not None:
+        if frame.tb_frame.f_globals.get("__name__") == __name__:
+            selected = _REFUSAL_STAGES.get(frame.tb_frame.f_code.co_name)
+            if selected is not None:
+                stage, line = selected, frame.tb_lineno
+        frame = frame.tb_next
+    return {"schema_version": "monetary-reader-refusal-location-v1", "stage": stage, "line": line}
+
 
 def _decode(original: bytes) -> dict[str, Any]:
     value = parse_json_document(original.decode("utf-8"), policy=POLICY, reject_fractional_numbers=True)

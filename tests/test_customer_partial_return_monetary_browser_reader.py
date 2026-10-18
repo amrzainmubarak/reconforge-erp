@@ -1,6 +1,7 @@
 """Custody components only; empty synthetic rows never prove a posted cycle."""
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,25 @@ import pytest
 
 from tests import customer_partial_return_monetary_browser_reader as reader
 from tests.test_customer_partial_return_monetary_posted_oracle import complete_browser_fixture
+
+
+def test_refusal_location_discloses_only_a_closed_stage_and_source_line() -> None:
+    sensitive = "Synthetic private row and credential must stay private"
+    try:
+        reader._tables({sensitive: []})
+    except ValueError as error:
+        location = reader.monetary_refusal_location(error)
+    assert location["stage"] == "raw_rows_contract"
+    assert type(location["line"]) is int and location["line"] > 0
+    assert set(location) == {"schema_version", "stage", "line"}
+    assert sensitive not in json.dumps(location)
+
+
+def test_unrelated_exception_text_never_becomes_public_reader_diagnostics() -> None:
+    sensitive = "postgresql://synthetic-private-user:synthetic-private-key@invalid/private"
+    result = reader.monetary_refusal_location(RuntimeError(sensitive))
+    assert result == {"schema_version": "monetary-reader-refusal-location-v1", "stage": "reader_dispatch", "line": 0}
+    assert sensitive not in json.dumps(result)
 
 
 def family(private: Path, *, case: str = "identity", restore: bool = True) -> tuple[Path, Path]:

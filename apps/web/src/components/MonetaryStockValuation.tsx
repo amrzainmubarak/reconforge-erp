@@ -1,3 +1,4 @@
+import "./MonetaryWorkflows.css";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useBrowserSession } from "../browserSession";
 import { AdminApiError } from "../data";
@@ -70,7 +71,7 @@ export function MonetaryStockValuation({ locale, scope, stock, options, identity
   const phasePermission = plan?.phase === 0 ? ["finance_core.validate", "receivables.approve"] : ["finance_core.post", "receivables.manage"];
   const phaseAllowed = plan && writable && plan.phase < 2 && has(...phasePermission) && (plan.kind !== "reverse_revaluation" || has("finance_core.reverse"))
     && (plan.phase === 0 ? plan.preparer_actor_id !== identity.id : ![plan.preparer_actor_id, plan.reviewer_actor_id].includes(identity.id));
-  return <section className="panel" aria-label={t("valuationTitle")} dir={locale === "ar" ? "rtl" : "ltr"}><h3 tabIndex={-1} ref={heading}>{t("valuationTitle")}</h3><p>{t("valuationBoundary")}</p>
+  return <section className="panel monetary-workflow" aria-label={t("valuationTitle")} dir={locale === "ar" ? "rtl" : "ltr"}><h3 tabIndex={-1} ref={heading}>{t("valuationTitle")}</h3><p>{t("valuationBoundary")}</p>
     {!has() ? <p role="alert">{t("denied")}</p> : !foreign ? <p>{t("identityValuation")}</p> : <>
       {error && <p ref={alert} role="alert" tabIndex={-1}>{t(error)}</p>}{busy && <p role="status">{t("loading")}</p>}
       {pending && !busy && <aside role="status"><p>{t("unknown")}</p><button disabled={externallyLocked || pendingActor.current !== identity.id} onClick={() => void send(pending)}>{t("retry")}</button></aside>}

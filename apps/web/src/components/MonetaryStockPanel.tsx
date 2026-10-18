@@ -1,3 +1,4 @@
+import "./MonetaryWorkflows.css";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useBrowserSession } from "../browserSession";
 import { AdminApiError } from "../data";
@@ -110,7 +111,7 @@ export function MonetaryStockPanel({ locale, scope, identity, externallyLocked, 
   const account = (key: keyof typeof invoice, kind: string) => select(key as MonetaryWord, invoice[key], value => setInvoice({ ...invoice, [key]: value }), options?.accounts.filter(row => row.account_type === kind).map(row => ({ value: row.account_code, label: `${row.name} · ${row.account_code}` })) ?? []);
   const period = (value: string, update: (value: string) => void) => select("period_id", value, update, options?.periods.map(row => ({ value: row.id, label: `${row.name} · ${row.start_date} — ${row.end_date}` })) ?? []);
   const rateFields = (value: ReturnType<typeof blankRate>, update: (value: ReturnType<typeof blankRate>) => void) => <div className="reporting-form">{input("rate", value.rate, rate => update({ ...value, rate }))}{input("rateSource", value.source, source => update({ ...value, source }))}{input("effective_at", value.effective_at, effective_at => update({ ...value, effective_at }))}</div>;
-  return <section aria-label={t("stockTitle")} dir={locale === "ar" ? "rtl" : "ltr"}><h2 tabIndex={-1} ref={heading}>{t("stockTitle")}</h2><p>{t("stockBoundary")}</p><p>{t("duties")}</p>
+  return <section className="monetary-workflow" aria-label={t("stockTitle")} dir={locale === "ar" ? "rtl" : "ltr"}><h2 tabIndex={-1} ref={heading}>{t("stockTitle")}</h2><p>{t("stockBoundary")}</p><p>{t("duties")}</p>
     {error && <p role="alert" tabIndex={-1} ref={alert}>{t(error)}</p>}{(loading || busy) && <p role="status">{t("loading")}</p>}
     {pending && !busy && <aside role="status"><p>{t("unknown")}</p><button disabled={externallyLocked} onClick={() => void send(pending)}>{t("retry")}</button></aside>}
     <section className="panel"><button disabled={locked} onClick={() => setRefresh(old => old + 1)}>{t("refresh")}</button><label>{t("selectStock")}<select disabled={locked} value={selected} onChange={event => { setSelected(event.target.value); setDetail(null); setError(null); }}><option value="">—</option>{orders.map(row => <option key={row.id} value={row.id}>{row.number} · {stockTranslate(locale, row.status)}</option>)}</select></label>{!loading && !orders.length && <p>{t("empty")}</p>}</section>

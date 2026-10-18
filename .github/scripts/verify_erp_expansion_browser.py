@@ -1512,6 +1512,9 @@ def main() -> int:
         if status_before or status_after:
             report["error"] = "Tracked checkout is dirty; inspect tracked_status_before and tracked_status_after."
     except Exception as exc:
+        if monetary_case is not None:
+            from tests.customer_partial_return_monetary_browser_reader import monetary_refusal_location
+            report["monetary_refusal_location"] = monetary_refusal_location(exc)
         with (private_diagnostics / "runner-error.txt").open("xb") as stream:
             stream.write(str(exc).encode("utf8"))
         report["error"] = "Owned acceptance failed; inspect retained private diagnostics and available derived browser diagnostics."
@@ -1573,7 +1576,7 @@ def main() -> int:
             if path.exists():
                 report[filename + "_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
         (output / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-        print(json.dumps({key: report[key] for key in ("status", "source_commit", "wall_seconds", "browser_counts", "error", "source_unchanged", "owned_container_removed") if key in report}, indent=2))
+        print(json.dumps({key: report[key] for key in ("status", "source_commit", "wall_seconds", "browser_counts", "error", "monetary_refusal_location", "source_unchanged", "owned_container_removed") if key in report}, indent=2))
     return 0 if report["status"] == "passed" else 1
 
 

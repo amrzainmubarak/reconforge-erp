@@ -16,6 +16,7 @@ from reconforge.api.server_finance_core import (
     execute_postgres_finance_core_scoped,
     server_finance_core_enabled,
 )
+from reconforge.api.server_identity import request_execution_scope
 from reconforge.auth.models import LocalUser
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor
 from reconforge.domain.monetary_customer_partial_return_commands import (
@@ -53,6 +54,7 @@ def execute(request: Request, user: LocalUser,
     if not server_finance_core_enabled(request):
         raise APIError(status_code=503, code="monetary_partial_return_backend_unavailable", message="Monetary partial returns require PostgreSQL.")
     actor = legacy._actor(request, user)
+    request_execution_scope(request, permission="finance_core.read")
 
     def invoke(finance: Any, scope: FinanceCoreExecutionScope) -> dict[str, Any]:
         if not scope.organization_id or not scope.legal_entity_id or not scope.organization_code or not scope.entity_code:

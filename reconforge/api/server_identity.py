@@ -195,8 +195,8 @@ def request_optional_hierarchy(request: Request) -> tuple[str | None, str | None
     return organization_id, legal_entity_id
 
 
-def request_execution_scope(request: Request) -> RequestExecutionScope:
-    """Resolve caller-selected hierarchy only from an authenticated grant snapshot."""
+def request_execution_scope(request: Request, *, permission: str | None = None) -> RequestExecutionScope:
+    """Resolve granted hierarchy, optionally requiring an audited policy decision."""
 
     tenant_id = request_tenant_id(request)
     principal = getattr(request.state, "server_principal", None)
@@ -216,6 +216,16 @@ def request_execution_scope(request: Request) -> RequestExecutionScope:
         organization_id, legal_entity_id = request_optional_hierarchy(request)
     except PostgresConfigurationError as exc:
         raise APIError(status_code=400, code="invalid_execution_scope", message=str(exc)) from exc
+    if permission is not None:
+        # The policy sink owns a short independent transaction, before any
+        # financial owner or audit-chain lock is acquired. A hierarchy denial
+        # must retain its redacted evidence even though business work refuses.
+        from reconforge.api.dependencies import enforce_server_scoped_permission
+
+        enforce_server_scoped_permission(
+            request, permission=permission, tenant_id=tenant_id, workspace_id=workspace_id,
+            organization_id=organization_id, entity_id=legal_entity_id,
+        )
     if workspace_id not in principal.authorized_workspace_ids:
         raise APIError(status_code=403, code="workspace_scope_denied", message="Workspace scope is not authorized.")
     if organization_id is not None and organization_id not in principal.authorized_organization_ids:

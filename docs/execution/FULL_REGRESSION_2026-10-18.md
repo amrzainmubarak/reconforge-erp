@@ -1,9 +1,9 @@
 # Full regression follow-up — 2026-10-18
 
 Status: in progress. Work is exclusively in `F:\reconforge-erp`, on
-`amr/full-regression-20261018`, without new worktrees. Python financial source
-and migrations remain identical to the consolidated `bfc138a1` source so far;
-the monetary UI now has a scoped responsive-layout correction under verification.
+`amr/full-regression-20261018`, without new worktrees. Financial arithmetic and
+migrations remain identical to the consolidated `bfc138a1` source. API scope
+audit and monetary UI corrections are under verification.
 
 ## Completed initial run and remaining integration failures
 
@@ -96,3 +96,28 @@ reads remain. The original red result is `read-admission-red.log`; complete web
 and actual browser verification follow. The instrumented local monetary post
 takes9.89s, including7.485s deferred constraints. Database guards and15s browser
 limits are unchanged; avoiding overlapping reads is not yet full acceptance.
+
+The fixed UI passes1109 tests in129.43s, typecheck and build. Its actual owned
+identity browser completes1/0skip in485.99s; the whole623.234s gate still refuses
+the missing audited scope-denial witness. The retained input remains unchanged.
+Direct diagnostic qualification of its raw cycle succeeds (12 effects,28 lines);
+adding observations refuses at reader1422. The actual403 observation has
+`entity_scope_denied`, but its audit suffix contains only allowed decisions.
+ADR0865 fixes the route's early unaudited hierarchy refusal without weakening
+the reader. Native workspace/organization/entity regressions first fail3/0skip
+in133.86s because zero persisted policy rows exist. Their corrected run and
+final-source complete browser/restore proof remain required.
+
+The corrected actual ordinary-role cases pass3/0skip (154.687s wall), including
+one persisted bound denial per request, verified audit chains and unchanged
+business digests.113 related execution-scope, monetary transport and route
+authorization checks pass. Ruff, Mypy and web typecheck pass after the change.
+
+Ruff, Mypy (828 files), Bandit, pip-audit, pip-check and package build pass.
+CLI doctor, sample validation and demo pass through the declared executable
+entrypoint. An initial unsupported `python -m reconforge` invocation is retained
+as a command error, not a product failure. General browser checks with actual
+local HTTPS pass20 cases, zero failures, and8 existing fixture-dependent skips
+owned by the dedicated CI jobs (77.50s test,79.103s wall). The ab789 foreign
+browser reduces overflow to18px but remains negative; structural-only dimensions
+will identify the remaining element without publishing field values.

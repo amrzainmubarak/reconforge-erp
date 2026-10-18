@@ -1,5 +1,14 @@
 # ReconForge Execution Decisions Log
 
+## Persist the actual scoped refusal (2026-10-18; ADR0865)
+
+Keep the independent reader's required denied-policy witness. The actual native
+identity cycle proves HTTP403 but its audit suffix contains only allowed
+decisions. Opt monetary execution into central scoped authorization before owner
+access, using its existing mandatory read permission and the existing independent
+redacted audit sink. Tenant identity and header validation precede it. Keep all
+route-specific and owner permissions, immutable financial checks and reader pins.
+
 ## Wait for current reads before financial commands (2026-10-18)
 
 Partial-return controls and command admission wait for their current catalog,

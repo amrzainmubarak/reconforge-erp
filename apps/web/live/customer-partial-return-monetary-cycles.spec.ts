@@ -13,6 +13,22 @@ const stockRoot = "/api/v2/stock-sales", returnRoot = "/api/v3/customer-partial-
 const rate = (value: string) => ({ rate: value, source: "Synthetic witnessed monetary spot", effective_at: day + "T12:00:00Z" });
 let source = "", capture = 0, csrf = "";
 
+async function expectContained(page: Page) {
+  const layout = await page.evaluate(() => {
+    const width = document.documentElement.clientWidth;
+    const overflow = Math.max(0, document.documentElement.scrollWidth - width);
+    const outside = overflow === 0 ? [] : [...document.querySelectorAll("main *")]
+      .filter(element => !element.closest(".reporting-table"))
+      .map(element => ({ tag: element.tagName, classes: element.className,
+        left: element.getBoundingClientRect().left, right: element.getBoundingClientRect().right }))
+      .filter(element => element.right > width || element.left < 0)
+      .sort((left, right) => right.right - left.right).slice(0, 16);
+    return { width, overflow, outside };
+  });
+  // Structural dimensions only: no text, field values or financial rows.
+  expect(layout.overflow, JSON.stringify(layout)).toBe(0);
+}
+
 async function login(page: Page, person: "maker" | "checker" | "poster") {
   await page.goto(`${base}/admin-audit`);
   for (const [label, value] of [["Tenant ID", tenant!], ["Username", "browser-" + person], ["Password", password!]]) await page.getByLabel(label, { exact: true }).fill(value);
@@ -176,7 +192,7 @@ async function closeAndReverseCurrentForeignCarrying(page: Page) {
     await expect(page.getByRole("heading", { name: text(locale, "valuationTitle"), exact: true })).toBeVisible();
     for (const width of [320, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
-      expect(await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth))).toBe(0);
+      await expectContained(page);
       expect((await new AxeBuilder({ page }).analyze()).violations.map(value => value.id)).toEqual([]);
     }
   }
@@ -270,7 +286,7 @@ test("actual monetary Stock v2 and CR3 identity or foreign tax cycle", async ({ 
     await expect(page.getByRole("heading", { name: text(locale, "partialTitle"), exact: true })).toBeVisible();
     for (const width of [320, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
-      expect(await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth))).toBe(0);
+      await expectContained(page);
       expect((await new AxeBuilder({ page }).analyze()).violations.map(value => value.id)).toEqual([]);
     }
   }

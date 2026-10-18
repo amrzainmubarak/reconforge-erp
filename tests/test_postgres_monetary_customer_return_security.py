@@ -9,12 +9,16 @@ from uuid import uuid4
 
 import psycopg
 import pytest
+from fastapi import FastAPI, Request
 from psycopg import sql
 from psycopg.rows import dict_row
 
+from reconforge.api.errors import APIError
+from reconforge.api.routes import customer_partial_returns_v3 as monetary_routes
 from reconforge.domain.finance_posting import FinancePostingError, canonical_json
 from reconforge.domain.monetary_customer_partial_return_commands import MonetaryPartialReturnPreparation
 from reconforge.infrastructure.postgres import PostgresTenantBoundary, set_local_tenant_scope
+from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository
 from reconforge.infrastructure.postgres_monetary_customer_partial_returns import (
     PostgresMonetaryCustomerPartialReturnsRepository,
@@ -35,6 +39,38 @@ from tests.test_postgres_monetary_customer_partial_returns import (
 )
 
 _ = receipt_database
+
+
+@pytest.mark.parametrize("dimension", ["workspace", "organization", "entity"])
+def test_monetary_scope_refusal_persists_closed_policy_evidence_before_owner_use(receipt_database, dimension):
+    runtime, order = _source(receipt_database, foreign=False)
+    before = _business_digest(runtime)
+    app = FastAPI()
+    app.state.postgres_identity_factory = runtime.factory
+    app.state.postgres_finance_core_factory = runtime.factory
+    headers = {"x-reconforge-tenant": runtime.tenant, "x-reconforge-workspace": "work",
+               "x-reconforge-organization": "org", "x-reconforge-legal-entity": "entity"}
+    selected = {"workspace": "x-reconforge-workspace", "organization": "x-reconforge-organization", "entity": "x-reconforge-legal-entity"}[dimension]
+    headers[selected] = "ungranted-" + dimension
+    request = Request({"type": "http", "method": "GET", "path": f"/api/v3/customer-partial-returns/sources/{order['id']}/balance",
+                       "headers": [(key.encode(), value.encode()) for key, value in headers.items()], "app": app})
+    request.state.request_id = "synthetic-scope-refusal"
+    with runtime.actor("poster") as (_, _, _actor):
+        principal = current_server_principal()
+        assert principal is not None
+        request.state.server_principal = principal
+        with pytest.raises(APIError) as refused:
+            monetary_routes.execute(request, principal.user, lambda *_args: pytest.fail("A refused scope reached its financial owner."))
+    assert refused.value.status_code == 403 and refused.value.code == dimension + "_scope_denied"
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
+        rows = connection.execute("""SELECT metadata_json FROM reconforge.domain_audit_events
+            WHERE tenant_id=%s AND object_type='authorization.policy_decision' AND action='evaluated'""", (runtime.tenant,)).fetchall()
+        assert len(rows) == 1
+        evidence = rows[0]["metadata_json"]["policy_decision_evidence"]
+        assert evidence["allowed"] is False and evidence["reason_code"] == refused.value.code
+        assert evidence["context_binding"] == "bound"
+        assert PostgresAuditEventRepository(connection, runtime.tenant).verify().ok
+    assert _business_digest(runtime) == before
 
 
 def _business_digest(runtime):

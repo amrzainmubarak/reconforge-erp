@@ -1,5 +1,18 @@
 # ReconForge Execution Evidence Log
 
+## Monetary scope-denial audit reproduction — 2026-10-18
+
+`owned-identity-read-admission/report.json` retains actual1/0skip browser success
+on clean dadf5006,623.234s whole gate, successful347-table restore followed by
+isolated-reader exit2 at adapter248. Original raw-cycle qualification passes;
+`reader-observation-diagnostic.json` locates the unchanged observation predicate
+at reader1422. No matching denied decision exists in the actual403 audit suffix.
+`monetary-scope-audit-red.xml` records3 native failures before the fix;
+`monetary-scope-audit-green.xml` records3/0skip passes after it (154.687s wall).
+All three authenticated hierarchy dimensions refuse before owner access, retain
+closed denial evidence, verify the audit chain and preserve89 business tables.
+The independent reader remains unchanged. ADR0865 records scope and rollback.
+
 ## Full regression follow-up, ongoing — 2026-10-18
 
 Evidence root: `output/full-regression-20261018T014707Z` in the primary checkout.

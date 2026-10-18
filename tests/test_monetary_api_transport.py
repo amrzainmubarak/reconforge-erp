@@ -32,6 +32,7 @@ def test_cr3_api_translates_typed_contention_to_409_once_without_implicit_retry(
                             legal_entity_id="entity", organization_code="ORG", entity_code="ENTITY")
     monkeypatch.setattr(partial, "server_finance_core_enabled", lambda _request: True)
     monkeypatch.setattr(partial.legacy, "_actor", lambda _request, _user: actor)
+    monkeypatch.setattr(partial, "request_execution_scope", lambda _request, **_kwargs: scope)
     monkeypatch.setattr(partial, "PostgresMonetaryCustomerPartialReturnsRepository", lambda _connection, _tenant_id: owner)
     monkeypatch.setattr(partial, "execute_postgres_finance_core_scoped", lambda _request, operation: operation(finance, scope))
     cause = FinancePostingError("monetary_return_retryable_conflict", "Retry the exact retained command after the current operation finishes.")

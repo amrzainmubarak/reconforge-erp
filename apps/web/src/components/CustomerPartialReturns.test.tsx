@@ -61,6 +61,7 @@ it("requires an explicit exact source balance and sends the captured history ver
   render(<CustomerPartialReturns locale="en" scope={partialScope} identity={identity} onLockChange={onLock} />);
   expect(screen.queryByRole("button", { name: "Prepare partial original return" })).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Partial return original stock order ID"), { target: { value: "stock-original" } });
+  await waitFor(() => expect(screen.getByRole("button", { name: "Load original source balance" })).toBeEnabled());
   fireEvent.click(screen.getByRole("button", { name: "Load original source balance" }));
   const form = await screen.findByRole("form", { name: "Prepare partial original return" });
   for (const [label, value] of [["Return quantity in captured scaled units", "12"], ["Partial cycle fiscal period ID", "period"], ["Partial cycle posting date", "2026-10-15"], ["Refund cash journal code", "CASH"], ["Partial refund liability account", "REFUND"], ["Captured collection cash account", "CASH"], ["Partial cycle reason", "Original twelve units"]]) fireEvent.change(within(form).getByLabelText(label), { target: { value } });
@@ -115,7 +116,7 @@ it("prepares a governed reversal rather than changing a posted plan or posting a
   for (const [label, value] of [["Partial cycle fiscal period ID", "period"], ["Partial cycle posting date", "2026-10-15"], ["Partial cycle reason", "Explicit original correction"]]) fireEvent.change(within(form).getByLabelText(label), { target: { value } });
   fireEvent.click(within(form).getByRole("button")); await waitFor(() => expect(attempts).toHaveLength(1));
   expect(attempts[0].url).toBe(`${partialReturnsRoot}/plans/${partialPlanFixture(2).id}/reversals`); expect(attempts[0].body.expected_history_version).toBe(1);
-  await screen.findByText(/Return reversal · Prepared/); expect(screen.getByRole("button", { name: "Review partial cycle plan" })).toBeInTheDocument();
+  await within(screen.getByRole("region", { name: "Partial cycle source and posting evidence" })).findByText("Return reversal · Prepared", { exact: true }); expect(screen.getByRole("button", { name: "Review partial cycle plan" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Post partial cycle plan" })).not.toBeInTheDocument();
 });
 it("renders bilingual native boundaries with RTL and makes no financial mutations on mount", async () => {
@@ -132,6 +133,7 @@ it("loads a retained plan by its exact ID without depending on the bounded list 
   vi.stubGlobal("fetch", requests);
   render(<CustomerPartialReturns locale="en" scope={partialScope} identity={identity} onLockChange={onLock} />);
   fireEvent.change(screen.getByLabelText("Partial cycle plan ID"), { target: { value: posted.id } });
+  await waitFor(() => expect(screen.getByRole("button", { name: "Load exact retained partial plan" })).toBeEnabled());
   fireEvent.click(screen.getByRole("button", { name: "Load exact retained partial plan" }));
   await screen.findByText(/effect-0/);
   expect(requests.mock.calls.some(([url, init]) => String(url) === `${partialReturnsRoot}/plans/${posted.id}` && init?.method === "GET")).toBe(true);
@@ -152,6 +154,31 @@ it("cancels only an unposted plan using its retained digest without claiming a f
 it("keeps history evidence readable at the finite capacity while disabling a new economic preparation", async () => {
   vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL) => new Response(JSON.stringify(String(url).includes("/balance") ? { balance: { ...originalBalance(), history_version: 256 } } : { plans: [] }))));
   render(<CustomerPartialReturns locale="en" scope={partialScope} identity={identity} onLockChange={onLock} />);
-  fireEvent.change(screen.getByLabelText("Partial return original stock order ID"), { target: { value: "stock-original" } }); fireEvent.click(screen.getByRole("button", { name: "Load original source balance" }));
+  fireEvent.change(screen.getByLabelText("Partial return original stock order ID"), { target: { value: "stock-original" } });
+  await waitFor(() => expect(screen.getByRole("button", { name: "Load original source balance" })).toBeEnabled());
+  fireEvent.click(screen.getByRole("button", { name: "Load original source balance" }));
   await screen.findByText(/This source has reached the supported history limit/); expect(screen.getByRole("button", { name: "Prepare partial original return" })).toBeDisabled();
+});
+it("waits for the current source balance before admitting a retained partial post", async () => {
+  const value = partialPlanFixture();
+  let release!: (response: Response) => void;
+  const waiting = new Promise<Response>(resolve => { release = resolve; });
+  const attempts: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    if (init?.method === "POST") { attempts.push(String(url)); return new Response(JSON.stringify({ plan: partialPlanFixture(2) })); }
+    return String(url).includes("/balance") ? waiting : new Response(JSON.stringify({ plans: [value] }));
+  }));
+  render(<CustomerPartialReturns locale="en" scope={partialScope} identity={identity} onLockChange={onLock} />);
+  const selector = screen.getByRole("combobox", { name: "Retained partial return, refund or reversal" });
+  await waitFor(() => expect(selector.querySelectorAll("option")).toHaveLength(2));
+  fireEvent.change(selector, { target: { value: value.id } });
+  const form = await screen.findByRole("form", { name: "Post partial cycle plan" });
+  phaseReason();
+  const post = within(form).getByRole("button", { name: "Post partial cycle plan" });
+  expect(post).toBeDisabled();
+  fireEvent.submit(form);
+  expect(attempts).toEqual([]);
+  release(new Response(JSON.stringify({ balance: originalBalance() })));
+  await waitFor(() => expect(post).toBeEnabled());
+  expect(attempts).toEqual([]);
 });

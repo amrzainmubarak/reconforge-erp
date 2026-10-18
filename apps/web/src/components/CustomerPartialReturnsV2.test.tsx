@@ -70,6 +70,7 @@ it("prepares a new v2 source without sending a caller-selected allocation rule o
   }));
   render(<CustomerPartialReturns locale="en" scope={partialScope} identity={identity} onLockChange={onLock} protocolVersion={2} />);
   fireEvent.change(screen.getByLabelText("Partial return original stock order ID"), { target: { value: "stock-original" } });
+  await waitFor(() => expect(screen.getByRole("button", { name: "Load original source balance" })).toBeEnabled());
   fireEvent.click(screen.getByRole("button", { name: "Load original source balance" }));
   const form = await screen.findByRole("form", { name: "Prepare partial original return" });
   for (const [label, value] of [["Return quantity in captured scaled units", "1"], ["Partial cycle fiscal period ID", "period"], ["Partial cycle posting date", "2026-10-15"], ["Refund cash journal code", "CASH"], ["Partial refund liability account", "REFUND"], ["Captured collection cash account", "CASH"], ["Partial cycle reason", "Original remaining portion"]]) fireEvent.change(within(form).getByLabelText(label), { target: { value } });

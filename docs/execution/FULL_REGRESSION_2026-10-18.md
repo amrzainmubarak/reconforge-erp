@@ -80,6 +80,19 @@ or customer database is modified by the local harness.
 A secondary all-in-one PostgreSQL diagnostic exposed the fixture defects above
 and was replaced by isolated native execution. Its interrupted result is
 explicitly retained under `postgres-enabled/`; it is not full acceptance.
-The unfiltered original run continues independently to its terminal outcome.
+The unfiltered original run completed; its terminal result and fixture-only
+negative-outcome classification are retained above.
 Final native/full/CI results are pending; prior M7 HTTPS/restore and release
 acceptance limits remain unchanged. ADR0864 records the test-only decision.
+
+## Read admission follow-up
+
+Three deferred-response component regressions reproduce mutation admission
+while a selected plan or source balance is still loading. The partial-return
+components now gate both controls and command dispatch until current reads
+finish. Typed command responses update the selected plan and catalog entry
+without redundant full catalog reloads; explicit refresh and fresh balance
+reads remain. The original red result is `read-admission-red.log`; complete web
+and actual browser verification follow. The instrumented local monetary post
+takes9.89s, including7.485s deferred constraints. Database guards and15s browser
+limits are unchanged; avoiding overlapping reads is not yet full acceptance.

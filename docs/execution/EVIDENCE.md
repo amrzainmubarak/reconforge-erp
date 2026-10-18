@@ -4,7 +4,9 @@
 
 Evidence root: `output/full-regression-20261018T014707Z` in the primary checkout.
 `environment.json` records the exact unfiltered command, source and Python
-3.12.13 runtime. Its full run has not been stopped. `tls-failure-reproduction.log`
+3.12.13 runtime. The full run completed in2039.88s:9652 pass,886 skip,3 failures
+and555 setup errors, all negative outcomes requiring native fixture configuration.
+`initial-failure-classification.json` records the classification. `tls-failure-reproduction.log`
 retains the ambient-server-DSN failure; `tls-repaired.xml` proves the correction.
 `native-api-failures.xml` retains the inherited-grant assertion and audit-FK
 cleanup failures. `native-api-repaired-final.xml` passes both actual native
@@ -13,7 +15,8 @@ three explicitly deselected live cases owned by separate invocations. Ruff and
 Mypy pass. A secondary all-in-one PostgreSQL diagnostic was replaced by the
 existing CI-native selection with isolated databases; that interrupted diagnostic
 is not accepted as a full-suite success. Complete-run and native results remain
-pending. No application source or financial migration was changed.
+pending. Financial Python and migrations are unchanged; narrow browser layout,
+read admission and private-safe refusal diagnostics are under verification.
 
 ## Primary workspace consolidation — 2026-10-18
 

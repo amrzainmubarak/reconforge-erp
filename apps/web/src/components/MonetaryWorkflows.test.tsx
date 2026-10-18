@@ -186,6 +186,7 @@ it("derives preparation only from the loaded history and scaled quantity, withou
   }));
   render(<MonetaryCustomerReturns locale="en" scope={scope} identity={identity} externallyLocked={false} onLockChange={onLock} />);
   fireEvent.change(screen.getByLabelText(text("en", "source_order_id")), { target: { value: fixtures.balance.source_order_id } });
+  await waitFor(() => expect(screen.getByRole("button", { name: text("en", "sourceLoad") })).toBeEnabled());
   fireEvent.click(screen.getByRole("button", { name: text("en", "sourceLoad") }));
   const form = await screen.findByRole("form", { name: text("en", "prepareReturn") });
   for (const [key, value] of [["quantity_scaled", "5"], ["period_id", "period"], ["posting_date", "2026-10-15"], ["reason", "Captured source quantity"]] as const) fireEvent.change(within(form).getByLabelText(text("en", key)), { target: { value } });
@@ -303,4 +304,30 @@ it("preserves a Stock command and its version across unknown delivery and a loca
   expect(attempts[1].path).toBe(`${monetaryStockRoot}/orders/${fixtures.draft.id}/submit`);
   expect(JSON.parse(attempts[1].body)).toMatchObject({ expected_version: 1, reason: "Submit exact source" });
   await waitFor(() => expect(onLock).toHaveBeenLastCalledWith(false));
+});
+it.each(["balance", "plan"])("waits for the current %s read before admitting a monetary post", async kind => {
+  const value = reviewed();
+  let release!: (response: Response) => void;
+  const waiting = new Promise<Response>(resolve => { release = resolve; });
+  const attempts: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(url);
+    if (init?.method === "POST") { attempts.push(path); return json({ plan: fixtures.return }); }
+    if (path.includes("/balance")) return kind === "balance" ? waiting : json({ balance: balance() });
+    if (path.endsWith(value.id)) return kind === "plan" ? waiting : json({ plan: value });
+    return json({ plans: [value] });
+  }));
+  render(<MonetaryCustomerReturns locale="en" scope={scope} identity={identity} externallyLocked={false} onLockChange={onLock} />);
+  const selector = screen.getByRole("combobox", { name: text("en", "selectPlan") });
+  await waitFor(() => expect(within(selector).getAllByRole("option")).toHaveLength(2));
+  fireEvent.change(selector, { target: { value: value.id } });
+  const form = await screen.findByRole("form", { name: text("en", "post") });
+  fireEvent.change(within(form).getByLabelText(text("en", "reason")), { target: { value: "Independent review" } });
+  const post = within(form).getByRole("button", { name: text("en", "post") });
+  expect(post).toBeDisabled();
+  fireEvent.submit(form);
+  expect(attempts).toEqual([]);
+  release(json(kind === "balance" ? { balance: balance() } : { plan: value }));
+  await waitFor(() => expect(post).toBeEnabled());
+  expect(attempts).toEqual([]);
 });

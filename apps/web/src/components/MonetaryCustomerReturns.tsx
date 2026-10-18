@@ -19,12 +19,12 @@ export function MonetaryCustomerReturns({ locale, scope, identity, externallyLoc
   const auth = useBrowserSession(), t = (key: MonetaryWord) => monetaryTranslate(locale, key);
   const [plans, setPlans] = useState<MonetaryPartialPlan[]>([]), [plan, setPlan] = useState<MonetaryPartialPlan | null>(null), [balance, setBalance] = useState<MonetaryPartialBalance | null>(null);
   const [source, setSource] = useState(""), [planId, setPlanId] = useState(""), [refresh, setRefresh] = useState(0);
-  const [busy, setBusy] = useState(false), [loading, setLoading] = useState(false), [pending, setPending] = useState<PreparedScopedCommand | null>(null), [stale, setStale] = useState(false), [error, setError] = useState<MonetaryWord | null>(null);
+  const [busy, setBusy] = useState(false), [loading, setLoading] = useState(false), [balanceLoading, setBalanceLoading] = useState(false), [pending, setPending] = useState<PreparedScopedCommand | null>(null), [stale, setStale] = useState(false), [error, setError] = useState<MonetaryWord | null>(null);
   const [fields, setFields] = useState({ quantity_scaled: "", period_id: "", posting_date: "", reason: "" });
   const [refund, setRefund] = useState({ amount_minor: "", period_id: "", posting_date: "", reason: "" }), [rate, setRate] = useState({ rate: "", source: "", effective_at: "" });
   const [reversal, setReversal] = useState({ period_id: "", posting_date: "", reason: "" }), [reason, setReason] = useState("");
   const mounted = useRef(true), lock = useRef(false), generation = useRef(0), alert = useRef<HTMLParagraphElement>(null);
-  const current = () => mounted.current && auth.isCurrent(auth.revision), locked = externallyLocked || busy || Boolean(pending);
+  const current = () => mounted.current && auth.isCurrent(auth.revision), locked = externallyLocked || busy || loading || balanceLoading || Boolean(pending);
   const has = (operation: keyof typeof partialReturnPermissions) => identity.human && partialReturnPermissions[operation].every(permission => identity.permissions.includes(permission));
   const allowed = (operation: keyof typeof partialReturnPermissions) => identity.stepUp && !stale && has(operation);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; ++generation.current; onLockChange(false); }; }, [onLockChange]);
@@ -42,7 +42,7 @@ export function MonetaryCustomerReturns({ locale, scope, identity, externallyLoc
       setPlans(selected && !values.some(value => value.id === selected.id) ? [selected, ...values] : values); setPlan(selected); setStale(false); setError(null);
     }).catch(caught => { if (!controller.signal.aborted) fail(caught); }).finally(() => { if (current() && !controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [auth.session, auth.revision, scope, identity, plan?.id, refresh, pending, externallyLocked]);
+  }, [auth.session, auth.revision, scope, identity, plan?.id, refresh, externallyLocked]);
   async function readBalance(sourceId: string, signal?: AbortSignal) {
     if (!auth.session || !has("read")) return;
     const epoch = ++generation.current, result = await loadMonetaryPartialBalance(auth.session, scope, sourceId, signal);
@@ -51,9 +51,9 @@ export function MonetaryCustomerReturns({ locale, scope, identity, externallyLoc
     setBalance(result); setStale(false); setError(null);
   }
   useEffect(() => {
-    setBalance(null); if (!plan || pending || externallyLocked) return;
-    const controller = new AbortController();
-    void readBalance(plan.source_order_id, controller.signal).catch(caught => { if (!controller.signal.aborted) fail(caught); });
+    setBalance(null); setBalanceLoading(false); if (!plan || pending || externallyLocked) return;
+    const controller = new AbortController(); setBalanceLoading(true);
+    void readBalance(plan.source_order_id, controller.signal).catch(caught => { if (!controller.signal.aborted) fail(caught); }).finally(() => { if (current() && !controller.signal.aborted) setBalanceLoading(false); });
     return () => { controller.abort(); ++generation.current; };
   }, [plan?.id, plan?.phase, plan?.source_id, plan?.source_order_id, plan?.source_fingerprint, refresh, pending, externallyLocked]);
   async function inspect(event: FormEvent, lookupPlan = false) {
@@ -68,13 +68,13 @@ export function MonetaryCustomerReturns({ locale, scope, identity, externallyLoc
     finally { lock.current = false; if (current()) { setBusy(false); onLockChange(false); } }
   }
   async function send(command: PreparedScopedCommand) {
-    if (!auth.session || lock.current || externallyLocked) return;
+    if (!auth.session || lock.current || externallyLocked || loading || balanceLoading) return;
     lock.current = true; ++generation.current; setBusy(true); setLoading(false); setPending(command); setError(null); onLockChange(true);
     try {
       const result = await executeMonetaryPartialCommand(auth.session, scope, command);
       if (!current()) return;
       setPlan(result); setSource(result.source_order_id); setPlans(old => [result, ...old.filter(value => value.id !== result.id)]);
-      setBalance(null); setPending(null); setReason(""); setStale(false); setRefresh(old => old + 1); onLockChange(false);
+      setBalance(null); setPending(null); setReason(""); setStale(false); onLockChange(false);
     } catch (caught) {
       if (!current()) return;
       if (caught instanceof AdminApiError && caught.status === 409 && caught.code === "monetary_return_retryable_conflict") { setError("retryableConflict"); setStale(true); }
@@ -101,7 +101,7 @@ export function MonetaryCustomerReturns({ locale, scope, identity, externallyLoc
   const input = (key: MonetaryWord, value: string, change: (value: string) => void) => <label>{t(key)}<input required disabled={locked} maxLength={key === "reason" ? 500 : 200} type={key === "posting_date" ? "date" : "text"} inputMode={key === "quantity_scaled" || key === "amount_minor" ? "numeric" : undefined} value={value} onChange={event => change(event.target.value)} /></label>;
   const independent = plan && plan.preparer_actor_id !== identity.id, third = independent && plan.reviewer_actor_id !== identity.id;
   return <section className="monetary-workflow" aria-label={t("partialTitle")} dir={locale === "ar" ? "rtl" : "ltr"}><h2>{t("partialTitle")}</h2><p>{t("partialBoundary")}</p><p>{t("duties")}</p>
-    {error && <p role="alert" ref={alert} tabIndex={-1}>{t(error)}</p>}{(loading || busy) && <p role="status">{t("loading")}</p>}
+    {error && <p role="alert" ref={alert} tabIndex={-1}>{t(error)}</p>}{(loading || balanceLoading || busy) && <p role="status">{t("loading")}</p>}
     {pending && !busy && <aside role="status"><p>{t(error === "retryableConflict" ? "retryableConflict" : "unknown")}</p><button disabled={externallyLocked} onClick={() => void send(pending)}>{t("retry")}</button></aside>}
     <section className="panel"><button disabled={locked} onClick={() => setRefresh(old => old + 1)}>{t("refresh")}</button><label>{t("selectPlan")}<select disabled={locked} value={plan?.id ?? ""} onChange={event => { ++generation.current; const value = plans.find(item => item.id === event.target.value) ?? null; setPlan(value); setSource(value?.source_order_id ?? ""); setBalance(null); setError(null); }}><option value="">—</option>{plans.map(value => <option key={value.id} value={value.id}>{t(value.operation)} · {t(value.status)} · {value.id}</option>)}</select></label>{!plans.length && !loading && <p>{t("emptyPlans")}</p>}</section>
     <form className="panel reporting-form" aria-label={t("sourceLoad")} onSubmit={event => void inspect(event)}>{input("source_order_id", source, value => { ++generation.current; setSource(value); setPlan(null); setBalance(null); })}<button disabled={locked || !source.trim() || !has("read")}>{t("sourceLoad")}</button></form>

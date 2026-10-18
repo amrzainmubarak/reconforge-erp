@@ -23,9 +23,9 @@ export default function CustomerPartialReturns({ locale, scope, identity, onLock
   const [fields, setFields] = useState({ quantity_scaled: "", period_id: "", posting_date: "", journal_code: "", refund_liability_account_code: "", cash_account_code: "", reason: "" });
   const [refund, setRefund] = useState({ amount_minor: "", period_id: "", posting_date: "", reason: "" });
   const [reversal, setReversal] = useState({ period_id: "", posting_date: "", reason: "" }), [reason, setReason] = useState("");
-  const [busy, setBusy] = useState(false), [pending, setPending] = useState<PreparedScopedCommand | null>(null), [error, setError] = useState<PartialReturnWord | null>(null), [refresh, setRefresh] = useState(0);
+  const [busy, setBusy] = useState(false), [loading, setLoading] = useState(false), [balanceLoading, setBalanceLoading] = useState(false), [pending, setPending] = useState<PreparedScopedCommand | null>(null), [error, setError] = useState<PartialReturnWord | null>(null), [refresh, setRefresh] = useState(0);
   const mounted = useRef(true), lock = useRef(false), readGeneration = useRef(0), alert = useRef<HTMLParagraphElement>(null);
-  const current = () => mounted.current && auth.isCurrent(auth.revision), locked = busy || Boolean(pending) || externallyLocked;
+  const current = () => mounted.current && auth.isCurrent(auth.revision), locked = busy || loading || balanceLoading || Boolean(pending) || externallyLocked;
   const has = (operation: keyof typeof partialReturnPermissions) => identity.human && partialReturnPermissions[operation].every(name => identity.permissions.includes(name));
   const allowed = (operation: keyof typeof partialReturnPermissions) => identity.stepUp && has(operation);
   const preparationBlocked = !balance || Boolean(balance.active_plan_id) || balance.history_version >= 256;
@@ -36,13 +36,13 @@ export default function CustomerPartialReturns({ locale, scope, identity, onLock
     setError(caught instanceof AdminApiError && [403, 404].includes(caught.status) ? "denied" : caught instanceof AdminApiError && caught.status === 409 ? "conflict" : "unavailable");
   }
   useEffect(() => {
-    if (!auth.session || !has("read")) return; const controller = new AbortController();
+    if (!auth.session || !has("read")) return; const controller = new AbortController(); setLoading(true);
     read(auth.session, scope, `${root}/plans`, undefined, controller.signal).then(raw => {
       if (!Array.isArray(raw.plans) || raw.plans.length > 200) throw new Error("partial_plan_page_invalid");
       const values = raw.plans.map(value => parsePlan(value, scope));
       if (new Set(values.map(value => value.id)).size !== values.length) throw new Error("partial_plan_page_invalid");
       if (!current() || controller.signal.aborted) return; setPlans(values); setPlan(old => old ? values.find(value => value.id === old.id) ?? old : null);
-    }).catch(caught => { if (!controller.signal.aborted) fail(caught); }); return () => controller.abort();
+    }).catch(caught => { if (!controller.signal.aborted) fail(caught); }).finally(() => { if (current() && !controller.signal.aborted) setLoading(false); }); return () => controller.abort();
   }, [auth.session, scope, identity, refresh, protocolVersion]);
   async function loadBalance(sourceId: string, signal?: AbortSignal) {
     if (!auth.session || !has("read")) return; const generation = ++readGeneration.current;
@@ -51,8 +51,8 @@ export default function CustomerPartialReturns({ locale, scope, identity, onLock
     if (current() && !signal?.aborted && generation === readGeneration.current) setBalance(value);
   }
   useEffect(() => {
-    setBalance(null); if (!plan) return; const controller = new AbortController();
-    void loadBalance(plan.source_order_id, controller.signal).catch(caught => { if (!controller.signal.aborted) fail(caught); });
+    setBalance(null); setBalanceLoading(false); if (!plan) return; const controller = new AbortController(); setBalanceLoading(true);
+    void loadBalance(plan.source_order_id, controller.signal).catch(caught => { if (!controller.signal.aborted) fail(caught); }).finally(() => { if (current() && !controller.signal.aborted) setBalanceLoading(false); });
     return () => controller.abort();
   }, [plan?.id, plan?.phase, refresh]);
   async function inspect(event: FormEvent) {
@@ -68,18 +68,18 @@ export default function CustomerPartialReturns({ locale, scope, identity, onLock
     try {
       const raw = await read(auth.session, scope, `${root}/plans/${lookupId}`), value = parsePlan(raw.plan, scope);
       if (value.id !== lookupId) throw new Error("partial_plan_identity_invalid");
-      if (current()) { setPlan(value); setSource(value.source_order_id); setBalance(null); setPlans(old => [value, ...old.filter(row => row.id !== value.id)]); setRefresh(old => old + 1); }
+      if (current()) { setPlan(value); setSource(value.source_order_id); setBalance(null); setPlans(old => [value, ...old.filter(row => row.id !== value.id)]); }
     } catch (caught) { fail(caught); }
     finally { lock.current = false; if (current()) { setBusy(false); onLockChange(false); } }
   }
   async function send(command: PreparedScopedCommand) {
-    if (!auth.session || lock.current || externallyLocked) return; lock.current = true; setBusy(true); onLockChange(true); setPending(command); setError(null);
+    if (!auth.session || lock.current || externallyLocked || loading || balanceLoading) return; lock.current = true; setBusy(true); onLockChange(true); setPending(command); setError(null);
     try {
       const transport = command.path.startsWith(`${partialReturnsRootV2}/`) ? partialReturnRequestV2 : partialReturnRequest;
       const raw = await transport(auth.session, scope, command.path, command), value = parsePartialReturnPlanUnion(raw.plan, scope);
       if (!partialPlanMatchesCommandUnion(value, command)) throw new Error("partial_command_receipt_mismatch");
       if (!current()) return; setPlan(value); setSource(value.source_order_id); setPlans(old => [value, ...old.filter(row => row.id !== value.id)]);
-      setBalance(null); setPending(null); setReason(""); setRefresh(old => old + 1); onLockChange(false);
+      setBalance(null); setPending(null); setReason(""); onLockChange(false);
     } catch (caught) {
       if (!current()) return;
       if (!(caught instanceof AdminApiError) || caught.status >= 500) setError("unknown");
@@ -111,7 +111,7 @@ export default function CustomerPartialReturns({ locale, scope, identity, onLock
   const independent = plan && identity.id !== plan.preparer_actor_id, third = independent && identity.id !== plan?.reviewer_actor_id;
   return <section aria-label={t("title")} dir={locale === "ar" ? "rtl" : "ltr"}>
     <h2>{t(protocolVersion === 2 ? "titleRemainder" : "title")}</h2><p>{t(protocolVersion === 2 ? "boundaryRemainder" : "boundary")}</p><p>{t("duties")}</p>
-    {error && <p role="alert" ref={alert} tabIndex={-1}>{t(error)}</p>}{busy && <p role="status">{t("busy")}</p>}
+    {error && <p role="alert" ref={alert} tabIndex={-1}>{t(error)}</p>}{(busy || loading || balanceLoading) && <p role="status">{t("busy")}</p>}
     {pending && !busy && <aside role="status"><p>{t("unknown")}</p><button onClick={() => void send(pending)}>{t("retry")}</button><code dir="ltr">{pending.body.command_id}</code></aside>}
     <section className="panel"><button disabled={locked} onClick={() => { setError(null); setRefresh(old => old + 1); }}>{t("refresh")}</button><label>{t("select")}<select disabled={locked} value={plan?.id ?? ""} onChange={event => { const selected = plans.find(value => value.id === event.target.value) ?? null; setPlan(selected); setSource(selected?.source_order_id ?? ""); setBalance(null); setError(null); }}><option value="">—</option>{plans.map(value => <option key={value.id} value={value.id}>{t(value.operation)} · {t(value.status)} · {value.id}</option>)}</select></label>{!plans.length && <p>{t("empty")}</p>}</section>
     <form className="panel reporting-form" aria-label={t("loadPlan")} onSubmit={event => void inspectPlan(event)}>{input("planId", lookupId, setLookupId)}<button disabled={locked || !lookupId}>{t("loadPlan")}</button></form>

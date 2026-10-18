@@ -1,5 +1,19 @@
 # ReconForge Execution Decisions Log
 
+## Wait for current reads before financial commands (2026-10-18)
+
+Partial-return controls and command admission wait for their current catalog,
+selected plan and balance reads. Three deferred-response regressions first fail
+because POST is admitted during these reads. Typed command responses already
+replace the selected plan and catalog entry, so do not additionally reload the
+whole catalog after each command or exact-plan lookup. Refresh and current
+selected-plan authorization reads remain available; balance is reread after
+phase changes. Manual retry retains the identical command. No backend lock,
+financial constraint, timeout or verification predicate is weakened. The local
+instrumented monetary post takes9.89s including deferred constraints, making
+overlapping source reads a testable latency contributor, not a proven complete
+explanation of the browser timeout.
+
 ## Keep evidence visible and reader refusals diagnosable (2026-10-18)
 
 The actual foreign monetary browser gate found428px overflow at320px. Scope

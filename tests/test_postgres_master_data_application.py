@@ -30,6 +30,7 @@ from reconforge.infrastructure.postgres_master_data_application import (
     PostgresMasterDataApplicationRepository,
     install_postgres_master_data_application_schema,
 )
+from tests.postgres_test_hygiene import grant_native_owner_reads
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -109,7 +110,9 @@ def test_workspace_scope_is_used_for_identity_overlap_and_reads() -> None:
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
-def test_live_postgres_master_data_application_workspace_and_tenant_isolation() -> None:
+def test_live_postgres_master_data_application_workspace_and_tenant_isolation(
+    isolated_postgres_runtime_role: str,
+) -> None:
     psycopg = pytest.importorskip("psycopg")
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
@@ -140,6 +143,9 @@ def test_live_postgres_master_data_application_workspace_and_tenant_isolation() 
             admin.execute(
                 f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}"
             )
+            # Later deferred owner guards must prove that the scoped original
+            # financial namespace is absent, through its existing RLS parents.
+            grant_native_owner_reads(admin, app_user, ("finance_charts", "finance_journals", "finance_entries"))
             admin.execute(
                 "INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)",
                 (tenant_a, tenant_a, tenant_b, tenant_b),

@@ -14,7 +14,11 @@ from reconforge.api import create_api_app
 from reconforge.api.server_identity import AuthenticatedServerRequest, request_tenant_id
 from reconforge.auth.models import LocalUser
 from reconforge.db import run_migrations
-from tests.postgres_test_hygiene import SERVICE_ACCOUNT_TENANT_CLEANUP_PLAN, cleanup_postgres_test_tenants_as_admin
+from tests.postgres_test_hygiene import (
+    SERVICE_ACCOUNT_TENANT_CLEANUP_PLAN,
+    cleanup_postgres_test_tenants_as_admin,
+    grant_native_owner_reads,
+)
 
 
 def test_service_principal_http_me_safe_permission_human_denial_logout_and_tenant_scope(
@@ -117,7 +121,9 @@ def test_service_principal_http_me_safe_permission_human_denial_logout_and_tenan
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL service")
-def test_live_service_credential_http_auth_policy_tenant_and_logout(tmp_path: Path) -> None:
+def test_live_service_credential_http_auth_policy_tenant_and_logout(
+    tmp_path: Path, isolated_postgres_runtime_role: str,
+) -> None:
     pytest.importorskip("psycopg")
     from reconforge.infrastructure.postgres import (
         PostgresConnectionFactory,
@@ -169,6 +175,14 @@ def test_live_service_credential_http_auth_policy_tenant_and_logout(tmp_path: Pa
                     f"reconforge.service_accounts,reconforge.service_account_permissions,"
                     f"reconforge.service_account_credentials,reconforge.service_account_events TO {app_user}"
                 )
+                # Authentication snapshots current scope even for a principal
+                # with no grants; fixture provisioning must allow that read.
+                grant_native_owner_reads(admin, app_user, ("principal_scope_grants",))
+                # Permission decisions append to the tenant audit chain before
+                # the existing server workflow boundary returns its 501.
+                admin.execute(f"GRANT SELECT,INSERT ON reconforge.domain_audit_events TO {app_user}")
+                admin.execute(f"GRANT SELECT,INSERT,UPDATE ON reconforge.domain_audit_ledger_state TO {app_user}")
+                admin.execute(f"GRANT SELECT,INSERT ON reconforge.outbox_events TO {app_user}")
         with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:
             repository = PostgresServiceAccountRepository(connection)
             repository.create_account(

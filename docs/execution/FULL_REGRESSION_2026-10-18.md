@@ -1,9 +1,9 @@
 # Full regression follow-up — 2026-10-18
 
 Status: in progress. Work is exclusively in `F:\reconforge-erp`, on
-`amr/full-regression-20261018`, without new worktrees. Financial arithmetic and
-migrations remain identical to the consolidated `bfc138a1` source. API scope
-audit and monetary UI corrections are under verification.
+`amr/full-regression-20261018`, without new worktrees. Existing migrations through
+149 remain unchanged. Revision150 changes query preparation; API scope audit,
+monetary UI and AR binding-admission corrections require composed validation.
 
 ## Completed initial run and remaining integration failures
 
@@ -170,3 +170,49 @@ Page exceptions are now retained through the same private bounded writer too.
 The846d generic CI tests finish, but publication inspection refuses its stale
 148-file/head149 expectation. The inspector now requires149 files/head150;
 the archive itself must still satisfy the complete linear-chain check.
+
+## Complete the inherited live prerequisites
+
+The665 local generic skips are inventoried by node and existing CI selectors,
+including their `-k` filters. The uncovered PostgreSQL selection contains189
+cases in70 files. Its actual migrated, per-file isolated run records147 passes,
+42 failures, zero skips (1495.36s). Eight fixture cases lack current finite role
+grants or provision tenants through the runtime instead of the administrator.
+The other34 AR cases lack their declared migrated application-role profile.
+
+Fresh ordinary roles now isolate the eight repaired OIDC, HTTP/native SCIM,
+service-account, master-data, scheduler and notification cases. Read-only owner
+dependencies keep prior DML, ownership and FORCE RLS; outbox delivery evidence
+remains read-only to the worker. All eight pass49.687s/zero skips. An intermediate
+service audit-profile refusal remains negative evidence. Mandatory CI now selects
+the same eight cases explicitly, independently of the generic prerequisite skips.
+
+Explicit finite AR provisioning first passes31/34 and reveals actual40P01 in
+currency change versus invoice/receipt creation and concurrent first upserts.
+Existing binding admission before customer/command locks fixes the inversion;
+all34 PostgreSQL integrity cases pass55.328s/zero skips. ADR0867 records the
+four adapter call sites, invariant preservation and rollback. Both complete AR
+integrity files run in the existing mandatory receivables shard.
+
+Four more restore-target fencing, bounded256-effect worker, process-crash/resume
+and concurrent grouped-drain cases pass80.421s. No1M/10M opt-in or external public
+connector run is enabled. Three local symlink prerequisites remain OS-specific;
+they are covered separately by the supported hosted profile where applicable.
+
+Actual clean846d hosted identity/foreign cycles pass221.169s/314.123s whole gate,
+zero skips/flakes, populated347-table restores and identical independent proofs.
+Their downloaded ZIP digests and equal merge/head trees are retained in `hosted/`.
+Clean20250 web CI passes1111 cases; Python3.11/3.12 and its publication inspection
+pass. Extra Windows monetary runs remain negative at15s; an instrumented native
+collection takes14.579s before HTTP overhead. No timeout, resource, reader or
+financial assertion is relaxed. Final AR-source composed CI remains mandatory.
+
+The local97-file native selection finishes864 passes and zero failures/errors/
+skips in14361.656s. It spans the recorded per-file heads during the repairs;
+coherent final-source CI is still required. The complete hosted20250 failures
+also expose an enterprise roundtrip's stale148-revision expectation and AR
+policy-capture tests that reuse the unprovisioned integrity fixture. The actual
+corrected roundtrip passes37.234s. The shared AR fixture repair is exercised by
+the complete mandatory receivables group, preserving all JPY/KWD, rebind, tamper,
+replay and rollback predicates. Pure targeted checks pass72/62 deselected and
+the existing CI contracts pass20; retained negatives are not overwritten.

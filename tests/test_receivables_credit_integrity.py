@@ -22,7 +22,11 @@ from reconforge.infrastructure.postgres import PostgresConnectionFactory, Postgr
 from reconforge.infrastructure.postgres_receivables import PostgresReceivablesError, PostgresReceivablesRepository
 from reconforge.infrastructure.sqlite_receivables import SQLiteReceivablesRepository
 from reconforge.platform.common import PlatformError
-from tests.postgres_test_hygiene import RECEIVABLES_TENANT_CLEANUP_PLAN, cleanup_postgres_test_tenants_as_admin
+from tests.postgres_test_hygiene import (
+    RECEIVABLES_TENANT_CLEANUP_PLAN,
+    cleanup_postgres_test_tenants_as_admin,
+    grant_native_owner_reads,
+)
 
 
 @dataclass
@@ -104,11 +108,32 @@ def database(request: Any, tmp_path: Path) -> Iterator[ReceivablesDatabase]:
     dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_DSN")
     if not dsn:
         pytest.skip("PROD-007 requires migrated live PostgreSQL app-role profile; review 2026-10-03")
+    # A migrated database alone does not provision the AR runtime profile.
+    # Own a fresh ordinary login rather than inherit grants from another file.
+    role = request.getfixturevalue("isolated_postgres_runtime_role")
+    dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
     admin = PostgresConnectionFactory(PostgresSettings(dsn=os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn), require_tls=False)).connect()
     tenant = "ar_integrity_" + uuid4().hex[:16]
     try:
         with admin.transaction():
+            admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {role}")
+            admin.execute(
+                f"GRANT SELECT ON reconforge.domain_workspaces,reconforge.organizations,"
+                f"reconforge.legal_entities,reconforge.currencies TO {role}"
+            )
+            admin.execute(
+                f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.ar_customers,reconforge.ar_invoices,"
+                f"reconforge.ar_invoice_lines,reconforge.ar_receipts,reconforge.ar_receipt_allocations,"
+                f"reconforge.ar_idempotency_keys,reconforge.currency_registry_bindings,"
+                f"reconforge.currency_registry_snapshots TO {role}"
+            )
+            admin.execute(f"GRANT SELECT,INSERT ON reconforge.domain_audit_events,reconforge.outbox_events TO {role}")
+            admin.execute(f"GRANT SELECT,INSERT,UPDATE ON reconforge.domain_audit_ledger_state TO {role}")
+            grant_native_owner_reads(admin, role, (
+                "operational_finance_plans", "operational_finance_links", "sales_revenue_documents",
+                "stock_sales_orders", "stock_sales_issue_claims",
+            ))
             admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s)", (tenant, tenant))
             admin.execute("INSERT INTO reconforge.domain_workspaces(tenant_id,id,name) VALUES (%s,%s,'default')", (tenant, "workspace_" + tenant))
             for currency in ("USD", "EUR"):

@@ -98,7 +98,9 @@ def test_invalid_or_revoked_credential_fails_closed() -> None:
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL service")
-def test_live_scim_credential_rotation_revocation_expiry_and_rls() -> None:
+def test_live_scim_credential_rotation_revocation_expiry_and_rls(
+    isolated_postgres_runtime_role: str,
+) -> None:
     pytest.importorskip("psycopg")
     from reconforge.infrastructure.postgres import (
         PostgresConnectionFactory,
@@ -121,14 +123,15 @@ def test_live_scim_credential_rotation_revocation_expiry_and_rls() -> None:
             install_postgres_rls_schema(admin)
             admin.execute(POSTGRES_SCIM_AUTH_SCHEMA_SQL)
             admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b))
+            admin.execute(
+                "INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)",
+                (tenant_a, tenant_a, tenant_b, tenant_b),
+            )
             if app_user:
                 admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
                 admin.execute(
-                    f"GRANT SELECT, INSERT, UPDATE, DELETE ON reconforge.tenants, reconforge.scim_credentials TO {app_user}"
+                    f"GRANT SELECT, INSERT, UPDATE, DELETE ON reconforge.scim_credentials TO {app_user}"
                 )
-        for tenant in (tenant_a, tenant_b):
-            with PostgresTenantBoundary(factory).transaction(tenant) as connection:
-                connection.execute("INSERT INTO reconforge.tenants (id,name) VALUES (%s,%s)", (tenant, tenant))
         with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:
             repository = PostgresSCIMCredentialRepository(connection)
             first = repository.issue(

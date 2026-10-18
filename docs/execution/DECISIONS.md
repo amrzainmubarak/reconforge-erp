@@ -1,5 +1,15 @@
 # ReconForge Execution Decisions Log
 
+## Complete the skipped live inventory before accepting the baseline (2026-10-18)
+
+Use isolated migrated databases and fresh ordinary roles for the previously
+unselected live cases. Repair finite fixture grants/admin tenant provisioning,
+without granting evidence writes or bypass-RLS/ownership. Register the eight
+reproduced fixture cases and complete AR integrity files in existing mandatory
+shards. Follow ADR0867 for the witnessed binding/customer lock inversion; retain
+its red cases and exact concurrency outcomes. Heavy1M/10M profiles and public
+network evidence keep their existing opt-in admission.
+
 ## Version query preparation rather than omit financial checks (2026-10-18; ADR0866)
 
 The actual zero cycle's sixth economic operation still exceeds15s after read

@@ -20,7 +20,7 @@ tasks:
     area: quality-and-test-isolation
     title: Complete the interrupted full regression and repair reproduced test failures in the primary checkout
     status: in_progress
-    exit_evidence: "FULL_REGRESSION_2026-10-18.md; retain the complete unfiltered result and missing-prerequisite errors; verify TLS, least-privilege AR and service-account cleanup; ADR0865 actual scope-denial audit; ADR0866 revision0150 byte/scope/rollback parity; complete final-source HTTPS/restore/independent proofs and coherent CI without adding skips, increasing timeouts or relaxing financial/security assertions."
+    exit_evidence: "FULL_REGRESSION_2026-10-18.md; retained unfiltered negative and configured native cohorts; eight fresh-role fixture regressions and34 actual AR cases pass; ADR0865 audited scope denial, ADR0866 revision0150 byte/scope/rollback parity, ADR0867 binding/customer admission order; whole successor CI and frozen composed proof required. Preserve optional prerequisites and Windows timing negatives without relaxing gates."
   - id: AMR-WORKSPACE-20261018
     depends_on: []
     priority: P1

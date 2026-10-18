@@ -683,6 +683,9 @@ jobs:
           case "$RECONFORGE_SERVER_BOUNDARY_SHARD" in
             writeback) ;; # Dedicated evidence runners above own this shard.
             native)
+              uv run --no-sync pytest tests/test_api_federation.py::test_live_http_oidc_session_logout_replay_and_tenant_isolation tests/test_api_scim.py::test_live_scim_http_auth_lifecycle_etag_filter_and_tenant_isolation tests/test_api_service_accounts.py::test_live_service_credential_http_auth_policy_tenant_and_logout -q
+              uv run --no-sync pytest tests/test_postgres_master_data_application.py::test_live_postgres_master_data_application_workspace_and_tenant_isolation -q
+              uv run --no-sync pytest tests/test_postgres_notifications.py::test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_audited tests/test_postgres_scheduler.py::test_live_postgres_scheduler_is_atomic_idempotent_coordinated_and_scoped tests/test_postgres_scim.py::test_live_postgres_scim_idempotency_deactivation_sessions_and_rls tests/test_postgres_scim_auth.py::test_live_scim_credential_rotation_revocation_expiry_and_rls -q
               native_smoke_dump="${RUNNER_TEMP}/reconforge-native-backup-smoke.dump"
               rm -f "$native_smoke_dump"
               pg_dump --format=custom --no-owner --no-privileges --file "$native_smoke_dump" --dbname service=reconforge_ci_source
@@ -724,6 +727,7 @@ jobs:
               uv run --no-sync pytest tests/test_api_server_bank_statement.py -q
               ;;
             receivables)
+              uv run --no-sync pytest tests/test_receivables_credit_integrity.py tests/test_receivables_aging_integrity.py -q
               uv run --no-sync pytest tests/test_api_server_receivables.py -q
               uv run --no-sync pytest tests/test_receivables_monetary_policy.py tests/test_receivables_policy_schema.py tests/test_receivables_policy_capture.py tests/test_receivables_policy_raw_guards.py tests/test_postgres_receivables_policy_restore.py -q
               uv run --no-sync pytest tests/test_receivables_money_api_contract.py tests/test_receivables_policy_api.py -q

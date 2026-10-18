@@ -1,5 +1,37 @@
 # ReconForge Execution Evidence Log
 
+## Skipped-live completion and actual AR deadlock — 2026-10-18
+
+Under `output/full-regression-20261018T014707Z`, `additional-native/result.json`
+retains147 passes/42 failures/zero skips across70 files,1495.36s wall.
+`identity-red-diagnostic` records only closed SQLSTATE/table/error-code metadata:
+missing assurance and scope reads. The intermediate service result additionally
+refuses its missing audit profile. `isolated-foundation-green` then passes all
+eight fixture cases on fresh nonowner/NOBYPASSRLS roles in49.687s wall.
+
+`ar-integrity-profile-green` passes31/34; its three negatives are actual40P01
+binding/customer lock inversions. `ar-binding-order-green` passes34/0skip in
+55.328s after the existing binding admission moves before business locks.
+`residual-native` passes four restore-fence, bounded worker, crash/resume and
+concurrent-drain cases in80.421s. Existing1M/10M scale opt-ins remain disabled.
+
+The hash-verified846d identity/foreign artifacts pass221.169s/314.123s whole
+gate, with347-table restores and byte-equal independent isolated proofs. Merge
+13eaaa68 and head846d have the same Git tree512938242f1026a9eea5da2a155c25e9f8da4b8b.
+Clean20250 publication closure hash is
+`a30542d047b0581e01b9582d0c361c1afb38468ebd1dee2bcc62fc8da052fe93`.
+These are component/source-bound evidence; the AR repair requires successor CI.
+
+The97-file local native selection completes864 passes/zero failures/errors/skips
+in14361.656s. Each file records its starting head; the cohort spans this repair
+sequence and is not relabeled as a coherent final-head acceptance.
+`enterprise-count-green` passes the actual empty current-head up/down roundtrip
+in37.234s after the stale148 count becomes149. Hosted20250's manufacturing
+failure witnesses that stale expectation; its receivables policy cases witness
+the same unprovisioned AR fixture. Both negative job logs remain in `hosted/`.
+Targeted pure verification passes72 cases/62 explicit deselections; CI contracts
+pass20. Whole successor-source validation remains required.
+
 ## Blocking late inverse and versioned query plans — 2026-10-18
 
 `hosted/dad-remainder-zero-artifact.zip` is hash-verified negative evidence at

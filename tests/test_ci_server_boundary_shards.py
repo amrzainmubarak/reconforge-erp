@@ -176,7 +176,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 75  # Retain every prior command plus all three complete mandatory monetary files.
+    assert len(commands) == 79  # Keep prior commands and the newly configured fixture/AR regressions.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -217,11 +217,25 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
         ("tests/test_postgres_financial_reporting_snapshots.py", "finance-reporting"),
         ("tests/test_postgres_financial_snapshot_recovery.py", "finance-reporting"),
         ("tests/test_postgres_financial_snapshot_migration.py", "finance-reporting"),
+        ("tests/test_receivables_credit_integrity.py", "receivables"),
+        ("tests/test_receivables_aging_integrity.py", "receivables"),
         *((path, owner) for owner, paths in INTEGRITY_FILES.items() for path in paths),
     ):
         selected = [shard for shard, entries in groups.items()
                     for command in entries if filename in shlex.split(command)]
         assert selected == [owner], f"The owner regression requires one mandatory shard: {filename}"
+    for selector in (
+        "tests/test_api_federation.py::test_live_http_oidc_session_logout_replay_and_tenant_isolation",
+        "tests/test_api_scim.py::test_live_scim_http_auth_lifecycle_etag_filter_and_tenant_isolation",
+        "tests/test_api_service_accounts.py::test_live_service_credential_http_auth_policy_tenant_and_logout",
+        "tests/test_postgres_master_data_application.py::test_live_postgres_master_data_application_workspace_and_tenant_isolation",
+        "tests/test_postgres_notifications.py::test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_audited",
+        "tests/test_postgres_scheduler.py::test_live_postgres_scheduler_is_atomic_idempotent_coordinated_and_scoped",
+        "tests/test_postgres_scim.py::test_live_postgres_scim_idempotency_deactivation_sessions_and_rls",
+        "tests/test_postgres_scim_auth.py::test_live_scim_credential_rotation_revocation_expiry_and_rls",
+    ):
+        assert [shard for shard, entries in groups.items()
+                for command in entries if selector in shlex.split(command)] == ["native"]
     assert "verify_redis_live.py" in "\n".join(groups["native"])
 
 

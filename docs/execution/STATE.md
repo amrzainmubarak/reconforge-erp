@@ -23,8 +23,22 @@ Revision0150 retains the exact three native query equations with reusable plans;
 its controlled late-inverse diagnostic takes13.109s versus21.234s. Native7/0skip
 verifies pre-upgrade bytes, current scope,347-table row preservation, exact
 rollback, reinstall and poisoned-catalog refusal (ADR0866). Ruff and Mypy
-(829 files) pass. Complete final-source HTTPS/restore/independent proofs and
-coherent CI remain pending. See [the follow-up record](FULL_REGRESSION_2026-10-18.md).
+(829 files) pass. Clean846d/20250 hosted zero, restituted and both monetary
+cycles now pass their unchanged HTTPS/347-table restore/independent proofs.
+Publication closure passes with the corrected149-file/head150 expectation.
+Web CI passes1111 cases; Python3.11/3.12 both pass on20250.
+
+The skipped-live inventory then exposes147 passes/42 failures in189 additional
+cases. Eight stale fixture cases now pass with fresh ordinary roles. Explicit
+AR provisioning reveals three real currency-binding/customer deadlocks;
+canonical admission order fixes all34 AR cases (ADR0867). Four additional
+restore-fence/crash/drain cases pass. Both AR files and eight fixture regressions
+are mandatory in CI; final-source composed validation remains required.
+The local97-file native cohort finishes864/0failure/0skip across recorded
+per-file heads; final coherent CI remains the acceptance boundary. The stale
+enterprise migration count is corrected and its actual roundtrip passes.
+Extra Windows monetary15s response failures and optional heavy/network/OS
+prerequisites remain separately retained. See [the follow-up record](FULL_REGRESSION_2026-10-18.md).
 
 ## Single working directory — 2026-10-18
 

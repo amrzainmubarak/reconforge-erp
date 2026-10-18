@@ -909,6 +909,9 @@ class PostgresReceivablesRepository:
         with self._transaction():
             workspace_id = self._required_workspace_id(workspace)
             key = _text(idempotency_key, "Idempotency key", maximum=200, required=False)
+            # Customer upserts take binding admission before their row lock.
+            # Retain that order before command and customer locks here too.
+            FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(workspace_id)
             if key:
                 # Missing rows cannot be locked; serialize the scoped command before its parent.
                 self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))", (
@@ -1043,6 +1046,7 @@ class PostgresReceivablesRepository:
     ) -> dict[str, Any]:
         with self._transaction():
             invoice = self._invoice(invoice_id)
+            FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(str(invoice["workspace_id"]))
             if invoice["status"] != "Submitted":
                 raise PlatformError("Only a submitted receivable invoice can be approved.")
             if same_actor(invoice.get("created_by"), actor_label):
@@ -1162,6 +1166,7 @@ class PostgresReceivablesRepository:
             raise PlatformError("Receipt allocations must contain each invoice at most once.")
         with self._transaction():
             workspace_id = self._required_workspace_id(workspace)
+            FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(workspace_id)
             customer = self._customer_by_code(workspace_id, customer_code, lock=True)
             if customer["currency_code"] != currency:
                 raise PlatformError("Customer receipt currency must match the customer currency.")
@@ -1229,6 +1234,7 @@ class PostgresReceivablesRepository:
         amount = _minor(amount_minor, "Allocation amount", positive=True)
         with self._transaction():
             receipt = self._receipt(receipt_id)
+            FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(str(receipt["workspace_id"]))
             customer = self._customer(str(receipt["customer_id"]), lock=True)
             self._assert_customer_currency(customer)
             receipt = self._receipt(receipt_id)

@@ -34,3 +34,19 @@ SQL guard, migration, API response or default network behavior changes. The
 mandatory native gate continues to reject skipped selected tests. Reverting
 this test-only change restores the old fixture behavior, including its known
 order/environment dependence; there is no production data migration to reverse.
+
+## Fresh migrated-role follow-up
+
+An additional189-case cohort in70 isolated databases reveals42 failures in ten
+files: eight fixture cases and34 AR cases lacking their declared role profile.
+OIDC needs current assurance/emergency/scope access; a service principal needs
+scope reads and policy-audit append privileges. Tenant provisioning for the three
+SCIM fixtures belongs to the admin connection. The legacy master fixture needs
+read-only financial parent indexes; scheduler callbacks need subscription/route
+reads; the outbox verifier needs read-only delivery evidence. Its security-definer
+writer remains the only evidence writer.
+
+The eight repaired cases each use `isolated_postgres_runtime_role`, with explicit
+finite grants and unchanged FORCE RLS, ownership and DML on read-only dependencies.
+All eight pass in49.687s wall without skips and are selected by mandatory CI.
+AR fixture provisioning exposes a separate product lock-order defect (ADR0867).

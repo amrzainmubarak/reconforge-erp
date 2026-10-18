@@ -8,8 +8,13 @@ from typing import Any
 
 from reconforge.application.inventory_core import InventoryCoreSummary
 from reconforge.auth.rbac import same_actor
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_inventory_quantity_coordination import lock_inventory_quantity_pools
+from reconforge.infrastructure.postgres_repository_scope import (
+    PostgresRepositoryScopeError,
+    ensure_repository_tenant_scope,
+)
 from reconforge.io.persisted import PersistedJsonError, encode_postgres_outbox_payload
 from reconforge.platform.common import PlatformError, platform_id
 from reconforge.platform.inventory_values import (
@@ -230,8 +235,10 @@ class PostgresInventoryCoreRepository:
     def _transaction(self) -> Iterator[None]:
         try:
             with self.connection.transaction():
-                set_local_tenant_scope(self.connection, self.tenant_id)
+                ensure_repository_tenant_scope(self.connection, self.tenant_id)
                 yield
+        except PostgresRepositoryScopeError as exc:
+            raise PlatformError(str(exc)) from exc
         except (PlatformError, PostgresInventoryCoreError):
             raise
         except Exception as exc:
@@ -245,8 +252,15 @@ class PostgresInventoryCoreRepository:
 
     def _workspace_id(self, workspace: str) -> str:
         row = self.connection.execute(
-            "SELECT id FROM reconforge.domain_workspaces WHERE tenant_id=%s AND name=%s",
-            (self.tenant_id, clean_text(workspace, "Workspace name")),
+            """SELECT id FROM reconforge.domain_workspaces
+            WHERE tenant_id=%s AND (id=%s OR name=%s)
+            ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END LIMIT 1""",
+            (
+                self.tenant_id,
+                clean_text(workspace, "Workspace name"),
+                clean_text(workspace, "Workspace name"),
+                clean_text(workspace, "Workspace name"),
+            ),
         ).fetchone()
         if row is None:
             raise PlatformError("Inventory workspace was not found for this tenant.")
@@ -599,7 +613,7 @@ class PostgresInventoryCoreRepository:
                 records.append(record)
             return {
                 "schema_version": 1,
-                "source": {"kind": "local-inventory-ledger", "local_first": True, "external_calls": False},
+                "source": {"kind": "postgresql-inventory-ledger", "local_first": True, "external_calls": False},
                 "workspace": clean_text(workspace, "Workspace name"),
                 "organization_code": organization["organization_code"],
                 "entity_code": entity["entity_code"],
@@ -695,7 +709,7 @@ class PostgresInventoryCoreRepository:
             "schema_version": 1,
             "generated_at": utc_now_text(),
             "as_of": as_of_date.isoformat(),
-            "source": {"kind": "local-inventory-controls", "local_first": True, "external_calls": False},
+            "source": {"kind": "postgresql-inventory-controls", "local_first": True, "external_calls": False},
             "workspace": clean_text(workspace, "Workspace name"),
             "organization_code": code(organization_code, "Organization code"),
             "entity_code": code(entity_code, "Entity code"),
@@ -747,7 +761,7 @@ class PostgresInventoryCoreRepository:
         return {
             "schema_version": 1,
             "generated_at": utc_now_text(),
-            "source": {"kind": "local-inventory-core", "local_first": True, "external_calls": False},
+            "source": {"kind": "postgresql-inventory-core", "local_first": True, "external_calls": False},
             "workspace": workspace_name,
             "summary": summary.to_dict(),
             "units_of_measure": self.list_uoms(workspace=workspace_name, limit=MAX_LIST_LIMIT, actor_label=actor_label),
@@ -1357,6 +1371,9 @@ class PostgresInventoryCoreRepository:
                     - (quantity if line["from_location_id"] is not None else 0),
                     precision,
                 )
+        lock_inventory_quantity_pools(self.connection, self.tenant_id, str(movement["workspace_id"]),
+                                      str(movement["legal_entity_id"]),
+                                      (str(line["item_id"]) for line in lines if line["inventory_lot_id"] is None))
         lock_keys = [
             f"{movement['workspace_id']}|{movement['legal_entity_id']}|{location}|{item}|{lot or ''}"
             for location, item, lot in effects
@@ -1443,6 +1460,8 @@ class PostgresInventoryCoreRepository:
         void_reason = clean_text(reason, "Void reason", maximum=500)
         with self._transaction():
             movement = self._get_movement(movement_id, lock=True)
+            if str(movement["id"]).upper().startswith("IRP1-") or str(movement["movement_number"]).upper().startswith("IRP1-"):
+                raise PlatformError("Reviewed inventory receipts require their complete source inverse command.")
             if movement["status"] != "Posted":
                 raise PlatformError("Only Posted inventory movements can be voided.")
             valuation_table = self.connection.execute(

@@ -24,10 +24,10 @@ import type { CSSProperties } from "react";
 
 import { formatCount, formatMetricValue } from "../locale-format";
 import type { MessageKey } from "../i18n";
-import type { Locale, StudioMetric, StudioOverview, StudioPage } from "../types";
+import type { Locale, StudioDataProvenance, StudioMetric, StudioOverviewWithProvenance, StudioPage } from "../types";
 
 interface DashboardProps {
-  data: StudioOverview;
+  data: StudioOverviewWithProvenance;
   translate: (key: MessageKey) => string;
   locale: Locale;
   colorSafe: boolean;
@@ -51,6 +51,12 @@ const featuredMetricKeys = [
   "evidence_coverage",
   "match_rate",
 ];
+
+const provenanceCopy = {
+  synthetic_demo: { status: "provenanceSyntheticDemo", detail: "provenanceSyntheticDetail" },
+  live: { status: "provenanceLive", detail: "provenanceLiveDetail" },
+  unknown: { status: "provenanceUnknown", detail: "provenanceUnknownDetail" },
+} as const satisfies Record<StudioDataProvenance["state"], { status: MessageKey; detail: MessageKey }>;
 
 function formatMetric(metric: StudioMetric, locale: Locale): string {
   return formatMetricValue(metric.value, metric.format, locale);
@@ -134,6 +140,8 @@ export function Dashboard({ data, locale, translate, colorSafe, onNavigate }: Da
     { page: "inventory", label: "tourInventory", help: "tourInventoryHelp", value: translate("exactControls"), icon: Boxes },
   ];
   const readinessStyle = { "--readiness": `${brief.readiness_score * 3.6}deg` } as CSSProperties;
+  const provenance = data.provenance;
+  const provenanceText = provenanceCopy[provenance.state];
 
   return (
     <main className="dashboard-content" id="main-content">
@@ -157,6 +165,22 @@ export function Dashboard({ data, locale, translate, colorSafe, onNavigate }: Da
             <p>{translate(`readinessStatus${brief.readiness_status[0].toUpperCase()}${brief.readiness_status.slice(1)}` as MessageKey)}</p>
           </div>
         </div>
+      </section>
+
+      <section
+        className={`studio-provenance-banner studio-provenance-banner--${provenance.state}`}
+        role="status"
+        aria-label={translate("dataProvenance")}
+        data-provenance-state={provenance.state}
+        data-operational-evidence={String(provenance.operational_evidence)}
+      >
+        <Database className="studio-provenance-banner-icon" size={20} aria-hidden="true" />
+        <div className="studio-provenance-banner-copy">
+          <span>{translate("dataProvenance")}</span>
+          <strong>{translate(provenanceText.status)}</strong>
+          <p>{translate(provenanceText.detail)}</p>
+        </div>
+        <code>{provenance.source}</code>
       </section>
 
       <section className="showcase-tour" aria-label={translate("guidedShowcase")}>

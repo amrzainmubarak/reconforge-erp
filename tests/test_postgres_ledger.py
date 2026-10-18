@@ -109,6 +109,14 @@ class _TrialBalanceConnection(_FakeConnection):
         return super().execute(sql, params)
 
 
+class _FloatTrialBalanceConnection(_TrialBalanceConnection):
+    def execute(self, sql: str, params: tuple[Any, ...] | None = None) -> _Cursor:
+        normalized = " ".join(sql.split()).lower()
+        if "select accounts.account_code" in normalized:
+            return _Cursor(rows=[("1000", "Cash", "Asset", "Debit", 100.0, "0")])
+        return super().execute(sql, params)
+
+
 class _AuditConnection(_FakeConnection):
     def __init__(self, *, tampered: bool = False, metadata_json: str = '{"source":"test"}') -> None:
         super().__init__()
@@ -297,6 +305,16 @@ def test_trial_balance_aggregates_exact_posted_amounts_for_a_fiscal_period() -> 
 def test_trial_balance_requires_a_postgres_fiscal_period() -> None:
     with pytest.raises(PostgresLedgerNotFoundError):
         PostgresLedgerRepository(_FakeConnection()).trial_balance(
+            tenant_id="tenant_a",
+            organization_id="org-a",
+            organization_code="ORG-A",
+            period_id="period-a",
+        )
+
+
+def test_trial_balance_rejects_binary_float_totals_from_adapter() -> None:
+    with pytest.raises(PostgresLedgerValidationError, match="debit total is not an exact numeric amount"):
+        PostgresLedgerRepository(_FloatTrialBalanceConnection()).trial_balance(
             tenant_id="tenant_a",
             organization_id="org-a",
             organization_code="ORG-A",

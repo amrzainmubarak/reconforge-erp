@@ -299,7 +299,16 @@ class _CorruptClaimConnection:
     def close(self) -> None:
         return None
 
-    def execute(self, sql: str, _: tuple[object, ...]) -> _Row:
+    def rollback(self) -> None:
+        return None
+
+    def execute(self, sql: str, _: tuple[object, ...] | None = None) -> _Row:
+        from reconforge.infrastructure.postgres import _RUNTIME_ROLE_SAFETY_SQL
+
+        if sql == _RUNTIME_ROLE_SAFETY_SQL:
+            return _Row((True,))
+        if sql == "SHOW transaction_isolation":
+            return _Row(("read committed",))
         self.executed.append(" ".join(sql.split()).lower())
         return _Row({"rule_json": "[]"})
 
@@ -319,7 +328,9 @@ def test_corrupt_rule_rolls_back_before_claim_mutation_or_matcher_invocation() -
         _CorruptClaimFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         matcher=lambda _: matched.append("called"),  # type: ignore[arg-type]
-        settings=PostgresReconciliationWorkerSettings(worker_id="worker-a", poll_interval_seconds=0),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="worker-a", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
     )
 
     with pytest.raises(PostgresReconciliationWorkerError, match="Unable to persist reconciliation execution failure"):

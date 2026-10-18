@@ -8,6 +8,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
+
 
 class InventoryValuationReversalRepository(Protocol):
     """Persistence contract used by the valuation-reversal service."""
@@ -347,13 +349,15 @@ class SQLiteInventoryValuationReversalRepository:
         )
 
     def insert_finance_draft(self, entry: Mapping[str, object], lines: Sequence[Mapping[str, object]]) -> None:
+        monetary_policy, _ = FinancePolicyStore(self.connection).entry(entry)
         self.connection.execute(
             """
             INSERT INTO ledger_entries (
                 id, workspace_id, organization_id, chart_id, legal_entity_id, period_id,
                 finance_journal_id, entry_number, posting_date, currency_code, description,
-                external_reference, source_type, status, created_by, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Generated', 'Draft', ?, ?, ?)
+                external_reference, source_type, status, created_by, created_at, updated_at,
+                currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Generated', 'Draft', ?, ?, ?, ?, ?, ?, ?)
             """,
             tuple(
                 entry[key]
@@ -374,7 +378,7 @@ class SQLiteInventoryValuationReversalRepository:
                     "created_at",
                     "updated_at",
                 )
-            ),
+            ) + monetary_policy.values(),
         )
         for line in lines:
             self.connection.execute(

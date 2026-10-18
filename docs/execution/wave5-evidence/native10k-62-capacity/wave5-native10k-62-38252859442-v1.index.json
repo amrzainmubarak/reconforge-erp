@@ -1,0 +1,595 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-native10k-62-38252859442-v1.zip",
+  "capture_for_root_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "run_id": 38252859442,
+    "job_id": 114823309885,
+    "artifact_id": 11751937667,
+    "controller_source": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+    "runtime_source": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+    "publication_head_does_not_rebind_measurement": true,
+    "native_revision": "0136_pg_inventory_scope",
+    "original_complete_artifact_members": 15,
+    "original_complete_artifact_zip_sha256": "39bd08b84bf3867e2aba4661333a9e52681725b32a6d69f8418c6df6f6b5acee",
+    "actual_pure_contracts": {
+      "passed": 245,
+      "failure": 0,
+      "error": 0,
+      "skip": 0
+    },
+    "actual_native_completed_cycles": 10000,
+    "separate_disjoint_warmups": 20,
+    "actual_measured_read_requests": 30300,
+    "independent_minor_units_total": "5028151631",
+    "financial_verification": "Passed independent integer oracle and original native read/source custody; no separate10000 original journal-line export or new isolation proof.",
+    "observed_posting": {
+      "seconds": 3578.90454609,
+      "transactions_per_second": 2.7941510792527646,
+      "client_cpu_seconds": 3586.675165149,
+      "latency_p50": 1.4171186380000336,
+      "latency_p95": 1.6475488560000144,
+      "latency_p99": 1.7984461839996584
+    },
+    "owned_process_and_full_cid_cleanup": "Verified exited/absent; original pre-spawn/audit/response/config seals retained.",
+    "resource_windows": "Raw before/after containerCPU/I/O/network;369sampler points; separate clientCPU/lifetime RSS/container peak/PG/WAL scopes and limitations retained. No whole-host/process-tree resource sum or I/O peak.",
+    "full_job_log_publication": "Complete66994B original LOCAL only; public63129B exact spans plus3865byte explicit omissions/fullremote SHA.",
+    "original_read_transport_failure": "Initial ZIP API client nonzero retained as incomplete capture with missing initial stderr; one fresh read-only capture matched API pin. No workload retry.",
+    "original_f04_setup_failure": "Zero financial operations/artifacts remains separate; exact one approved upload-object repair.",
+    "performance_comparison_accepted": false,
+    "monetary_cost_per_transaction": null,
+    "100k_and_one_million_capacity_established": false
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 59,
+  "raw_bytes": 3862115,
+  "records": [
+    {
+      "entry_name": "operations/actual62/artifact-11751937667-original-api.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\artifact-11751937667-original-api.json",
+      "bytes": 777,
+      "sha256": "0aac56536642a920a7c5d389bc5dc79cfb3699e2e5be1bbaffc04d20bd18aba4",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/artifact-11751937667-original-index.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\artifact-11751937667-original-index.json",
+      "bytes": 3434,
+      "sha256": "e6d45579546883bce32b91e2014269d55088158ba9ecce9d1e36c565a03483b8",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/artifact-11751937667-original.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\artifact-11751937667-original.zip",
+      "bytes": 609566,
+      "sha256": "39bd08b84bf3867e2aba4661333a9e52681725b32a6d69f8418c6df6f6b5acee",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/independent-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\independent-I.json",
+      "bytes": 1977,
+      "sha256": "37bf754c6da7703e426e7a185a689c592fb76b695efdb3f599a55434bbc04490",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/independent-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\independent-IO.json",
+      "bytes": 1977,
+      "sha256": "37bf754c6da7703e426e7a185a689c592fb76b695efdb3f599a55434bbc04490",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/independent-resource-windows.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\independent-resource-windows.json",
+      "bytes": 4015,
+      "sha256": "34b5bc8813082d0a08e617db129fe04358de441d6fc1cdddab7bfa492ab27c4f",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/job-114823309885-log-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\job-114823309885-log-provenance.json",
+      "bytes": 9812,
+      "sha256": "bda40005efe63de14d0e1ffd2c01956c8d24c54b089b436c673a422e8ba78398",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/job-114823309885-safe-original-spans.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\job-114823309885-safe-original-spans.log",
+      "bytes": 63129,
+      "sha256": "26518ce3405134ff58f647254538ff833fde27db5500c4de0624bd328999ba0f",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-artifacts-20261012T130516672519Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-artifacts-20261012T130516672519Z.json",
+      "bytes": 32,
+      "sha256": "244563f989470892c537c9a4622920af0d228ee4528f7d00c64a06d6cd95856c",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-artifacts-20261012T140617627636Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-artifacts-20261012T140617627636Z.json",
+      "bytes": 809,
+      "sha256": "acecb2d25a431c6720f5a0845999c53f79d2aae895e0f9f96d5b7b7aa7c67cd5",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-artifacts-20261012T141212390845Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-artifacts-20261012T141212390845Z.json",
+      "bytes": 809,
+      "sha256": "acecb2d25a431c6720f5a0845999c53f79d2aae895e0f9f96d5b7b7aa7c67cd5",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-first-capture-script.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-first-capture-script.py",
+      "bytes": 8682,
+      "sha256": "560fb79ab0ea147d4690c9299649147c96503c90721206414e0b533129e93f81",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-git/22ebfd78e293aafa13d81b3a0bbf287491951115/.github/scripts/benchmark_enterprise_finance.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-git\\22ebfd78e293aafa13d81b3a0bbf287491951115\\.github\\scripts\\benchmark_enterprise_finance.py",
+      "bytes": 29481,
+      "sha256": "7bce2382df24d439d39386f0e02c07bf362c4f451649dbd8d7f225c8a920396b",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-git/62c41c42d66924039c4fbdae6b260cc0d33996e7/.github/scripts/benchmark_wave5_profile_diagnostics.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-git\\62c41c42d66924039c4fbdae6b260cc0d33996e7\\.github\\scripts\\benchmark_wave5_profile_diagnostics.py",
+      "bytes": 74667,
+      "sha256": "d005e84654b412393c36c4fc2b7f81f25789a3bb8c6ce354e449bb6ef28cca76",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-git/62c41c42d66924039c4fbdae6b260cc0d33996e7/.github/workflows/wave5-native-10k-capacity.yml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-git\\62c41c42d66924039c4fbdae6b260cc0d33996e7\\.github\\workflows\\wave5-native-10k-capacity.yml",
+      "bytes": 3126,
+      "sha256": "30f2fe682d4d43bc69ce41c47de377b41c3569b29f498fbcd503f5aec5712b30",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-git/62c41c42d66924039c4fbdae6b260cc0d33996e7/tests/test_wave5_profile_diagnostics.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-git\\62c41c42d66924039c4fbdae6b260cc0d33996e7\\tests\\test_wave5_profile_diagnostics.py",
+      "bytes": 42205,
+      "sha256": "a6fd9e7ef6263f5b5b73babfe95cb1250252981f93abf0003cc93f1ff2771353",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-jobs-20261012T130516672519Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-jobs-20261012T130516672519Z.json",
+      "bytes": 3267,
+      "sha256": "8211aa68de7666ba13ffce51514fb2c07c6162bd437e07e20f3ab9912365b40b",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-jobs-20261012T140617627636Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-jobs-20261012T140617627636Z.json",
+      "bytes": 3678,
+      "sha256": "0bf3c02709dace53417014ddd48c93685c6e5b2a34019b504a658862a27e9290",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-jobs-20261012T141212390845Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-jobs-20261012T141212390845Z.json",
+      "bytes": 3678,
+      "sha256": "0bf3c02709dace53417014ddd48c93685c6e5b2a34019b504a658862a27e9290",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/capacity/capacity.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\capacity\\capacity.json",
+      "bytes": 3379,
+      "sha256": "09d20e86c75ba40ab5a6788a60a93ced2260d74d36ae34364b6b99de5873483d",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/capacity/current-native-10000/admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\capacity\\current-native-10000\\admission.json",
+      "bytes": 214,
+      "sha256": "61e185ef46bdeca3771287dc86a69c54f2dec95992cb5dd39fd031e5d9dc2c96",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/capacity/current-native-10000/created-container.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\capacity\\current-native-10000\\created-container.json",
+      "bytes": 994,
+      "sha256": "d77831685c8ac4ff098bb0f3d3740eafd3635fd567472a4ca3abba8b77b9367a",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/capacity/current-native-10000/creation-audit.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\capacity\\current-native-10000\\creation-audit.json",
+      "bytes": 299,
+      "sha256": "89e8157ff8d2086a98675c9a44fe82199a44c287ef38fa6a1c8796d7fd37f7a5",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/capacity/current-native-10000/creation-intent.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\capacity\\current-native-10000\\creation-intent.json",
+      "bytes": 735,
+      "sha256": "c0e4c8535d95246e748c0dc612a83086dbea96d22ff7efc4bbdced21f4763b50",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/capacity/current-native-10000/creation-response.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\capacity\\current-native-10000\\creation-response.json",
+      "bytes": 555,
+      "sha256": "3d06a303a9366bb77431fd092a584165aa71fd1eac3761a4515772c99423959e",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/capacity/current-native-10000/diagnostic.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\capacity\\current-native-10000\\diagnostic.json",
+      "bytes": 2178,
+      "sha256": "be6197a6db9daa02b2d0d42c46c12ddc4a722c32a260dd01664b0e8209002578",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/capacity/current-native-10000/native/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\capacity\\current-native-10000\\native\\migration.log",
+      "bytes": 23478,
+      "sha256": "06b32b0f9383542db87c70bc9076a671bc0859d322fa6472b8bc42ceee9cde51",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/capacity/current-native-10000/native/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\capacity\\current-native-10000\\native\\result.json",
+      "bytes": 2481083,
+      "sha256": "38175801c65ccf4fb872d755a4fdc2fd5435d4db76a8695146c9cf11ba06def6",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/capacity/current-native-10000/origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\capacity\\current-native-10000\\origins.json",
+      "bytes": 36147,
+      "sha256": "8ab9ce995c1a82e592266f689ff8d0326c0c581cb753980c3adfc35bc8011eab",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/capacity/current-native-10000/spec.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\capacity\\current-native-10000\\spec.json",
+      "bytes": 921,
+      "sha256": "f8d99ac4e8395b09177517bee24dcdb4abe1e1c8231011b65fcc9b06fe1db66d",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/capacity/current-native-10000/worker-complete.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\capacity\\current-native-10000\\worker-complete.json",
+      "bytes": 50,
+      "sha256": "8d2207818bd750b68af0d87b61677ad116dc45df3a6cf94cdf8ea59a27978f3e",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/capacity/current-native-10000/worker.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\capacity\\current-native-10000\\worker.log",
+      "bytes": 144,
+      "sha256": "5386a0ced6649a4eb62d71be360d5cbe8be04baf1641ff45a3cd354537378f4b",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/pure-contracts.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\pure-contracts.xml",
+      "bytes": 41159,
+      "sha256": "a14f8d65db465a188b12718b47183409589e859d4d7cb376ba78cd47b054c8b9",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-members/workflow-source-commit.txt",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-members\\workflow-source-commit.txt",
+      "bytes": 41,
+      "sha256": "4323b75b40b1603a3389833309583c1468446f32e2d14cb84fb311c23a40ae47",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-run-20261012T130516672519Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-run-20261012T130516672519Z.json",
+      "bytes": 13599,
+      "sha256": "b110669291e7e3d197bb2995a58b1c765f6f20aae0d8a1b58287916d4a3569c6",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-run-20261012T140617627636Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-run-20261012T140617627636Z.json",
+      "bytes": 13602,
+      "sha256": "a15d65572cd978f0fabfdcd606df4047123f159b2d9d749e5f0d1f57e6137fec",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-run-20261012T141212390845Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-run-20261012T141212390845Z.json",
+      "bytes": 13602,
+      "sha256": "a15d65572cd978f0fabfdcd606df4047123f159b2d9d749e5f0d1f57e6137fec",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-status-20261012T130516672519Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-status-20261012T130516672519Z.json",
+      "bytes": 2571,
+      "sha256": "d9c9717bec27e19690930bf52e417a952d163dcd591771fb32b8581a78576a8c",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-status-20261012T140617627636Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-status-20261012T140617627636Z.json",
+      "bytes": 2755,
+      "sha256": "4ac5035efec9e38f6199c25c2482b0f271fe60bc97c7e80343b708fe8ae760a5",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-status-20261012T141212390845Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-status-20261012T141212390845Z.json",
+      "bytes": 2755,
+      "sha256": "4ac5035efec9e38f6199c25c2482b0f271fe60bc97c7e80343b708fe8ae760a5",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-terminal-custody.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-terminal-custody.json",
+      "bytes": 19859,
+      "sha256": "d334b9a2012ff715ed72405a628208b8d419c7faba9a9db2c9788739ebd865df",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/actual62/original-zip-read-recovery-metadata.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-62c41c42-38252859442\\original-zip-read-recovery-metadata.json",
+      "bytes": 706,
+      "sha256": "779191084915518c1a4f09fd69ebf16dfb28b362bd6f0856f11a11f82ad87701",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original62 controller/current22 runtime headers retained; complete originalZIP/API/raw financial/resource records, precise publicsafe logs, original partial snapshots/read-recovery metadata and file-only audits. No future publication rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/read-only-tools/audit_wave5_native10k_62_original.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\audit_wave5_native10k_62_original.py",
+      "bytes": 17456,
+      "sha256": "488a948574f920059aa07e29942b8c8fa60e3656e9e6933ad9edb23bad2ab12c",
+      "source_commit": null,
+      "source_attribution": "Exact file-only capture/review tool checkpoint; no application financial code imports or own runtime workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/read-only-tools/audit_wave5_native10k_resources.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\audit_wave5_native10k_resources.py",
+      "bytes": 6869,
+      "sha256": "fc11985afd81c34178de068134168410c414635dcca67c19fa31edf00a71c433",
+      "source_commit": null,
+      "source_attribution": "Exact file-only capture/review tool checkpoint; no application financial code imports or own runtime workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/read-only-tools/capture_wave5_native10k_62_cloud.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\capture_wave5_native10k_62_cloud.py",
+      "bytes": 8983,
+      "sha256": "4550251d062bc93c2fce637988d43b519d3f503013ba378576b372d2d8feb92e",
+      "source_commit": null,
+      "source_attribution": "Exact file-only capture/review tool checkpoint; no application financial code imports or own runtime workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/read-only-tools/recover_wave5_native10k_original_zip.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\recover_wave5_native10k_original_zip.py",
+      "bytes": 2988,
+      "sha256": "e854debbc18460f7f53d46fa8970d87acf59ab97ba507c14c946958ee2472d09",
+      "source_commit": null,
+      "source_attribution": "Exact file-only capture/review tool checkpoint; no application financial code imports or own runtime workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/read-only-tools/review_10k_uploadpin_delta.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\review_10k_uploadpin_delta.py",
+      "bytes": 3018,
+      "sha256": "9d662b13ee418617eb384dc3c579d25e773c1dd8418670303ef057cca1665821",
+      "source_commit": null,
+      "source_attribution": "Exact file-only capture/review tool checkpoint; no application financial code imports or own runtime workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/read-only-tools/review_wave5_native_10k_workflow.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\review_wave5_native_10k_workflow.py",
+      "bytes": 7478,
+      "sha256": "fca809f13662c0a0ae3fd131c896835593426830cc119e3a0989e366db37183e",
+      "source_commit": null,
+      "source_attribution": "Exact file-only capture/review tool checkpoint; no application financial code imports or own runtime workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/current-native10k/audit_wave5_actual_native10k62.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\audit_wave5_actual_native10k62.py",
+      "bytes": 22856,
+      "sha256": "8feb9153ff2dc754ae89909078ff18d7608300c9021322424377e5712f6b5fc5",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original independent prelaunch/actual source headers preserved; two file-only-I/-I-O actual audits byte identical, no downloaded duplicate/workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/current-native10k/audit_wave5_current_capacity_prelaunch.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\audit_wave5_current_capacity_prelaunch.py",
+      "bytes": 8701,
+      "sha256": "bf57512412cb62ff3ab3d5269a9030a719f7e11b5018530be9a49f9dc2bec135",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original independent prelaunch/actual source headers preserved; two file-only-I/-I-O actual audits byte identical, no downloaded duplicate/workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/current-native10k/wave5-actual-native10k62-independent-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-actual-native10k62-independent-I.json",
+      "bytes": 21375,
+      "sha256": "588745bb3e4b1b3c4b64278d5e823fef5dbbb9f2104f336ebadf95bb84b28b70",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original independent prelaunch/actual source headers preserved; two file-only-I/-I-O actual audits byte identical, no downloaded duplicate/workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/current-native10k/wave5-actual-native10k62-independent-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-actual-native10k62-independent-IO.json",
+      "bytes": 21375,
+      "sha256": "588745bb3e4b1b3c4b64278d5e823fef5dbbb9f2104f336ebadf95bb84b28b70",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original independent prelaunch/actual source headers preserved; two file-only-I/-I-O actual audits byte identical, no downloaded duplicate/workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/current-native10k/wave5-current-capacity-independent-prelaunch-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-current-capacity-independent-prelaunch-v1.json",
+      "bytes": 7249,
+      "sha256": "3114c544ce6796b66ee22cdf7f313c3c85c52740b3c2a7d762b6712b9082e934",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original independent prelaunch/actual source headers preserved; two file-only-I/-I-O actual audits byte identical, no downloaded duplicate/workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/prelaunch-originals/base0756-driver.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-current-capacity-independent-prelaunch-v1-originals\\base0756-driver.py",
+      "bytes": 52233,
+      "sha256": "a9f60d01589bc68cf03eb24007f6b1a5a8d6f2c2bf29f439215653da713f3d5f",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original prelaunch source/pure141 checkpoint; not new native execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/prelaunch-originals/driver.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-current-capacity-independent-prelaunch-v1-originals\\driver.py",
+      "bytes": 74667,
+      "sha256": "d005e84654b412393c36c4fc2b7f81f25789a3bb8c6ce354e449bb6ef28cca76",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original prelaunch source/pure141 checkpoint; not new native execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/prelaunch-originals/pure-targeted.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-current-capacity-independent-prelaunch-v1-originals\\pure-targeted.xml",
+      "bytes": 23389,
+      "sha256": "37ae1f3a8750846a8ffe53c272355bbe034c00856addb84ab77624270ccefb38",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original prelaunch source/pure141 checkpoint; not new native execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/prelaunch-originals/tests.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-current-capacity-independent-prelaunch-v1-originals\\tests.py",
+      "bytes": 42205,
+      "sha256": "a6fd9e7ef6263f5b5b73babfe95cb1250252981f93abf0003cc93f1ff2771353",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original prelaunch source/pure141 checkpoint; not new native execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/prelaunch-originals/workflow.yml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-current-capacity-independent-prelaunch-v1-originals\\workflow.yml",
+      "bytes": 3126,
+      "sha256": "846cf244a98b76f9265a19105997aac53b5af9066e0edf0ef57aa70e58a620ef",
+      "source_commit": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+      "source_attribution": "Original prelaunch source/pure141 checkpoint; not new native execution.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "prior-fifteen-capsules-reference-only.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-public-capsule-20261012-v1\\prior-fifteen-capsules-reference-only.json",
+      "bytes": 12200,
+      "sha256": "fee903c7e0f0dfd0cfa2dcebfc67009a18e3d910da7a50739e12afd1f4cc0547",
+      "source_commit": null,
+      "source_attribution": "Reference only; existing15 ZIP/index30records unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

@@ -213,7 +213,10 @@ def test_account_reconciliation_rolls_back_business_workflow_audit_and_outbox_on
     connection = connect(db_path, require_exists=True)
     try:
         service = AccountReconciliationService(connection)
-        audit_count = connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"]
+        audit_count = connection.execute(
+            "SELECT COUNT(*) AS count FROM audit_events "
+            "WHERE object_type <> 'authorization.policy_decision'"
+        ).fetchone()["count"]
         outbox_count = connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"]
         monkeypatch.setattr(common_module, "audit", _fail_audit)
         with pytest.raises(PlatformError, match="audit evidence"):
@@ -226,7 +229,13 @@ def test_account_reconciliation_rolls_back_business_workflow_audit_and_outbox_on
             )
         assert connection.execute("SELECT COUNT(*) AS count FROM account_reconciliation_records").fetchone()["count"] == 0
         assert connection.execute("SELECT COUNT(*) AS count FROM workflow_objects").fetchone()["count"] == 0
-        assert connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"] == audit_count
+        assert (
+            connection.execute(
+                "SELECT COUNT(*) AS count FROM audit_events "
+                "WHERE object_type <> 'authorization.policy_decision'"
+            ).fetchone()["count"]
+            == audit_count
+        )
         assert connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"] == outbox_count
         monkeypatch.setattr(accounts_module, "append_outbox_event", _fail_outbox)
         with pytest.raises(PlatformError, match="outbox"):

@@ -52,10 +52,24 @@ def test_ppa_api_rebuilds_typed_request_and_uses_authenticated_actor(
         def persist(self, request: object, result: object, **_: object) -> dict[str, object]:
             captured["request"] = request
             captured["result"] = result
-            return {"id": "ppa-" + "a" * 32, "posted": False, "result_digest": result.result_digest}  # type: ignore[union-attr]
+            return {
+                "id": "ppa-" + "a" * 32,
+                "posted": False,
+                "result_digest": result.result_digest,
+                "result_payload": {
+                    "posted": False,
+                    "items": [],
+                    "future_result_field": "must-not-leak",
+                },
+                "future_artifact_field": "must-not-leak",
+            }  # type: ignore[union-attr]
 
         def get(self, artifact_id: str, **_: object) -> dict[str, object]:
-            return {"id": artifact_id, "posted": False}
+            return {
+                "id": artifact_id,
+                "posted": False,
+                "future_artifact_field": "must-not-leak",
+            }
 
     repository = Repository()
 
@@ -69,6 +83,8 @@ def test_ppa_api_rebuilds_typed_request_and_uses_authenticated_actor(
     created = client.post("/api/v1/consolidation-ppa", headers=headers, json=_body())
     assert created.status_code == 200, created.text
     assert created.json()["artifact"]["posted"] is False
+    assert "future_artifact_field" not in created.json()["artifact"]
+    assert "future_result_field" not in created.json()["artifact"]["result_payload"]
     assert captured["request"].prepared_by == actor_id  # type: ignore[union-attr]
     assert captured["request"].approved_by == "reviewer"  # type: ignore[union-attr]
 
@@ -78,6 +94,7 @@ def test_ppa_api_rebuilds_typed_request_and_uses_authenticated_actor(
     )
     assert loaded.status_code == 200
     assert loaded.json()["artifact"]["posted"] is False
+    assert "future_artifact_field" not in loaded.json()["artifact"]
 
     invalid = _body()
     invalid["unexpected"] = True

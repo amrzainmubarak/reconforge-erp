@@ -34,8 +34,13 @@ const contract: ProfessionalInvoicePaymentStudioContract = {
   notices: [],
 };
 
+const loadedContract = {
+  ...contract,
+  provenance: { state: "synthetic_demo", source: "bundled_local_fixture", operational_evidence: false },
+} satisfies Awaited<ReturnType<typeof loadProfessionalInvoicePaymentStudio>>;
+
 beforeEach(() => {
-  vi.mocked(loadProfessionalInvoicePaymentStudio).mockResolvedValue(contract);
+  vi.mocked(loadProfessionalInvoicePaymentStudio).mockResolvedValue(loadedContract);
 });
 
 describe("ProfessionalInvoicePaymentStudio", () => {

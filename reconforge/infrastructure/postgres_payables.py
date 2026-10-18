@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import date, datetime
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Any
 
 from reconforge.application.payables import (
@@ -16,8 +16,20 @@ from reconforge.application.payables import (
 )
 from reconforge.auth.rbac import same_actor
 from reconforge.domain.models import utc_now_text
+from reconforge.domain.payables_quantities import (
+    exact_product,
+    exact_sum,
+    quantity_capacity,
+    quantity_text,
+    rounded_minor,
+)
+from reconforge.domain.payables_replay import PayablesReplayError, creation_identity, replay_envelope, verify_replay
 from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_repository_scope import (
+    PostgresRepositoryScopeError,
+    ensure_repository_tenant_scope,
+)
 from reconforge.io.persisted import (
     PersistedJsonError,
     decode_financial_idempotency_response,
@@ -25,10 +37,11 @@ from reconforge.io.persisted import (
     encode_postgres_outbox_payload,
 )
 from reconforge.platform.common import PlatformError, platform_id
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 _CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9._-]{0,63}$")
 SUPPLIER_STATUSES = ("Draft", "Active", "Suspended", "Closed")
-INVOICE_STATUSES = ("Draft", "Submitted", "Matched", "Exception", "Approved", "Paid", "Rejected")
+INVOICE_STATUSES = ("Draft", "Submitted", "Matched", "Exception", "Approved", "Paid", "Rejected", "Credited")
 
 
 class PostgresPayablesError(RuntimeError):
@@ -96,19 +109,29 @@ def _minor(value: object, label: str) -> int:
 
 
 def _quantity(value: object, label: str) -> tuple[Decimal, str]:
-    raw = _text(value, label, maximum=80)
+    _text(value, label, maximum=80)
     try:
-        quantity = Decimal(raw)
-    except (InvalidOperation, ValueError) as exc:
+        quantity = parse_exact_amount(value)
+    except InvalidAmountError as exc:
         raise PlatformError(f"{label} must be an exact decimal quantity.") from exc
-    if not quantity.is_finite() or quantity <= 0:
+    if quantity <= 0:
         raise PlatformError(f"{label} must be finite and greater than zero.")
     exponent = quantity.as_tuple().exponent
     if not isinstance(exponent, int):
         raise PlatformError(f"{label} must be an exact decimal quantity.")
-    normalized = quantity.normalize()
-    text = "0" if normalized == 0 else format(normalized, "f")
-    return quantity, text
+    return quantity, quantity_text(quantity)
+
+
+def _stored_quantity(value: object, label: str, *, allow_zero: bool = False) -> Decimal:
+    """Decode a persisted quantity without weakening the exact-input policy."""
+
+    try:
+        quantity = parse_exact_amount(value)
+    except InvalidAmountError as exc:
+        raise PlatformError(f"Invalid stored quantity: {label}.") from exc
+    if quantity < 0 or (quantity == 0 and not allow_zero):
+        raise PlatformError(f"Invalid stored quantity: {label}.")
+    return quantity
 
 
 def _normalize_po_lines(lines: Sequence[PurchaseOrderLineInput]) -> list[tuple[str, Decimal, str, int, str, int]]:
@@ -163,12 +186,11 @@ def _normalize_invoice_lines(
 
 
 def _decimal_text(value: Decimal) -> str:
-    normalized = value.normalize()
-    return "0" if normalized == 0 else format(normalized, "f")
+    return quantity_text(value)
 
 
 def _rounded_minor(value: Decimal) -> int:
-    return int(value.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    return rounded_minor(value)
 
 
 POSTGRES_PAYABLES_SCHEMA_SQL = r"""
@@ -422,17 +444,22 @@ class PostgresPayablesRepository:
     def _transaction(self) -> Iterator[None]:
         try:
             with self.connection.transaction():
-                set_local_tenant_scope(self.connection, self.tenant_id)
+                ensure_repository_tenant_scope(self.connection, self.tenant_id)
                 yield
+        except PostgresRepositoryScopeError as exc:
+            raise PlatformError(str(exc)) from exc
         except (PlatformError, PostgresPayablesError):
             raise
         except Exception as exc:
             raise PostgresPayablesError("PostgreSQL Payables operation failed.") from exc
 
     def _workspace_id(self, workspace: str, *, required: bool = True) -> str | None:
+        cleaned = _text(workspace, "Workspace name")
         row = self.connection.execute(
-            "SELECT id FROM reconforge.domain_workspaces WHERE tenant_id=%s AND name=%s",
-            (self.tenant_id, _text(workspace, "Workspace name")),
+            "SELECT id FROM reconforge.domain_workspaces "
+            "WHERE tenant_id=%s AND (id=%s OR name=%s) "
+            "ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END LIMIT 1",
+            (self.tenant_id, cleaned, cleaned, cleaned),
         ).fetchone()
         if row is None:
             if required:
@@ -446,6 +473,7 @@ class PostgresPayablesRepository:
         *,
         organization_code: str,
         entity_code: str,
+        require_active: bool = True,
     ) -> tuple[str | None, str | None]:
         organization_id: str | None = None
         entity_id: str | None = None
@@ -456,8 +484,8 @@ class PostgresPayablesRepository:
                    JOIN reconforge.master_data_workspace_organizations w
                      ON w.tenant_id=o.tenant_id AND w.organization_id=o.id
                    WHERE o.tenant_id=%s AND w.workspace_id=%s
-                     AND o.organization_code=%s AND o.active=TRUE""",
-                (self.tenant_id, workspace_id, code),
+                     AND o.organization_code=%s AND (NOT %s OR o.active=TRUE)""",
+                (self.tenant_id, workspace_id, code, require_active),
             ).fetchone()
             if row is None:
                 raise PlatformError("Payables organization was not found or inactive in this workspace.")
@@ -468,8 +496,8 @@ class PostgresPayablesRepository:
             code = _code(entity_code, "Entity code")
             row = self.connection.execute(
                 """SELECT id FROM reconforge.legal_entities
-                   WHERE tenant_id=%s AND organization_id=%s AND entity_code=%s AND active=TRUE""",
-                (self.tenant_id, organization_id, code),
+                   WHERE tenant_id=%s AND organization_id=%s AND entity_code=%s AND (NOT %s OR active=TRUE)""",
+                (self.tenant_id, organization_id, code, require_active),
             ).fetchone()
             if row is None:
                 raise PlatformError("Payables legal entity was not found or inactive.")
@@ -506,7 +534,9 @@ class PostgresPayablesRepository:
             metadata=metadata,
         )
 
-    def _supplier_by_code(self, workspace_id: str, supplier_code: str) -> dict[str, Any]:
+    def _supplier_by_code(
+        self, workspace_id: str, supplier_code: str, *, require_active: bool = True,
+    ) -> dict[str, Any]:
         row = self.connection.execute(
             """SELECT id,workspace_id,organization_id,legal_entity_id,supplier_code,name,
                       currency_code,tax_identifier,status,created_at,updated_at,row_version
@@ -517,31 +547,43 @@ class PostgresPayablesRepository:
         if row is None:
             raise PlatformError("Supplier not found in the requested workspace.")
         supplier = _row(row, self._SUPPLIER_COLUMNS)
-        if supplier["status"] != "Active":
+        if require_active and supplier["status"] != "Active":
             raise PlatformError("Supplier must be active.")
         return supplier
 
-    def _branch_id(self, organization_id: str | None, entity_id: str | None, branch_code: str) -> str | None:
+    def _branch_id(
+        self, organization_id: str | None, entity_id: str | None, branch_code: str, *, require_active: bool = True,
+    ) -> str | None:
         if not branch_code.strip():
             return None
         if organization_id is None:
             raise PlatformError("Organization code is required when a branch code is supplied.")
         row = self.connection.execute(
             """SELECT id FROM reconforge.branches
-               WHERE tenant_id=%s AND organization_id=%s AND branch_code=%s AND active=TRUE
-                 AND (%s IS NULL OR legal_entity_id=%s)""",
-            (self.tenant_id, organization_id, _code(branch_code, "Branch code"), entity_id, entity_id),
+               WHERE tenant_id=%s AND organization_id=%s AND branch_code=%s AND (NOT %s OR active=TRUE)
+                 AND (%s::text IS NULL OR legal_entity_id=%s)""",
+            (self.tenant_id, organization_id, _code(branch_code, "Branch code"), require_active, entity_id, entity_id),
         ).fetchone()
         if row is None:
             raise PlatformError("Payables branch was not found or inactive.")
         return str(row["id"] if isinstance(row, Mapping) else row[0])
 
-    def _idempotent(self, operation: str, workspace_id: str, key: str) -> dict[str, Any] | None:
+    def _idempotent(
+        self, operation: str, workspace_id: str, key: str, request: dict[str, Any]
+    ) -> dict[str, Any] | None:
         normalized = _text(key, "Idempotency key", maximum=200, required=False)
         if not normalized:
             return None
+        self.connection.execute(
+            "SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+            (
+                encode_financial_idempotency_response(
+                    {"tenant": self.tenant_id, "operation": operation, "workspace": workspace_id, "key": normalized}
+                ).text,
+            ),
+        )
         row = self.connection.execute(
-            """SELECT response_json FROM reconforge.ap_idempotency_keys
+            """SELECT response_json::text AS response_json FROM reconforge.ap_idempotency_keys
                WHERE tenant_id=%s AND scope=%s AND idempotency_key=%s""",
             (self.tenant_id, f"{operation}:{workspace_id}", normalized),
         ).fetchone()
@@ -549,16 +591,34 @@ class PostgresPayablesRepository:
             return None
         raw = row["response_json"] if isinstance(row, Mapping) else row[0]
         try:
-            return decode_financial_idempotency_response(raw).payload
+            stored = decode_financial_idempotency_response(raw).payload
         except PersistedJsonError as exc:
             raise PostgresPayablesError("Stored Payables idempotency response is invalid.") from exc
+        # The caller's canonical request determines the source, never the cache.
+        getters: dict[str, Callable[[str], dict[str, Any]]] = {
+            "purchase_order": self._purchase_order,
+            "goods_receipt": self._receipt,
+            "supplier_invoice": self._supplier_invoice,
+        }
+        authoritative = getters[operation](request["id"])
+        receipt_scope = None
+        if operation == "goods_receipt":
+            parent = self._purchase_order(authoritative["purchase_order_id"])
+            receipt_scope = {key: parent[key] for key in ("organization_id", "legal_entity_id")}
+        try:
+            verify_replay(operation, stored, request, authoritative, receipt_scope=receipt_scope)
+        except PayablesReplayError as exc:
+            raise PlatformError(str(exc)) from exc
+        return authoritative
 
-    def _save_idempotency(self, operation: str, workspace_id: str, key: str, result: dict[str, Any]) -> None:
+    def _save_idempotency(
+        self, operation: str, workspace_id: str, key: str, result: dict[str, Any], request: dict[str, Any]
+    ) -> None:
         normalized = _text(key, "Idempotency key", maximum=200, required=False)
         if not normalized:
             return
         try:
-            document = encode_financial_idempotency_response(result)
+            document = encode_financial_idempotency_response(replay_envelope(operation, request, result))
         except PersistedJsonError as exc:
             raise PostgresPayablesError("Payables idempotency response is invalid.") from exc
         self.connection.execute(
@@ -568,7 +628,12 @@ class PostgresPayablesRepository:
             (self.tenant_id, f"{operation}:{workspace_id}", normalized, document.text),
         )
 
-    def _purchase_order(self, purchase_order_id: str) -> dict[str, Any]:
+    def _purchase_order(self, purchase_order_id: str, *, lock: bool = False) -> dict[str, Any]:
+        if lock:
+            self.connection.execute(
+                "SELECT id FROM reconforge.ap_purchase_orders WHERE tenant_id=%s AND id=%s FOR NO KEY UPDATE",
+                (self.tenant_id, _text(purchase_order_id, "Purchase order id", maximum=128)),
+            ).fetchone()
         row = self.connection.execute(
             """SELECT id,workspace_id,organization_id,legal_entity_id,branch_id,supplier_id,
                       po_number,order_date,expected_date,currency_code,status,created_by,
@@ -590,18 +655,63 @@ class PostgresPayablesRepository:
         return result
 
     def _received_quantity(self, purchase_order_line_id: str) -> Decimal:
-        row = self.connection.execute(
-            """SELECT COALESCE(SUM(l.received_quantity),0) AS quantity
+        rows = self.connection.execute(
+            """SELECT l.received_quantity_text AS quantity
                FROM reconforge.ap_goods_receipt_lines l
                JOIN reconforge.ap_goods_receipts r
                  ON r.tenant_id=l.tenant_id AND r.id=l.receipt_id
-               WHERE l.tenant_id=%s AND l.purchase_order_line_id=%s AND r.status='Posted'""",
+               WHERE l.tenant_id=%s AND l.purchase_order_line_id=%s AND r.status='Posted'
+               ORDER BY r.receipt_date, r.id, l.id""",
             (self.tenant_id, purchase_order_line_id),
-        ).fetchone()
-        if row is None:
-            return Decimal("0")
-        value = row["quantity"] if isinstance(row, Mapping) else row[0]
-        return Decimal(str(value))
+        ).fetchall()
+        return exact_sum(
+            _stored_quantity(
+                row["quantity"] if isinstance(row, Mapping) else row[0],
+                f"received quantity {purchase_order_line_id}",
+            )
+            for row in rows
+        )
+
+    def _quantity_capacity(
+        self, invoice_id: str, quantities: dict[str, Decimal], po_lines: dict[str, Any]
+    ) -> tuple[Decimal, tuple[str, ...]]:
+        available = {}
+        for line_id in sorted(quantities):
+            rows = self.connection.execute(
+                """SELECT lines.invoiced_quantity_text FROM reconforge.ap_supplier_invoice_lines lines
+                   JOIN reconforge.ap_supplier_invoices invoices
+                     ON invoices.tenant_id=lines.tenant_id AND invoices.id=lines.supplier_invoice_id
+                   WHERE lines.tenant_id=%s AND lines.purchase_order_line_id=%s AND invoices.id<>%s
+                     AND invoices.status IN ('Approved','Paid') ORDER BY invoices.id,lines.id""",
+                (self.tenant_id, line_id, invoice_id),
+            ).fetchall()
+            consumed = exact_sum(
+                _stored_quantity(
+                    row["invoiced_quantity_text"] if isinstance(row, Mapping) else row[0],
+                    f"approved quantity {line_id}",
+                ) for row in rows
+            )
+            available[line_id] = (
+                _stored_quantity(po_lines[line_id]["ordered_quantity"], f"ordered quantity {line_id}"),
+                self._received_quantity(line_id),
+                consumed,
+            )
+        return quantity_capacity(quantities, available)
+
+    def _check_approval_quantity(self, invoice: dict[str, Any], order: dict[str, Any]) -> None:
+        po_lines = {str(line["id"]): line for line in order["lines"]}
+        quantities: dict[str, Decimal] = {}
+        for line in invoice["lines"]:
+            line_id = str(line["purchase_order_line_id"] or "")
+            if line_id not in po_lines:
+                raise PlatformError("Invoice quantity references an unknown purchase-order line.")
+            quantities[line_id] = exact_sum((
+                quantities.get(line_id, Decimal(0)),
+                _stored_quantity(line["invoiced_quantity"], f"invoiced quantity {line_id}"),
+            ))
+        _variance, exceeded = self._quantity_capacity(str(invoice["id"]), quantities, po_lines)
+        if exceeded:
+            raise PlatformError("Supplier invoice quantity exceeds available received or ordered quantity.")
 
     def _receipt(self, receipt_id: str) -> dict[str, Any]:
         row = self.connection.execute(
@@ -627,13 +737,17 @@ class PostgresPayablesRepository:
         row = self.connection.execute(
             """SELECT id,workspace_id,organization_id,legal_entity_id,supplier_id,purchase_order_id,
                       invoice_number,invoice_date,due_date,currency_code,tax_minor,total_minor,status,
-                      created_by,approved_by,approved_at,created_at,updated_at,row_version
+                      created_by,approved_by,approved_at,created_at,updated_at,row_version,
+                      to_jsonb(ap_supplier_invoices)->>'supplier_return_owner_id' AS supplier_return_owner_id
                FROM reconforge.ap_supplier_invoices WHERE tenant_id=%s AND id=%s""",
             (self.tenant_id, _text(invoice_id, "Supplier invoice id", maximum=128)),
         ).fetchone()
         if row is None:
             raise PlatformError("Supplier invoice not found.")
-        result = _row(row, self._INVOICE_COLUMNS)
+        result = _row(row, self._INVOICE_COLUMNS + ("supplier_return_owner_id",))
+        if result.pop("supplier_return_owner_id") is not None:
+            result.update(_row(self.connection.execute("SELECT reconforge.sr_invoice_projection(%s,%s) AS value",
+                (self.tenant_id, invoice_id)).fetchone(), ("value",))["value"])
         lines = self.connection.execute(
             """SELECT id,supplier_invoice_id,purchase_order_line_id,line_number,description,
                       invoiced_quantity_text AS invoiced_quantity,unit_price_minor,tax_minor,
@@ -783,19 +897,51 @@ class PostgresPayablesRepository:
             workspace_id = self._workspace_id(workspace)
             if workspace_id is None:
                 raise PostgresPayablesError("Payables workspace was not found for this tenant.")
-            previous = self._idempotent("purchase_order", workspace_id, idempotency_key)
+            # Exact recovery still resolves authorized parent identities, but a
+            # later deactivation cannot turn a read-only replay into a new write.
+            supplier = self._supplier_by_code(workspace_id, supplier_code, require_active=False)
+            organization_id, entity_id = self._scope_ids(
+                workspace_id,
+                organization_code=organization_code,
+                entity_code=entity_code,
+                require_active=False,
+            )
+            branch_id = self._branch_id(organization_id, entity_id, branch_code, require_active=False)
+            po_id = platform_id("APPO", workspace_id, number)
+            request = creation_identity(
+                "purchase_order",
+                {
+                    "id": po_id,
+                    "workspace_id": workspace_id,
+                    "organization_id": organization_id,
+                    "legal_entity_id": entity_id,
+                    "branch_id": branch_id,
+                    "supplier_id": supplier["id"],
+                    "po_number": number,
+                    "order_date": ordered_on.isoformat() if ordered_on else None,
+                    "expected_date": expected_on.isoformat() if expected_on else None,
+                    "currency_code": currency,
+                    "created_by": _text(actor_label, "Actor label", maximum=160),
+                    "lines": [
+                        {
+                            "item_code": item,
+                            "ordered_quantity": quantity_text,
+                            "unit_price_minor": unit_price,
+                            "description": description,
+                            "tax_minor": tax,
+                        }
+                        for item, _quantity, quantity_text, unit_price, description, tax in normalized_lines
+                    ],
+                },
+            )
+            previous = self._idempotent("purchase_order", workspace_id, idempotency_key, request)
             if previous is not None:
                 return previous
             supplier = self._supplier_by_code(workspace_id, supplier_code)
             if supplier["currency_code"] != currency:
                 raise PlatformError("Purchase order currency must match the supplier currency.")
-            organization_id, entity_id = self._scope_ids(
-                workspace_id,
-                organization_code=organization_code,
-                entity_code=entity_code,
-            )
-            branch_id = self._branch_id(organization_id, entity_id, branch_code)
-            po_id = platform_id("APPO", workspace_id, number)
+            self._scope_ids(workspace_id, organization_code=organization_code, entity_code=entity_code)
+            self._branch_id(organization_id, entity_id, branch_code)
             row = self.connection.execute(
                 """INSERT INTO reconforge.ap_purchase_orders
                    (tenant_id,id,workspace_id,organization_id,legal_entity_id,branch_id,
@@ -843,7 +989,7 @@ class PostgresPayablesRepository:
                     ),
                 )
             result = self._purchase_order(po_id)
-            self._save_idempotency("purchase_order", workspace_id, idempotency_key, result)
+            self._save_idempotency("purchase_order", workspace_id, idempotency_key, result, request)
             self._event(
                 actor_label=actor_label,
                 object_type="ap_purchase_order",
@@ -956,10 +1102,31 @@ class PostgresPayablesRepository:
             workspace_id = self._workspace_id(workspace)
             if workspace_id is None:
                 raise PostgresPayablesError("Payables workspace was not found for this tenant.")
-            previous = self._idempotent("goods_receipt", workspace_id, idempotency_key)
+            order = self._purchase_order(purchase_order_id)
+            if order["workspace_id"] != workspace_id:
+                raise PlatformError("Goods receipt and purchase order workspace must match.")
+            receipt_id = platform_id("APGR", workspace_id, number)
+            request = creation_identity(
+                "goods_receipt",
+                {
+                    "id": receipt_id,
+                    "workspace_id": workspace_id,
+                    "purchase_order_id": order["id"],
+                    "organization_id": order["organization_id"],
+                    "legal_entity_id": order["legal_entity_id"],
+                    "receipt_number": number,
+                    "receipt_date": received_on.isoformat() if received_on else None,
+                    "created_by": _text(actor_label, "Actor label", maximum=160),
+                    "lines": [
+                        {"purchase_order_line_id": line_id, "received_quantity": quantity_text}
+                        for line_id, (_quantity, quantity_text) in sorted(normalized_quantities.items())
+                    ],
+                },
+            )
+            previous = self._idempotent("goods_receipt", workspace_id, idempotency_key, request)
             if previous is not None:
                 return previous
-            order = self._purchase_order(purchase_order_id)
+            order = self._purchase_order(purchase_order_id, lock=True)
             if order["workspace_id"] != workspace_id or order["status"] != "Approved":
                 raise PlatformError("Goods receipts require an Approved purchase order in the same workspace.")
             line_rows = {str(line["id"]): line for line in order["lines"]}
@@ -967,10 +1134,9 @@ class PostgresPayablesRepository:
                 if line_id not in line_rows:
                     raise PlatformError(f"Unknown purchase-order line: {line_id}.")
             for line_id, (quantity, _quantity_text) in normalized_quantities.items():
-                ordered = Decimal(str(line_rows[line_id]["ordered_quantity"]))
-                if self._received_quantity(line_id) + quantity > ordered:
+                ordered = _stored_quantity(line_rows[line_id]["ordered_quantity"], f"ordered quantity {line_id}")
+                if exact_sum((self._received_quantity(line_id), quantity)) > ordered:
                     raise PlatformError(f"Receipt exceeds ordered quantity for line {line_id}.")
-            receipt_id = platform_id("APGR", workspace_id, number)
             row = self.connection.execute(
                 """INSERT INTO reconforge.ap_goods_receipts
                    (tenant_id,id,workspace_id,purchase_order_id,receipt_number,receipt_date,
@@ -1006,7 +1172,7 @@ class PostgresPayablesRepository:
                     ),
                 )
             result = self._receipt(receipt_id)
-            self._save_idempotency("goods_receipt", workspace_id, idempotency_key, result)
+            self._save_idempotency("goods_receipt", workspace_id, idempotency_key, result, request)
             self._event(
                 actor_label=actor_label,
                 object_type="ap_goods_receipt",
@@ -1053,16 +1219,12 @@ class PostgresPayablesRepository:
             workspace_id = self._workspace_id(workspace)
             if workspace_id is None:
                 raise PostgresPayablesError("Payables workspace was not found for this tenant.")
-            previous = self._idempotent("supplier_invoice", workspace_id, idempotency_key)
-            if previous is not None:
-                return previous
-            supplier = self._supplier_by_code(workspace_id, supplier_code)
-            if supplier["currency_code"] != currency:
-                raise PlatformError("Supplier invoice currency must match the supplier currency.")
+            supplier = self._supplier_by_code(workspace_id, supplier_code, require_active=False)
             organization_id, entity_id = self._scope_ids(
                 workspace_id,
                 organization_code=organization_code,
                 entity_code=entity_code,
+                require_active=False,
             )
             po_id = _text(purchase_order_id, "Purchase order id", maximum=128, required=False)
             po = self._purchase_order(po_id) if po_id else None
@@ -1077,6 +1239,42 @@ class PostgresPayablesRepository:
                 if po is not None and po_line_id not in po_lines:
                     raise PlatformError(f"Invoice line references an unknown purchase-order line: {po_line_id}.")
             invoice_id = platform_id("APINV", workspace_id, supplier["id"], number)
+            request = creation_identity(
+                "supplier_invoice",
+                {
+                    "id": invoice_id,
+                    "workspace_id": workspace_id,
+                    "organization_id": organization_id,
+                    "legal_entity_id": entity_id,
+                    "supplier_id": supplier["id"],
+                    "purchase_order_id": po_id or None,
+                    "invoice_number": number,
+                    "invoice_date": invoiced_on.isoformat() if invoiced_on else None,
+                    "due_date": due_on.isoformat() if due_on else None,
+                    "currency_code": currency,
+                    "tax_minor": tax,
+                    "total_minor": total,
+                    "created_by": _text(actor_label, "Actor label", maximum=160),
+                    "lines": [
+                        {
+                            "purchase_order_line_id": line_id or None,
+                            "invoiced_quantity": quantity_text,
+                            "unit_price_minor": price,
+                            "line_total_minor": line_total,
+                            "description": description,
+                            "tax_minor": line_tax,
+                        }
+                        for line_id, _quantity, quantity_text, price, line_total, description, line_tax in normalized_lines
+                    ],
+                },
+            )
+            previous = self._idempotent("supplier_invoice", workspace_id, idempotency_key, request)
+            if previous is not None:
+                return previous
+            supplier = self._supplier_by_code(workspace_id, supplier_code)
+            if supplier["currency_code"] != currency:
+                raise PlatformError("Supplier invoice currency must match the supplier currency.")
+            self._scope_ids(workspace_id, organization_code=organization_code, entity_code=entity_code)
             row = self.connection.execute(
                 """INSERT INTO reconforge.ap_supplier_invoices
                    (tenant_id,id,workspace_id,organization_id,legal_entity_id,supplier_id,
@@ -1133,7 +1331,7 @@ class PostgresPayablesRepository:
                     ),
                 )
             result = self._supplier_invoice(invoice_id)
-            self._save_idempotency("supplier_invoice", workspace_id, idempotency_key, result)
+            self._save_idempotency("supplier_invoice", workspace_id, idempotency_key, result, request)
             self._event(
                 actor_label=actor_label,
                 object_type="ap_supplier_invoice",
@@ -1177,9 +1375,12 @@ class PostgresPayablesRepository:
         with self._transaction():
             invoice = self._supplier_invoice(invoice_id)
             po_id = str(invoice["purchase_order_id"] or "")
-            po = self._purchase_order(po_id) if po_id else None
+            po = self._purchase_order(po_id, lock=True) if po_id else None
+            invoice = self._supplier_invoice(invoice_id)
+            if invoice["status"] not in {"Submitted", "Matched", "Exception"}:
+                raise PlatformError("Only a submitted supplier invoice can be matched.")
             po_lines = {str(line["id"]): line for line in po["lines"]} if po is not None else {}
-            quantity_variance = Decimal("0")
+            quantities: dict[str, Decimal] = {}
             price_variance = Decimal("0")
             total_variance = Decimal("0")
             reasons: list[str] = []
@@ -1191,20 +1392,19 @@ class PostgresPayablesRepository:
                 if po_line is None:
                     reasons.append(f"AP-3WM-UNKNOWN-LINE:{line_id}")
                     continue
-                received = self._received_quantity(line_id)
-                invoiced = Decimal(str(line["invoiced_quantity"]))
-                quantity_variance += invoiced - received
-                unit_price_delta = Decimal(int(line["unit_price_minor"])) - Decimal(int(po_line["unit_price_minor"]))
-                price_variance += unit_price_delta * invoiced
-                expected_total = _rounded_minor(Decimal(int(po_line["unit_price_minor"])) * invoiced)
-                total_variance += Decimal(int(line["line_total_minor"])) - expected_total
-                if invoiced > received:
-                    reasons.append(f"AP-3WM-QUANTITY:{line_id}")
+                invoiced = _stored_quantity(line["invoiced_quantity"], f"invoiced quantity {line_id}")
+                quantities[line_id] = exact_sum((quantities.get(line_id, Decimal(0)), invoiced))
+                unit_price_delta = Decimal(int(line["unit_price_minor"]) - int(po_line["unit_price_minor"]))
+                price_variance = exact_sum((price_variance, exact_product(unit_price_delta, invoiced)))
+                expected_total = _rounded_minor(exact_product(Decimal(int(po_line["unit_price_minor"])), invoiced))
+                total_variance = exact_sum((total_variance, Decimal(int(line["line_total_minor"]) - expected_total)))
                 if unit_price_delta != 0:
                     reasons.append(f"AP-3WM-PRICE:{line_id}")
+            quantity_variance, exceeded = self._quantity_capacity(invoice_id, quantities, po_lines)
+            reasons.extend(f"AP-3WM-QUANTITY:{line_id}" for line_id in exceeded)
             status = (
                 "Passed"
-                if not reasons and quantity_variance == 0 and price_variance == 0 and total_variance == 0
+                if not reasons and price_variance == 0 and total_variance == 0
                 else "Exception"
             )
             reason = ";".join(sorted(set(reasons)))
@@ -1309,10 +1509,13 @@ class PostgresPayablesRepository:
             raise PlatformError("Expected version must be a positive integer.")
         with self._transaction():
             invoice = self._supplier_invoice(invoice_id)
+            order = self._purchase_order(str(invoice["purchase_order_id"] or ""), lock=True)
+            invoice = self._supplier_invoice(invoice_id)
             if invoice["status"] != "Matched":
                 raise PlatformError("Only a supplier invoice with a passed three-way match can be approved.")
             if same_actor(invoice.get("created_by"), actor_label):
                 raise PlatformError("Separation of duties conflict: invoice creator cannot approve the same invoice.")
+            self._check_approval_quantity(invoice, order)
             row = self.connection.execute(
                 """UPDATE reconforge.ap_supplier_invoices
                    SET status='Approved',approved_by=%s,approved_at=now(),updated_at=now(),row_version=row_version+1
@@ -1357,4 +1560,9 @@ class PostgresPayablesRepository:
                    ORDER BY invoice_date,invoice_number,id""",
                 (self.tenant_id, workspace_id, normalized_status, normalized_status),
             ).fetchall()
-            return [_row(row, self._INVOICE_COLUMNS) for row in rows]
+            result = [_row(row, self._INVOICE_COLUMNS) for row in rows]
+            for invoice in result:
+                if invoice["status"] == "Credited":
+                    invoice.update(_row(self.connection.execute("SELECT reconforge.sr_invoice_projection(%s,%s) AS value",
+                        (self.tenant_id, invoice["id"])).fetchone(), ("value",))["value"])
+            return result

@@ -6,7 +6,7 @@ import hashlib
 import json
 import re
 from collections.abc import Mapping
-from decimal import Decimal, InvalidOperation
+from decimal import InvalidOperation
 from typing import Any
 
 from reconforge.domain.consolidation import ConsolidationError
@@ -19,7 +19,7 @@ from reconforge.domain.consolidation_ownership_changes import (
 from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.platform.common import PlatformError, normalize_text
-from reconforge.utils.money import Money
+from reconforge.utils.money import Money, parse_exact_amount
 
 POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_SCHEMA_SQL = r"""
 CREATE TABLE IF NOT EXISTS reconforge.consolidation_ownership_change_artifacts (
@@ -109,7 +109,7 @@ def _money(payload: Mapping[str, object], field: str) -> Money:
     value = payload.get(field)
     if not isinstance(value, Mapping):
         raise ConsolidationError(f"Ownership-change {field} is invalid.")
-    return Money.from_canonical_dict(value)
+    return Money.from_strict_canonical_dict(value)
 
 
 def _request_from_payload(payload: Mapping[str, object]) -> OwnershipChangeAdjustmentRequest:
@@ -120,8 +120,8 @@ def _request_from_payload(payload: Mapping[str, object]) -> OwnershipChangeAdjus
             period_id=str(payload["period_id"]),
             effective_date=str(payload["effective_date"]),
             reporting_currency=str(payload["reporting_currency"]),
-            prior_group_ownership_percentage=Decimal(str(payload["prior_group_ownership_percentage"])),
-            new_group_ownership_percentage=Decimal(str(payload["new_group_ownership_percentage"])),
+            prior_group_ownership_percentage=parse_exact_amount(payload["prior_group_ownership_percentage"]),
+            new_group_ownership_percentage=parse_exact_amount(payload["new_group_ownership_percentage"]),
             net_assets=_money(payload, "net_assets"),
             consideration_effect=_money(payload, "consideration_effect"),
             nci_account_code=str(payload["nci_account_code"]),

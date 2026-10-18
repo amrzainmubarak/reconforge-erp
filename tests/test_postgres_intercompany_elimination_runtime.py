@@ -119,6 +119,7 @@ def test_live_postgres_intercompany_elimination_is_replayable_immutable_and_work
             admin.execute("ALTER TABLE reconforge.intercompany_elimination_artifacts ENABLE TRIGGER intercompany_elimination_artifact_guard")
             admin.execute("ALTER TABLE reconforge.domain_audit_events DISABLE TRIGGER domain_audit_events_immutable")
             admin.execute("DELETE FROM reconforge.domain_audit_events WHERE tenant_id IN (%s,%s)", (tenant_a, tenant_b))
+            admin.execute("SET CONSTRAINTS ALL IMMEDIATE")
             admin.execute("ALTER TABLE reconforge.domain_audit_events ENABLE TRIGGER domain_audit_events_immutable")
             admin.execute("DELETE FROM reconforge.identity_users WHERE tenant_id IN (%s,%s)", (tenant_a, tenant_b))
             admin.execute("DELETE FROM reconforge.domain_workspaces WHERE tenant_id IN (%s,%s)", (tenant_a, tenant_b))

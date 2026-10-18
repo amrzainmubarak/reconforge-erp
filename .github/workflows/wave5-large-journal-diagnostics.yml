@@ -1,0 +1,80 @@
+name: Wave5 large journal engineering benchmark
+
+on:
+  push:
+    branches: ["amr/wave5-large-journal-diagnostics-20261012"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wave5-large-journal-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  large-journal-probe:
+    name: Nine original 1000-line journals on one runner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - name: Retain original workflow source before setup
+        run: |
+          mkdir -p "$RUNNER_TEMP/wave5-large-journal"
+          printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/wave5-large-journal/workflow-source-commit.txt"
+      - name: Check out exact diagnostic control and projection source
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check out accepted Wave4 source
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          ref: 6362724f2337a79c3d7569574f7bf9591a018524
+          path: baseline
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check out frozen Wave5 source
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          ref: 22ebfd78e293aafa13d81b3a0bbf287491951115
+          path: current
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+      - name: Set up locked dependency runtime
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: control/uv.lock
+      - name: Install exact existing dependency resolution
+        working-directory: control
+        run: uv sync --locked --all-extras --no-editable --python 3.12
+      - name: Verify owned controller and independent hostile-ledger contracts
+        working-directory: control
+        run: |
+          uv run --no-sync ruff check .github/scripts/benchmark_wave5_profile_diagnostics.py .github/scripts/verify_wave5_large_journal.py tests/test_wave5_profile_diagnostics.py tests/test_wave5_large_journal_oracle.py
+          uv run --no-sync python -m pytest tests/test_wave5_profile_diagnostics.py tests/test_wave5_large_journal_oracle.py -q --junitxml="$RUNNER_TEMP/wave5-large-journal/pure-contracts.xml"
+      - name: Run three independent populations per fixed source in balanced order
+        working-directory: control
+        run: >-
+          uv run --no-sync python .github/scripts/benchmark_wave5_profile_diagnostics.py
+          --baseline-root ../baseline
+          --current-root ../current
+          --projection-root .
+          --projection-commit "$GITHUB_SHA"
+          --output "$RUNNER_TEMP/wave5-large-journal/diagnostics"
+          --large-snapshot-repetitions 3
+      - name: Preserve original financial, time and resource evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: wave5-large-journal-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/wave5-large-journal/
+          if-no-files-found: error
+          retention-days: 30

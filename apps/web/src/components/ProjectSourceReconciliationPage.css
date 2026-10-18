@@ -1,0 +1,9 @@
+.project-source-page { max-width: 72rem; margin: auto; padding: 1.5rem; }
+.project-source-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 1rem; margin-block: 1rem; }
+.project-source-fields label { display: flex; flex-direction: column; gap: .35rem; }
+.project-source-fields input { width: 100%; min-width: 0; }
+.project-source-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 1rem; }
+.project-source-totals dd { margin-inline-start: 0; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.project-source-page code { overflow-wrap: anywhere; }
+.project-source-page button { margin-block: 1rem; }
+.project-source-limit { color: var(--color-text-muted, inherit); max-width: 65ch; }

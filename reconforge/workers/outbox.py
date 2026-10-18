@@ -11,9 +11,11 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from math import isfinite
 from threading import Event
 
 from reconforge.auth.policy import PolicyEvaluationContext
+from reconforge.deployment.worker_permissions import WorkerPermissionManifest
 from reconforge.platform.outbox import OutboxEvent, OutboxProcessResult, OutboxPublisher, OutboxService
 from reconforge.workers.policy import WorkerPolicyContextSupplier, WorkerPolicyHierarchyContextSupplier
 
@@ -39,26 +41,52 @@ class OutboxWorkerSettings:
     scope_supplier: Callable[[], Iterable[tuple[str, str | None, str | None, str | None]]] | None = None
     max_tenants: int = 10_000
     policy_permission: str = "outbox.publish"
+    discovery_policy_permission: str | None = None
+    permission_manifest: WorkerPermissionManifest | None = None
+    allow_unbound_hosted_policy: bool = False
 
     def __post_init__(self) -> None:
         if not self.worker_id.strip() or len(self.worker_id.strip()) > 160:
             raise OutboxWorkerError("worker_id must be a non-empty value of at most 160 characters.")
-        if self.poll_interval_seconds < 0:
+        if not isfinite(self.poll_interval_seconds) or self.poll_interval_seconds < 0:
             raise OutboxWorkerError("poll_interval_seconds cannot be negative.")
-        if not 1 <= self.batch_size <= 1_000:
+        if type(self.batch_size) is not int or not 1 <= self.batch_size <= 1_000:
             raise OutboxWorkerError("batch_size must be between 1 and 1000.")
-        if self.max_attempts < 1 or self.lease_seconds < 1 or self.retry_base_seconds < 0:
+        if (
+            type(self.max_attempts) is not int or not 1 <= self.max_attempts <= 100
+            or type(self.lease_seconds) is not int or not 1 <= self.lease_seconds <= 86400
+            or type(self.retry_base_seconds) is not int or not 0 <= self.retry_base_seconds <= 86400
+        ):
             raise OutboxWorkerError("Outbox retry and lease settings are invalid.")
         if not 1 <= int(self.max_tenants) <= 100_000:
             raise OutboxWorkerError("max_tenants must be between 1 and 100000.")
         if not self.policy_permission.strip():
             raise OutboxWorkerError("policy_permission must be non-empty when configured.")
+        if self.discovery_policy_permission is not None and not self.discovery_policy_permission.strip():
+            raise OutboxWorkerError("discovery_policy_permission must be non-empty when configured.")
+        if self.permission_manifest is not None:
+            if self.permission_manifest.worker_id.strip() != self.worker_id.strip():
+                raise OutboxWorkerError("permission_manifest worker_id must match the outbox worker_id.")
+            if self.permission_manifest.principal_id.strip() != self.audit_actor_id:
+                raise OutboxWorkerError("permission_manifest principal_id must match the outbox audit actor.")
+            if self.permission_manifest.execution_permission.strip() != self.policy_permission.strip():
+                raise OutboxWorkerError("permission_manifest execution_permission must match policy_permission.")
+            if self.permission_manifest.discovery_permission.strip() != self.discovery_authorization_permission:
+                raise OutboxWorkerError(
+                    "permission_manifest discovery_permission must match discovery_policy_permission."
+                )
 
     @property
     def audit_actor_id(self) -> str:
         """Return the configured service actor, falling back to worker identity."""
 
         return self.actor_id.strip() or self.worker_id.strip()
+
+    @property
+    def discovery_authorization_permission(self) -> str:
+        """Return the least-privileged permission used to claim events."""
+
+        return (self.discovery_policy_permission or self.policy_permission).strip()
 
 
 @dataclass(frozen=True)
@@ -95,6 +123,21 @@ class OutboxWorker:
         publisher: OutboxPublisher | Callable[[OutboxEvent], None],
         settings: OutboxWorkerSettings,
     ) -> None:
+        if (
+            settings.actor_id.strip()
+            or settings.policy_context_supplier is not None
+            or settings.policy_context_scope_supplier is not None
+            or settings.policy_context_hierarchy_supplier is not None
+            or settings.scope_supplier is not None
+            or settings.policy_permission != "outbox.publish"
+            or settings.discovery_policy_permission is not None
+            or settings.permission_manifest is not None
+            or settings.allow_unbound_hosted_policy
+        ):
+            raise OutboxWorkerError(
+                "Central worker policy and scope configuration is supported only by "
+                "PostgresOutboxWorker; the local SQLite worker cannot enforce hosted authorization."
+            )
         self.connection_factory = connection_factory
         self.publisher = publisher
         self.settings = settings

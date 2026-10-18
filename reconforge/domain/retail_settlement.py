@@ -53,7 +53,7 @@ def _money(value: object, currency: str, field: str) -> Money:
     if isinstance(value, (bool, float)):
         raise RetailSettlementError(f"{field} must use an exact decimal amount.")
     try:
-        result = Money.from_exact(value, currency)
+        result = Money.from_exact(value, currency, strict_precision=True)
     except Exception as exc:  # Money exposes several precise policy errors.
         raise RetailSettlementError(f"{field} is not a valid {currency} amount.") from exc
     if not result.amount.is_finite() or result.amount < 0:

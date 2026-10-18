@@ -1,0 +1,138 @@
+{
+  "schema_version": "stable-power-environment-proof-v1",
+  "status": "passed",
+  "expected_scheme_guid": "381b4222-f694-41f0-9685-ff5bb260df2e",
+  "sidecar_count": 12,
+  "sidecars": [
+    {
+      "repetition": 1,
+      "variant": "baseline",
+      "phase": "before",
+      "path": "1-baseline-power-before.json",
+      "sha256": "a7e7c3c65e6dc138fc477f915c01615595a4191126c1b78e5e8f112538285e70"
+    },
+    {
+      "repetition": 1,
+      "variant": "baseline",
+      "phase": "after",
+      "path": "1-baseline-power-after.json",
+      "sha256": "823d338f955123b16209d94db98d3b2c93bc029a466f4dffcd2bc8062387ff3c"
+    },
+    {
+      "repetition": 1,
+      "variant": "candidate",
+      "phase": "before",
+      "path": "1-candidate-power-before.json",
+      "sha256": "3d3f9ef603158016348770e27c2663eb8711e1590c202e101d6c9fed4fb09989"
+    },
+    {
+      "repetition": 1,
+      "variant": "candidate",
+      "phase": "after",
+      "path": "1-candidate-power-after.json",
+      "sha256": "7a5839c7226e8375b256523615b3226358f0542a889c6221dbed684cc58c0912"
+    },
+    {
+      "repetition": 2,
+      "variant": "candidate",
+      "phase": "before",
+      "path": "2-candidate-power-before.json",
+      "sha256": "8d55c9c10c396bb21940cdf45608e9bf59c87ea72f6a4f4c8bb743abc1eb8c2a"
+    },
+    {
+      "repetition": 2,
+      "variant": "candidate",
+      "phase": "after",
+      "path": "2-candidate-power-after.json",
+      "sha256": "f28df07a6abdea5287b55fac1b29933fffd0168db4e55a508e3334eded43a7a5"
+    },
+    {
+      "repetition": 2,
+      "variant": "baseline",
+      "phase": "before",
+      "path": "2-baseline-power-before.json",
+      "sha256": "1388ab6e3062894427e5a4b07763cfd54eb096cf38725cd2081d5720a969f7e5"
+    },
+    {
+      "repetition": 2,
+      "variant": "baseline",
+      "phase": "after",
+      "path": "2-baseline-power-after.json",
+      "sha256": "e89aa2758d13f724a03d2b22fff66fe93c7fbb37b973e366b68c310716364b70"
+    },
+    {
+      "repetition": 3,
+      "variant": "baseline",
+      "phase": "before",
+      "path": "3-baseline-power-before.json",
+      "sha256": "ef49b9b2b99bfc509bd784251c4fa8283f748ead44aa955381a358ef17548415"
+    },
+    {
+      "repetition": 3,
+      "variant": "baseline",
+      "phase": "after",
+      "path": "3-baseline-power-after.json",
+      "sha256": "6a1ee93af1de8cc834f39fcb651a186021397e850eaf2dd0f43f8bdd67b98f90"
+    },
+    {
+      "repetition": 3,
+      "variant": "candidate",
+      "phase": "before",
+      "path": "3-candidate-power-before.json",
+      "sha256": "dc60cb7526801e4605c79072c51595041d00ac108c07ebd8ed9c6b41aeef818a"
+    },
+    {
+      "repetition": 3,
+      "variant": "candidate",
+      "phase": "after",
+      "path": "3-candidate-power-after.json",
+      "sha256": "150849b0bad015e880b48cedebaf23553ba8151691a71893037e9a24e3327cd3"
+    }
+  ],
+  "raw_reports": [
+    {
+      "repetition": 1,
+      "variant": "baseline",
+      "report": "1-baseline/result.json",
+      "report_sha256": "e8d6fdb8b2066fdf186ceebf0db2a020556a44752b2fb76da690347d22c9363b",
+      "verified_sample_count": 79
+    },
+    {
+      "repetition": 1,
+      "variant": "candidate",
+      "report": "1-candidate/result.json",
+      "report_sha256": "b3ecb5bc0837938e6b77160623a0ae17290e24bb4dda635f94657e4e990f6dac",
+      "verified_sample_count": 55
+    },
+    {
+      "repetition": 2,
+      "variant": "candidate",
+      "report": "2-candidate/result.json",
+      "report_sha256": "2ff0aa25cc234be3050fd7cd4da6300424594ea11d7f8998b8a721a2cf8ec547",
+      "verified_sample_count": 50
+    },
+    {
+      "repetition": 2,
+      "variant": "baseline",
+      "report": "2-baseline/result.json",
+      "report_sha256": "8dd63d67abaae57d7611ef96e773a15de4849948b63f12ee54bf3e1ce996b372",
+      "verified_sample_count": 70
+    },
+    {
+      "repetition": 3,
+      "variant": "baseline",
+      "report": "3-baseline/result.json",
+      "report_sha256": "9e934ccf5eb0ebe1d14f24674e2935fab224c5edfde5701236e69f46cd579a6e",
+      "verified_sample_count": 69
+    },
+    {
+      "repetition": 3,
+      "variant": "candidate",
+      "report": "3-candidate/result.json",
+      "report_sha256": "7571411cc394d71f6d13f8ed839daa5a2fb1e9273c43e43f53818f0ddafc5a85",
+      "verified_sample_count": 48
+    }
+  ],
+  "sampled_ac_and_saver_off_verified": true,
+  "scope": "scheme GUID before/after each child and available exact-boolean AC/saver retained samples; no power-mode overlay or continuous measurement"
+}

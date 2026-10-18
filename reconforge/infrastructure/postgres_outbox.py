@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from reconforge.application.outbox import OutboxError, OutboxEvent, OutboxRepositoryProtocol
+from reconforge.domain.outbox_fencing import OutboxEvidenceIntegrityError, validate_outbox_fencing_storage
 from reconforge.infrastructure.postgres import (
     PostgresConfigurationError,
-    normalize_scope_id,
     validate_legal_entity_id,
     validate_organization_id,
     validate_tenant_id,
@@ -22,14 +22,14 @@ from reconforge.io.persisted import (
     encode_postgres_outbox_payload,
 )
 
-_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 _STATUSES = ("Pending", "Claimed", "Published", "Dead")
 _LIST_STATUSES = {"pending", "claimed", "published", "dead", "all"}
 _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
     "all": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
         "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
-        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id "
+        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id, lease_generation, lease_generation_floor "
         "FROM reconforge.outbox_events "
         "WHERE tenant_id = %s "
         "ORDER BY created_at, event_id "
@@ -38,7 +38,7 @@ _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
     "pending": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
         "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
-        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id "
+        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id, lease_generation, lease_generation_floor "
         "FROM reconforge.outbox_events "
         "WHERE tenant_id = %s AND status IN ('Pending', 'Claimed') "
         "ORDER BY created_at, event_id "
@@ -47,7 +47,7 @@ _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
     "claimed": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
         "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
-        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id "
+        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id, lease_generation, lease_generation_floor "
         "FROM reconforge.outbox_events "
         "WHERE tenant_id = %s AND status = 'Claimed' "
         "ORDER BY created_at, event_id "
@@ -56,7 +56,7 @@ _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
     "published": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
         "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
-        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id "
+        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id, lease_generation, lease_generation_floor "
         "FROM reconforge.outbox_events "
         "WHERE tenant_id = %s AND status = 'Published' "
         "ORDER BY created_at, event_id "
@@ -65,7 +65,7 @@ _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
     "dead": (
         "SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id, payload, "
         "status, attempt_count, available_at, claimed_at, claimed_by, published_at, last_error, "
-        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id "
+        "dead_lettered_at, created_at, workspace_id, organization_id, legal_entity_id, lease_generation, lease_generation_floor "
         "FROM reconforge.outbox_events "
         "WHERE tenant_id = %s AND status = 'Dead' "
         "ORDER BY created_at, event_id "
@@ -116,14 +116,23 @@ def _tenant_id(value: object) -> str:
         raise PostgresOutboxValidationError(str(exc)) from exc
 
 
+def validate_postgres_outbox_event_id(value: object) -> str:
+    """Validate opaque retained event identity without case-folding it.
+
+    Financial producers persist OBX-/LCOUT- identifiers. They are distinct
+    primary keys, not tenant or consumer aliases, and delivery must use the
+    exact identity returned by claim. Existing lowercase keys stay unchanged.
+    """
+    if not isinstance(value, str):
+        raise PostgresOutboxValidationError("event_id has an invalid identifier.")
+    identifier = value.strip()
+    if not _ID_PATTERN.fullmatch(identifier):
+        raise PostgresOutboxValidationError("event_id has an invalid identifier.")
+    return identifier
+
+
 def _identifier(value: object, field_name: str) -> str:
-    try:
-        normalized = normalize_scope_id(str(value), field_name=field_name)
-    except PostgresConfigurationError as exc:
-        raise PostgresOutboxValidationError(str(exc)) from exc
-    if not _ID_PATTERN.fullmatch(normalized):
-        raise PostgresOutboxValidationError(f"{field_name} has an invalid identifier.")
-    return normalized
+    return validate_postgres_outbox_event_id(value)
 
 
 def _text(value: object, field_name: str, *, maximum: int = 160) -> str:
@@ -186,6 +195,8 @@ class PostgresOutboxEvent:
     workspace_id: str | None
     organization_id: str | None
     legal_entity_id: str | None
+    lease_generation: int = 0
+    lease_generation_floor: int = 0
 
 
 @dataclass(frozen=True)
@@ -193,6 +204,7 @@ class PostgresOutboxRepository:
     """Claim and transition PostgreSQL outbox events without committing."""
 
     connection: Any
+    _verified_tenants: set[str] = field(default_factory=set, init=False, repr=False, compare=False)
 
     def _event(self, row: Any) -> PostgresOutboxEvent:
         payload, payload_json = _metadata(_row_value(row, "payload", 5))
@@ -216,6 +228,8 @@ class PostgresOutboxRepository:
             workspace_id=self._optional_scope(_optional_row_value(row, "workspace_id", 15)),
             organization_id=self._optional_scope(_optional_row_value(row, "organization_id", 16)),
             legal_entity_id=self._optional_scope(_optional_row_value(row, "legal_entity_id", 17)),
+            lease_generation=int(_optional_row_value(row, "lease_generation", 18) or 0),
+            lease_generation_floor=int(_optional_row_value(row, "lease_generation_floor", 19) or 0),
         )
 
     @staticmethod
@@ -229,22 +243,128 @@ class PostgresOutboxRepository:
 
     @staticmethod
     def _validate_limit(limit: int, *, maximum: int = 1_000) -> int:
-        if not 1 <= int(limit) <= maximum:
+        if type(limit) is not int or not 1 <= limit <= maximum:
             raise PostgresOutboxValidationError(f"limit must be between 1 and {maximum}.")
         return int(limit)
 
     @staticmethod
     def _validate_attempts(max_attempts: int) -> int:
-        if not 1 <= int(max_attempts) <= 100:
+        if type(max_attempts) is not int or not 1 <= max_attempts <= 100:
             raise PostgresOutboxValidationError("max_attempts must be between 1 and 100.")
         return int(max_attempts)
 
     @staticmethod
     def _validate_seconds(value: int, field_name: str, *, allow_zero: bool = False) -> int:
         minimum = 0 if allow_zero else 1
-        if not minimum <= int(value) <= 86_400:
+        if type(value) is not int or not minimum <= value <= 86_400:
             raise PostgresOutboxValidationError(f"{field_name} is outside its supported range.")
         return int(value)
+
+    @staticmethod
+    def _generation(value: int | None) -> int:
+        generation = 1 if value is None else value
+        if isinstance(generation, bool) or not isinstance(generation, int) or not 1 <= generation < 2**63:
+            raise PostgresOutboxValidationError("lease_generation must be a positive integer.")
+        return generation
+
+    def _verify_retained_evidence(self, *, tenant_id: str) -> None:
+        """Reject a tenant-visible store whose post-floor history is discontinuous."""
+        if tenant_id in self._verified_tenants:
+            return
+        try:
+            rows = self.connection.execute(
+                """SELECT events.event_id, events.lease_generation, events.lease_generation_floor,
+                          events.status AS delivery_state, evidence.event_id AS evidence_event_id,
+                          evidence.lease_generation AS evidence_lease_generation, evidence.action,
+                          evidence.worker_id, evidence.attempts
+                FROM reconforge.outbox_events AS events
+                LEFT JOIN reconforge.outbox_delivery_evidence AS evidence
+                  ON evidence.tenant_id=events.tenant_id AND evidence.event_id=events.event_id
+                WHERE events.tenant_id=%s
+                ORDER BY events.event_id, evidence.occurred_at, evidence.lease_generation, evidence.action""",
+                (tenant_id,),
+            ).fetchall()
+            events_by_id: dict[str, dict[str, object]] = {}
+            evidence: list[dict[str, object]] = []
+            for row in rows:
+                event_id = str(_row_value(row, "event_id", 0))
+                events_by_id.setdefault(
+                    event_id,
+                    {
+                        "event_id": event_id,
+                        "lease_generation": _row_value(row, "lease_generation", 1),
+                        "lease_generation_floor": _row_value(row, "lease_generation_floor", 2),
+                        "delivery_state": str(_row_value(row, "delivery_state", 3)).casefold(),
+                    },
+                )
+                evidence_id = _optional_row_value(row, "evidence_event_id", 4)
+                if evidence_id is not None:
+                    evidence.append(
+                        {
+                            "event_id": evidence_id,
+                            "lease_generation": _row_value(row, "evidence_lease_generation", 5),
+                            "action": _row_value(row, "action", 6),
+                            "worker_id": _row_value(row, "worker_id", 7),
+                            "attempts": _row_value(row, "attempts", 8),
+                        }
+                    )
+            events = list(events_by_id.values())
+            validate_outbox_fencing_storage(events=events, evidence=evidence)
+        except OutboxEvidenceIntegrityError as exc:
+            raise PostgresOutboxIntegrityError(
+                "Retained outbox delivery evidence is invalid; restore a verified database."
+            ) from exc
+        self._verified_tenants.add(tenant_id)
+
+    def recover_expired(
+        self, *, tenant_id: str, limit: int = 50, max_attempts: int = 5,
+        workspace_id: str | None = None, organization_id: str | None = None,
+        legal_entity_id: str | None = None,
+    ) -> int:
+        """Recover a bounded expired batch, including crashes on the final attempt."""
+        tenant = _tenant_id(tenant_id)
+        selected_limit = self._validate_limit(limit)
+        attempts = self._validate_attempts(max_attempts)
+        try:
+            workspace = validate_workspace_id(self._optional_scope(workspace_id))
+            organization = validate_organization_id(self._optional_scope(organization_id))
+            entity = validate_legal_entity_id(self._optional_scope(legal_entity_id))
+        except PostgresConfigurationError as exc:
+            raise PostgresOutboxValidationError(str(exc)) from exc
+        if entity is not None and organization is None:
+            raise PostgresOutboxValidationError("legal_entity_id requires organization_id.")
+        self._verify_retained_evidence(tenant_id=tenant)
+        rows = self.connection.execute(
+            """WITH expired AS (
+              SELECT tenant_id,event_id FROM reconforge.outbox_events
+              WHERE tenant_id=%s AND status='Claimed' AND claimed_at <= statement_timestamp()
+              AND (%s::text IS NULL OR workspace_id=%s)
+              AND (%s::text IS NULL OR organization_id=%s)
+              AND (%s::text IS NULL OR legal_entity_id=%s)
+              ORDER BY claimed_at,created_at,event_id FOR UPDATE SKIP LOCKED LIMIT %s
+            ) UPDATE reconforge.outbox_events AS events
+            SET status=CASE WHEN events.attempt_count >= %s THEN 'Dead' ELSE 'Pending' END,
+                claimed_at=NULL,claimed_by=NULL,last_error='LEASE_EXPIRED',available_at=clock_timestamp(),
+                dead_lettered_at=CASE WHEN events.attempt_count >= %s THEN clock_timestamp() ELSE NULL END
+            FROM expired WHERE events.tenant_id=expired.tenant_id AND events.event_id=expired.event_id
+            RETURNING events.event_id""",
+            (tenant, workspace, workspace, organization, organization, entity, entity, selected_limit, attempts, attempts),
+        ).fetchall()
+        return len(rows)
+
+    def assert_claim(self, *, tenant_id: str, event_id: str, worker_id: str, lease_generation: int) -> None:
+        tenant = _tenant_id(tenant_id)
+        self._verify_retained_evidence(tenant_id=tenant)
+        row = self.connection.execute(
+            """SELECT 1 FROM reconforge.outbox_events
+            WHERE tenant_id=%s AND event_id=%s AND status='Claimed' AND claimed_by=%s
+            AND lease_generation=%s AND lease_generation>lease_generation_floor
+            AND claimed_at > clock_timestamp()""",
+            (tenant, _identifier(event_id, "event_id"), _text(worker_id, "worker_id"),
+             self._generation(lease_generation)),
+        ).fetchone()
+        if row is None:
+            raise PostgresOutboxIntegrityError("Outbox event claim is expired or fenced by a newer lease.")
 
     def claim_pending(
         self,
@@ -273,6 +393,10 @@ class PostgresOutboxRepository:
             raise PostgresOutboxValidationError(str(exc)) from exc
         if legal_entity is not None and organization is None:
             raise PostgresOutboxValidationError("legal_entity_id requires organization_id.")
+        self.recover_expired(
+            tenant_id=tenant, limit=selected_limit, max_attempts=attempts,
+            workspace_id=workspace, organization_id=organization, legal_entity_id=legal_entity,
+        )
         scope_values: list[str] = []
         scope_predicates: list[str] = []
         for column, value in (
@@ -283,7 +407,7 @@ class PostgresOutboxRepository:
             if value is not None:
                 scope_predicates.append(f"AND {column} = %s")
                 scope_values.append(value)
-        scope_sql = "\n                  ".join(scope_predicates)
+        scope_sql = "\n                  " + "\n                  ".join(scope_predicates)
         query = (  # nosec B608 - scope predicates are fixed internal column names.
             """
             WITH candidates AS (
@@ -293,17 +417,18 @@ class PostgresOutboxRepository:
             + scope_sql  # nosec B608 - scope predicates are fixed internal column names.
             + """
                   AND attempt_count < %s
-                  AND available_at <= now()
-                  AND (status = 'Pending' OR (status = 'Claimed' AND claimed_at <= now()))
+                  AND available_at <= statement_timestamp()
+                  AND status = 'Pending'
                 ORDER BY available_at, created_at, event_id
                 FOR UPDATE SKIP LOCKED
                 LIMIT %s
             ), claimed AS (
                 UPDATE reconforge.outbox_events AS events
                 SET status = 'Claimed',
-                    claimed_at = now() + (%s * INTERVAL '1 second'),
+                    claimed_at = clock_timestamp() + (%s * INTERVAL '1 second'),
                     claimed_by = %s,
-                    attempt_count = events.attempt_count + 1
+                    attempt_count = events.attempt_count + 1,
+                    lease_generation = events.lease_generation + 1
                 FROM candidates
                 WHERE events.tenant_id = candidates.tenant_id
                   AND events.event_id = candidates.event_id
@@ -312,12 +437,13 @@ class PostgresOutboxRepository:
                           events.status, events.attempt_count, events.available_at,
                           events.claimed_at, events.claimed_by, events.published_at,
                           events.last_error, events.dead_lettered_at, events.created_at,
-                          events.workspace_id, events.organization_id, events.legal_entity_id
+                          events.workspace_id, events.organization_id, events.legal_entity_id,
+                          events.lease_generation, events.lease_generation_floor
             )
             SELECT tenant_id, event_id, event_type, aggregate_type, aggregate_id,
                    payload, status, attempt_count, available_at, claimed_at, claimed_by,
                    published_at, last_error, dead_lettered_at, created_at,
-                   workspace_id, organization_id, legal_entity_id
+                   workspace_id, organization_id, legal_entity_id, lease_generation, lease_generation_floor
             FROM claimed
             ORDER BY available_at, created_at, event_id
             """
@@ -329,20 +455,26 @@ class PostgresOutboxRepository:
         )
         return [self._event(row) for row in cursor.fetchall()]
 
-    def mark_published(self, *, tenant_id: str, event_id: str, worker_id: str) -> None:
+    def mark_published(
+        self, *, tenant_id: str, event_id: str, worker_id: str, lease_generation: int | None = None
+    ) -> None:
         """Acknowledge one event only for the worker holding its lease."""
 
         tenant = _tenant_id(tenant_id)
         identifier = _identifier(event_id, "event_id")
         worker = _text(worker_id, "worker_id")
+        generation = self._generation(lease_generation)
+        self._verify_retained_evidence(tenant_id=tenant)
         cursor = self.connection.execute(
             """
             UPDATE reconforge.outbox_events
             SET status = 'Published', published_at = now(), claimed_at = NULL,
                 claimed_by = NULL, last_error = NULL
             WHERE tenant_id = %s AND event_id = %s AND status = 'Claimed' AND claimed_by = %s
+              AND lease_generation = %s AND lease_generation > lease_generation_floor
+              AND claimed_at > clock_timestamp()
             """,
-            (tenant, identifier, worker),
+            (tenant, identifier, worker, generation),
         )
         if cursor.rowcount != 1:
             raise PostgresOutboxIntegrityError("Outbox event is not leased by this worker or is already published.")
@@ -356,23 +488,30 @@ class PostgresOutboxRepository:
         error: str,
         max_attempts: int = 5,
         retry_base_seconds: int = 5,
+        lease_generation: int | None = None,
     ) -> bool:
         """Release one lease for retry and return whether it became dead-lettered."""
 
         tenant = _tenant_id(tenant_id)
         identifier = _identifier(event_id, "event_id")
         worker = _text(worker_id, "worker_id")
+        generation = self._generation(lease_generation)
         attempts = self._validate_attempts(max_attempts)
         retry_base = self._validate_seconds(retry_base_seconds, "retry_base_seconds", allow_zero=True)
         safe_error = (str(error).strip() or "publisher failure")[:1_000]
+        if safe_error == "LEASE_EXPIRED":
+            safe_error = "publisher failure"
+        self._verify_retained_evidence(tenant_id=tenant)
         row = self.connection.execute(
             """
             SELECT attempt_count
             FROM reconforge.outbox_events
             WHERE tenant_id = %s AND event_id = %s AND status = 'Claimed' AND claimed_by = %s
+              AND lease_generation = %s AND lease_generation > lease_generation_floor
+              AND claimed_at > clock_timestamp()
             FOR UPDATE
             """,
-            (tenant, identifier, worker),
+            (tenant, identifier, worker, generation),
         ).fetchone()
         if row is None:
             raise PostgresOutboxIntegrityError("Outbox event is not leased by this worker.")
@@ -385,11 +524,13 @@ class PostgresOutboxRepository:
                 SET status = 'Dead', last_error = %s, claimed_at = NULL, claimed_by = NULL,
                     dead_lettered_at = now()
                 WHERE tenant_id = %s AND event_id = %s AND status = 'Claimed' AND claimed_by = %s
+                  AND lease_generation = %s AND lease_generation > lease_generation_floor
+                  AND claimed_at > clock_timestamp()
                 """,
-                (safe_error, tenant, identifier, worker),
+                (safe_error, tenant, identifier, worker, generation),
             )
         else:
-            backoff = retry_base * (2 ** max(attempt_count - 1, 0))
+            backoff = min(86400, retry_base * (2 ** max(attempt_count - 1, 0)))
             cursor = self.connection.execute(
                 """
                 UPDATE reconforge.outbox_events
@@ -397,8 +538,10 @@ class PostgresOutboxRepository:
                     available_at = now() + (%s * INTERVAL '1 second'),
                     claimed_at = NULL, claimed_by = NULL, dead_lettered_at = NULL
                 WHERE tenant_id = %s AND event_id = %s AND status = 'Claimed' AND claimed_by = %s
+                  AND lease_generation = %s AND lease_generation > lease_generation_floor
+                  AND claimed_at > clock_timestamp()
                 """,
-                (safe_error, backoff, tenant, identifier, worker),
+                (safe_error, backoff, tenant, identifier, worker, generation),
             )
         if cursor.rowcount != 1:
             raise PostgresOutboxIntegrityError("Outbox event lease changed before failure state was saved.")
@@ -409,6 +552,7 @@ class PostgresOutboxRepository:
 
         tenant = _tenant_id(tenant_id)
         identifier = _identifier(event_id, "event_id")
+        self._verify_retained_evidence(tenant_id=tenant)
         cursor = self.connection.execute(
             """
             UPDATE reconforge.outbox_events
@@ -432,12 +576,15 @@ class PostgresOutboxRepository:
         selected_limit = self._validate_limit(limit, maximum=10_000)
         query = _LIST_OUTBOX_EVENT_QUERIES[selected_status]
         cursor = self.connection.execute(query, (tenant, selected_limit))
-        return [self._event(row) for row in cursor.fetchall()]
+        events = [self._event(row) for row in cursor.fetchall()]
+        self._verify_retained_evidence(tenant_id=tenant)
+        return events
 
     def summary(self, *, tenant_id: str) -> dict[str, int | str]:
         """Return tenant-scoped delivery counts."""
 
         tenant = _tenant_id(tenant_id)
+        self._verify_retained_evidence(tenant_id=tenant)
         cursor = self.connection.execute(
             """
             SELECT
@@ -493,6 +640,8 @@ class TenantBoundPostgresOutboxRepository:
             locked_at=event.claimed_at,
             locked_by=event.claimed_by,
             dead_lettered_at=event.dead_lettered_at,
+            lease_generation=event.lease_generation,
+            lease_generation_floor=event.lease_generation_floor,
         )
 
     @staticmethod
@@ -521,9 +670,16 @@ class TenantBoundPostgresOutboxRepository:
         )
         return [self._event(event) for event in events]
 
-    def mark_published(self, *, event_id: str, worker_id: str) -> None:
+    def assert_claim(self, *, event_id: str, worker_id: str, lease_generation: int) -> None:
+        self._translate(lambda: self.repository.assert_claim(
+            tenant_id=self.tenant_id, event_id=event_id, worker_id=worker_id, lease_generation=lease_generation
+        ))
+
+    def mark_published(self, *, event_id: str, worker_id: str, lease_generation: int | None = None) -> None:
         self._translate(
-            lambda: self.repository.mark_published(tenant_id=self.tenant_id, event_id=event_id, worker_id=worker_id)
+            lambda: self.repository.mark_published(
+                tenant_id=self.tenant_id, event_id=event_id, worker_id=worker_id, lease_generation=lease_generation
+            )
         )
 
     def mark_failed(
@@ -534,6 +690,7 @@ class TenantBoundPostgresOutboxRepository:
         error: str,
         max_attempts: int = 5,
         retry_base_seconds: int = 5,
+        lease_generation: int | None = None,
     ) -> bool:
         return bool(
             self._translate(
@@ -544,6 +701,7 @@ class TenantBoundPostgresOutboxRepository:
                     error=error,
                     max_attempts=max_attempts,
                     retry_base_seconds=retry_base_seconds,
+                    lease_generation=lease_generation,
                 )
             )
         )

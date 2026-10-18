@@ -61,9 +61,9 @@ class SQLiteCloseManagementRepository:
                 """
                 INSERT INTO close_periods (
                     id, workspace_id, period_name, start_date, end_date, status,
-                    readiness_score, created_at, updated_at
+                    readiness_score, locked_by, reopened_by, created_at, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, 'Open', 0, ?, ?)
+                VALUES (?, ?, ?, ?, ?, 'Open', 0, '', '', ?, ?)
                 ON CONFLICT(workspace_id, period_name)
                 DO UPDATE SET
                     start_date = excluded.start_date,
@@ -327,13 +327,17 @@ class SQLiteCloseManagementRepository:
         """Lock a close period when no task is blocked."""
 
         require_permission(self.connection, actor_label=actor_label, permission="close.manage")
+        actor = normalize_text(actor_label, default="local-cli")
+        period = self.get_period(period_id)
+        if period["status"] not in {"Open", "Reopened"}:
+            raise PlatformError("Only Open or Reopened close periods can be locked.")
         readiness = self.readiness(period_id=period_id, actor_label=actor_label, audit_read=False, autocommit=False)
         if readiness.blocked_tasks:
             raise PlatformError("Close period cannot be locked while tasks are blocked.")
         now = utc_now_text()
         self.connection.execute(
-            "UPDATE close_periods SET status = 'Locked', locked_at = ?, updated_at = ? WHERE id = ?",
-            (now, now, period_id),
+            "UPDATE close_periods SET status = 'Locked', locked_by = ?, locked_at = ?, updated_at = ? WHERE id = ?",
+            (actor, now, now, period_id),
         )
         commit_audited(
             self.connection,
@@ -349,14 +353,19 @@ class SQLiteCloseManagementRepository:
         """Reopen a locked period with an audited reason."""
 
         require_permission(self.connection, actor_label=actor_label, permission="close.manage")
+        actor = normalize_text(actor_label, default="local-cli")
         if not normalize_text(reason):
             raise PlatformError("Reopen reason is required.")
-        self.get_period(period_id)
+        period = self.get_period(period_id)
+        if period["status"] != "Locked":
+            raise PlatformError("Only Locked close periods can be reopened.")
+        if normalize_text(str(period.get("locked_by", ""))) == actor:
+            raise PlatformError("Reopening a close period requires an independent actor.")
         now = utc_now_text()
         try:
             cursor = self.connection.execute(
-                "UPDATE close_periods SET status = 'Reopened', reopened_at = ?, updated_at = ? WHERE id = ?",
-                (now, now, period_id),
+                "UPDATE close_periods SET status = 'Reopened', reopened_by = ?, reopened_at = ?, updated_at = ? WHERE id = ? AND status = 'Locked'",
+                (actor, now, now, period_id),
             )
             if cursor.rowcount != 1:
                 raise PlatformError("Close period not found.")

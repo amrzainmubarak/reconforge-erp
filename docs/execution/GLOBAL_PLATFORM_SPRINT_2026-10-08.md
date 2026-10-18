@@ -1,0 +1,32 @@
+# Global platform operational sprint — 2026-10-08
+
+Base: clean `6c194e7c95b32f8afd55b260bd89e44c82576678`.
+Integration branch: `amr/global-platform-execution-20261008`.
+Main retained: `b61ea56bb9c135fda12546e173795af3c243e4fb`.
+
+| Owner | Capability | Exclusive implementation branch |
+| --- | --- | --- |
+| Platform | Live budget lifecycle, independent approval, conserved reserve/release/consume Studio | `amr/gfo-platform-agent-20261008` |
+| Finance/Operations | Reviewed inventory receipt API and Studio composing existing inventory/GL engine | `amr/gfo-finance-agent-20261008` |
+| Enterprise | Durable job scoped inspection, cancel/requeue, permission and concurrency controls | `amr/gfo-enterprise-20261008` |
+| Lead | Shared integration, inherited acceptance repairs and final aggregate gates | `amr/global-platform-execution-20261008` |
+
+No new financial storage engine is introduced. Enterprise owns additive
+SQLite migration 56 / PostgreSQL revision 0107 for job-management permission
+and bounded inspection indexes. Finance adds forward revision 0108 to align
+receipt admission with the existing Stock/Consumable domain and serialize the
+first monetary-policy binding against receipt capture; no new posting engine.
+
+Dependencies: canonical identity/scope → existing financial/job engines →
+authenticated operational APIs → real Studio workflows → integrated gates.
+Central registration, permission inventory, migration registry, navigation,
+packaging and execution state files have one lead owner.
+
+Baseline evidence and original failures remain in the October 8 baseline and
+recovery records. The three integrated operational paths passed the final local
+regression and explicit PostgreSQL/browser/native-restore gates. Full regression
+binds runtime9bcbeb07; later application/migration/Studio bytes are unchanged.
+Verification and pinned container refresh are separately accepted. Source563ad127
+passes all20hosted CI jobs plus Docker/Security/CodeQL; manual exact-image and
+independent root scans accept the refreshed image with remaining findings recorded. [Acceptance and operating limits](GLOBAL_PLATFORM_ACCEPTANCE_2026-10-08.md)
+and [command/source/hash index](GLOBAL_PLATFORM_ACCEPTANCE_2026-10-08.json).

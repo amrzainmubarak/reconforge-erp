@@ -19,6 +19,7 @@ from reconforge.api.dependencies import (
 from reconforge.api.errors import APIError
 from reconforge.api.server_bank_statement import execute_postgres_bank_statement, server_bank_statement_enabled
 from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope, server_identity_enabled
+from reconforge.auth.field_access import project_bank_statement
 from reconforge.auth.models import LocalUser
 from reconforge.infrastructure.postgres import PostgresConfigurationError, validate_workspace_id
 from reconforge.infrastructure.sqlite_bank_statement_control import (
@@ -120,7 +121,7 @@ def persist_bank_statement(
 
         stored = execute_postgres_bank_statement(request, persist)
         return {
-            "bank_statement": stored,
+            "bank_statement": project_bank_statement(stored).visible,
             "source": {"kind": "postgresql-bank-statement-control", "server_mode": True},
             "network_dispatch": "disabled",
             "workspace": scope.workspace_id,
@@ -134,7 +135,7 @@ def persist_bank_statement(
     except BankStatementPersistenceError as exc:
         raise _persistence_error(exc) from exc
     return {
-        "bank_statement": stored,
+        "bank_statement": project_bank_statement(stored).visible,
         "source": {"kind": "sqlite-bank-statement-control", "server_mode": False},
         "network_dispatch": "disabled",
     }
@@ -174,7 +175,7 @@ def list_bank_statements(
 
         records = execute_postgres_bank_statement(request, read)
         return {
-            "bank_statements": records,
+            "bank_statements": [project_bank_statement(record).visible for record in records],
             "workspace": scope.workspace_id,
             "limit": limit,
             "offset": offset,
@@ -190,7 +191,7 @@ def list_bank_statements(
     except BankStatementPersistenceError as exc:
         raise _persistence_error(exc) from exc
     return {
-        "bank_statements": records,
+        "bank_statements": [project_bank_statement(record).visible for record in records],
         "workspace": resolved_workspace,
         "limit": limit,
         "offset": offset,
@@ -232,7 +233,7 @@ def get_bank_statement(
         if record is None:
             raise APIError(status_code=404, code="bank_statement_not_found", message="Bank statement evidence was not found.")
         return {
-            "bank_statement": record,
+            "bank_statement": project_bank_statement(record).visible,
             "source": {"kind": "postgresql-bank-statement-control", "server_mode": True},
         }
     try:
@@ -245,7 +246,7 @@ def get_bank_statement(
     if record is None:
         raise APIError(status_code=404, code="bank_statement_not_found", message="Bank statement evidence was not found.")
     return {
-        "bank_statement": record,
+        "bank_statement": project_bank_statement(record).visible,
         "source": {"kind": "sqlite-bank-statement-control", "server_mode": False},
     }
 

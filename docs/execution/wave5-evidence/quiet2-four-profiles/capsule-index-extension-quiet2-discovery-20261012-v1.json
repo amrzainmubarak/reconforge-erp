@@ -1,0 +1,50 @@
+{
+  "schema_version": "reconforge-flat-evidence-capsule-extension-v1",
+  "original_runtime_sources": [
+    "6362724f2337a79c3d7569574f7bf9591a018524",
+    "22ebfd78e293aafa13d81b3a0bbf287491951115"
+  ],
+  "capsules": [
+    {
+      "file_name": "wave5-quiet2-discovery-636-22-fourprofiles-v1.zip",
+      "bytes": 1184732,
+      "sha256": "3dc3b141f59b401366c80e42de425244bbc8f2af5779f65fdcacb7c60673ba16",
+      "file_count": 116,
+      "raw_bytes": 7761885,
+      "index_name": "wave5-quiet2-discovery-636-22-fourprofiles-v1.index.json",
+      "index_sha256": "187460fe995d71a46e0ce55652baf20ea3248851cbc3a052dd6bb1e64bc52f2c",
+      "coverage": {
+        "completed_populations": [
+          "baseline-four-r1",
+          "candidate-four-r1",
+          "baseline-serial-r1",
+          "candidate-serial-r1"
+        ],
+        "measured_cycles_per_population": 100,
+        "disjoint_warmup_per_population": 20,
+        "measured_read_requests_per_population": 303,
+        "independent_minor_total_per_population": "46669102",
+        "baseline_source": "6362724f2337a79c3d7569574f7bf9591a018524",
+        "candidate_source": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+        "same_common_harness_sha256": "7bce2382df24d439d39386f0e02c07bf362c4f451649dbd8d7f225c8a920396b",
+        "same_current_pinned_database": "postgres:17.11-alpine@sha256:aa90e97ee862e558111d34cfb8b2c4bec768c2b039fb791341686928560263b3",
+        "independent_normal_optimized_pairs": 4,
+        "cross_source_final_normal_optimized_identical": true,
+        "server_profile_rows": "200 capped rows in each four-worker population;182exactquery_id+toplevel+SHA shared; top-level/nested kept separate.",
+        "serial_functions": "First32measuredcycles perstage;96PBKDF2calls perpopulation; cProfile self-wall distinct from thread/process CPU.",
+        "source_query_mapping": "Four exact public AST constants reproduce native SQL hashes; full query text/parameters were not captured.",
+        "source_custody": "Original reported full fingerprints preserved;21publicGitblobs+20selectedactualphysicalfiles captured with raw hashes and normalized equality; no live full-tree scan.",
+        "raw_logs": "All four short child logs and synthetic migration logs included byte-exact; no credential/DSN setup logs.",
+        "new_unprofiled_v5_pair_included": false,
+        "native_line_exports_included": false,
+        "performance_comparison_accepted": false,
+        "causal_rls_planner_root_cause_proven": false,
+        "optimization_implemented_or_integrated": false
+      }
+    }
+  ],
+  "previous_native10k_extension_sha256": "0c1cfdb6775f3bb2a4f86cfeede046872100afb47fa9d399f2d21c0d2471e25e",
+  "previous_capsules_rewritten": false,
+  "new_unprofiled_v5_pair_included": false,
+  "performance_comparison_accepted": false
+}

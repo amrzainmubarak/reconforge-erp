@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: "2026-08-01"
+updated_at: "2026-10-14"
 claim_boundary: >-
   This inventory measures source coupling. A partial repository does not prove
   backend neutrality, and only a connection-free application service may be
@@ -25,8 +25,61 @@ platform_services:
   - {file: operations.py, service: OperationsService, status: compatibility_adapter}
   - {file: outbox.py, service: OutboxService, status: compatibility_adapter}
   - {file: payables.py, service: PayablesService, status: compatibility_adapter}
+  - {file: payables_payment_link.py, service: PayablesPaymentLinkService, status: compatibility_adapter}
   - {file: receivables.py, service: ReceivablesService, status: compatibility_adapter}
 application_services:
+  - file: inventory_transfer.py
+    service: InventoryTransferService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_inventory_transfer.PostgresInventoryTransferRepository
+  - file: intercompany_group_diagnostic.py
+    service: IntercompanyGroupDiagnosticService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_intercompany_group_diagnostic.PostgresIntercompanyGroupDiagnosticRepository
+  - file: intercompany_cashflow.py
+    service: IntercompanyCashflowApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_intercompany_cashflow.PostgresIntercompanyCashflowRepository
+  - file: project_source_reconciliation.py
+    service: ProjectSourceReconciliationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_project_source_reconciliation.PostgresProjectSourceReconciliationRepository
+  - file: manufacturing_supply_plan.py
+    service: ManufacturingSupplyPlanService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_manufacturing_supply_plan.PostgresManufacturingSupplyPlanRepository
+  - file: project_time_billing.py
+    service: ProjectTimeBillingService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_project_time_billing.PostgresProjectTimeBillingRepository
+  - file: accrual_deferral.py
+    service: AccrualDeferralApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_accrual_deferral.PostgresAccrualDeferralRepository
+  - file: manufacturing_execution_v2.py
+    service: ManufacturingExecutionV2Service
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_manufacturing_execution_v2.PostgresManufacturingExecutionV2Repository
+  - file: intercompany_fx.py
+    service: IntercompanyFxService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_intercompany_fx.PostgresIntercompanyFxRepository
+  - file: people_project_payroll.py
+    service: PeopleProjectPayrollService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_people_project_payroll.PostgresPeopleProjectPayrollRepository
+  - file: manufacturing_execution.py
+    service: ManufacturingExecutionService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_manufacturing_execution.PostgresManufacturingExecutionRepository
+  - file: intercompany_operations.py
+    service: IntercompanyOperationsService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_intercompany_operations.PostgresIntercompanyOperationsRepository
+  - file: job_operations.py
+    service: JobOperationsService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_jobs.SQLiteDurableJobRepository
   - file: consolidation.py
     service: ConsolidationApplicationService
     status: backend_neutral
@@ -73,6 +126,11 @@ application_services:
     service: BackupRestoreApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.postgres_backup.PostgresNativeBackupAdapter
+  - file: budget_control.py
+    service: BudgetControlService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_budget_control.SQLiteBudgetControlRepository
+    postgres_adapter: reconforge.infrastructure.postgres_budget_control.PostgresBudgetControlRepository
   - file: idempotency.py
     service: IdempotencyApplicationService
     status: backend_neutral
@@ -117,6 +175,11 @@ application_services:
     service: NotificationApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.postgres_notifications.PostgresNotificationRepository
+  - file: notification_inbox.py
+    service: NotificationInboxService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_notification_inbox.SQLiteNotificationInboxRepository
+    postgres_adapter: reconforge.infrastructure.postgres_notification_inbox.PostgresNotificationInboxRepository
   - file: security_center.py
     service: SecurityCenterApplicationService
     status: backend_neutral
@@ -145,6 +208,10 @@ application_services:
     service: ExceptionQueueApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_exceptions.SQLiteExceptionQueueRepository
+  - file: exception_review.py
+    service: ExceptionReviewApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_exceptions.PostgresExceptionQueueRepository
   - file: approvals.py
     service: ApprovalApplicationService
     status: backend_neutral
@@ -181,14 +248,29 @@ application_services:
     service: FinanceCoreApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_finance_core.SQLiteFinanceCoreRepository
+  - file: finance_posting.py
+    service: FinancePostingApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_finance_posting.SQLiteFinancePostingRepository
+    postgres_adapter: reconforge.infrastructure.postgres_finance_posting.PostgresFinancePostingRepository
   - file: inventory_core.py
     service: InventoryCoreApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_inventory_core.SQLiteInventoryCoreRepository
+  - file: inventory_receipt_posting.py
+    service: InventoryReceiptPostingApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_inventory_receipt_posting.SQLiteInventoryReceiptPostingRepository
+    postgres_adapter: reconforge.infrastructure.postgres_inventory_receipt_posting.PostgresInventoryReceiptPostingRepository
   - file: payables.py
     service: PayablesApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_payables.SQLitePayablesRepository
+  - file: payables_payment_link.py
+    service: PayablesPaymentLinkApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_payables_payment_link.SQLitePayablesPaymentLinkRepository
+    postgres_adapter: reconforge.infrastructure.postgres_payables_payment_link.PostgresPayablesPaymentLinkRepository
   - file: receivables.py
     service: ReceivablesApplicationService
     status: backend_neutral
@@ -209,9 +291,45 @@ application_services:
     service: InventoryPlanningApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_inventory_planning.SQLiteInventoryPlanningRepositoryAdapter
+  - file: operational_finance.py
+    service: OperationalFinanceService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_operational_finance.PostgresOperationalFinanceRepository
+  - file: sales_revenue.py
+    service: SalesRevenueApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_sales_revenue.PostgresSalesRevenueRepository
+  - file: procurement_operations.py
+    service: ProcurementApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_procurement_operations.PostgresProcurementOperationsRepository
+  - file: financial_installments.py
+    service: FinancialInstallmentsApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_financial_installments.PostgresFinancialInstallmentsRepository
+  - file: financial_reporting.py
+    service: FinancialReportingApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_financial_reporting.PostgresFinancialReportingRepository
+  - file: stock_sales.py
+    service: StockSalesApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_stock_sales.PostgresStockSalesRepository
+  - file: procurement_partial.py
+    service: ProcurementPartialApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_procurement_partial.PostgresProcurementPartialRepository
+  - file: stock_commerce.py
+    service: StockCommerceApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_stock_commerce.PostgresStockCommerceRepository
+  - file: supplier_returns.py
+    service: SupplierReturnsService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_supplier_returns.PostgresSupplierReturnsRepository
 summary:
-  platform_total: 20
+  platform_total: 21
   direct_sqlite: 0
   partial_repository: 0
-  compatibility_adapter: 20
-  backend_neutral_application: 45
+  compatibility_adapter: 21
+  backend_neutral_application: 73

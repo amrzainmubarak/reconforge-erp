@@ -19,7 +19,10 @@ from reconforge.benchmark.postgres_outbox_scale import (
     run_postgres_outbox_scale_profile,
     verify_postgres_outbox_scale_result,
 )
+from reconforge.deployment import WorkerPermissionManifest
+from reconforge.infrastructure.outbox_fencing_schema import POSTGRES_OUTBOX_FENCING_SCHEMA_SQL
 from reconforge.infrastructure.postgres import (
+    _RUNTIME_ROLE_SAFETY_SQL,
     PostgresConnectionFactory,
     PostgresSettings,
     PostgresTenantBoundary,
@@ -35,8 +38,9 @@ from reconforge.infrastructure.postgres_outbox import (
     PostgresOutboxValidationError,
     TenantBoundPostgresOutboxRepository,
     tenant_bound_postgres_outbox_repository,
+    validate_postgres_outbox_event_id,
 )
-from reconforge.workers.outbox import OutboxWorkerSettings
+from reconforge.workers.outbox import OutboxWorkerError, OutboxWorkerSettings
 from reconforge.workers.postgres_outbox import PostgresOutboxWorker, PostgresOutboxWorkerError
 
 
@@ -79,6 +83,8 @@ class _FakeConnection:
 
     def execute(self, sql: str, params: tuple[Any, ...] | None = None) -> _Cursor:
         self.executed.append((sql, params))
+        if sql == _RUNTIME_ROLE_SAFETY_SQL:
+            return _Cursor(row=(True,))
         normalized = " ".join(sql.split()).lower()
         if normalized.startswith("select set_config"):
             return _Cursor()
@@ -107,11 +113,14 @@ class _FakeConnection:
                         "workspace-a",
                         "org-a",
                         "entity-a",
+                        1,
                     )
                 ]
             )
         if normalized.startswith("select attempt_count"):
             return _Cursor(row=(self.attempt_count,))
+        if normalized.startswith("select 1 from reconforge.outbox_events"):
+            return _Cursor(row=(1,))
         if normalized.startswith("update reconforge.outbox_events"):
             return _Cursor(rowcount=0 if params and "other-worker" in params else 1)
         if normalized.startswith("select tenant_id, event_id"):
@@ -146,6 +155,9 @@ class _FakeConnection:
     def close(self) -> None:
         return None
 
+    def rollback(self) -> None:
+        return None
+
 
 class _FakeFactory:
     def __init__(self, connection: _FakeConnection) -> None:
@@ -153,6 +165,42 @@ class _FakeFactory:
 
     def connect(self) -> _FakeConnection:
         return self.connection
+
+
+def _outbox_manifest(worker_id: str) -> WorkerPermissionManifest:
+    return WorkerPermissionManifest(
+        worker_id=worker_id,
+        principal_id=worker_id,
+        discovery_permission="outbox.discover",
+        execution_permission="outbox.publish",
+        granted_permissions=("outbox.discover", "outbox.publish"),
+        scope="tenant:tenant_a",
+    )
+
+
+@pytest.mark.parametrize("identifier", ["evt-1", "OBX-aB01", "LCOUT-0001", "Z" * 64])
+def test_postgres_outbox_opaque_event_identity_retains_exact_case(identifier: str) -> None:
+    assert validate_postgres_outbox_event_id(" " + identifier + " ") == identifier
+
+
+@pytest.mark.parametrize("identifier", ["", "bad id", "id/other", "id\nother", "id;drop", "x" * 65, None, True, 42])
+def test_postgres_outbox_opaque_event_identity_rejects_malformed_tokens(identifier: object) -> None:
+    with pytest.raises(PostgresOutboxValidationError):
+        validate_postgres_outbox_event_id(identifier)
+
+
+@pytest.mark.parametrize("operation", ["assert_claim", "mark_published", "mark_failed", "replay_dead"])
+def test_postgres_outbox_exact_event_identity_reaches_every_transition(operation: str) -> None:
+    connection = _FakeConnection(attempt_count=1)
+    owner = PostgresOutboxRepository(connection)
+    arguments: dict[str, Any] = {"tenant_id": "TENANT_A", "event_id": "OBX-Exact-01"}
+    if operation != "replay_dead":
+        arguments.update(worker_id="worker-a", lease_generation=1)
+    if operation == "mark_failed":
+        arguments.update(error="Retained event retry", max_attempts=1)
+    getattr(owner, operation)(**arguments)
+    assert any(parameters and "OBX-Exact-01" in parameters for _, parameters in connection.executed)
+    assert not any(parameters and "obx-exact-01" in parameters for _, parameters in connection.executed)
 
 
 def test_postgres_outbox_claim_and_transitions_are_tenant_scoped() -> None:
@@ -206,14 +254,27 @@ def test_postgres_outbox_rejects_wrong_worker_and_invalid_status() -> None:
         repository.list_events(tenant_id="tenant_a", status="unknown")
 
 
-def test_postgres_outbox_worker_publishes_with_idempotent_event_id() -> None:
+def test_postgres_outbox_worker_publishes_with_idempotent_event_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     connection = _FakeConnection()
     published: list[str] = []
+    policy_permissions: list[str] = []
+    monkeypatch.setattr(
+        "reconforge.workers.postgres_outbox.require_service_worker_policy",
+        lambda **values: policy_permissions.append(str(values["policy_permission"])),
+    )
     worker = PostgresOutboxWorker(
         _FakeFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         publisher=lambda event: published.append(event.id),
-        settings=OutboxWorkerSettings(worker_id="worker-a", poll_interval_seconds=0),
+        settings=OutboxWorkerSettings(
+            worker_id="worker-a",
+            poll_interval_seconds=0,
+            discovery_policy_permission="outbox.discover",
+            permission_manifest=_outbox_manifest("worker-a"),
+            allow_unbound_hosted_policy=True,
+        ),
     )
 
     result = worker.process_once()
@@ -222,7 +283,8 @@ def test_postgres_outbox_worker_publishes_with_idempotent_event_id() -> None:
     assert result.published == 1
     assert result.failed == 0
     assert published == ["evt-1"]
-    assert connection.commits == 2
+    assert connection.commits == 3
+    assert policy_permissions == ["outbox.discover", "outbox.publish", "outbox.publish"]
 
 
 def test_postgres_outbox_worker_records_publisher_failure() -> None:
@@ -235,7 +297,12 @@ def test_postgres_outbox_worker_records_publisher_failure() -> None:
         _FakeFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         publisher=publish,
-        settings=OutboxWorkerSettings(worker_id="worker-a", max_attempts=1, poll_interval_seconds=0),
+        settings=OutboxWorkerSettings(
+            worker_id="worker-a",
+            max_attempts=1,
+            poll_interval_seconds=0,
+            allow_unbound_hosted_policy=True,
+        ),
     )
 
     result = worker.process_once()
@@ -257,6 +324,8 @@ def test_postgres_outbox_worker_policy_denies_before_connection_access() -> None
         publisher=lambda _event: None,
         settings=OutboxWorkerSettings(
             worker_id="outbox-policy-worker",
+            permission_manifest=_outbox_manifest("outbox-policy-worker"),
+            discovery_policy_permission="outbox.discover",
             policy_context_supplier=lambda tenant: PolicyEvaluationContext(
                 user_id="outbox-policy-worker",
                 username="outbox-policy-worker",
@@ -271,6 +340,63 @@ def test_postgres_outbox_worker_policy_denies_before_connection_access() -> None
         worker.process_once()
 
 
+def test_postgres_outbox_worker_rejects_missing_policy_before_connection_access() -> None:
+    class _NeverConnect:
+        def connect(self) -> Any:
+            raise AssertionError("missing policy must be rejected before connection access")
+
+    worker = PostgresOutboxWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ["tenant_a"],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(worker_id="unbound-outbox-worker"),
+    )
+    with pytest.raises(PostgresOutboxWorkerError, match="requires an explicit service-account policy supplier"):
+        worker.process_once()
+
+
+def test_postgres_outbox_worker_requires_manifest_for_configured_policy() -> None:
+    class _NeverConnect:
+        def connect(self) -> Any:
+            raise AssertionError("missing permission manifest must be rejected before connection access")
+
+    worker = PostgresOutboxWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ["tenant_a"],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(
+            worker_id="manifestless-outbox-worker",
+            policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                user_id="manifestless-outbox-worker",
+                username="manifestless-outbox-worker",
+                user_permissions={"outbox.discover", "outbox.publish"},
+                principal_type="service_account",
+                tenant_id=tenant,
+                authorized_tenant_ids=frozenset({tenant}),
+            ),
+        ),
+    )
+    with pytest.raises(PostgresOutboxWorkerError, match="verified worker permission manifest"):
+        worker.process_once()
+
+
+def test_postgres_outbox_worker_rejects_manifest_configuration_drift() -> None:
+    with pytest.raises(OutboxWorkerError, match="execution_permission"):
+        OutboxWorkerSettings(
+            worker_id="outbox-drift-worker",
+            policy_permission="outbox.publish",
+            discovery_policy_permission="outbox.discover",
+            permission_manifest=WorkerPermissionManifest(
+                worker_id="outbox-drift-worker",
+                principal_id="outbox-drift-worker",
+                discovery_permission="outbox.discover",
+                execution_permission="other.publish",
+                granted_permissions=("other.publish", "outbox.discover"),
+                scope="tenant:tenant_a",
+            ),
+        )
+
+
 def test_postgres_outbox_worker_policy_allows_scoped_service_identity() -> None:
     connection = _FakeConnection()
     worker = PostgresOutboxWorker(
@@ -279,10 +405,12 @@ def test_postgres_outbox_worker_policy_allows_scoped_service_identity() -> None:
         publisher=lambda _event: None,
         settings=OutboxWorkerSettings(
             worker_id="outbox-policy-worker",
+            permission_manifest=_outbox_manifest("outbox-policy-worker"),
+            discovery_policy_permission="outbox.discover",
             policy_context_supplier=lambda tenant: PolicyEvaluationContext(
                 user_id="outbox-policy-worker",
                 username="outbox-policy-worker",
-                user_permissions={"outbox.publish"},
+                user_permissions={"outbox.discover", "outbox.publish"},
                 principal_type="service_account",
                 tenant_id=tenant,
                 authorized_tenant_ids=frozenset({tenant}),
@@ -301,7 +429,7 @@ def test_postgres_outbox_worker_rechecks_policy_before_publisher_side_effect() -
     def policy_context(tenant: str) -> PolicyEvaluationContext:
         nonlocal policy_calls
         policy_calls += 1
-        permissions = {"outbox.publish"} if policy_calls == 1 else set()
+        permissions = {"outbox.discover", "outbox.publish"} if policy_calls == 1 else set()
         return PolicyEvaluationContext(
             user_id="outbox-revocation-worker",
             username="outbox-revocation-worker",
@@ -317,6 +445,8 @@ def test_postgres_outbox_worker_rechecks_policy_before_publisher_side_effect() -
         publisher=lambda event: published.append(event.id),
         settings=OutboxWorkerSettings(
             worker_id="outbox-revocation-worker",
+            permission_manifest=_outbox_manifest("outbox-revocation-worker"),
+            discovery_policy_permission="outbox.discover",
             policy_context_supplier=policy_context,
             poll_interval_seconds=0,
         ),
@@ -343,7 +473,7 @@ def test_postgres_outbox_worker_processes_exact_hierarchy_lane() -> None:
         return PolicyEvaluationContext(
             user_id="outbox-scoped-worker",
             username="outbox-scoped-worker",
-            user_permissions={"outbox.publish"},
+            user_permissions={"outbox.discover", "outbox.publish"},
             principal_type="service_account",
             tenant_id=tenant,
             organization_id=organization,
@@ -361,6 +491,8 @@ def test_postgres_outbox_worker_processes_exact_hierarchy_lane() -> None:
         publisher=lambda _event: None,
         settings=OutboxWorkerSettings(
             worker_id="outbox-scoped-worker",
+            permission_manifest=_outbox_manifest("outbox-scoped-worker"),
+            discovery_policy_permission="outbox.discover",
             poll_interval_seconds=0,
             policy_context_hierarchy_supplier=policy_context,
             scope_supplier=lambda: (("tenant_a", "workspace-a", "org-a", "entity-a"),),
@@ -378,7 +510,7 @@ def test_postgres_outbox_worker_processes_exact_hierarchy_lane() -> None:
         "set_config('app.legal_entity_id'" in sql and params == ("entity-a",)
         for sql, params in connection.executed
     )
-    claim_params = next(params for sql, params in connection.executed if "FOR UPDATE SKIP LOCKED" in sql)
+    claim_params = next(params for sql, params in connection.executed if "WITH candidates" in sql)
     assert claim_params[:4] == ("tenant_a", "workspace-a", "org-a", "entity-a")
 
 
@@ -389,10 +521,12 @@ def test_postgres_outbox_worker_requires_hierarchy_policy_for_organization_lane(
         publisher=lambda _event: None,
         settings=OutboxWorkerSettings(
             worker_id="outbox-organization-policy",
+            permission_manifest=_outbox_manifest("outbox-organization-policy"),
+            discovery_policy_permission="outbox.discover",
             policy_context_scope_supplier=lambda tenant, workspace, entity: PolicyEvaluationContext(
                 user_id="outbox-organization-policy",
                 username="outbox-organization-policy",
-                user_permissions={"outbox.publish"},
+                user_permissions={"outbox.discover", "outbox.publish"},
                 principal_type="service_account",
                 tenant_id=tenant,
                 workspace_id=workspace,
@@ -452,7 +586,7 @@ def test_tenant_bound_postgres_adapter_maps_status_and_safe_errors() -> None:
     events = repository.list_events(status="dead_letter")
     assert events[0].attempts == 1
     assert events[0].dead_lettered_at is None
-    assert connection.executed[-1][1] == ("tenant_a", 100)
+    assert any(params == ("tenant_a", 100) for _sql, params in connection.executed)
 
     with pytest.raises(OutboxError, match="status must be"):
         repository.list_events(status="unknown")
@@ -502,6 +636,7 @@ def test_live_postgres_outbox_application_claim_retry_dead_replay_publish_and_rl
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
             admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_OUTBOX_APPLICATION_SCHEMA_SQL)
+            admin.execute(POSTGRES_OUTBOX_FENCING_SCHEMA_SQL)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             admin.execute(f"GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {app_user}")
             admin.execute(
@@ -545,7 +680,9 @@ def test_live_postgres_outbox_application_claim_retry_dead_replay_publish_and_rl
             )
             replayed = replay.claim_pending(worker_id="worker-c", limit=1)
             assert len(replayed) == 1
-            replay.mark_published(event_id=replayed[0].id, worker_id="worker-c")
+            replay.mark_published(
+                event_id=replayed[0].id, worker_id="worker-c", lease_generation=replayed[0].lease_generation
+            )
             assert len(replay.list_events(status="published")) == 1
         with PostgresTenantBoundary(factory).transaction(tenant_b) as connection:
             isolated = TenantBoundPostgresOutboxRepository(
@@ -583,6 +720,7 @@ def test_live_postgres_outbox_bounded_multi_worker_delivery_profile() -> None:
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
             admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_OUTBOX_APPLICATION_SCHEMA_SQL)
+            admin.execute(POSTGRES_OUTBOX_FENCING_SCHEMA_SQL)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             admin.execute(f"GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {app_user}")
             admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES(%s,%s)", (tenant_id, tenant_id))

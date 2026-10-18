@@ -52,8 +52,8 @@ def _stock_gl_frames(amount: object) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def _matching_records(amount: object) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
-    left = [{"id": "L-1", "amount": amount, "reference": "INV-1", "date": "2026-07-25"}]
-    right = [{"id": "R-1", "amount": amount, "reference": "INV-1", "date": "2026-07-25"}]
+    left = [{"id": "L-1", "amount": amount, "currency": "USD", "reference": "INV-1", "date": "2026-07-25"}]
+    right = [{"id": "R-1", "amount": amount, "currency": "USD", "reference": "INV-1", "date": "2026-07-25"}]
     return left, right
 
 
@@ -180,7 +180,7 @@ def test_matching_run_persists_policy_in_rule_audit_outbox_and_idempotency(tmp_p
                 (first.job_id,),
             ).fetchone()["payload_json"]
         )
-        with pytest.raises(PlatformError, match="different financial input policy"):
+        with pytest.raises(InvalidAmountError, match="new financial writes require strict-financial-input-v2"):
             service.run(
                 left_path=left_path,
                 right_path=right_path,

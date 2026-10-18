@@ -4,8 +4,10 @@ import importlib.util
 import inspect
 import os
 import re
+from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -29,6 +31,11 @@ from reconforge.infrastructure.postgres_inventory_core import (
 from reconforge.infrastructure.postgres_inventory_valuation import (
     POSTGRES_INVENTORY_VALUATION_SCHEMA_SQL,
     PostgresInventoryValuationRepository,
+    install_postgres_inventory_valuation_schema,
+)
+from reconforge.infrastructure.postgres_inventory_valuation_reversal import (
+    POSTGRES_INVENTORY_VALUATION_REVERSAL_SCHEMA_SQL,
+    install_postgres_inventory_valuation_reversal_schema,
 )
 from reconforge.infrastructure.postgres_master_data import POSTGRES_MASTER_DATA_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data_application import (
@@ -153,13 +160,59 @@ def test_fifo_allocation_uses_half_even_and_preserves_full_layer_residual() -> N
 
 def test_fifo_approval_serializes_layers_and_creates_balanced_finance_draft() -> None:
     source = (ROOT / "reconforge/infrastructure/postgres_inventory_valuation.py").read_text(encoding="utf-8")
-    assert "ROUND_HALF_EVEN" in source
+    assert "allocate_fifo_value(remaining_value, remaining_quantity, consumed_quantity)" in source
     assert "pg_advisory_xact_lock" in source
-    assert "ORDER BY created_at,id FOR UPDATE" in source
+    assert "ORDER BY l.created_at,l.id FOR UPDATE OF l" in source
     assert "finance_entries" in source
     assert "finance_entry_lines" in source
     assert "Generated Inventory-to-Finance postings must balance" in source
     assert "Segregation of duties prevents approving your own inventory valuation." in source
+
+
+@pytest.mark.parametrize("installed", [False, True], ids=["legacy-foundation", "current-monetary"])
+@pytest.mark.parametrize(("installer", "statement"), [
+    (install_postgres_inventory_valuation_schema, POSTGRES_INVENTORY_VALUATION_SCHEMA_SQL),
+    (install_postgres_inventory_valuation_reversal_schema, POSTGRES_INVENTORY_VALUATION_REVERSAL_SCHEMA_SQL),
+], ids=["valuation", "reversal"])
+def test_current_valuation_installer_checks_owner_before_any_historical_ddl(monkeypatch: pytest.MonkeyPatch, installed: bool,
+        installer: Callable[[Any], None], statement: str) -> None:
+    from reconforge.infrastructure import postgres_monetary_installation
+
+    calls: list[object] = []
+
+    class Connection:
+        def execute(self, query: object) -> None:
+            calls.append(query)
+
+    connection = Connection()
+
+    def verify(candidate: object) -> bool:
+        assert candidate is connection
+        calls.append("verify")
+        return installed
+
+    monkeypatch.setattr(postgres_monetary_installation, "verify_monetary_installation_if_present", verify)
+    installer(connection)
+    assert calls == (["verify"] if installed else ["verify", statement])
+
+
+@pytest.mark.parametrize("installer", [install_postgres_inventory_valuation_schema, install_postgres_inventory_valuation_reversal_schema], ids=["valuation", "reversal"])
+def test_current_valuation_installer_propagates_drift_without_repair(monkeypatch: pytest.MonkeyPatch, installer: Callable[[Any], None]) -> None:
+    from reconforge.infrastructure import postgres_monetary_installation
+
+    refusal = ValueError("Exact installed execution contract differs")
+
+    class Connection:
+        def execute(self, _query: object) -> None:
+            raise AssertionError("A refused current installation must not run historical DDL")
+
+    def verify(_candidate: object) -> bool:
+        raise refusal
+
+    monkeypatch.setattr(postgres_monetary_installation, "verify_monetary_installation_if_present", verify)
+    with pytest.raises(ValueError) as denied:
+        installer(Connection())
+    assert denied.value is refusal
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
@@ -184,7 +237,7 @@ def test_live_postgres_fifo_valuation_finance_draft_void_guard_and_rls() -> None
             install_postgres_master_data_application_schema(admin)
             install_postgres_finance_core_schema(admin)
             admin.execute(POSTGRES_INVENTORY_CORE_SCHEMA_SQL)
-            admin.execute(POSTGRES_INVENTORY_VALUATION_SCHEMA_SQL)
+            install_postgres_inventory_valuation_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             admin.execute(f"GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {app_user}")
             admin.execute(
@@ -203,8 +256,8 @@ def test_live_postgres_fifo_valuation_finance_draft_void_guard_and_rls() -> None
                     (tenant,),
                 )
                 connection.execute(
-                    "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,active) VALUES (%s,%s,'ORG','Organization','USD',TRUE)",
-                    (tenant, organization_id),
+                    "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,active,application_workspace_id) VALUES (%s,%s,'ORG','Organization','USD',TRUE,%s)",
+                    (tenant, organization_id, workspace_id),
                 )
                 connection.execute(
                     "INSERT INTO reconforge.master_data_workspace_organizations(tenant_id,workspace_id,organization_id) VALUES (%s,%s,%s)",
@@ -215,8 +268,8 @@ def test_live_postgres_fifo_valuation_finance_draft_void_guard_and_rls() -> None
                     (tenant, entity_id, organization_id),
                 )
                 connection.execute(
-                    "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number) VALUES (%s,%s,%s,'2026-07-01','2026-07-31',2026,7)",
-                    (tenant, f"period-{tenant}", f"2026-07-{tenant}"),
+                    "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number,application_workspace_id) VALUES (%s,%s,%s,'2026-07-01','2026-07-31',2026,7,%s)",
+                    (tenant, f"period-{tenant}", f"2026-07-{tenant}", workspace_id),
                 )
                 connection.execute(
                     "INSERT INTO reconforge.master_data_workspace_periods(tenant_id,workspace_id,period_id) VALUES (%s,%s,%s)",

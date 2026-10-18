@@ -1,0 +1,96 @@
+{
+  "slice": "PROD024",
+  "status": "source_frozen_verified",
+  "owned_files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "ed80c421d1b7ee8d2701c2ac000db990626af439efeb58b517babd28830818ad"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_repository_scope.py",
+      "sha256": "35532c99102edae8afdbabb22750f662a79631c0a7fc7cd10a313d67132960bc"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_finance_core.py",
+      "sha256": "825e8351ff18b9e1d8a9cb33340169f36950d55f32f064f6426c30c08826ebf8"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_receivables.py",
+      "sha256": "6a82200e486fd870b0f7c59197b0a462a943652dd636991c5622823b832d201a"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_payables.py",
+      "sha256": "fc3e5a8b7e17dbf23b76c47c844fda8a383a982a7837dc8c78c7fc09bccac53d"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_inventory_core.py",
+      "sha256": "ae0179a22fde3d6889d9675aedb3f079194ab0b7828a0af49f5d0efd20000d3c"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_inventory_planning.py",
+      "sha256": "36c53b5d4694177f311783dbdcd4c1511af71bf64f6d636d1d482f14dd26b66a"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_inventory_valuation.py",
+      "sha256": "7cb4fbd6286572d65fe70c0675fae47dc168d4a260c98b07fc0e67d63e129a2c"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_inventory_valuation_reversal.py",
+      "sha256": "7b4b3af7dc5c7af603a61f1cd3761d629aeddd2cc3d36c45ee92c21f9daf96e9"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_master_data_application.py",
+      "sha256": "51d7e78674da79d2163f50592530cbde953d088238f3fd3c96d1844229caa682"
+    },
+    {
+      "path": "tests/test_postgres_repository_scope.py",
+      "sha256": "5380b1cff459710136de091a05996419743686076919cb68f3c1c538757d682c"
+    },
+    {
+      "path": "tests/test_postgres_finance_core.py",
+      "sha256": "6d7ab57f8fbbded9914151dd44dcffe702a1d00798cb2599ebe0202149b6d8ff"
+    },
+    {
+      "path": "tests/test_postgres_payables.py",
+      "sha256": "b6037f4e0bcb155b0d765269f02c34c990aafffe80c2e3ca34b9b7d48dcc3c5b"
+    },
+    {
+      "path": "tests/test_postgres_master_data_application.py",
+      "sha256": "f4bbd17d7778bfae7f291ee8325902181f3baf5d92134e9a0c177680c96d1255"
+    }
+  ],
+  "ci": {
+    "selected": 463,
+    "passed": 462,
+    "failures": 0,
+    "skipped": 1,
+    "pytest_seconds": 227.747,
+    "harness_seconds": 243.23584859998664,
+    "report": "prod024-ci-general-final/report.json",
+    "database_cleaned": true,
+    "redis_cleaned": true,
+    "skip": "PostgreSQL native client tools missing from host PATH"
+  },
+  "focused": {
+    "selected": 14,
+    "passed": 14,
+    "failures": 0,
+    "skipped": 0,
+    "pytest_seconds": 68.851,
+    "xml": "prod024-green-second.xml"
+  },
+  "existing_contracts": {
+    "selected": 75,
+    "passed": 67,
+    "failures": 0,
+    "skipped": 8,
+    "pytest_seconds": 2.845,
+    "note": "All eight live prerequisites exercised in actual CI general run"
+  },
+  "quality": {
+    "ruff": "pass",
+    "mypy": "pass 9 source files",
+    "bandit": "exit0; existing annotation warnings retained",
+    "diff_check": "exit0"
+  }
+}

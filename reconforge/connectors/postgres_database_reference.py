@@ -15,7 +15,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from types import ModuleType
 from typing import cast
 from urllib.parse import urlsplit
@@ -44,6 +44,7 @@ from reconforge.connectors.network import (
     ConnectorSecretResolver,
 )
 from reconforge.io.writers import canonical_decimal_text
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 POSTGRES_DATABASE_ENDPOINT = "postgresql://db.example.test/reconforge"
 _TENANT_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
@@ -157,12 +158,12 @@ def _load_psycopg() -> ModuleType:
 def _canonical_amount(value: object) -> str:
     if isinstance(value, float):
         raise ConnectorNetworkError("postgres_amount_type_invalid")
-    try:
-        amount = Decimal(str(value))
-    except (InvalidOperation, ValueError) as exc:
-        raise ConnectorNetworkError("postgres_amount_invalid") from exc
-    if not amount.is_finite():
+    if isinstance(value, Decimal) and not value.is_finite():
         raise ConnectorNetworkError("postgres_amount_nonfinite")
+    try:
+        amount = parse_exact_amount(value)
+    except InvalidAmountError as exc:
+        raise ConnectorNetworkError("postgres_amount_invalid") from exc
     return canonical_decimal_text(amount)
 
 

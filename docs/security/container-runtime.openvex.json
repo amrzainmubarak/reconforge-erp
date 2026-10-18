@@ -1,10 +1,10 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://reconforge.local/security/vex/container-runtime-2026-08-22",
+  "@id": "https://reconforge.local/security/vex/container-runtime-2026-10-08",
   "author": "ReconForge automated security review",
   "role": "Document Creator",
-  "timestamp": "2026-08-22T12:30:00Z",
-  "last_updated": "2026-08-22T12:30:00Z",
+  "timestamp": "2026-10-08T04:52:00Z",
+  "last_updated": "2026-10-08T04:52:00Z",
   "version": 1,
   "statements": [
     {
@@ -13,11 +13,11 @@
       },
       "products": [
         {
-          "@id": "pkg:generic/python@3.11.16"
+          "@id": "pkg:generic/python@3.12.15"
         }
       ],
       "status": "fixed",
-      "impact_statement": "CPython 3.11.16 includes the 3.11 backport commit dae4b1a21f8df4570e30986affd61bbe4ade4cef, and the official 3.11.16 release record identifies gh-145599 as the fix for CVE-2026-3644."
+      "impact_statement": "The official Python 3.12.14 security release records gh-145599 as the CVE-2026-3644 fix, inherited by the official 3.12.15 security release. The checksum-pinned 3.12.15-alpine3.24 image was probed on 2026-10-08: CPython 3.12.15 and Morsel.update/js_output reject control characters."
     },
     {
       "vulnerability": {
@@ -25,11 +25,11 @@
       },
       "products": [
         {
-          "@id": "pkg:generic/python@3.11.16"
+          "@id": "pkg:generic/python@3.12.15"
         }
       ],
       "status": "fixed",
-      "impact_statement": "CPython 3.11.16 includes the 3.11 backport commit 642865ddf4b232da1f3b1f7abcfa3254c4bfe785, and the official 3.11.16 release record identifies gh-145986 as the fix for CVE-2026-4224."
+      "impact_statement": "The official Python 3.12.14 security release records gh-145986 as the CVE-2026-4224 fix, inherited by the official 3.12.15 security release. The checksum-pinned 3.12.15-alpine3.24 image was probed on 2026-10-08: CPython 3.12.15 and pyexpat 2.8.5."
     },
     {
       "vulnerability": {
@@ -37,11 +37,11 @@
       },
       "products": [
         {
-          "@id": "pkg:generic/python@3.11.16"
+          "@id": "pkg:generic/python@3.12.15"
         }
       ],
       "status": "fixed",
-      "impact_statement": "The signed CPython v3.11.16 tag is three commits after the merged 3.11 backport cbaecf9f16da611a646d507c1cbca265c588fc56 and also includes bundled Expat 2.8.3, which supplies the required XML_SetHashSalt16Bytes API."
+      "impact_statement": "The official Python release announcement records gh-149018 hash-flooding protection in 3.12.14; the 3.12.15 release updates bundled Expat to 2.8.5. The checksum-pinned 3.12.15-alpine3.24 image was probed on 2026-10-08: CPython 3.12.15 and pyexpat 2.8.5 retain the reviewed fix."
     }
   ]
 }

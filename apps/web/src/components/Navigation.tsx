@@ -1,6 +1,7 @@
 import {
   Activity,
   Archive,
+  Bell,
   Boxes,
   Check,
   ChevronDown,
@@ -25,6 +26,7 @@ import type { ComponentType } from "react";
 
 import type { MessageKey } from "../i18n";
 import type { StudioPage } from "../types";
+import { isLiveOperationalPage, operationalPageLabel } from "../studio-pages";
 
 export interface NavigationItem {
   key: string;
@@ -44,12 +46,40 @@ const currentStudio = import.meta.env.VITE_CURRENT_STUDIO_URL ?? "http://127.0.0
 
 export const navigationGroups: NavigationGroup[] = [
   {
+    label: "erpNavigation",
+    items: [
+      { key: "enterprise-finance", label: "enterpriseFinance", icon: Landmark, page: "enterpriseFinance" },
+      { key: "financial-reporting", label: "financialReporting", icon: FileChartColumn, page: "financialReporting" },
+      { key: "fixed-assets", label: "fixedAssets", icon: Landmark, page: "fixedAssets" },
+      { key: "manufacturing-execution", label: "manufacturingExecution", icon: Factory, page: "manufacturingExecution" },
+      { key: "intercompany-operations", label: "intercompanyOperations", icon: Landmark, page: "intercompanyOperations" },
+      { key: "manufacturing-execution-v2", label: "manufacturingExecutionV2", icon: Factory, page: "manufacturingExecutionV2" },
+      { key: "intercompany-fx", label: "intercompanyFx", icon: Landmark, page: "intercompanyFx" },
+      { key: "intercompany-group-diagnostic", label: "groupDiagnostic", icon: FileChartColumn, page: "groupDiagnostic" },
+      { key: "intercompany-source-cashflow", label: "intercompanyCashflow", icon: FileChartColumn, page: "intercompanyCashflow" },
+      { key: "project-source-reconciliation", label: "projectSourceReconciliation", icon: FileChartColumn, page: "projectSourceReconciliation" },
+      { key: "people-project-payroll", label: "peopleProjectPayroll", icon: FileChartColumn, page: "peopleProjectPayroll" },
+      { key: "project-time-billing", label: "projectTimeBilling", icon: FileChartColumn, page: "projectTimeBilling" },
+      { key: "accrual-deferral", label: "accrualDeferral", icon: FileChartColumn, page: "accrualDeferral" },
+      { key: "manufacturing-supply-plan", label: "manufacturingSupplyPlan", icon: Factory, page: "manufacturingSupplyPlan" },
+      { key: "procurement-sourcing", label: "procurementSourcing", icon: Boxes, page: "procurementSourcing" },
+      { key: "customer-returns", label: "customerReturns", icon: Landmark, page: "customerReturns" },
+      { key: "operational-fx-tax", label: "operationalFxTax", icon: Landmark, page: "operationalFxTax" },
+      { key: "stock-sales", label: "stockSales", icon: Boxes, page: "stockSales" },
+      { key: "procurement-partial", label: "procurementPartial", icon: Boxes, page: "procurementPartial" },
+      { key: "sales-revenue", label: "salesRevenue", icon: FileChartColumn, page: "salesRevenue" },
+      { key: "procurement-operations", label: "procurementOperations", icon: Boxes, page: "procurementOperations" },
+    ],
+  },
+  {
     label: "overview",
     items: [{ key: "dashboard", label: "dashboard", icon: Gauge, page: "dashboard" }],
   },
   {
     label: "finance",
     items: [
+      { key: "receivables", label: "receivables", icon: FileChartColumn, page: "receivables" },
+      { key: "budget-control", label: "budgetControl", icon: FileChartColumn, page: "budgetControl" },
       { key: "reconciliation", label: "reconciliation", icon: Activity, href: `${currentStudio}/reconciliation`, status: "foundation" },
       { key: "exceptions", label: "exceptions", icon: ShieldCheck, page: "exceptions", status: "foundation" },
       { key: "evidence", label: "evidence", icon: Archive, page: "evidence", status: "foundation" },
@@ -64,6 +94,8 @@ export const navigationGroups: NavigationGroup[] = [
     label: "operations",
     items: [
       { key: "inventory", label: "inventory", icon: Boxes, page: "inventory", status: "foundation" },
+      { key: "inventory-receipts", label: "inventoryReceipt", icon: Boxes, page: "inventoryReceipt" },
+      { key: "inventory-transfer", label: "inventoryTransfer", icon: Boxes, page: "inventoryTransfer" },
       { key: "manufacturing", label: "manufacturingCost", icon: Factory, page: "manufacturingCost", status: "foundation" },
     ],
   },
@@ -76,6 +108,8 @@ export const navigationGroups: NavigationGroup[] = [
       { key: "rules", label: "ruleStudio", icon: Code2, page: "rules", status: "foundation" },
       { key: "live", label: "liveStudio", icon: RadioTower, page: "live", status: "foundation" },
       { key: "admin-audit", label: "adminAudit", icon: ShieldCheck, page: "adminAudit", status: "foundation" },
+      { key: "notifications", label: "notifications", icon: Bell, page: "notifications", status: "foundation" },
+      { key: "jobs", label: "durableJobs", icon: Activity, page: "durableJobs" },
       { key: "settings", label: "settings", icon: Settings, status: "planned" },
       { key: "developer", label: "developer", icon: Code2, href: `${currentStudio}/docs`, status: "foundation" },
     ],
@@ -93,6 +127,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobileClose, activePage, onNavigate }: SidebarProps) {
+  const liveOperationalPage = isLiveOperationalPage(activePage);
   return (
     <aside className={`sidebar ${collapsed ? "sidebar--collapsed" : ""} ${mobileOpen ? "sidebar--mobile-open" : ""}`}>
       <div className="brand-row">
@@ -112,8 +147,8 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
         <summary className="workspace-switcher" aria-label={translate("workspaceDetails")}>
           <span className="workspace-avatar">FC</span>
           <span className="workspace-copy">
-            <strong>{translate("local")}</strong>
-            <small>{translate("preview")}</small>
+            <strong>{translate(operationalPageLabel(activePage) ?? "local")}</strong>
+            <small>{translate(liveOperationalPage ? "arLiveSession" : "preview")}</small>
           </span>
           <ChevronDown className="workspace-chevron" size={15} aria-hidden="true" />
         </summary>
@@ -147,6 +182,7 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
                   <button
                     className={`nav-item ${activePage === item.page ? "nav-item--active" : ""}`}
                     type="button"
+                    aria-label={translate(item.label)}
                     aria-current={activePage === item.page ? "page" : undefined}
                     key={item.key}
                     onClick={() => {
@@ -160,13 +196,13 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
               }
               if (item.href) {
                 return (
-                  <a className="nav-item" href={item.href} target="_blank" rel="noreferrer" key={item.key} onClick={onMobileClose}>
+                  <a className="nav-item" aria-label={translate(item.label)} href={item.href} target="_blank" rel="noreferrer" key={item.key} onClick={onMobileClose}>
                     {content}
                   </a>
                 );
               }
               return (
-                <button className="nav-item" type="button" disabled key={item.key} title={translate("planned")}>
+                <button className="nav-item" type="button" aria-label={translate(item.label)} disabled key={item.key} title={translate("planned")}>
                   {content}
                 </button>
               );
@@ -179,8 +215,8 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
         <div className="local-state">
           <span className="status-dot" aria-hidden="true" />
           <span>
-            <strong>{translate("readOnly")}</strong>
-            <small>{translate("localNote")}</small>
+            <strong>{translate(liveOperationalPage ? "arLiveSession" : "readOnly")}</strong>
+            <small>{translate(operationalPageLabel(activePage) ?? "localNote")}</small>
           </span>
         </div>
         <button className="collapse-button" type="button" onClick={onCollapse} aria-label={translate(collapsed ? "expandSidebar" : "collapseSidebar")}>
@@ -201,23 +237,27 @@ interface MobileDockProps {
 }
 
 export function MobileDock({ translate, onMenu, onQuickAction, activePage, onNavigate }: MobileDockProps) {
+  const live = isLiveOperationalPage(activePage);
   return (
     <nav className="mobile-dock" aria-label={translate("mobileNav")}>
-      <button type="button" className={`mobile-dock-item ${activePage === "dashboard" ? "mobile-dock-item--active" : ""}`} onClick={() => onNavigate("dashboard")}>
+      <button type="button" className={`mobile-dock-item ${activePage === (live ? "enterpriseFinance" : "dashboard") ? "mobile-dock-item--active" : ""}`} onClick={() => onNavigate(live ? "enterpriseFinance" : "dashboard")}>
         <Gauge size={20} aria-hidden="true" />
-        <span>{translate("dashboard")}</span>
+        <span>{translate(live ? "enterpriseFinance" : "dashboard")}</span>
       </button>
-      <button type="button" className={`mobile-dock-item ${activePage === "exceptions" ? "mobile-dock-item--active" : ""}`} onClick={() => onNavigate("exceptions")}>
+      <button type="button" className={`mobile-dock-item ${activePage === (live ? "salesRevenue" : "exceptions") ? "mobile-dock-item--active" : ""}`} onClick={() => onNavigate(live ? "salesRevenue" : "exceptions")}>
         <ShieldCheck size={20} aria-hidden="true" />
-        <span>{translate("exceptions")}</span>
+        <span>{translate(live ? "salesRevenue" : "exceptions")}</span>
       </button>
-      <button type="button" className="mobile-create" onClick={onQuickAction} aria-label={translate("quickCreate")}>
+      <button type="button" className="mobile-create" onClick={live ? () => onNavigate("inventoryReceipt") : onQuickAction} aria-label={translate(live ? "inventoryReceipt" : "quickCreate")}>
         <Sparkles size={21} />
       </button>
-      <a href={`${currentStudio}/close`} target="_blank" rel="noreferrer" className="mobile-dock-item">
+      {live ? <button type="button" className="mobile-dock-item" onClick={() => onNavigate("procurementOperations")}>
+        <Boxes size={20} aria-hidden="true" />
+        <span>{translate("procurementOperations")}</span>
+      </button> : <a href={`${currentStudio}/close`} target="_blank" rel="noreferrer" className="mobile-dock-item">
         <ClipboardCheck size={20} aria-hidden="true" />
         <span>{translate("close")}</span>
-      </a>
+      </a>}
       <button type="button" className="mobile-dock-item" onClick={onMenu}>
         <PanelLeftOpen size={20} aria-hidden="true" />
         <span>{translate("menu")}</span>

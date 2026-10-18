@@ -1,0 +1,35 @@
+{
+  "artifact_id": 11262813812,
+  "artifact_zip_digest": "sha256:a4023c07f6e2adea57f0074856c066936fdf408ee093f19c2bf1750d89f187da",
+  "build_report_digest": "67d402cefb2b8c93f22f7ba7827dac75ff964e373c6388e5db77c38730e749ac",
+  "commit": "517e6a8fb4b35ad8a7ae76c6d12872959c26bd9c",
+  "image_config_digest": "sha256:0801d2cdb65007f733745562e407a58b41e5dc9c46b79a1a12f792743e1bb9f3",
+  "job": 111121404972,
+  "live_tests_passed": 2,
+  "live_tests_skipped": 0,
+  "observed": {
+    "checksum_tamper_refusal": true,
+    "cleanup": true,
+    "hierarchical_scope_isolation": true,
+    "immutable_conflict_refusal": true,
+    "object_lock_delete_refusal": true
+  },
+  "report_digest": "5e6be5f21d14206ec587e49cb390b2ceb52276927ac46850640de1727d656cab",
+  "run": 37094452570,
+  "status": "verified",
+  "storage_report_digest": "3160479b2b53e5b4c2b6a5cf1397282aeafb7ec8fa7c24d147fb8928d7f24c2e",
+  "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37094452570/job/111121404972",
+  "verified": [
+    "exact head and successful job",
+    "GitHub artifact head/run and ZIP digest",
+    "downloaded JSON bytes equal archived artifact bytes",
+    "canonical Git recipe and manifest hashes",
+    "official source archive and module/license hashes",
+    "runtime source commit, release and Go identity",
+    "both report digests",
+    "closed storage schema",
+    "same config identity across build and storage reports",
+    "unchanged module locks before and after compilation",
+    "two real S3 tests without skips"
+  ]
+}

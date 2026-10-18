@@ -1,0 +1,44 @@
+{
+  "checks": {
+    "cleanup_complete": true,
+    "drifted_upgrade_refused": true,
+    "enhanced_insert_guard_refused_drift": true,
+    "failed_upgrade_history_preserved": true,
+    "failed_upgrade_revision_preserved": true,
+    "failed_upgrade_trigger_preserved": true,
+    "pre_drift_dump_list_verified": true,
+    "pre_drift_restore_verified": true,
+    "restored_upgrade_to_head": true,
+    "successful_upgrade_history_preserved": true
+  },
+  "executed_at": "2026-10-03T02:16:10+00:00",
+  "history": {
+    "invalid_history_sha256": "7384d0a6b70c466e099461bb28b24a979f90cd0c78ea8ae97e5cdf1d77e950a4",
+    "invalid_versions": 3,
+    "pre_drift_dump_sha256": "03ea8124a81ca45b529515a397b4b09ecb8d2ac604d5575c554f2ddf604c2f0f",
+    "valid_history_sha256": "ec931f9cf25e1b9f8c1b39cc83e6c38e2bc3384b669516505a46d4aaabb30886",
+    "valid_versions": 2
+  },
+  "limitations": [
+    "single_disposable_postgresql_node",
+    "synthetic_data_and_credentials_only",
+    "one_postgresql_version",
+    "no_live_provider_or_accounting_posting",
+    "no_cross_host_ha_dr_or_production_claim"
+  ],
+  "profile": "disposable-postgresql-writeback-identity-migration",
+  "report_digest": "85cad6a98e420e905fc62a65c1e1153a269fce77fd44d4bda7e2fc5fedb8f07d",
+  "runtime": {
+    "docker_server": "29.8.1",
+    "image": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+    "postgresql": "17.10",
+    "source_revision": "0088_pg_currency_snapshot",
+    "target_revision": "0093_pg_metrics"
+  },
+  "schema_version": "postgres-writeback-identity-migration-drill-v1",
+  "subject": {
+    "migration_commit": "c7e357335c71a15889375be01bd3e6bf8d70041c",
+    "migration_source_sha256": "92e42b27e1ef043ce9be9a44130efadc61daa6953b85aa516e5f7e7e03a6a4b0",
+    "runner_source_sha256": "37d3f33f8a7d8b8769bcc446d2ec962885fba4f1a98ba10f8c1a91391392ce9d"
+  }
+}

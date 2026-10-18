@@ -1,0 +1,291 @@
+{
+  "source": {
+    "bom_digest": "ca7c5b540fe9ac1e2b5bb155060c19cd947eda81c41bd21415b1a81388f18e7d",
+    "bom_version_id": "ME1B-614CBE64F8D94A24A5B6061F30CE8997",
+    "budget_id": "BGT-fb2a85e5522a4da8b545c5a28eaf150a",
+    "ceiling_minor": "2700",
+    "command_request": {
+      "budget_id": "BGT-fb2a85e5522a4da8b545c5a28eaf150a",
+      "material": {
+        "bom_version_id": "ME1B-614CBE64F8D94A24A5B6061F30CE8997",
+        "component_location_code": "MAIN/STOCK",
+        "component_policy_code": "FIFO",
+        "entity_code": "ENTITY",
+        "finished_location_code": "MAIN/STOCK",
+        "finished_policy_code": "MFG",
+        "journal_code": "STOCK",
+        "legal_entity_id": "entity",
+        "number": "SUPPLY-WORK",
+        "organization_code": "ORG",
+        "organization_id": "org",
+        "output_quantity": "10",
+        "period_id": "period",
+        "posting_date": "2026-10-04",
+        "reason": "Genuine pre-stock planned production",
+        "schema_version": "manufacturing-order-v1",
+        "scrap_account_code": "SCRAP",
+        "wip_account_code": "WIP",
+        "workspace_id": "work"
+      },
+      "routing_id": "ME2R-8DE3C4554AC44ACA9EF064244C392D83",
+      "schema_version": "manufacturing-supply-plan-v1",
+      "unit_price_ceilings_minor": {
+        "ITEM": "1200",
+        "MATERIAL": "100"
+      }
+    },
+    "component_location_code": "MAIN/STOCK",
+    "component_location_id": "LOC-2891c8f0d3efdaa3",
+    "component_policy_code": "FIFO",
+    "component_policy_id": "IVP-519ce6992b70a397",
+    "creator_id": "maker",
+    "currency_code": "USD",
+    "entity_code": "ENTITY",
+    "finished_location_code": "MAIN/STOCK",
+    "finished_location_id": "LOC-2891c8f0d3efdaa3",
+    "finished_policy_code": "MFG",
+    "finished_policy_id": "IVP-22b56a1c54f3a5bb",
+    "id": "MSP1-60B895CCA364436DA41D0EE89EFEA190",
+    "journal_code": "STOCK",
+    "journal_id": "FJ-d291fc6e482bb366",
+    "legal_entity_id": "entity",
+    "manufacturing_order_id": "ME2-2181CB7D9D52454C873CE198AC999074",
+    "material_order_id": "ME1-2AC594C7C7E347E5BEE50E4900474C54",
+    "monetary_policy": {
+      "currency_code": "USD",
+      "precision": 2,
+      "registry_digest": "d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246",
+      "registry_version": "iso-4217-list-one-2026-01-01-rf1",
+      "rounding_policy": "ROUND_HALF_UP"
+    },
+    "number": "SUPPLY-WORK",
+    "organization_code": "ORG",
+    "organization_id": "org",
+    "output": {
+      "inventory_account_id": "ACC-a6eab606242739d4",
+      "item_code": "PRODUCT",
+      "item_id": "ITEM-b7596c4e2af6473b",
+      "quantity_precision": 0,
+      "uom_code": "EA",
+      "uom_id": "UOM-9d00046016e0cec9"
+    },
+    "output_item_id": "ITEM-b7596c4e2af6473b",
+    "output_quantity": "10",
+    "output_quantity_scaled": "10",
+    "period_id": "period",
+    "phase": 2,
+    "planned_requirements": [
+      {
+        "bom_digest": "ca7c5b540fe9ac1e2b5bb155060c19cd947eda81c41bd21415b1a81388f18e7d",
+        "bom_version_id": "ME1B-614CBE64F8D94A24A5B6061F30CE8997",
+        "coverage": {
+          "gross_quantity_scaled": "2",
+          "observed_available_scaled": "1",
+          "observed_fifo_free_scaled": "1",
+          "observed_reserved_scaled": "0",
+          "onhand_reserved_scaled": "1",
+          "requirement_digest": "a4fdc9590ed7bd067b75f3cb0af58a8b44351744642794a3fb190b5c69a3e82f",
+          "requirement_id": "MSP1D-CB59021B20243297B5E743CB14166CCE",
+          "schema_version": "manufacturing-supply-coverage-v1",
+          "shortage_quantity_scaled": "1"
+        },
+        "coverage_digest": "3d599b8792b99987b11893a7506b2cabec39c2a3f80e3f4755bcd1ae4f40f825",
+        "gross_quantity": "2",
+        "gross_quantity_scaled": "2",
+        "id": "MSP1D-CB59021B20243297B5E743CB14166CCE",
+        "inventory_account_id": "ACC-e172c11784d6b425",
+        "item_code": "ITEM",
+        "item_id": "ITEM-de35119264de236c",
+        "location_id": "LOC-2891c8f0d3efdaa3",
+        "plan_digest": "83168181ab5117bd761d25e3b9a861d9d63b8f32ec095a7eb281d35620b1785d",
+        "plan_id": "MSP1-60B895CCA364436DA41D0EE89EFEA190",
+        "quantity_precision": 0,
+        "routing_digest": "bfd1f4f7ca7206dab3b9469856bd875bb679c72b3f93f4e99e1c3859bdfd6a9f",
+        "routing_id": "ME2R-8DE3C4554AC44ACA9EF064244C392D83",
+        "schema_version": "manufacturing-planned-requirement-v1",
+        "scope": {
+          "legal_entity_id": "entity",
+          "organization_id": "org",
+          "workspace_id": "work"
+        },
+        "sequence": 1,
+        "source_digest": "a4fdc9590ed7bd067b75f3cb0af58a8b44351744642794a3fb190b5c69a3e82f",
+        "uom_code": "EA",
+        "uom_id": "UOM-9d00046016e0cec9"
+      },
+      {
+        "bom_digest": "ca7c5b540fe9ac1e2b5bb155060c19cd947eda81c41bd21415b1a81388f18e7d",
+        "bom_version_id": "ME1B-614CBE64F8D94A24A5B6061F30CE8997",
+        "coverage": {
+          "gross_quantity_scaled": "3000",
+          "observed_available_scaled": "500",
+          "observed_fifo_free_scaled": "500",
+          "observed_reserved_scaled": "0",
+          "onhand_reserved_scaled": "500",
+          "requirement_digest": "dbed5edcb7e8b26a8ed32c03e2990a65c030d9e2c378ee277e2498159653e99f",
+          "requirement_id": "MSP1D-F0E229200F4F725721B8D4AEE3727E97",
+          "schema_version": "manufacturing-supply-coverage-v1",
+          "shortage_quantity_scaled": "2500"
+        },
+        "coverage_digest": "340119fd9901b0b7b2ab89c28ea38fa4ea1c0212ec1217b0cccf128479a0ba07",
+        "gross_quantity": "3.000",
+        "gross_quantity_scaled": "3000",
+        "id": "MSP1D-F0E229200F4F725721B8D4AEE3727E97",
+        "inventory_account_id": "ACC-e172c11784d6b425",
+        "item_code": "MATERIAL",
+        "item_id": "ITEM-ed165cd9c22d04b5",
+        "location_id": "LOC-2891c8f0d3efdaa3",
+        "plan_digest": "83168181ab5117bd761d25e3b9a861d9d63b8f32ec095a7eb281d35620b1785d",
+        "plan_id": "MSP1-60B895CCA364436DA41D0EE89EFEA190",
+        "quantity_precision": 3,
+        "routing_digest": "bfd1f4f7ca7206dab3b9469856bd875bb679c72b3f93f4e99e1c3859bdfd6a9f",
+        "routing_id": "ME2R-8DE3C4554AC44ACA9EF064244C392D83",
+        "schema_version": "manufacturing-planned-requirement-v1",
+        "scope": {
+          "legal_entity_id": "entity",
+          "organization_id": "org",
+          "workspace_id": "work"
+        },
+        "sequence": 2,
+        "source_digest": "dbed5edcb7e8b26a8ed32c03e2990a65c030d9e2c378ee277e2498159653e99f",
+        "uom_code": "KG",
+        "uom_id": "UOM-b72fd49f8923fde5"
+      }
+    ],
+    "posting_date": "2026-10-04",
+    "procurement_claims": [
+      {
+        "coverage_digest": "340119fd9901b0b7b2ab89c28ea38fa4ea1c0212ec1217b0cccf128479a0ba07",
+        "id": "MSP1Q-09E24A651F2B4D94A0A8D2C7A0832742",
+        "item_id": "ITEM-ed165cd9c22d04b5",
+        "location_id": "LOC-2891c8f0d3efdaa3",
+        "plan_digest": "83168181ab5117bd761d25e3b9a861d9d63b8f32ec095a7eb281d35620b1785d",
+        "plan_id": "MSP1-60B895CCA364436DA41D0EE89EFEA190",
+        "quantity_precision": 3,
+        "quantity_scaled": "2500",
+        "requirement_digest": "dbed5edcb7e8b26a8ed32c03e2990a65c030d9e2c378ee277e2498159653e99f",
+        "requirement_id": "MSP1D-F0E229200F4F725721B8D4AEE3727E97",
+        "requisition_id": "PSREQ-00653fcc8d062b81",
+        "schema_version": "manufacturing-planned-origin-v2",
+        "scope": {
+          "legal_entity_id": "entity",
+          "organization_id": "org",
+          "workspace_id": "work"
+        },
+        "source_digest": "d4a9dfe1c46d8ab7bf06dbfaa82e2c0d5cf3e6fb3d2a085dc94f0caa3075d30e",
+        "source_line": 2,
+        "state": "HandedOff",
+        "uom_id": "UOM-b72fd49f8923fde5"
+      },
+      {
+        "coverage_digest": "3d599b8792b99987b11893a7506b2cabec39c2a3f80e3f4755bcd1ae4f40f825",
+        "id": "MSP1Q-A7EB0BAAAA4B472C94DDE6D7468CD7F4",
+        "item_id": "ITEM-de35119264de236c",
+        "location_id": "LOC-2891c8f0d3efdaa3",
+        "plan_digest": "83168181ab5117bd761d25e3b9a861d9d63b8f32ec095a7eb281d35620b1785d",
+        "plan_id": "MSP1-60B895CCA364436DA41D0EE89EFEA190",
+        "quantity_precision": 0,
+        "quantity_scaled": "1",
+        "requirement_digest": "a4fdc9590ed7bd067b75f3cb0af58a8b44351744642794a3fb190b5c69a3e82f",
+        "requirement_id": "MSP1D-CB59021B20243297B5E743CB14166CCE",
+        "requisition_id": "PSREQ-00653fcc8d062b81",
+        "schema_version": "manufacturing-planned-origin-v2",
+        "scope": {
+          "legal_entity_id": "entity",
+          "organization_id": "org",
+          "workspace_id": "work"
+        },
+        "source_digest": "57781c1c88f6f931f7ce0b17e59db52225d90de469bcff95bf874c573fcead59",
+        "source_line": 1,
+        "state": "HandedOff",
+        "uom_id": "UOM-9d00046016e0cec9"
+      }
+    ],
+    "reason": "Genuine pre-stock planned production",
+    "requirements": [
+      {
+        "inventory_account_id": "ACC-e172c11784d6b425",
+        "item_code": "ITEM",
+        "item_id": "ITEM-de35119264de236c",
+        "quantity": "2",
+        "quantity_precision": 0,
+        "quantity_scaled": "2",
+        "required_quantity": "2",
+        "required_quantity_scaled": "2",
+        "requirement_id": "MSP1D-CB59021B20243297B5E743CB14166CCE",
+        "uom_code": "EA",
+        "uom_id": "UOM-9d00046016e0cec9"
+      },
+      {
+        "inventory_account_id": "ACC-e172c11784d6b425",
+        "item_code": "MATERIAL",
+        "item_id": "ITEM-ed165cd9c22d04b5",
+        "quantity": "3.000",
+        "quantity_precision": 3,
+        "quantity_scaled": "3000",
+        "required_quantity": "3.000",
+        "required_quantity_scaled": "3000",
+        "requirement_id": "MSP1D-F0E229200F4F725721B8D4AEE3727E97",
+        "uom_code": "KG",
+        "uom_id": "UOM-b72fd49f8923fde5"
+      }
+    ],
+    "reviewer_actor_id": "checker",
+    "routing_digest": "bfd1f4f7ca7206dab3b9469856bd875bb679c72b3f93f4e99e1c3859bdfd6a9f",
+    "routing_id": "ME2R-8DE3C4554AC44ACA9EF064244C392D83",
+    "row_version": 29,
+    "schema_version": "manufacturing-supply-plan-v1",
+    "scrap_account_code": "SCRAP",
+    "scrap_account_id": "ACC-3500aa0170a55bea",
+    "source_digest": "83168181ab5117bd761d25e3b9a861d9d63b8f32ec095a7eb281d35620b1785d",
+    "stock_claims": [
+      {
+        "id": "MSP1K-29244FAB26FE490CB2C52A5D81304DFB",
+        "native_receipt_plan_id": null,
+        "origin": "OnHand",
+        "quantity_scaled": "1",
+        "requirement_id": "MSP1D-CB59021B20243297B5E743CB14166CCE",
+        "state": "HandedOff"
+      },
+      {
+        "id": "MSP1K-6D112F9198564B16B91A1FE39FBDB0AB",
+        "native_receipt_plan_id": null,
+        "origin": "OnHand",
+        "quantity_scaled": "500",
+        "requirement_id": "MSP1D-F0E229200F4F725721B8D4AEE3727E97",
+        "state": "HandedOff"
+      },
+      {
+        "id": "MSP1K-D3F2DD4469FC4EC99FEF7F9CAA633359",
+        "native_receipt_plan_id": "IRP1-PLAN-44aeafa8b8a0643d79756b18cfbf0e0f",
+        "origin": "Receipt",
+        "quantity_scaled": "1500",
+        "requirement_id": "MSP1D-F0E229200F4F725721B8D4AEE3727E97",
+        "state": "HandedOff"
+      },
+      {
+        "id": "MSP1K-F76436D3EC4C4ACDA90C2BF17C31B500",
+        "native_receipt_plan_id": "IRP1-PLAN-ac59b036471d13a9c03a538dddf47cc2",
+        "origin": "Receipt",
+        "quantity_scaled": "1",
+        "requirement_id": "MSP1D-CB59021B20243297B5E743CB14166CCE",
+        "state": "HandedOff"
+      },
+      {
+        "id": "MSP1K-F9695BE355F546B8A4C54814A530581D",
+        "native_receipt_plan_id": "IRP1-PLAN-525164c1ef327679fe1a8d9f5a47d845",
+        "origin": "Receipt",
+        "quantity_scaled": "1000",
+        "requirement_id": "MSP1D-F0E229200F4F725721B8D4AEE3727E97",
+        "state": "HandedOff"
+      }
+    ],
+    "unit_price_ceilings_minor": {
+      "ITEM": "1200",
+      "MATERIAL": "100"
+    },
+    "wip_account_code": "WIP",
+    "wip_account_id": "ACC-7069207d06f142ab",
+    "workspace_id": "work"
+  }
+}

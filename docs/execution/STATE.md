@@ -1,6 +1,3618 @@
-﻿# Execution State
+# Execution State
 
-Updated: 2026-08-24
+## PR141 integration policy — 2026-10-18
+
+Review/merge target is main, as explicitly requested. Keep all work in this
+primary checkout and fast-forward local main only after the reviewed final
+candidate's required checks pass. ADR0868 corrects three component assertions
+that observe focus before the existing React effect. The original4ff88aff web
+failure, backed-up local edits, successor checks and eventual merge receipt are
+retained in `output/pr141-merge-review`. Earlier099d results remain bound to
+099d; no later-head or whole-M7 acceptance is inferred from them.
+
+## Full regression follow-up — 2026-10-18, completed for required profiles
+
+The interrupted regression is completed from `F:\reconforge-erp`, exclusively
+in the primary checkout on `amr/full-regression-20261018`. No worktree was created.
+Frozen code `099d5dde4d113a8df2a1df35325c4a51ff6b87c3` passes CI39103245278:
+79/79 successful jobs, including all mandatory native shards and the aggregate.
+Same-source Security, Docker and CodeQL pass. Python3.11 and3.12 each pass9583
+cases with663 inherited prerequisite skips. Web passes1111 component cases and
+19 general E2E cases. All30 hash-verified enterprise browser/recovery reports
+pass; the two monetary cycles include347-table restores and byte-identical
+independent isolated proofs. Source merge/head trees match.
+
+Frozen local native profiles pass194 cases/75 modules/834.141s and314 receivables
+cases/15 modules/281.234s, both zero failures/errors/skips and unchanged099d
+source. These profiles overlap and are not summed. Ruff, Mypy829, Bandit,
+dependency checks, typecheck/build and full package publication closure pass.
+Repairs cover fixture isolation/finite grants, current-read admission,320px
+layout, actual scoped-denial audit, versioned native query preparation and four
+AR binding-before-customer admission calls that eliminate witnessed deadlocks.
+All original financial, authorization, restore and independent-reader gates,
+timeouts, resource bounds and retry policies remain in place.
+
+The initial unconfigured full-run failures, intermediate failures and mixed-head
+864-case cohort remain source-qualified history. Generic skips and heavy1M/10M,
+public-network and OS prerequisites are not relabeled as passes. Earlier extra
+Windows monetary browser deadline/render negatives remain historical; no final
+Windows browser rerun is claimed. Whole M7 remains INCOMPLETE. Final status
+documentation does not change tested runtime/test/workflow sources.
+
+Both owned local PostgreSQL fixtures and expired credentials are removed;
+recovery evidence is retained. See [the full record](FULL_REGRESSION_2026-10-18.md)
+and [machine-readable closure](FULL_REGRESSION_2026-10-18.json), SHA256
+`b31aaa17ecca21d4382a43bd5f8f5315290d68d30f899626dfeb82cbee86f6d3`.
+
+## Single working directory — 2026-10-18
+
+All current work is consolidated in `F:\reconforge-erp`, on local branch
+`amr/single-workspace-20261018`, from integrated source `bfc138a13c05513dc5c6e7bf23c81f013a0df123`
+(750 commits beyond the former primary checkout). Four secondary worktrees
+were removed after patch-equivalence and backup verification; 46 stale
+registrations were pruned. Do not create further worktrees (ADR0863).
+The two former primary SQL-assembly edits are preserved in a stash, patch and
+original-file copies; their emitted SQL was unchanged, and the newer source
+already separates the migration fragments. The recovery bundle and retained
+artifacts are indexed in [the consolidation record](WORKSPACE_CONSOLIDATION_2026-10-18.md).
+176 selected Python tests and 1106 web tests pass, together with Ruff, Mypy,
+web typecheck/build and diff validation. Full pytest was stopped after 439.729s
+and is incomplete. Historical M7 acceptance blockers below remain open.
+
+## M7 final closure mode — frozen requirements (2026-10-16)
+
+The latest human directive freezes M7.7/M7.9; whole M7 stays OPEN. No optional
+scenario, new domain or nonblocking performance comparison is authorized
+in this closure round. Remote Draft140 is63f74155. Actual native zero-reuse
+passes1/0skip248.031s,19-function149 migration5/0skip106.152s, and independent
+raw91/I-I-O/3tampers derives5effects/12lines/Dr=Cr233. All eight monetary native
+CI shards, Docker, CodeQL and manual Security5/5 pass. Five witnessed CI failures
+remain negative: four HTTPS cases and the historical quantity-gate fixture.
+That same fixture passes1/0skip48.873s after local81519d64's test-only repair.
+The fixed envelope now passes snapshot reading. A separate actual all91 check
+proves balance GET changes only the two quantity-gate version fields; read-path
+source-proof correction is under independent review. Legacy zero/restituted
+still exceed the unchanged15s POST bound; reviewed same-invocation full-proof
+consolidation must pass actual operation gates. Final-source HTTPS/347-table
+restore and coherent CI remain OPEN. No observer equality or control is relaxed.
+Main and the two primary dirty file hashes remain unchanged.
+
+Retained predecessor0d5a7d2a has terminal CI75 success/
+4 failure/79 jobs; local reader-only integration is00c3ce16. Actual zero-reuse
+passes1/0skip403.578s, legacy compatibility3/0skip103.825s and migration149
+5/0skip101.405s, with source/cleanup verified. Independent corrected IRP reader
+qualifies actual raw6 through identical-I/-I-O output and3 tamper refusals,
+deriving5 effects/12 lines/Dr=Cr233. All hosted native shards and current manual
+Security5/5, Docker and CodeQL pass. Required remaining defects are the old
+zero/restituted15s POST waits and the monetary identity/foreign escaped-envelope
+size refusal; source fixes and final exact-head HTTPS/restore/CI remain OPEN.
+Main and the two primary dirty file hashes are unchanged.
+
+### Retained predecessor attempts (source-qualified historical limits)
+
+Predecessor15a1149d terminal CI has69 success/10 failure/79 jobs.
+Earlier02b3 terminal CI records
+56 successful and23 failed jobs of79, all originals retained. Accepted139
+remains375, and main plus the primary user's two dirty files are unchanged.
+The coherent local repairs cover the observed financial-owner callback ACL
+regression, exact admin Cash scope and historical-fixture guard overwrites.
+Native5 migration cases pass221.677s onfb5c and selected6 native security cases
+pass395.101s oncd3c. Actual0d2a zero-reuse fails90.431s at a new dispatch alias
+named document shadowing an original RECORD; its failure is not reclassified.
+The limited dispatch_* alias repair is integrated. Required remaining work:
+Actual6aeffb13 rerun fails1/0skip194.168s at IT1 review: the authoritative
+shared FIFO quantity sum excludes genuine Q1/V0 restored stock. Its clean source,
+owned cleanup and negative closure039c6f1752233dc433f621c3ea6fcf37cf05eef5bad2c7f912ec1b7bc8173361
+are retained; no complete six-stage raw91 packet exists. The bounded repair must
+preserve original units, positive-layer sums and all unreleased global claims,
+admitting zero-value quantity only through current native restitution proof.
+The migration custody inventory now includes that17th retained function.
+The next actual3e834c3c attempt fails1/0skip100.848s with stack-depth exhaustion:
+FIFO proof reaches Stock live capacity through both transfer-source closure and
+zero-consumption facts. Source, saved executed launcher and owned cleanup remain
+unchanged; no raw packet exists. The source review's earlier no-cycle judgement
+is withdrawn. Separate full historical source proof from live capacity, retaining
+every current command/deferred capacity check and all accounting/source guards.
+The source regression also catches the retained v3 zero-consumption fallback
+before DB execution. Preserve that full historical proof separately while its
+legacy current Stock close keeps capacity; retained-function custody becomes18.
+Actual15a1149d removes the stack cycle but fails1/0skip127.946s on the unchanged
+SQL30s bound during the first zero Return; negative9a300382 is retained. The
+bounded same-post diagnostic passes25.396s with cleanup/source unchanged, including
+23.361s deferred closure and15 repeated whole-physical cost adoption calls. This
+is not native-cycle acceptance or a speed comparison. Restrict the FIFO quantity
+proof to the exact existing cost factory minus only its final all-physical adoption
+call; keep full originals, every live owner/adoption guard and global claims.
+Required remaining work is to rerun that same zero-reuse case with its six original raw91 captures, independently
+verify them, run both actual monetary HTTPS/restore cycles, and accept the final
+coherent source through required native/legacy/CI/security/Docker/CodeQL gates.
+No external architectural decision currently blocks these finite repairs.
+
+The following source-qualified checkpoints retain their original limits.
+
+## Current actual M7 gate (2026-10-16, accepted375 / Draft140)
+
+Whole M7 remains OPEN; the master matrix retains M7.7/M7.9 INCOMPLETE.
+Complete native149, source/phase/history/physical/FX owners, API/Studio and
+mandatory native/HTTPS CI wiring are published in Draft140 above unchanged139.
+Actual02b3 fractional0.1 return/cancellation/inverse passes1/0skip97.422s;
+identity credit/second collection/refund/inverse/final-settlement passes1/0skip
+278.255s. Independent component closures cfad773e and5a1df580 bind source,
+original XML, mandatory plugin and owned cleanup. Actual c14a positive transaction
+cash/zero functional journal case passes1/0skip85.930s. Foreign02b3 reaches
+history6 but final refund fails closed at the existing30s SQL limit; its509.042s
+negative and successful source/fixture cleanup remain preserved.
+Actual empty
+148→149→148→149 and retained installer replays pass22699f7d, preserving all16
+old function OIDs/ACLs/attributes and original downgrade bytes on that exact
+earlier source. A347-table catalog capture is retained with its temporary DB
+removed. Hosted02b3 CI preserves real legacy79 catalog and IT1 alias failures;
+Security preserves two Bandit B608 failures. The verifier template repair emits
+the exact same120510 SQL bytes. The RLS downgrade refusal guard and reviewed
+posted-snapshot reuse repair are integrated. Actual598212e2 foreign cycle now
+passes1/0skip411.655s, including the final refund within the unchanged30s actor
+statement limit; source, child-job cleanup and owned-database cleanup pass.
+Actual3d7bad5a empty roundtrip plus non-bypass DDL-owner refusal pass2/0skip
+63.407s, independently qualified at61908f13. The original509.042s failure stays
+retained; different pass/fail outcomes establish no comparable speed gain.
+Closed legacy79/86 and67/74 adapters, explicit fixture-only ACL restoration,
+owned-event callback admission and rollback-before-retryable-conflict are
+integrated. Actual raw91 chronological financial proof, monetary HTTPS/restore,
+updated17-case security and final coherent CI remain required. Full frontend
+component proof1095 PASS/typecheck/build is bound to unchanged F9 UI bytes.
+No whole-M7, country, production or comparable-performance acceptance is claimed.
+All old failures remain external; the following checkpoints are historical.
+
+## Current M7 integration and recovered workspaces (2026-10-16)
+
+Accepted source remains375 below. Unpublished integration checkpoint
+`f1422636e461bf3049048ed9ab06a75992d45b11` includes fixed F/L Stock and partial
+owners, real versioned API/Studio/valuation paths, exact retained620-route proof,
+physical/transfer-cost-v4 components and independent raw91 reader stages.
+The updated authorization inventory passes46 cases; the independent reader
+passes194 pure cases on334be0fd. B377c component closurec682e89b records111 Python
+and105 frontend cases plus build/type checks. These are component results, not
+native149 or complete financial-cycle acceptance. Native cycle3, migration3 and
+security9 cases are collected; none has run on149. Core source/phase/immutable
+guards, complete149 exports, migration assembly and actual gates remain open.
+
+All four `.codex/worktrees/enterprise-m7-*-recovered` checkouts and their Git
+metadata disappeared during work; the cause is undetermined. Existing branch
+refs/commits survived. Work resumes under `F:/ReconForge_Worktrees/` in four
+ordinary Git worktrees. A recovered605 uncommitted lines from exact five original
+tool patches and committedba820986; C is reconstructing its five-test valuation
+addition. B had no uncommitted work. Root's installer WIP was retained. Verified
+incremental four-branch bundle9ca4bcbad4d5d35215fa0c129370fc9ae6184d666635520ffad2c09af351c20
+requires accepted375. Primary69951414, mainb61ea56b and both preexisting dirty
+schema-file SHA256 values remain unchanged. No native worker or partial149
+installation ran during recovery. Whole M7 remains OPEN; no new domain started.
+
+## Completion first — one domain at a time (2026-10-15)
+
+Accepted bounded M7 source: `37518287126e0f630e726592dda8cc981faa2a96`.
+CI38771788999 passes74/74 at attempt1, zero failed/cancelled/skipped jobs.
+M7 native60 PASS/7 commands/0 critical skips; five partial-browser jobs execute5
+first-attempt cases plus CR1 executes3. All six use real HTTPS, populated340-table
+restore and three tampers each. Python3.11/3.12 each pass8408 with663 inherited generic skips; Docker and
+CodeQL pass. Manual exact-image Security38771976983 passes5/5:0 Critical/High,
+9 Medium,1 Negligible,3/68 SBOM records missing license metadata. No legal
+compatibility or production assurance is inferred. Joined closure08b2463a binds
+171 required original files/14458907 bytes on immutable375.
+
+The master marks M7.1–6 and M7.8 VERIFIED COMPLETE only for the unchanged
+zero-tax/functional-currency/untracked v1/v2 contract. Mandatory M7.7 and dependent
+M7.9 remain INCOMPLETE; whole M7 is OPEN. A/B/C continue the SAME M7 tax/FX
+original-source and return dependency in unpublished worktrees. No new major
+domain or milestone has started. Accepted375 stays fixed in its original branch
+and Draft139 while the next coherent source is built separately.
+
+The following component notes record earlier checkpoints, including their old
+pending statements and negative originals; they do not supersede current status.
+
+Latest integrated slice: actualc70 settlement/cash-race2 PASS, including native
+invoice/exposure/current and overdue aging at seven stages. New79-table originals
+independently derive9/18/205000 and9/19/221000 (I/IO closure813f8f56).
+Actual713 ordinary/refund Studio aging, bilingual HTTPS and populated restore
+pass on the new985c4a build; independent peers0368741c/01bcaabc bind6 NEW/12/4001
+and8 NEW/17/81000, with79-table restores660/1140 rows. Actual5cdb mixed0+10
+consumption passes; new frozen48fd reader independently derives9 TOTAL effects,
+18 lines/Dr=Cr433, equal-I/IO proof90d1bd4b and closure984fc405. Actual corrected
+backdate security passes1/1 atcdd. Component results retain their own heads.
+
+CI38751026869 on cdd is a preserved terminal failure: Python8385 PASS plus one
+bad lstat test double, and native8 PASS/2 FAIL on obsolete78-table capture.
+The aggregate fails closed. Terminal totals are68 success/4 failure/1 cancelled/
+1 skipped; the fourth browser job records25 minutes of total job metadata while
+the official Check Run annotation proves its20-minute execution ceiling was
+exceeded during Studio build, before HTTPS. Direct log retrieval retains404 and
+bounded run-ZIP downloads remain incomplete. The exact npm/build/Playwright
+subcommand and underlying stall cause remain unknown; supplemental receipt
+216a1222 preserves the earlier bf9c3e91 qualification. Both narrow fixes
+execute their targeted gates;
+Linux affected stat case also passes. Original Gitleaks protocol-fixture false
+positive is corrected without scanner exceptions; tree and HEAD-history scans
+pass. Local all-refs scan separately refuses an old synthetic fixture in a
+nonancestor local branch; it is not relabeled as a candidate-history success.
+Package preflight first refused missing ADR0861; the explicit manifest fix then
+passes source/wheel inspection at ac5fec69. Cohesive new-head CI and security
+qualification remain pending. M7 stays OPEN, including its original tax/FX gap;
+the team has not advanced to Manufacturing or another major domain.
+
+Earlier scoped checkpoints retain their exact heads and outcomes below.
+
+Frozen373362a6 actual zero-resale HTTPS/populated restore passes243.031s:
+4 checkpoints/79 tables/2 sources,5 actual effects/10 lines/Dr=Cr203,
+3 later observations/76 valid audit appends and79 restored tables/1518 rows.
+The actual old-return dependency refusal, lost ACK, bilingual/RTL/Axe assertions,
+three tamper refusals and source/build/runtime cleanup pass. Isolated proof
+596a7255 is byte equal. Native full new5-security plus affected mixed executes
+5 PASS/1 FAIL/0 skips358.344s; mixed and first4 hostile cases pass. The fifth
+observation stops at reserved SQL alias day before the intended backdate check;
+its two-name test-only correction still needs execution. Root's full Ruff,
+mypy809 and Bandit pass. Draft139 now holds373362a6 and CI38749652508 is pending;
+this is not final acceptance. Remaining zero/refund HTTPS and final-head gates
+remain OPEN. Ordinary9af independent custody closes951737e5, preserving the
+original340-table restore and the distinct later identity_users probe checkpoint.
+
+Earlier scoped checkpoints follow without changing their original outcomes.
+
+Latest scoped evidence: ordinary-v2 HTTPS on frozen9af22802 passes3 posted
+returns, lost-response replay, bilingual/RTL/accessibility assertions and populated
+restore. Independent isolated readers agree on6 new effects/12 lines/Dr=Cr4001;
+all79 restored financial tables/646 rows match. Product peer c1afe7d6 verifies the
+actual browser original; independent custody review remains separate. The same
+head's zero-cost resale/new-return case passes and its four79-table raw captures
+independently yield5 effects/10 lines/Dr=Cr203, closure3d3bc3d3. Its whole native
+cohort remains2 PASS/1 FAIL. The SQL chronology fix then passes the empty148
+catalog/data/OID roundtrip at5f1ea229; mixed posting proceeds but its observation
+query fails on an ambiguous column. Original failures remain retained. The narrow
+query correction, new hostile SQL cases, remaining v2 HTTPS/restore cases and
+final unified CI are not accepted yet. M7 remains OPEN; no new major domain.
+
+The following paragraphs preserve earlier checkpoints and their original scope.
+
+The new restituted Stock cycle is still unaccepted. Actual3947 fails at148 SQL
+compilation (1 failure/2 setup errors); narrow CASE fix ac7 then passes the empty
+147↔148 catalog/data/OID roundtrip1/1 in47.578s. Its business2 first fail on
+polymorphic trigger record access; subsequent4236 business2 expose a new alias
+collision and correctly refused backdated fixture. Subsequentc255 business2 reach
+zero delivery but expose nullable-composite claim/entry handling and an actual
+receipt-chronology integration gap after a CR2 physical correction. All originals
+retain zero skips, unchanged source and owned-DB cleanup. The next narrow fix
+binds real empty entry descriptors and exact closed CR2 valuation ownership;
+no operational success, actual v2 HTTPS or populated-zero restore is claimed.
+
+The unchanged populated0099 AR restore passes on frozen8e1dcfcd:1/0 failures,
+errors or skips in12.719s, preserving11 table digests,15 legacy raw denials and3
+forged policy refusals. Independent peer a4eb1e72 rehashes all11 originals and4358
+source contents; the fixture stays at0099. This closes the old AR compatibility
+checkpoint only. CI38685992235 remains the original failed hosted run.
+
+Current M7 closure remains OPEN. On frozen998f7fe0 the affected zero lifecycle
+executes1 PASS/0 failure/error/skip in126.516s, and the five direct-SQL/authority
+cases execute5 PASS/0 failure/error/skip in238.657s. Both retain unchanged source,
+ordinary five-false role flags,30s statement timeout and owned-DB cleanup.
+Original ten-file closures309da3ab and4d35591b bind these specific gates;
+4355 tracked Git contents and explicit checkout line-ending policies agree.
+This is not a whole16-case rerun, HTTPS, populated-zero restore or final acceptance.
+The zero lifecycle now replays exact ACKs, posts/reverses zero effects and single
+revenue/cost legs without a zero journal. The SQL gates reject forged before-value,
+reused zero witnesses, malformed policies and revoked posting authority.
+
+The original native12c314ee16 cases execute
+10PASS/6FAIL/0skip (889.172s); the affected f2052c2c6 cases fail at a distinct
+retained-ACK empty-entry monetary projection (150.390s), after first preparation
+succeeds. Both runs have unchanged source and owned-DB cleanup. Original negative
+files are retained. The subsequent998 fix preserves original monetary exposure
+while explicitly admitting only the v2 zero-leg shape. No zero journal is introduced.
+An unexpected disappearance of active worktree inner directories required fresh
+managed checkouts from retained refs. Root f205 source4355/4355 byte hashes match;
+main and both primary dirty-file hashes remain unchanged. Agent drafts were
+reconstructed from owned recorded writes and checkpointed with targeted checks;
+no independent comparison to the lost uncommitted bytes or whole-domain acceptance
+is claimed.
+
+Actual additive148 migration gates on frozen8f163527:3 PASS/0 failure/error/skip,
+516.031 seconds. Empty147→148→147 restores all rows/catalog/function identities;
+retained posted-v1 history and original ACK survive upgrade/downgrade; retained
+v2 source refuses downgrade before any catalog/data mutation. Tuple/dict installer
+replay retains the full upgraded snapshot. Source unchanged and owned databases
+removed. Original10-member custody fc881481 is retained externally. This closes
+that migration checkpoint only. New v2 operations/security/HTTPS/zero-stock reuse
+and final cohesive acceptance remain open.
+
+Current5017 actual affected5 and hosted native18 pass with zero critical skips.
+Its full eight-event Studio HTTPS cycle and populated339-table restore pass;
+independent raw-row proofs derive17 effects/35 lines/Dr=Cr385000. Separate new
+cash-split/wait-race raw proofs derive9/18/205000 and9/19/221000. Manual image
+security5/5 passes with0 Critical/High and retained Medium/license gaps.
+Full CI38685992235 is not accepted:62 successful jobs,4 failures and1 skipped.
+Both Python versions failed one stale phase-name assertion; AR restore at retained
+0099 encountered a new147 column, and the aggregate boundary job failed closed.
+Strict current-governance correction80cb9ba2 passes11 targeted cases. The AR
+compatibility fix is in progress without upgrading its old fixture to hide the bug;
+the original hosted failures remain retained. The same three agents now close
+M7.6's remaining-value and zero-leg paths under additive148/ADR0861, with preserved
+legacy versions and no new major domain. New v2 functionality lacks cohesive
+final acceptance, actual v2 HTTPS/populated restore and zero-stock reuse proof.
+The earlier component subjects below retain their original outcomes.
+
+The authoritative remaining-work inventory is
+[ENTERPRISE_COMPLETION_MASTER_MATRIX.md](ENTERPRISE_COMPLETION_MASTER_MATRIX.md).
+M3/M4 original closure bytes and fresh official Draft heads were verified without
+repeating their accepted tests. M5/M6 scoped acceptance remains retained.
+The following paragraph is the preserved earlier checkpoint, superseded by the
+executed5017 outcomes above; its original negative receipts remain immutable.
+M7 partial customer returns are OPEN. Native025 now posts actual repeated returns,
+later collection and partial refunds; an isolated independent reader derives
+12 effects/24 lines/Dr=Cr238000 from original rows. Nativeea457 lifecycle5 passed;
+the scope-wait expected-code failure is retained. Actual7d transfer/retry/scope
+withdrawal both pass; actual095 rounded original/Consumable both pass. Whole18
+SQL/security executed15 PASS/3 FAIL/0 skips on095; the original negative closure
+53c3f697 is preserved. Three narrow harness corrections require affected reruns;
+their remaining wait/rollback assertions are not accepted. Actual8f HTTPS first post/replay reaches a failed
+observer comparison; retained originals prove only valid authorization-audit
+growth, with all76 business tables unchanged. Source545 supplemental-observation
+contracts have339 targeted passes, without an actual HTTPS acceptance. Full78 observations,
+eight-event HTTPS, populated restore and final-source acceptance remain required.
+Three agents now cooperate on this same domain: native owner/data, API/Studio,
+independent financial/security/recovery verification. Root owns shared migrations
+and integration. No new domain or small successor milestone is opened.
+Functional closure precedes comparative benchmarks and production qualification.
+Main and both primary dirty files retain their original heads and SHA256 values.
+The historical checkpoints below remain original subjects, not current priorities.
+
+## M3/M4 accepted; cohesive M5 source gate proceeds (2026-10-14)
+
+Current accepted dependency heads are M3 `18d81cc5` (CI62/62) and M4
+`d9f2e031` (CI64/64), with original downloaded archives, actual manual image
+security5/5, current-source package closure and independent original readers.
+PR135/136 final bodies were PATCH/GET verified; Draft status and main remain.
+Earlier sourcing timeout and missing local evidence remain separately disclosed.
+M5 corrects original-price/current-read authority across CR1/StockSales/Commerce
+without altering WRITE amounts or accepted financial history. Fresh Stock
+native9 and multi-warehouse commerce compatibility passed with integer/Fraction
+oracles; retained ACK regression is corrected by comparing actual row contents.
+An actual rejected Studio lazy asset also exposed missing workspace containment.
+The new bilingual manual recovery boundary has726 passing React cases. Strict
+private reporter/attachment custody and final three-case HTTPS/333-table restore
+and cohesive hosted acceptance remain pending. Source is frozen only after peer
+review; unpublished development receipts do not replace final source gates.
+No147 migration, new money/identity/GL engine, benchmark or statutory country
+acceptance follows. Performance is still deferred by the human; country packs0.
+See ENTERPRISE_COMPLETION_M5_2026-10-14.md and WORKTREE_RECOVERY_2026-10-14.md.
+
+## Enterprise M1 integrated cycles; final hosted gate pending (2026-10-13)
+
+Draft [PR133](https://github.com/amrzainmubarak/reconforge-erp/pull/133) is above
+accepted Wave5 PR131. Manufacturing inspection/cancel/re-preparation, paired
+foreign trade/translation/elimination and private wage/time/budget/partial cash
+all have actual socket HTTPS/Chromium and301-table populated native restore
+receipts with zero browser skips, three tamper refusals and owned cleanup.
+These belong to their individually recorded commits; they are development
+closure, not final hosted acceptance. Adversarial SQL/current authority and
+legacy posting/rollback issues found by initial CI were repaired and tested.
+The final cohesive source now proceeds to Python/PostgreSQL/React/package/
+HTTPS/security/Docker/CodeQL gates. Source-qualified evidence and remaining
+scope are in ENTERPRISE_M1_PROGRESS_2026-10-13.md. M2 development continues in
+three separate worktrees (141 accrual/deferral,142 supply,143 billing).
+Main and primary dirty files remain unchanged. Performance comparison stays
+deferred by the human; activated statutory country packs remain zero.
+
+## Enterprise program activated after actual Wave5 quality closure (2026-10-13)
+
+Wave5 accepted source542d4282 has actual CI44/44, Docker/CodeQL and manual image
+security5/5; PR131 stays Draft above PR130, with original chain/main/dirty files
+preserved. Local comparative performance remains deferred by the human and false.
+M1 three parallel owner cores are now implemented and integrated for targeted
+PostgreSQL/migration/API/Studio gates; final frozen-source hosted acceptance is
+pending. M2 pure accrual/deferral is separate; project billing and supply planning
+follow dependencies. [Current scoped matrix](ENTERPRISE_M1_PROGRESS_2026-10-13.md)
+records actual development versus ordered-head evidence and remaining gaps.
+All countries remain target; proven activated statutory packs0. The historical
+pending checkpoints below retain their original subjects and are superseded for
+Wave5 quality by the actual542 closure, never for unperformed benchmarks.
+
+## Source archive diagnostic dependency correction (2026-10-12)
+
+Independent inspection of the original6ce3.12 source-closure report found both
+diagnostic tests packaged but their two .github script dependencies absent. The
+existing selected-member archive gate passed; it does not establish this missing
+dependency closure. Add the exact scripts/current closure inventory to MANIFEST
+and require fresh isolated imports from extracted source without application,
+DB or profiling imports/workloads. Eight regressions and257 related contracts including8 sharding contracts
+passed265cases/0failures/errors/skips; Ruff/diff passed. Fresh corrected source
+package and full hosted acceptance remain pending.6ce actual CI outcomes stay
+original and are not silently reclassified. Runtime/migration/Studio remain22.
+Measurement is deferred by the human; next program activation stays conditional.
+
+
+## Current corrective publication and deferred measurement (2026-10-12)
+
+Four quiet2 profiles completed and independently closed. The later V5 six-run
+attempt failed on AC loss: three complete populations, one interrupted after
+posting during reads, two unperformed. The secondary transaction shutdown error
+remains visible; no comparative acceptance or six-run medians. The human requests
+Wave5 gates now and measurement later. No further local benchmark is launched.
+Corrective source changes only portable test contracts and additive evidence/docs;
+application, migration and Studio trees retain accepted22 exactly.264 targeted
+cases passed; fresh full hosted acceptance on the corrective head remains pending.
+The all-countries program inventory is conditional on that actual quality gate.
+[Current source-bound closure](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md)
+records actual10K, diagnostic and failed attempts with their separate sources.
+Earlier checkpoints below retain historical status and are superseded explicitly.
+
+
+## Actual10K capacity and additional authorized local diagnosis (2026-10-12)
+
+Corrected62/current22 run38252859442 passed10000native effects+20separate warmups,
+30300reads and independent5028151631minor-unit equality. Two independent `-I`/
+`-I -O` audits and new59-input/60-member lossless capsule close source/PID/CID/
+normal cleanup. Posting3578.904546sec/TPS2.794151 is standalone capacity; no fair
+comparison, new10K raw-journal export/isolation or monetary cost is inferred.
+Previous15capsules and original f04 zero-business failure remain unchanged.
+The additional local quiet window is now explicitly authorized. Root isolated
+accepted22, retained exact harness/wrappers/oracles and began bounded diagnosis
+following actual5.86/5.47/3.66percentCPU/AC admission. All earlier pending statements
+below retain their checkpoint subjects. Publication4c fullCI failed its new test
+contracts;264targeted corrected cases and independent review passed. Corrected
+source full hosted acceptance remains pending. See [actual closure](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md).
+
+## Publication4c gate failures and portable test correction (2026-10-12)
+
+The actual publication head `4c464b67f8b1fe9dbead40e5cf158dc1a5d9ff91`
+[CI38257659454](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38257659454)
+failed: Python3.11 reported5543passed/2failed/663inherited prerequisite skips;
+Python3.12 reported5544passed/1failed/663inherited prerequisite skips.
+The failures were in the newly published diagnostic controller test contracts:
+a shared-process `sys.modules` assertion depended on full-suite import order,
+and the historical AST digest included3.12's empty `type_params` field absent
+from3.11. Original failure logs remain retained; this gate is not a success.
+
+Correct only that test file: restore temporary diagnostic-module registration,
+verify import independence in a fresh `-I` subprocess, and deep-copy ASTs to add
+only an absent legacy empty generic field. Preserve all original0756 hash pins,
+nonempty generic parameters, body differences and original AST objects. Three
+adversarial function/async/class cases retain those refusal boundaries. No
+application, migration, API, Studio, controller or financial oracle bytes change.
+The exact combined targeted gate passed264cases/0failures/errors/skips, with Ruff
+and diff checks. Full corrected-source hosted acceptance remains pending.
+Actual4c Docker/CodeQL and manual Security38258765073 succeeded separately;
+manual Security executed all5jobs, with0Critical/0High/9Medium/1Negligible image
+findings and65/68 license metadata coverage; legal compatibility is unassessed.
+Actual corrected62/current22 10K run38252859442 is still in progress; no completed
+10K population or fair performance gain is inferred. Previous22 acceptance and
+all original negative measurements below keep their historical source subjects.
+
+## Wave5 actual22 acceptance and retained negative comparison (2026-10-12)
+
+Accepted application subject22ebfd78 now has actual44/44 successful CI jobs,
+current security/CodeQL/Docker/package checks and current16.15/17.11 synthetic
+recovery. ME1/IC1/SRC5 bounded Studio-to-GL cycles are completed; their limits
+remain in the backlog. Three baseline636 and three current22 real1K populations
+passed independent financial oracles, but medianTPS fell11.80% and DBcgroupCPU
+rose7.44% under unresolved host load/frequency variation. Performance acceptance
+remains false; the tail outlier and earlier controller failures are retained.
+Cloud experimental a6 passed61 native/132 pure cases and six diagnostic runs;
+additive137 is isolated/unintegrated. Actual0756 nine-run large-journal financial/custody proof passed9000 lines/6012
+dimension links/1089 tenant-qualified effects; observed current22 whole stages
+51.589313→48.156226sec and clientCPU1.240840→0.916604sec coexist with primary
+throughput−7.15%. Reject137 integration: mixed block ratios/no convincing gain.
+Additional LOCAL quiet-window/fair performance acceptance remain pending. See
+[actual source/measurement closure](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md).
+Original final22 raw closure is published unchanged; older checkpoints below
+retain their actual historical pending/failure statements.
+
+## Wave5 integration and acceptance checkpoint (2026-10-12)
+
+Draft [PR131](https://github.com/amrzainmubarak/reconforge-erp/pull/131) remains
+stacked on accepted PR130 `6362724f2337a79c3d7569574f7bf9591a018524` and the
+129→124 dependency chain. Main and the primary checkout's two original dirty
+schema files remain unchanged. All new commits use Amr's author/committer identity.
+
+Implemented bounded cycles now have actual Studio/API/native financial and
+populated restore evidence: ME1 approved BOM→reservation→original FIFO issue→WIP→
+partial finished receipt/scrap; IC1 paired company books→partial settlement→native
+group elimination/report; SRC5 requisition→RFQ→quotation/selection→BPC purchase→
+partial receipt/AP/payments/release. The three complete original HTTPS/restore
+packets remain bound to `8513a9e2`; the cohesive PostgreSQL17.11 native gate at
+`e8e2de24` passed 73 cases with zero failures/errors/skips. Additive0136 restricts
+nine original inventory/FIFO tables; it does not rewrite financial history. The
+original tenant-global audit chain is explicitly disclosed as a workspace exception.
+
+The newer FX proof-lifecycle race was reproduced and fixed without bypassing
+actual cryptographic verification. On `b6fcf71d`, all68 Studio files/452 tests,
+TypeScript/build and actual five-stage FX HTTPS/populated restore passed. An
+independent Fraction reader admits exactly reviewed restore heads0131/0136 while
+retaining original catalog/RLS/population/effect/source-seal checks. The original
+reader's0136 refusal and both corrected/legacy isolated-Python outcomes remain
+retained. These results are source-bound, not relabelled as later HEAD executions.
+
+Actual `1a40bda0` hosted Python3.11/3.12 each passed5228 tests with663 inherited
+prerequisite skips; mandatory native pytest15 partitions/44 sessions completed1269
+selected tests with zero skip/xfail/xpass. Its web race failed, three other native
+partitions were cancelled, and dependent browsers/Docker did not execute. That
+whole CI run is failed. Actual manual Security38196678518 ran all five jobs,
+including image/SBOM, successfully on1a40. Subsequent D3 CodeQL, Docker, all five
+manual Security38202724005 jobs and local sdist/wheel/source-archive inspection
+passed with their original source identity. D3 ordinary Python jobs each failed
+eight execution-contract tests on one unquoted BACKLOG scalar, with5258 passes
+and663 inherited prerequisite skips. The one-line quoting repair retains the
+scalar/tasks; reciprocal review and22 affected cases passed on a8742d1c. Whole
+corrected-source hosted acceptance remains required. Actual D3 writeback recovery
+and owned cleanup passed on16.14/17.10; current16.15/17.11 execution is a separate gate.
+Completed D3 CI has44 jobs:41 success, two ordinary-Python failures and one dependent
+Docker-parity skip. The failed aggregate is retained despite successful native and
+enterprise browser/recovery partitions.
+
+Thirteen lossless evidence capsules preserve702 files with flat SHA256 indexes;
+715 ZIP members including their embedded indexes were checked during copying.
+Native/failed-web log indexes explicitly identify safe retained byte spans and
+omitted authentication/DSN setup; complete remote log hashes/lengths remain pinned.
+No result, raw financial report, source header or earlier failed packet is rewritten.
+The prior nine-capsule copy record remains intact; v3 records all thirteen additions.
+See [evidence checkpoint](WAVE5_ACCEPTANCE_CHECKPOINT_2026-10-12.md) and the
+[official capability matrix](GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md).
+
+Performance acceptance remains false. Three actual1K financial runs completed
+before the user confirmed external load; the six-run pair was stopped and retained,
+including seven actual power bookends and five unperformed bookends. The user
+requested completion of gates before agreeing on a quiet measurement window.
+The new three-cohort mixed API discovery completed126 successful requests and
+all per-cycle financial proofs, but its completion contract rejected legitimate
+local seeded-effect IDs reused across distinct tenants. Benchmark adapters now
+use the native `(tenant_id, id)` identity. Three actual fresh D3 repetitions each
+passed three cohorts/126 HTTPS requests/33 original effects/27 timed effects,
+both original owner oracles, unchanged clean source and verified owned cleanup.
+The resource-scope descriptions now explicitly distinguish client process CPU,
+actual server PID CPU and dedicated PostgreSQL cgroup CPU, with different windows.
+Both owner oracles run in-process; their CPU is included. Descriptive clarification
+preserves executable ASTs and does not relabel D3 packets as later-head executions.
+Root e9dc source verification uses bounded binary hashing and preserves exact
+raw-byte/name-order fingerprints. Fifty-nine development cases passed; an8MiB
+regression detects tail changes at the same size/mtime. Three warmed alternating
+observations per method on one22.27MB original capsule measured Python hashing
+allocations22276896→271537 bytes. This is source-verification allocation evidence;
+CPU/wall, business throughput, whole-host RSS and monetary gains are unaccepted.
+The current recovery V2 profile is separately reviewed with62 zero-skip cases and
+defaults to16.15/17.11; actual integrated lifecycle acceptance remains required.
+No Wave5 throughput/resource gain, monetary transaction cost,100K/1M capacity,
+country-tax compliance or competitor superiority is established.
+
+The older Wave5 entries below are historical development checkpoints; this section
+supersedes their pending local statements without erasing prior failures.
+
+## Wave5 active implementation (2026-10-11)
+
+2026-10-12 correction checkpoint: root5da0c4c1 passed66 actual native cases
+without failures/errors/skips, including both original finance-scope races and
+the two IC namespace mutation regressions. Root23778af1 passed actual IC1 and
+SRC5 HTTPS/RTL/Axe/full populated native restoration; Studio449 tests,
+TypeScript, Ruff and production mypy727 pass at the later correction checkpoint.
+Manufacturing's actual financial proof independently passes isolated stdlib
+and optimized-Python verification, but its sibling-workspace restoration probe
+exposed original tenant-only native FIFO policies. Additive0136 now restricts
+nine native inventory tables to their original hierarchy without rewriting rows;
+its native execution and final-source restoration remain pending. The tenant-wide
+audit chain is explicitly disclosed and retained in full-row/catalog/FORCE-RLS
+and unbound-tenant checks. New mixed HTTPS discovery passed42 requests and11
+original financial effects; it is one descriptive sample, not scale acceptance.
+Exact-object GitHub API transfer preserved236 original Git objects through23778
+after ordinary push transport failures; no branch reference was changed by that
+transfer. Final quiet comparisons, higher tiers, archive and hosted acceptance
+remain pending. No prior throughput percentage is rebound to this source.
+
+Actual accepted base is DraftPR130 `6362724f2337a79c3d7569574f7bf9591a018524`.
+The primary checkout, main and original uncommitted edits are preserved. Four new
+managed worktrees separate root integration from manufacturing, intercompany
+finance and procurement sourcing. Fresh targeted baseline61/0skip and Ruff pass;
+exact-source full hosted38-job Wave4 acceptance is reused explicitly. Native ME1
+production/WIP/FG, paired IC1 and native group eliminations, and sourcing→BPC1
+are in implementation, not accepted capability claims. Root owns shared migrations
+133–135, permissions, dispatch, API/UI integration, CI and measured resource work.
+See [Wave5 contracts](WAVE5_CONTRACTS_2026-10-11.md). Prior Wave4 raw evidence,
+failures and false resource/program acceptance remain unchanged and source-bound.
+
+Integration checkpoint: native133–135 ordered migrations,12 least-privilege
+catalog permissions and492 exact API route contracts are integrated. Native
+17.11 empty migration roundtrip and retained-grant atomic downgrade refusal
+passed2/0skip. IC1 current persisted five-scope grants passed8 actual owner/HTTP
+cases at21404b78; ME1→SRC5→BPC1 six native linking cases passed at the owner's
+fixed source. These owner packets remain source-bound and precede final gates.
+Integrated Studio typecheck and444 tests pass. Current PostgreSQL16.15/17.11
+image policy is additive; historical v1 policy and report source fingerprints
+remain unchanged.19 native CI partitions and13 enterprise HTTPS scenarios retain
+all previous coverage. Actual new HTTPS/populated restoration and final-source
+concurrency acceptance are pending. Common external benchmark controller passes
+its adversarial financial/power/failure tests; no Wave5 improvement is claimed
+until six fresh alternating final-source populations and resource review finish.
+
+Correction checkpoint: [DraftPR131](https://github.com/amrzainmubarak/reconforge-erp/pull/131)
+is stacked directly on130. Initial hosted source3e34a1a9 failed exact application
+inventory, asynchronous UI verification, ordinary deferred finance-to-IC dispatch
+and two SQL-composition security findings. Original failed logs remain retained;
+dependent browser jobs did not execute. Those causes are corrected without
+blanket grants, weakened financial assertions or test skips. Root Studio447 tests,
+TypeScript/build, Ruff and production mypy726 passed before the final two UI
+corrections; targeted current UI regressions pass. Native ME15/0skip at the owner
+and SRC34/0skip in initial hosted CI remain historical source-bound packets.
+
+Root ca7f891f actual sourcing HTTPS/RTL/Axe and native populated restore passed on
+immutable PostgreSQL17.11:270-table snapshot, five original effects, independent
+isolated sourcing oracle, three direct tamper refusals and owned cleanup. The same
+source's manufacturing browser passed but its nested authenticated proof export
+self-blocked; IC completed financial actions but failed the missing main landmark.
+Both failures remain preserved and their causes are corrected. Standalone stdlib
+manufacturing verification now binds original BOM/FIFO/native layer custody,
+historical acknowledgements and complete command/event membership; reciprocal
+file-only counterexamples were repaired. Final integrated native, HTTPS/restore,
+package, security and measured performance acceptance is still pending.
+
+## Wave4 active integration (2026-10-10)
+
+Actual start is DraftPR129 e07bff2a2e8197b052d53454ea85c727f7c7518e.
+DraftPR130 on amr/global-enterprise-wave4-20261010 stacks above129→128→127→126→125→124.
+Main b61ea56b and both pre-existing primary schema edits are protected; all new
+commits are authored/committed by Amr. Three independent commercial/supply/finance
+worktrees implement CR1/CRF1, BPC1, FX1 and SR1 with reciprocal source review;
+root owns contracts, ordered migrations,
+API/Studio integration, CI/package closure and performance profiling.
+
+The linear chain reaches 0132, including exact original revenue inverse closure
+and ordinary-role dispatch compatibility. [Hosted CI run38059696904](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904)
+had all38 jobs observed successful at15:07:32UTC on
+b6e9dcf608df2885b61a2846a4edc8df783db72d; its completed/success check-suite
+updated_at is15:04:54UTC. Complete native/API owner gates, actual HTTPS/populated
+restore scenarios and package gates passed there. Separately, four applicable
+Security checks succeeded; conditional exact-image SBOM/vulnerability/license
+checks were skipped and are not executed evidence.
+The later 0b5987927391f2e46a91813f8ccee71763b4140a source also has all 38 jobs
+successful in [run38067389520](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520),
+including both Python archive checks and eleven actual HTTPS/populated restores.
+The assembled final source requires its own archive and hosted checks. Exact
+head/run-bound results are retained in the final handoff output and
+[DraftPR130 checks](https://github.com/amrzainmubarak/reconforge-erp/pull/130/checks),
+so recording a run does not mutate the source that run accepted. Source acceptance
+does not complete the worldwide ERP program. Original evidence-head2ca failures
+are retained; its all16native shards/both archives passed but its Web/secret gates
+refused full acceptance. Repairs explicitly await real FX cryptographic completion
+and bind reviewed public hash fingerprints to immutable values before scanning.
+
+Scoped completed cycles are whole zero-tax functional-currency CR1 credit/FIFO
+restoration and CRF1 original-cash refund installments; BPC1 merchandise reserve,
+partial receipt/AP consumption and unreceived release; taxed foreign AR/partial
+functional settlement, closing FX and its exact inverse; and SR1 whole unissued
+receipt with a matching single-line unpaid zero-tax functional-currency AP credit,
+with paid landed charges disposed to approved expense. BPC1 refuses paid charges;
+SR1 does not restore replacement receiving capacity or reinstate BPC1 budgets.
+Hosted gates include CR15, collections19, BPC24, LC49, SR28 and corrective0132's
+four cases, with zero skips/xfails/xpasses. Earlier CR/BPC9c4bea54, BPC7f72c770,
+FX1e73267e and SR92230f4a packets retain their original source scope. The original
+FX19 unique cases and closing6/retained-position1 follow-ups are not additive totals.
+Partial/taxed/foreign stock returns, paid/partial/issued supplier returns, BPC1
+budget reinstatement, PR/RFQ and charge appropriation remain gaps. Manufacturing
+cost controls do not post production inventory/WIP/GL; native BOM/MRP remains missing.
+Broad country tax, intercompany and the other global operational suites remain gaps.
+API inventory remains 459 routes with the accepted 429/432 predecessors preserved.
+The earlier current-live22 inventory and historical benchmark index stay source-bound.
+
+Six fresh1K posting runs compare b7df9271 with07452da8 in BC/CB/BC order, four
+workers and20 warmup cycles per run, retaining durability settings and raw bytes.
+Static configuration and seven instrumentation files match, but dynamic power
+changed:248 observed AC samples and263 battery samples. B1/C1 were AC at median
+2197MHz; C2 switched AC→battery; B2/B3/C3 were battery at median2811MHz.
+Independent normal and optimized-Python oracles pass under trusted manifest
+c5dfa70b980a9532e14e7e93e65e24f6c9fbf0f9c56524d63985fbcbaed31acc.
+Descriptive median throughput rises1.340057→1.822781 successful cycles/sec (+36.02%);
+combined client/database CPU per success falls2.524217→1.929894sec (−23.54%). These
+observations do not establish a causal gain or a dynamically matched comparison;
+performance_comparison_accepted is false. The separate stable-power repeat is complete. Resource
+acceptance is false: client CPU rises641.218750→785.265625sec (+22.46%) and bounded
+batch read rises0.567914→0.626310sec (+10.28%). Six raw reports and both oracles are
+staged under wave4-evidence/posting-1k; publication closure is separate. Fresh10K
+scale completed afterward with10000 genuine measured effects and20warmups. Its
+independent integer oracle5028151631minor units passed, source07452 stayed unchanged
+and the owned lab was removed. The pinned original3.55MBreport is under
+wave4-evidence/scale-10k; this is single-candidate capacity with changing power,
+not a matched10Kbaseline or improvement comparison.
+
+Separate stable-AC three pairs pass financial/environment verification, bound to
+manifest1e67d483a994e68392fd7d5a35413e7c535d8d2b78a25d1ae975cf587b3f2a7c.
+They retain 371 AC/0 battery/0 unavailable samples and matching before/after
+Balanced scheme GUID. Observed median throughput improves42.585%, combined CPU
+per success falls27.130%, and bounded batch read falls1.337%; p50/p95/p99 fall
+31.549%/23.187%/25.958%. Client CPU rises2.825% and remains an unresolved adverse
+result. Overall performance/resource acceptance is false; task004 stays in_progress.
+Sparse observations do not prove continuous power, overlay mode, scheduling or
+thermal equivalence, and CPU attribution is unresolved. These are four-worker
+two-line USD cash/equity journal cycles measured at b7df9271/07452da8, not final
+publication-head measurements. Later UI/observer changes do not rewrite these bytes.
+100K/1M remain unrun. Mixed full1,000-line business cycles, monetary cost and HA/DR
+RPO/RTO remain unaccepted. No cross-vendor superiority is established.
+
+See [baseline and protected provenance](WAVE4_BASELINE_2026-10-10.md),
+[current functional gaps](GLOBAL_CAPABILITY_COVERAGE_WAVE4_2026-10-10.md) and
+[read-policy design](../adr/0850-invoker-financial-read-policy-planning.md).
+[Source-bound acceptance](WAVE4_ACCEPTANCE_2026-10-10.md) retains 44 byte-exact
+original JSON reports and 23 unsuccessful attempts. Portable FX proof files and
+the original trusted manifest are under wave4-evidence/fx-1e73267e; the independent
+stdlib Fraction verifier requires the separately retained manifest SHA256.
+Historical accepted snapshots below retain their original source scope.
+
+## Successor publication snapshot: locally verified operating integrity (2026-10-10)
+
+Branch `amr/global-integrity-wave3-20261010` remains above PR128699→PR12734b9→
+PR126/125/124. Main remainsb61ea56b; primary's two pre-existing schema edits are
+protected. Three Amr-owned worktrees completed mutual review.0124/0125 and the
+125-revision registry compose the existing owners; no duplicate financial engine.
+Local owner gates91/0skip at4bb and overlapping asset-lock19/0skip at70d pass;
+three real HTTPS/populated239-table restores and360 Studio component tests pass.
+The fresh matched1000-cycle pair and independent financial oracles pass. Posting
+change+6.78% vs806; the warmed1000-line snapshot alone measures64.0519x.
+Raw source-specific evidence and retained unsuccessful attempts are in
+[GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md).
+Sample-window client CPU regresses36.45%; bounded-batch read median regresses2.75%.
+These retained adverse outcomes prevent a blanket resource/reporting speed claim.
+This is the pre-hosted publication snapshot. The successor Draft PR's exact-head
+required checks establish final hosted status; local general900s exhaustion is
+unaccepted. Broad platform expansion remains active under the
+[next phase](GLOBAL_NEXT_PHASE_2026-10-10.md), not a completed worldwide ERP claim.
+
+Production source remains frozen at70d; later commits publish evidence, operator
+guidance, standalone verification tools and tests. CI now partitions all full
+commercial/supply/finance files without removing native commands, retains no-skip
+admission, and requires post-build wheel/source inspection plus the independent
+posting oracle on both Python3.11/3.12. Actual final hosted results remain external
+to this historical local snapshot.
+
+## Historical intermediate successor: governed abandonment and verified evidence (2026-10-10; ADR0845/0846)
+
+Active branch: `amr/global-integrity-wave3-20261010`, clean integration worktree
+separate from the dirty primary checkout. Three agents own managed commercial,
+supply and finance worktrees. All new commits use Amr's existing author identity.
+Main remains `b61ea56b`; no merge or main update is authorized. Verified PR127
+head remains `34b9e7a5`, with PR126/125/124 ancestry. Existing PR128 actual head
+`69951414` is an open draft with failed hosted security/receivables/parity gates;
+it supplies the existing owners, not an inferred accepted integrated release.
+
+CA1 unposted claim cancellation, LC1 unreceived charged-plan cancellation and
+FA1 source/native-ledger evidence drill-down now compose existing posting,
+inventory, AR/AP, policy and audit/outbox engines. Additive0124/0125 retain
+abandoned preparation/review evidence and refuse destructive populated rollback.
+Cross-review additionally fixes current original-cost/history-turnover read
+authority, ordinary-role protected-table query planning and exact charged receipt
+capitalization. Every new native file is mandatory in configured CI, not skipped.
+
+Source-bound intermediate `fed54dbc` gate passed6/6 with zero skips: normal and
+cancel/replacement mixed financial oracle,1000-line snapshot digest/RLS parity,
+ordinary AR HTTP lifecycle and both native draft-scope races. Later hardening
+requires a new final fixed-source gate. Integration acceptance, actual browser
+recovery and matched benchmarks are **in progress**; development failures remain
+retained. See `GLOBAL_CAPABILITY_COVERAGE_WAVE3_2026-10-10.md` and ADR0845/0846.
+
+## Preserved PR128 publication snapshot
+
+Publication snapshot: this file is frozen before the successor hosted gate.
+Current integrated acceptance is recorded by Draft PR128 required checks and
+its source-bound acceptance packet; prior failed/source-specific evidence stays
+historical. Do not repeat accepted owner capabilities to update this snapshot.
+
+## Active global operating platform program (2026-10-09; ADR0844)
+
+Verified base: PR127 `34b9e7a5b2a7c4d8ae49b641a36de030a878d507`, preserving
+PR126/125/124. CI37978382128 succeeded on that exact accepted head. Main remains
+untouched; implementation uses `amr/global-operating-platform-20261009` and three
+independent managed commercial/supply/finance worktrees.
+
+CA1 individual-invoice AR collections, LC1 prepaid landed-cost receiving and FA1
+acquisition/depreciation/disposal kernels are integrated with native posting,
+reviewed routes and ordered revisions0120–0122. Separate native milestones pass:
+CA1 eight unique cases (including namespace-conflict preflight), LC1 twenty
+business/API/authority/COGS cases, and FA1 ten cases. All three actual normal
+HTTPS Studio cycles and populated 237-table/schema restore milestones pass on
+their own committed sources. The funded combined native cycle also passes:
+existing opening capital → charged receiving → partial AP settlement → FIFO sale
+→ partial AR collection → acquisition/depreciation/disposal → retained reports.
+Its independent oracle proves18 effects,184156minor debit=credit, cash45898,
+inventory11648 and assets57546=capital50000+unclosed result7546. Source-bound
+milestones are retained in GLOBAL_OPERATING_MILESTONES_2026-10-10.json; final
+integrated hosted acceptance remains pending.
+Cross-review strengthened monetary ABAC admission before retained retries and
+current database permission/phase admission. Development failure packets remain.
+
+Benchmark instrumentation at3dabe93e passed10 genuine native cycles on revision0119
+in22.672s, retaining10 raw cycle observations,11 raw read observations and two
+resource samples. It verifies nonowner/NOBYPASSRLS execution and unchanged source;
+it does not accept new business owners or establish a performance improvement.
+Draft PR128 is open above PR127. Its first fixed-source hosted gate,
+CI38006481633 at5e575031, failed and remains retained. Seven normal HTTPS
+browser/restore jobs, web, four engine-parity jobs, HA/DR, object storage,
+Security38006481629, Docker38006481705 and CodeQL38006481715 passed on that
+source; these are not overall acceptance. Failure analysis found unrelated
+event/master dispatch reading new owner tables under legacy restricted roles,
+an unordered direct multiline downgrade, and a Phase4 backlog contract drift.
+Repairs preserve RLS, ACLs, immutable identities and financial closure. Genuine
+CA1/LC1 event recovery now passes loss of acknowledgement, crashed leases,
+fencing and exactly one consumer receipt/effect with unchanged financial rows.
+Additive0123 refreshes corrected invoker functions for existing0122 databases;
+its downgrade preserves the compatible correction without deleting history.
+Repaired-source hosted acceptance remains required at publication time.
+The unchangedcfd30de7/full123 retest passes1000 native cycles, zero errors and
+the independent493671004minor oracle. Posting1.145287cycles/s is23.23% below
+PR127 and13.00% below6272889d; p50/p95/p99=3.417656/4.423447/4.747318s.
+Raw observations and93 resource samples remain published. No broad performance
+gain is claimed; source-specific corrective gates and benchmark are complete.
+No production, banking or competitor superiority claim.
+
+The fixed6272889d source now passes the final native1000-cycle local benchmark:
+zero errors, independent493671004minor totals,1.316464posting cycles/s,
+p50/p95/p99=3.115654/3.296120/3.581297s. Posting throughput regresses11.76%
+against accepted34b9 and requires profiling; current warmed native verified reads
+are7.669656→0.569061s through the preserved batch pathway. Raw vectors and79
+resource samples are retained with exact source/hardware/configuration in
+GLOBAL_ENGINEERING_BENCHMARK_2026-10-10.md. New projection aggregation3→1 has a
+narrow measured4.84% warm median duration reduction; no broad speed claim.
+
+## Accepted prior enterprise engineering program (2026-10-09; ADR0843, PR127)
+
+Starts at PR126 exact `21b4b8a23a4bf9c3e5562b51392fad896f39ef7d`, retaining PR125
+and PR124, on `amr/enterprise-erp-program-20261009`. Main remains `b61ea56b`.
+Three managed worktrees implement conserved multiline stock commerce, native
+multiline partial procurement and frozen scalable financial captures. Lead owns
+shared authority/migration/CI/transport and final integration. Initial Sales12-case
+native gate and shared35-case contracts pass. On61bf6d7b the100-effect benchmark
+matches independent46669102minor totals, verified-read median0.75026→0.05164s,
+client execute300→2 and four-worker three-human posting1.311/s including identity.
+The subsequent1000-effect benchmark on clean347d3714 matches independent
+493671004minor totals with zero errors: four-worker reviewed posting1.476cycles/s,
+verified-read median6.867102→0.464948s, client execute3000→20. The checked-in raw
+profile preserves hardware/configuration, request units and memory tradeoffs.
+Native commerce16-case and procurement17-case gates pass with zero skips;
+three integrated normal HTTPS cycles and populated native restore passed their
+source-bound milestones. DraftPR127 is open above unchangedPR126. The first hosted
+run40e9 retained a parser-inventory failure and legacy scope-loading race; both
+are repaired without weaker controls. Successor34b9 passed CI37978382128,
+Security37978381712, Docker37978381685 and CodeQL37978381804: both Python versions
+4608pass/663existing prerequisite skips,39 mandatory native pytest commands
+1247passing case invocations with zero selected skips, React325 and all five
+source-bound business HTTPS/restore cycles. Fixed34b9 native1000-cycle posting
+is1.491938cycles/s; warmed verified-read median6.957988→0.474097s. The immutable
+original final packet remains in output/enterprise-erp-program-20261009. These
+bounded results accept that predecessor scope, not the broad global ERP program.
+
+## Active ERP expansion sprint (2026-10-09; ADR0842)
+
+Work starts at PR125 exact `f24d48363817f36991239c436ae616f59d391918`, retaining PR124 ancestry, on `amr/global-erp-expansion-20261009`; main remains `b61ea56bb9c135fda12546e173795af3c243e4fb`. Three independent managed worktrees own Stock Sales, Partial Procurement, and classified Financial Reporting. Shared installment ownership, API contracts, Studio navigation and final gates are integrated centrally. New migrations form the linear0112–0115 chain; four typed application ports reuse native FIFO, Finance Posting, AR/AP, scoped identity, audit and outbox engines.
+
+Bounded local acceptance now binds clean source `6ec9a70114edfd835386ee3b0f0085e5da1fff15`: stock reservation → reviewed FIFO/COGS → reviewed invoicing → full AR collection; repeated partial receiving → exact3-way invoice tranches → accrued AP → reviewed partial cash payments; reviewed classification → first-history opening → as-of TB/BS/IS/cash movements. New financial publication requires three independent current humans in the owner, Studio and deferred SQL, preserving legacy native policies. Native gates pass43+25 with zero skips; domain/CI/permission contracts47; fullReact295; both normal HTTPS ERP cycles and214-table/197-function populated restore pass. Package/Docker/security and bounded synthetic capacity gates pass, with9 Medium/1 Negligible image findings disclosed. Original failed/interrupted packets remain unaccepted. [Local acceptance](ERP_EXPANSION_ACCEPTANCE_2026-10-09.md) · [Sources, hashes and limits](ERP_EXPANSION_ACCEPTANCE_2026-10-09.json) · [DraftPR126 current-source hosted checks](https://github.com/amrzainmubarak/reconforge-erp/pull/126/checks). Global production assurance and deferred partial sales/returns/PR-RFQ/tax-FX/treasury/assets/consolidation remain separate; no production-readiness or unrestricted ERP claim.
+
+## Historical PR125 hosted ERP gate repair (2026-10-09)
+
+At that earlier checkpoint, CI37837201370 on `88d2fe20740b` failed its receivables and parity
+shards and aggregate; its seven other PostgreSQL shards, both Python versions,
+web, actual HTTPS ERP/restore and separate Security/Docker/CodeQL passed.
+Retain that failed run as failed. Fresh restricted-role AR/AP fixtures need
+only SELECT on the additive invoker ownership relations, without new owner-table
+DML or RLS bypass. The independent tenant permission expectation must include
+the three Sales catalog entries seeded by0110; catalog presence does not grant
+roles. A corrected successor requires affected native gates and complete stable
+hosted verification before acceptance. Earlier local results below retain their
+actual execution identities and do not claim that this failed CI succeeded.
+
+## ERP completion sprint (2026-10-08; ADR0841)
+
+Source `547b65391587` accepts the bounded connected service Sales, stock Procurement and shared operational Finance cycles locally. Three isolated managed worktrees are integrated on `amr/global-erp-completion-20261008`; main stays `b61ea56b`. Full Python: 4538 passed/595 explicit prerequisites; configured critical PostgreSQL: 564 passed/zero skips; native recovery profile: 33 passed/zero skips. Actual wire HTTPS Studio, Paid AR/AP, FIFO, balanced GL, lost-ack replay, Arabic/mobile/accessibility and195-table populated restore pass. Packaging/default secrets are fresh after a one-line MANIFEST dependency correction. Earlier failures and exact mixed source/byte identities are preserved. [Acceptance and remaining ERP scope](ERP_COMPLETION_ACCEPTANCE_2026-10-08.md) · [Commands, hashes and sources](ERP_COMPLETION_ACCEPTANCE_2026-10-08.json).
+
+[Draft PR](https://github.com/amrzainmubarak/reconforge-erp/pull/125) is stacked on the accepted platform branch. Final hosted results must be read from its [current-source checks](https://github.com/amrzainmubarak/reconforge-erp/pull/125/checks) and retained Actions artifacts; this documentation checkpoint records local acceptance. The broad global ERP expansion and independent release assurance remain in progress.
+
+## Global operational capability sprint (2026-10-08; ADR0834)
+
+The user authorized three parallel implementation agents and reopened the
+previously deferred reviewed-receipt API/Studio scope. Integration starts from
+clean `6c194e7c` on `amr/global-platform-execution-20261008`; main remains
+`b61ea56b`. Existing engines are reused for live budget management, atomic
+inventory/GL receipt workflows and scoped durable-job control. Shared
+registration and acceptance have a single lead owner. The integrated capabilities
+passed local final gates:4455Python/492explicit prerequisites,243web components,
+zero-skip live PG and normal-Studio HTTPS workflows, and populated native restore.
+Full regression binds runtime9bcbeb07; application runtime/migrations/Studio
+remain byte-identical through563ad127. All20hosted CI jobs passed ond59bc4d0.
+ADR0840 refreshes pinned Python/Alpine and signed zlib without weakening policy;
+manual Security37731225415 passes onaa81176d with0Critical/0High,9Medium and
+1Negligible,zero active exceptions. The independently built root image also
+passes. Four genuine16.14/17.10 native Writeback matrices refresh current
+evidence while preserving October3 history;50affected contracts pass on563ad127.
+Its full CI37733619873 passes all20required jobs; Docker, Security and CodeQL
+also pass563ad127. The final documentation checkpoint changes no tested subject.
+Exact container acceptance stays separate from tested application runtime;
+no production release is approved here.
+Draft [PR124](https://github.com/amrzainmubarak/reconforge-erp/pull/124) is stacked
+on the baseline-refresh branch. [Acceptance, exact bindings and limits](GLOBAL_PLATFORM_ACCEPTANCE_2026-10-08.md).
+The receipt pause in historical checkpoints below was explicitly superseded by
+this user's new sprint; the separate cancellation-projection worktree remains
+outside the source. [Ownership and dependencies](GLOBAL_PLATFORM_SPRINT_2026-10-08.md).
+
+## October8 hosted gate repair (2026-10-08)
+
+Draft [PR123](https://github.com/amrzainmubarak/reconforge-erp/pull/123) is stacked
+on unchanged sprint636786e8. ADR0833 repairs executable pinned recovery checks,
+service-only Docker tool translation, moving-head restore evidence and deferred
+fixture cleanup. Local live PostgreSQL17.10 analogous acceptance passes97 with
+zero skips; strict encrypted current0106 restore and wrong-source refusal pass.
+Writeback16.14/17.10 and three repeated single-host HA drills pass. Exact
+synthetic-auth Gitleaks fingerprints retain the default history/tree gate.
+[Evidence and remaining CI gaps](HOSTED_GATES_REPAIR_2026-10-08.md).
+
+Whole regression after this runtime repair passes4429 with490 explicit skips
+and zero failures on clean832ceeee.
+[Final source-bound acceptance](ACCEPTANCE_FINAL_2026-10-08.md).
+AMR-GFO-005 remains in progress: hosted downgrade fixture isolation and identity
+expectations are open; Inventory receipt stays paused, cancellation0107 stays
+outside this source and main staysb61ea56b. Earlier results below retain their
+own source identities and are not acceptance of this later runtime repair.
+
+## October 8 baseline refresh and bounded repair (2026-10-08)
+
+The audit branch is `amr/baseline-refresh-20261008`, based on clean sprint
+source `636786e8`. Initial failures remain in `BASELINE_2026-10-08.json`.
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
+AUD-20261008-001 through -005 are complete for the bounded repair.
+`AMR-GFO-005` stays in progress pending native recovery/configured network
+acceptance and separate cancellation integration. Reviewed Inventory receipt
+work stays paused, cancellation revision0107 is unmerged, and main remains
+`b61ea56b`. The final evidence documentation commit changes no tested runtime.
+The Draft repair review is stacked on the unchanged sprint checkpoint.
+
+## Amr current sprint integration verification (2026-10-04)
+
+`AMR-GFO-005` remains in progress. The source through the scoped exception-review
+Studio integration was accepted through a locked Python 3.12 whole-suite rerun,
+an independently rerun owned PostgreSQL nonowner AP acceptance, recovery-profile
+tests, static quality/security gates, package build, and the real local Studio
+browser suite. The later AP reversal slice has its own focused SQLite/API and
+disposable PostgreSQL acceptance below; a new whole-suite regression is required
+after all currently pending slices are integrated. The locked whole suite and the
+host whole suite both exited zero; the selected nonowner PostgreSQL AP suite
+exited zero after temporary-database migration to head; locked Python 3.11/3.12
+dependency audits reported zero findings; and the Studio typecheck, 219 unit
+tests, production build, and two focused Chromium exception-review journeys
+passed. The earlier whole-Studio browser gate recorded 17 executed tests and 9
+explicit live-service skips; it is retained separately because it predates the
+new route. A deterministic 10,000-record local
+benchmark completed in 11.7616 seconds with 37.15 MiB peak memory and result
+signature `4f634672cdae0d21e6179b66a7d78fb6c861e4fb0511dd57a478d66d7f021717`
+on the recorded Windows/CPython 3.14.6 host. The native PostgreSQL
+source/maintenance recovery test and externally configured HTTPS browser
+journeys remain explicit environmental prerequisites; this is not a capacity,
+HA/DR, hosted-browser, or production-release claim.
+
+## Amr scoped exception-review Studio completion (2026-10-04)
+
+The `/exceptions` Studio route now uses only the authenticated server API for
+the PostgreSQL review contract. It obtains current identity and scope before
+loading, sends CSRF-bearing mutation requests, projects only closed review
+fields, uses the retained expected version for assign/transition commands, and
+shows persisted history/audit/outbox references. It has no local or synthetic
+queue fallback. The route is responsive, keyboard-operable, English/Arabic
+localized, and tested with focused component and Chromium journeys for
+authenticated scope, CSRF, evidence history, RTL, and mobile layout. The
+server-review contract remains a PostgreSQL deployment capability; local
+exception compatibility is not represented by this UI and no hosted HTTPS or
+accessibility certification claim follows.
+
+## Amr evidence-bound AP payment-link slice (2026-10-04)
+
+`PROD-010` is in progress. SQLite migration 54 and PostgreSQL revision 0105
+add an immutable partial/full payment allocation between an approved supplier
+invoice and an independently reviewed, posted Manual AP/cash Finance effect.
+The persisted link uses exact positive minor units, a source-bound reference,
+scope/currency affinity, maker-checker-posting and invoice-payment separation,
+current-version serialization, idempotent command receipts, atomic audit/outbox
+evidence, and a database-owned invoice transition. The local API has scoped
+create/list endpoints with a closed projection; the server adapter derives the
+trusted effect amount before amount-bounded authorization, or the retained
+receipt amount for an exact retry after a full allocation. SQLite backup and
+restore replay link history and reject invalid evidence.
+
+Focused local domain/API/concurrency/backup/migration contracts pass. The root
+acceptance reran the AP approval, payment-link, authorization inventory, and
+operations group against owned PostgreSQL administrator and nonowner
+application profiles; it exited zero after each disposable database migrated
+to head and verified the application role is neither `SUPERUSER` nor
+`BYPASSRLS`. This proves the named synthetic scope, locking, exact replay,
+idempotency, audit/outbox, and migration behavior only. It is not an
+inventory/GRNI/AP/GL posting cycle, external banking lifecycle,
+return/reversal, FX, tax, intercompany, capacity, availability, or compliance
+result.
+
+## Amr AP payment-link reversal completion (2026-10-04)
+
+`PROD-010` retains a bounded Finance-evidenced reversal of one immutable AP
+payment-link allocation. SQLite migration 55 and PostgreSQL revision 0106 keep
+the original link and permit one independently prepared, validated, posted
+Finance inverse only when its exact minor amount, currency, scope, original
+effect, AP/cash lines, digest, and source evidence agree. Canonical tenant-local
+identity resolution fails closed on unknown or ambiguous `id`/`username` aliases
+for the invoice maker/approver, original settler, original and reversal Finance
+participants, and reversal actor. The reversal, command receipt, audit event,
+outbox event, and invoice version transition co-commit; it never changes the
+original link.
+
+Focused local payment-link/reversal/API/backup/migration contracts passed, as
+did the post-0106 Alembic head check, targeted Ruff and Mypy gates, and an owned
+disposable PostgreSQL admin/application-role acceptance. The PostgreSQL group
+exited zero and exercised non-bypass migration refusal, canonical alias
+collision refusal, posted inverse evidence, historical idempotent replay, and
+single-effect concurrency. The SQLite recovery regression retains the sequence
+`L400 → L600 → reverse L400 → replacement L400`, restores it chronologically,
+and replays the retained reversal response. This supersedes the original
+payment-link slice's former `return/reversal` limitation only for this exact
+evidence-bound allocation reversal. The scope still excludes external payment
+instructions/statuses/voids, automatic receipt-to-inventory/GRNI/AP/GL effects,
+banking, FX, tax, intercompany, PostgreSQL native backup recovery, capacity,
+availability, and compliance claims.
+
+## Amr sprint PostgreSQL recovery-profile fencing completion (2026-10-04)
+
+AMR-GFO-006 closes a bounded operational-recovery prerequisite on the sprint
+branch. A paired named recovery profile and exact Alembic revision now preflight
+the PostgreSQL source before dump creation, bind new encrypted artifacts through
+AES-GCM associated data, refuse a configured mismatch before target validation
+or database creation, and require the exact revision after isolated restore.
+The preflight/restore SQL receives its revision through quoted `psql` variable
+substitution. Existing unbound v1 settings and artifacts stay readable through a
+documented coarse compatibility path; a legacy configuration refuses a bound
+artifact. Fifty focused fake-native-tool, encrypted-backup, matrix, phase-audit,
+and upgrade-orchestrator tests pass with one declared live-service skip; Ruff,
+Mypy, Bandit, and the package build exit zero. This has no database migration,
+HTTP route, UI, live native-service exercise, throughput, RPO/RTO, HA/DR, or
+production-recovery claim.
+
+## Amr scoped PostgreSQL exception-review completion (2026-10-04)
+
+PROD-008 is complete only for the bounded server-review contract. PostgreSQL
+revision 0104 retains optional canonical organization/legal-entity attribution,
+authenticated actor/reason evidence, forced hierarchy RLS, optimistic version
+checks, independent-review refusal, immutable history, and atomic audit/outbox
+events. The server API exposes scoped list/get/assign/transition with a closed
+projection and central permission enforcement; it never falls back to SQLite in
+server mode. A disposable synthetic PostgreSQL HTTP acceptance used a
+non-superuser/non-`BYPASSRLS` application role and proved authenticated scope,
+stale-write refusal, maker self-review denial, immutable history, and audit/
+outbox publication. Local queue compatibility is retained; organization/entity
+scope remains optional to preserve non-attributable legacy records under their
+workspace. No standalone UI, automated escalation, native backup orchestration,
+production capacity, availability, or compliance claim follows.
+
+## Amr sprint enterprise-quality outbox fencing completion (2026-10-04)
+
+AMR-GFO-004 is complete at its bounded reliability foundation on the sprint
+branch. SQLite migration 53 and PostgreSQL revision 0103 retain monotonic lease
+generations, explicit historical `2/2` watermarks, immutable delivery evidence,
+bounded expiry recovery, and downgrade refusal when retained evidence exists.
+SQLite backup/restore preserves the parent-before-child evidence graph, rejects
+checksum-valid incomplete or forged evidence, restores the canonical guard
+bundle only in an unpublished temporary database, and re-verifies after the
+compatibility migration path. Named evidence includes 15 SQLite
+migration/backup cases, 51 SQLite delivery/recovery/continuity/worker cases,
+and the live PostgreSQL migration/recovery suite under a non-superuser,
+non-`BYPASSRLS` role; focused Ruff and Mypy pass. The shared PostgreSQL runtime
+role and server application remain the actor-authorization boundary for a
+structurally valid raw transition. External transport remains bounded
+at-least-once, and broker HA, production capacity, and cross-host recovery are
+not claimed.
+
+## Amr sprint governed budget-control completion (2026-10-03)
+
+AMR-GFO-003 is complete at its bounded backend/API foundation on the sprint
+branch. SQLite migration 52 and PostgreSQL revision 0102 retain exact
+minor-unit budget envelopes, independent approval, conserved commitments,
+scoped command receipts, audit and Outbox evidence. The central API factory,
+router, authorization inventory, module registry, PostgreSQL migration-status
+chain, and SQLite backup/restore admission are connected. Named synthetic
+evidence includes 28 SQLite/domain/API tests, 4 live PostgreSQL authority/API
+tests under a non-superuser/non-BYPASSRLS role, 2 PostgreSQL migration tests,
+and the live PostgreSQL operations status selection; focused Ruff and Mypy
+passed. Migration 52 and revision 0102 own frozen SQL artifacts, and revision
+0102 seeds the declared default roles for existing and future PostgreSQL tenants.
+PostgreSQL writes recheck and lock the actual session plus a live step-up
+assertion inside the budget transaction. The shared runtime database credential
+and trusted server application remain the authority boundary for human actor and
+SoD checks; database triggers prove structural invariants only. The budget scope
+does not post purchase, payable, cash, banking, or general-ledger effects; it has
+no standalone UI or PostgreSQL native backup/restore orchestration.
+
+## Amr sprint platform-core completion (2026-10-03)
+
+AMR-GFO-002 is complete on the sprint branch. SQLite migration 51 and
+PostgreSQL revision 0101 add retained recipient-scoped inbox publication and
+read evidence. The route registry, authorization inventory, backup/restore
+admission, module descriptor, and authenticated Studio route are connected.
+Evidence is limited to the named synthetic local tests: SQLite 16,
+API/registry/authorization 22, PostgreSQL 4 using an independently owned
+temporary database and non-superuser/non-BYPASSRLS application role, Studio
+component/contract 10, and Chromium 1. No outbound transport, automatic
+financial approval, ERP replacement, or deployment claim is made.
+
+## Amr sprint handoff (2026-10-03)
+
+The user stopped PROD038 at a safe checkpoint and authorized a new Global
+Financial & Operations Platform sprint. The reviewed Inventory receipt source,
+adapters, migrations and synthetic tests are retained as paused implementation,
+without public API/UI acceptance or a completed capability claim. No further
+receipt feature work is authorized in this sprint. Pre-handoff Ruff passed and
+Mypy passed for 578 sources; bounded receipt tests passed locally while live
+PostgreSQL prerequisites were absent from that command. Full checkpoint acceptance
+and the new sprint's exact test evidence will be recorded separately.
+
+Amr owns architecture, integration, shared registration files and execution state.
+Three agents will use independent worktrees and branches with exclusive file
+ownership, inspect existing capabilities first, and implement bounded missing
+capabilities through existing domain/application/repository interfaces. Main stays
+unchanged. Platform expansion is a target, not a claim of complete ERP or banking
+readiness.
+
+## Current publication checkpoint (2026-10-03)
+
+PROD038 implementation is active on amr/reviewed-inventory-receipt-posting from
+published PR12192719305. PostgreSQL/common-contract and SQLite/atomic-migration/
+backup work have separate owners. ADR0824 is proposed; versions50/0100 reserved.
+Immutable preparation and a conservative unused-inverse predicate are selected.
+Every artifact ID/number uses a closed reserved IRP1 namespace; migration rejects
+preexisting collisions and raw/public writes require exact reviewed ownership.
+The updated contract was independently reviewed; no receipt effect is accepted
+yet. Fresh AR9271 whole/hosted acceptance is complete in its unchanged detached
+checkout, outside the new Inventory source tree:4178passed/380explicit skips,
+0failure/0error locally; both hosted Python versions4180/378 and all nine live
+boundary shards/aggregate succeed. CI/Security/Docker/CodeQL succeed; conditional
+image SBOM remains skipped. INVOICE_RECOVERY_PUBLISHED_ACCEPTANCE_2026-10-03.json
+binds this exact source and independently checked raw report hashes.
+GitHub records amrzainmubarak merging PR121 into its working base at14:36:11UTC;
+root issued no merge. Remote main remains b61ea56b. New Inventory work remains
+based on92719305; the external merge changes no active source file.
+
+PROD039 bounded local acceptance is complete on amr/verified-ar-invoice-recovery, based on
+published PR1204629a64b (tree-identical to retained PR114e63859d7).
+User-requested work labels are migrated:17local/7remote branches,5merge messages,
+33mapped commit IDs with equal trees/identities/timestamps. Six replacement
+Draft PRs115-120 preserve the original109-114 review/run links. Main is unchanged.
+AMR_WORK_LABEL_MIGRATION_2026-10-03.json records the mapping and verified bundle.
+ADR0823 records exact identity/source verification,
+historical Draft acknowledgement and conservative ambiguous-legacy GET fallback.
+The immutable e81b4481-test local gate failed4114pass/366prerequisites/1old policy
+projection expectation; hosted3.12 failed the same assertion. Test-only e63859d7
+repairs that expectation with27focused/138overlapping contracts and private-field
+denials. Its fresh full gate now passes4115/366explicit prerequisites/0fail/0error
+with3,057stable tracked files and global quality/build. New PRIMARY recovery
+edits are outside that acceptance. Retained before-fix evidence
+is AR_INVOICE_REPLAY_FINDINGS_2026-10-03.json. The repair passes331AR/API/cash/codec
+tests without skips plus a separate native restore test. Nine owned/1,208Python
+sources remain unchanged; independent review finds no blocker and root confirms
+four owned databases absent. RECEIVABLES_INVOICE_RECOVERY_2026-10-03.json records
+the frozen runtime, original failures and conservative legacy compatibility.
+
+AR API b9153400 exposes verified retained policy and exact integer/text amounts;
+corrected actual SQLite/PostgreSQL HTTP11/0skip proves positive Outbox counts.
+React31220e06 uses recorded precision/BigInt and major-unit inputs. Full web202
+passes; a fresh tracked-fixture HTTPS0099 run passes2 journeys in32.0s with
+unchanged sources and independent named database cleanup. JPY0/KWD3, large
+8999999999999999123minor, unresolved legacy raw units, EN/AR accessibility,
+390px and keyboard evidence remain bounded AR proof. ADR0821 and API/UI reports
+retain earlier196/1failure, deterministic AdminAudit repair and measurement fixes.
+Surface inventory now distinguishes synthetic previews and authenticated AR.
+
+CI a8a6dd36 preserves39 original commands in nine bounded live shards and a
+failing server-boundaries aggregate;109 local contracts and actual Bash dispatch
+pass. ed5fc707 reruns current0099 native history/restore on16.14/17.10 and closes
+the stale0098 proof contract. Original immutable8054 whole result remains FAILED:
+4041pass/361prerequisites/1failure/0error. Updated local78-test proof gate passes.
+Hosted PR1128d76647c is successful; PR1138ba6772d timed out at30minutes; PR1148054
+failed its stale target/empty-digest secret finding. Exact reports remain separate.
+New invoice-recovery9271 whole/hosted acceptance now passes separately. Original e638
+hostedPython3.11/3.12 pass4117/364prerequisites each; finance-posting shard fails
+three stale0098 expectations after its fixture upgrades to0099. The test-only
+repair now passes all12actual PostgreSQL concurrency cases without skips, with
+677stable runtime/migration/fixture hashes and15owned red/green databases removed.
+The exact pre-downgrade revision and provenance columns are both preserved;
+this failure is retained separately from local whole success. Original exact-head
+outcomes are never reassigned to renamed commits.
+
+Active PROD038 implements a reviewed receipt bundle before complete purchase/sales/
+GL cycles. Its concrete source/owner/migration/restore design is reviewed; no
+generated Inventory effect has been implemented or accepted. No customer
+pilot,5M-transaction workload, measured labor savings or auditor acceptance exists.
+The goal remains active; no main merge or production deployment has occurred.
+
+Current-bootstrap repaircd67fc67 passes96 PostgreSQL/compatibility tests without
+skips plus global Ruff/Mypy/Bandit. Historical0078 SQL remains unchanged;
+repeat installation preserves catalog constraints and forced RLS. Matching
+synthetic cleanup restores0097 guards. ADR0819 and retained evidence preserve
+original failures and the separate legacy global close-uniqueness gap.
+
+OpenSSL pins68bfea5b match two official signed Alpine indexes and existing base
+keys. A52.180s full local Docker build and six functional commands pass, including
+constrained offline doctor and OpenSSL3.5.9. ADR0820 and OPENSSL_RUNTIME evidence
+retain the exact image digest and original unexplained hosted checksum failures.
+
+Clean immutablec56 whole regression passes3,831/309 prerequisite skips/0fail with
+unchanged2,988-file manifests and global quality/build success. See retained
+POSTING_CASH_REGRESSION_C56 evidence. Skipped service cases are not successes.
+Subsequent hosted acceptance belongs to the new subject and remains pending.
+
+PR112 source-checksum review on `43bafc9d` verifies all seven new Gitleaks
+findings against the exact source Git blobs. Fourteen exact history/current-tree
+fingerprints preserve the existing exclusions without a broad path or rule
+allowlist. Gitleaks 8.30.1 now reports zero findings in both local scans;
+35 supply-chain policy tests pass with no skips. The checked sources and HEAD
+remained unchanged during verification. See
+[retained checksum review](POSTING_CASH_SOURCE_DIGEST_FINDINGS_2026-10-03.json).
+This is a separate local checkpoint: the historical d4 full regression remains
+failed; the subsequent clean c56 whole gate is retained above. Hosted acceptance
+remains separate and pending on the new subject.
+
+## Active financial-policy and open-workload slice (2026-10-03)
+
+PROD032 is accepted on clean immutable866d943a under ADR0817:127 local tests and
+4 actual PostgreSQL/HTTP tests pass without skips. Global Ruff/Mypy/Bandit/build
+and native16.14 restore pass with unchanged source/head and owned cleanup.
+POSTED_BALANCES_2026-10-03.json retains cross-period10000/0/2500 goldens, exact
+9007199254740993 API text, SQLite backup/caller ownership and restored as-of
+digests. Independent policy/identity/resource findings are repaired; earlier
+failed/source-drifting proofs remain separate. Business-date recorded history
+does not reconstruct historical knowledge-time or statutory fiscal close.
+
+The exact-arithmetic/AP-recovery/as-of slice is reviewable in
+[Draft PR113](https://github.com/amrzainmubarak/reconforge-erp/pull/113), stacked
+on PR112 with its actual latest ancestry. Root commitsdf071e48/76d2a8b4/866d943a
+separate the three runtime changes;1942b7af records acceptance. PRIMARY now uses
+codex/receivables-policy-and-inventory-composition for subsequent work. Neither
+PR is merged or deployed. The managed c56 whole regression passes with309
+prerequisite skips; its independent global quality/build gates pass. Observed
+c56 hosted Python3.11/3.12/security/web/storage/Docker/HA-DR checks succeed, while
+server-boundaries failed two cases now repaired and verified locally under
+ADR0819. The observed PR113 Docker checksum failure is retained under ADR0820;
+its updated official pins pass the full local build. Updated hosted PR1128d76647c succeeds; PR1138ba6772d times out at30minutes.
+FINANCIAL_HOSTED_CHECKPOINTS_112_113_2026-10-03.json retains both exact subjects.
+
+PROD033 backend is committed at662aad3f under ADR0815:216 tests pass without
+skips, actual PostgreSQL0099 dump/restore retains eleven table digests, and
+captured policy remains stable after registry changes. All-null history stays
+explicitly unverified; API and React exposure now has separate ADR0821 acceptance. PROD036 is
+committed at75bdbe63 under ADR0818:120 passes/three live prerequisites plus an
+overlapping21-test independent review verify explicit SQLite ownership and
+rollback of caught constructor failures. Test EOF normalization is recorded and
+39 publication/inventory tests pass without skips. Root revision/inventory
+checks pass25 with one live prerequisite; global Ruff/Mypy/Bandit pass on the
+backend checkpoint. Complete purchase and
+sales GL cycles, real customer outcomes and auditor acceptance remain open.
+
+The goal remains active. Foundation changes are reviewable in
+[Draft PR 109](https://github.com/amrzainmubarak/reconforge-erp/pull/109), stacked
+against the preexisting `codex/p0-postgres-clean-boot` branch. They are not merged
+into main. The financial checkpoint is in Draft PR110; the next integrity work
+is on `codex/scoped-finance-and-atomic-jobs`, stacked on that checkpoint and
+reviewable in [Draft PR111](https://github.com/amrzainmubarak/reconforge-erp/pull/111).
+
+- AR customer/currency/credit invariants are committed: 89 focused SQLite/live
+  PostgreSQL tests passed, followed by four caller-transaction ownership checks.
+- Explicit strict one-to-one constraints are committed and opt-in; 69 focused
+  tests and 138 broader regressions pass. Default legacy matching digest is
+  unchanged. Hosted worker adoption is now verified under ADR0807 below.
+- An actual licensed IBM AMLSim 45-row sample now runs through an offline
+  adapter and independent fault oracle: 42 matched pairs, three unmatched rows
+  on each side, and equal decisions under row permutation. This is in-process
+  synthetic evidence; actual durable worker execution is now verified separately.
+  Larger data and customer ROI remain open.
+- Runtime capability admission is committed: 73 live PostgreSQL tests pass,
+  zero skipped, after 27 reproduced unsafe-admission failures. See
+  [runtime evidence](RUNTIME_GRANTS_2026-10-03.json) and ADR 0800.
+- Per-currency aging is committed: 163 tests passed with one authorization-
+  inventory count failure, then seven reviewed inventory tests closed that gap.
+  Mixed balances now use an explicit grouped endpoint.
+- Monetary-policy capture is committed at `187f592d` (SQLite 47 / PostgreSQL
+  0094), including valuation, generated GL, reversals, FIFO policy checks and
+  legacy restore compatibility. The actual PostgreSQL selection passes 448
+  tests with one native-client prerequisite skip; focused local checks pass 79
+  with two live-environment skips subsequently covered by PostgreSQL execution.
+  Separate native-container migration/restore through 0094 passes on PostgreSQL
+  16.14 and 17.10. These are outside the foundation full-regression checkpoint;
+  the latest isolated whole-repository attempt and repairs are recorded below.
+- Remote foundation CI exposed portable evidence-path validation and unavailable
+  historical MinIO registry pulls. The path fix is pushed and passes 35 Windows
+  tests plus a Linux direct reader probe. The pinned source-built MinIO fixture
+  passed the real GitHub build and both live storage tests on `517e6a8f`, with
+  all five S3/Object Lock invariants verified. This is CI-only fixture evidence.
+  The failed foundation server-boundaries job was traced to immediate Docker
+  removal verification. ADR0804 and freshly executed restore reports fix it;
+  Foundation a6776c69 passed17 remote checks, with one conditional skip and a
+  scoped-export test teardown failure after its HTTP assertions passed. The
+  fixture now explicitly grants policy-audit writes and cleans only its own
+  immutable audit rows in an administrative transaction. A fresh database passes
+  all three tests with cleanup verified. Subsequent remote execution atb5075883
+  exposed nine additional general-server fixture failures. The exact40-test
+  selection passes40/0skipped on33b3fb5e after explicit canonical attribution
+  and transaction-bound cleanup of only test-owned audit rows. The original
+  failures and an intermediate import error remain retained under ADR0812.
+  Full-history secret scanning passes after seven exact source-checksum false
+  positives were verified against Git blobs; no broad rule/path exclusions.
+  Hosted33b3fb5e has now completed18 successful checks, including Python3.11/3.12,
+  web, object-storage, Docker, CodeQL, security, engine parity, server boundaries
+  and PostgreSQL HA/DR simulation. Conditional release-image scanning was skipped.
+  FOUNDATION_REMOTE_ACCEPTANCE_2026-10-03.json binds the observed exact head;
+  later operational posting and cash changes are outside that CI acceptance.
+- Next dependencies remain explicit scoped transaction composition, immutable
+  operational posting, integrated trade cycles and connected financial writes.
+  There is no available company pilot or external-auditor acceptance evidence.
+
+Finance hierarchy migration0095 is now verified on its frozen sources:478 live
+general passes, two native-client prerequisite skips, two additional API contract
+passes, independent concurrent-write denials and a populated native Finance
+restore on PostgreSQL16.14. Separate migration-chain restore passes16.14/17.10.
+ADR0805 and POSTGRES_FINANCE_SCOPE_2026-10-03.json retain the exact boundary.
+The five narrowed master-data mutation gaps are closed by central policy and
+PostgreSQL0096 mutation guards (PROD029):196 combined tests passed, alongside
+populated Finance restore and native16.14/17.10 migration evidence. ADR0808
+preserves the workspace-only currency administration limitation; complete
+end-to-end isolation remains open. Durable
+AMLSim execution now passes the strict oracle, exact replay and transaction-race
+contracts through0094/0096. ADR0807 accepts the bounded repository/worker path.
+Raw SQL post-completion child insertion, reparenting and claimed-input mutation
+are now guarded by PostgreSQL0097 (PROD030). Nine live tests pass; the actual
+populated native restore repeats all three append denials and preserves exact
+read-only replay. The45-row worker and native16/17 chain also pass with unchanged
+sources and owned cleanup. ADR0810 records the READ COMMITTED requirement and
+historical damaged-manifest boundary. This is separate from scale/ROI evidence.
+
+The isolated ca82 whole-repository run is retained as failed:3647 passed,
+259 capability skips, one stale health migration-count assertion and24 warnings
+in788.16s. Ruff/Mypy/Bandit/build passed on that source. The exact pending-count
+test now derives the registered successor count and checks the latest revision;
+a fresh isolated run has now passed as recorded below. See
+SCOPED_FINANCE_REGRESSION_CA82_2026-10-03.json.
+
+Isolated83662639 passes3758 tests,270 prerequisite skips and24 warnings in
+1057.61s. Ruff found two duplicated retained-report set members, repaired in
+ab8e134b with no production change. All quality gates pass onab8e134b;60 focused
+restore/health checks pass with one live-service prerequisite skip. Exact sources
+and the earlier lint failure are retained in SCOPED_FINANCE_VERIFICATION_2026-10-03.json.
+Later0097 and posting development are outside that full regression snapshot.
+
+PROD009 is accepted as a bounded reviewed Manual posting/full-reversal kernel
+under ADR0811 and SQLite48/PostgreSQL0098. Stable authenticated preparation,
+independent review, immutable exact effects, current human authority, source-
+bound command replay, period locks and exact audit/outbox affinity are verified.
+SQLite101 tests pass without skips; PostgreSQL's final affected7 pass after the
+recorded SoD/evidence repairs. Actual HTTP and password-bound CLI pass. Populated
+native16.14 restore repeats missing/cross-source receipts and borrowed-evidence
+denials, retains2 effects/3 receipts/4 legacy-null records, and verifies cleanup
+and every history hash. The separately frozen16.14/17.10 chain reaches0098.
+FINANCE_POSTING_2026-10-03.json keeps overlapping and earlier source-drifting
+runs distinct. Reports explicitly describe selected-period net activity;
+cumulative opening/as-of balances and generated trade posting remain open.
+
+PROD031 is accepted for actual scoped React receipt/allocation writes under
+ADR0813. The final production build passes19.9s actual HTTPS/PostgreSQL0097:
+one1376minor receipt, total1376 allocation, invoicePaid/version6, exposure0,
+and exactly1 posted/2 allocated event in audit and outbox. Exact receipt retry
+and allocation read-back recover lost responses without a duplicate effect.
+EN/AR keyboard/accessibility and390px layout pass;159 web tests and16 general
+browser tests pass. Sources remain unchanged and the owned database is removed.
+RECEIVABLES_CASH_2026-10-03.json retains the original JSONB503/GET404 and failed
+harness attempts unchanged. No leakage is inferred from the before probe.
+Policyv3 preserves historicalv1/v2 and service invoice/import capabilities.
+Cash remains an AR subledger operation; GL/inventory integration is separate.
+
+These sources are committed atd4e6baf8 and reviewable in
+[Draft PR112](https://github.com/amrzainmubarak/reconforge-erp/pull/112),
+stacked above DraftPR111 on codex/reviewed-posting-and-cash. Final frozen
+quality/package/interface gates pass. The separate clean managed checkout at
+exactlyd4e6baf8 completed with3829 passes,309 capability skips and2 failures in
+1787.40s under locked Python3.12.13. The failures are missing PostgreSQL posting
+JSON-parser inventory and missing Finance posting test evidence in the threat
+model index. Ruff/Mypy/Bandit/build pass with unchanged head and a clean tracked
+tree. POSTING_CASH_REGRESSION_D4_2026-10-03.json permanently retains the failed
+checkpoint. Both inventory repairs pass51 focused tests; a fresh immutable
+whole-repository run remains required. Subsequent work does not modifyd4.
+Hosted PR112 also reproduced both inventory failures; its Python3.11 matrix
+was cancelled and dependent server boundaries skipped. Seven new full-history
+Gitleaks findings are under exact fingerprint/source review; hosted acceptance
+is not claimed. The earlier foundation acceptance remains a separate source.
+The goal remains active. Source inspection for PROD010/011 confirms that AP
+receipts, Inventory movements, AR invoices and GL effects are not yet connected,
+and AP payment is not an implemented aggregate. A reproducible Decimal-context
+prerequisite changes quantity12345 into12000 and FIFO66 into67 at precision2;
+PROD035 must close it before generated stock/trade posting. PROD032/033/034
+track cumulative balances, retained AR precision and analogous AP replay.
+PROD034/035 are now in progress on a subsequent slice: actual PO/receipt/invoice
+recovery and context-independent quantity/FIFO primitives. AP payment remains
+absent and cannot be used as a purported replay fixture.
+
+PROD035 is now accepted under ADR0814:227 tests pass with no skips on frozen
+SQLite/PostgreSQL16.14 sources through0098, plus Ruff/Mypy/Bandit and owned
+database cleanup. Quantity/FIFO results no longer depend on Decimal context;
+ordinary standalone grammar and5000-digit local quantities remain readable.
+Explicit PG new-input refusals and fixed expansion limits are documented.
+EXACT_TRADE_PRIMITIVES_2026-10-03.json retains original/superseded evidence.
+This closes the arithmetic prerequisite only; trade posting and AR policy remain
+separate implementation work.
+
+PROD034 is accepted under ADR0816 after independent inactive-parent review:
+145pass/0skip, unchanged11 dependency hashes, actual concurrent/nonowner/HTTP
+execution, owned cleanup and quality gates. New command envelopes bind the
+request and authoritative source; recovery returns current workflow state with
+no duplicate business evidence. Inactive-parent recovery and fresh-write denial
+are separately verified. PAYABLES_COMMAND_RECOVERY_2026-10-03.json keeps the
+earlier138-pass source and failed probes distinct. Legacy receipt historical
+hierarchy remains unknown; supplier payment and trade GL are not implemented.
+
+### Financial regression and browser checkpoint
+
+The next slice repairs a reproduced SQLite AP partial commit: exception writes
+with `autocommit=False` now keep evidence in the caller transaction and leave
+rollback to that owner.54 focused tests pass; after-fix fault injection leaves
+zero partial AP effects. ADR0806 records the exact boundary. Other SQLite
+aggregate transaction composition and durable strict-rule/input sealing remain
+active work, separate from the isolated70dac5cf regression. The bounded Finance
+hierarchy RLS gate is now verified separately as described above.
+
+Isolated source `f48781e695533df577ca671b9f5a1b8f9a18f7aa` completed:3602 passed,
+240 capability skips, four failures,24 warnings in936.79s. Failures identify an
+outdated SQLite schema assertion, a corruption fixture blocked by the immutable
+snapshot trigger and two missing parser inventory entries. The failed run is
+retained; full acceptance awaits repair and a fresh isolated run. Ruff, Mypy,
+Bandit and packaging passed on that exact source.
+
+The four failures have reviewed repairs;66 focused tests pass. A fresh isolated
+run at70dac5cf passes3632 tests, with243 explicit capability skips and24 warnings
+in877.33s. Ruff, Mypy, Bandit, packaging and whitespace checks also pass; the
+checkout stayed clean. `FINANCIAL_VERIFICATION_2026-10-03.json` binds commands,
+logs and skip reasons to that source. Later integrity work is outside this
+checkpoint. Nested PostgreSQL scope preservation is committed at
+3fce89f7:14 focused live passes and462 broad live passes with one explicit
+native-client skip. Independent follow-up reproduced same-workspace Finance
+organization/entity access via natural-key columns; PROD025 is a P0 closure gate.
+SQLite composed commit ownership also remains open under PROD024.
+
+The AR React journey now has actual HTTPS/PostgreSQL evidence:1376 minor units
+persisted through draft, submission and independent approval, with valid audit
+and outbox events and negative authorization/CSRF/version checks. Arabic/English
+mobile and keyboard behavior were exercised in Playwright. See ADR0801 and
+`RECEIVABLES_UI_2026-10-03.json`; receipts and integrated posting remain open.
+Financial work is reviewable in [Draft PR110](https://github.com/amrzainmubarak/reconforge-erp/pull/110),
+stacked on PR109, with no merge or deployment to main.
+
+## Verified foundation checkpoint (2026-10-03)
+
+An isolated checkout at `8c0951273c6eb6b0e395f12ffe5626821c2f9814` passed
+3412 tests, with167 explicit capability skips and24 warnings, in900.79s.
+Ruff, Mypy, Bandit, package build, Docker build and container doctor pass.
+Actual PostgreSQL CI separately passes409/410 selected with one missing-native-
+client-tools skip. No skip counts as a pass. Exact commands, timings and log
+hashes: [foundation verification](FOUNDATION_VERIFICATION_2026-10-03.json).
+Next-slice AR/currency/strict-matching work is outside this checkpoint.
+
+Updated: 2026-10-03
+
+## Production foundation checkpoint; financial invariants continue
+
+- Committed clean metrics migration 0093, dependency remediation, exact cumulative
+  AP approval/receipt guards, runtime-role admission, hosted API routing and CI selection.
+- AP focused gate: 78 passed, zero skipped; duplicate liability reproduction falls
+  from 6000 to 3000 minor units. Existing historical violations remain reviewable.
+- Runtime-role gate: 37 passed, zero skipped; existing live workers: 65 passed.
+  Metrics migration/rollback gate: 3 passed with live PostgreSQL.
+- Ruff, Mypy (541 sources), Bandit and wheel/sdist build pass on the updated lock.
+  Python locked audit profiles and full/production npm audits have zero findings.
+- Full first Python regression: 3402 passed, 164 skipped, five failed. Those five
+  exposed approval-surface discovery and outdated report source bindings. The
+  repaired focused selection passes 49 tests; a fresh full run is pending.
+- Actual PostgreSQL CI general selection: 409 passed, zero failed, one missing
+  native-client prerequisite skip (410 selected). Fresh PostgreSQL 16/17
+  migration, idempotency, receiver failover and recovery matrices all passed;
+  dated reports preserve historical evidence unchanged.
+- React: 120 tests passed, typecheck/build passed; standard E2E 16 passed/six
+  opt-in skips. Four existing live admin flows, new live metrics and hosted HTTPS
+  cookie/static/API checks passed separately. Exact English/Arabic metric text
+  no longer passes through binary floating point. No full release claim.
+- Remaining P0 work includes AR status/currency, immutable monetary interpretation,
+  mixed-currency aging and runtime database grants; PROD-019 through PROD-021 record
+  newly reproduced hosting/reporting/privilege acceptance requirements.
+- The user confirmed the full individual-to-bank/institution scope; a first
+  integrated cycle is an engineering dependency gate, not a narrower target market.
+- Complete GL, trade cycles, financial UI and company outcomes remain active.
+  The user reports no company pilot is available and requests strong open-source
+  references/workloads instead. PROD-022 records pinned official sources and the
+  next executable import/benchmark contract. No real company data was accessed.
+
+## PROD-001 — Current production-objective baseline (2026-10-03)
+
+- Previous goal turn classified as progress: fresh environment/runtime measurements,
+  financial defect reproductions and actual CI selection evidence changed the next actions.
+- Baseline source: `1551e8ae69a2982961a315c40be1c4ac2b8c8bc5`;
+  current branch: `codex/production-foundation-audit`. Unrelated untracked work preserved.
+- 3366 passed, 124 skipped, 23 warnings in 817.57s (0:13:37). PostgreSQL focused baseline: 70 passed, zero skipped.
+- Python/npm security audits failed. Existing tests also missed reproduced
+  monetary/quantity/AP/AR defects and a clean-boot metrics migration gap.
+- [Audit](PRODUCTION_AUDIT_2026-10-03.md), [snapshot](BASELINE_2026-10-03.json),
+  [roadmap](PRODUCTION_ROADMAP_2026-10-03.md); PROD-002 through PROD-018 remain open.
+- Original baseline next actions were AP, CI, dependencies and browser session;
+  current checkpoint above records their implementation and remaining gates.
+- The complete PostgreSQL/GL/trade-cycle/financial-UI/customer-outcome objective
+  remains active and unverified. No customer data, production change or release.
+
+## E-1120 - Strict Receivables quantity inputs (2026-08-29)
+
+- SQLite Receivables invoice quantity validation now uses the shared
+  `parse_exact_amount()` boundary, matching the existing PostgreSQL adapter
+  before invoice-line persistence and line-total arithmetic.
+- The focused Receivables/API/PostgreSQL selection reports 19 passed and 1
+  capability-gated PostgreSQL skip; the full locked Python 3.11 regression
+  exits 0 at 100% with declared capability-gated skips. Local Ruff, Mypy,
+  Bandit, dependency-audit, and package-build gates also pass, with the local
+  package explicitly not audited by PyPI because it is unpublished. This is
+  bounded input-integrity evidence. A disposable local PostgreSQL 16 runtime
+  with a non-privileged application role also ran the four-file
+  Payables/Receivables PostgreSQL and HTTP selection at exit 0. Its HTTP tests
+  use synthetic authenticated principals and scope snapshots; the test
+  container was removed afterward without touching pre-existing containers.
+  This does not prove quantity-unit governance, tax correctness, statutory
+  posting, settlement, hosted or cross-version backend parity, external
+  identity, or production assurance.
+
+## E-1119 - Strict persisted Payables quantity decoding (2026-08-29)
+
+- SQLite and PostgreSQL receipt-limit and three-way-match arithmetic now
+  decodes persisted ordered, invoiced, and received quantities through the
+  shared strict parser boundary. PostgreSQL sums canonical persisted text
+  shadows after decoding instead of coercing an aggregate through
+  `Decimal(str(...))`.
+- Malformed, non-finite, negative, and non-canonical persisted quantity data
+  fails closed; zero is accepted only for an empty receipt aggregate. The
+  focused selection reports 40 passed and 1 capability-gated PostgreSQL skip,
+  and the full locked Python 3.11 regression exits 0 at 100% with only
+  declared capability-gated skips. This is persisted quantity-integrity
+  evidence, not inventory completeness, posting, settlement, or production
+  assurance.
+
+## E-1118 - Strict Payables quantity inputs (2026-08-29)
+
+- SQLite and PostgreSQL Payables quantity boundaries now use the shared
+  `parse_exact_amount()` parser while preserving positive arbitrary-scale
+  canonical quantity text. Binary floating-point, non-finite, malformed, and
+  scientific-notation values fail closed before persistence or 3-way matching.
+- The focused Payables/API/application/PostgreSQL selection reports 30 passed
+  and 1 capability-gated PostgreSQL skip; the full locked Python 3.11
+  regression also exits 0 at 100% with only declared capability-gated skips.
+  This is bounded quantity-input evidence, not inventory completeness,
+  posting, settlement, or production assurance.
+
+## E-1117 - Strict amount lexemes in duplicate detection (2026-08-29)
+
+- The bounded duplicate-detection strategy now uses the shared
+  `parse_exact_amount()` boundary before amount fingerprint canonicalization.
+  Binary floating-point, non-finite, malformed, and scientific-notation text
+  values fail closed without changing exact duplicate occurrence semantics.
+- The focused duplicate-detection and strategy-contract selection passes
+  48/48; the full locked Python 3.11 regression also exits 0 at 100% with
+  only declared capability-gated skips. This is bounded matching-input
+  evidence, not fraud detection, source authenticity, posting, or production
+  assurance.
+
+## E-1116 - Explicit financial input policy in Journal Controls (2026-08-29)
+
+- Journal threshold and stored journal-amount evaluation now accept a named
+  `FinancialInputPolicy`; SQLite and PostgreSQL production adapters pass the
+  strict policy explicitly before creating control exceptions.
+- Legacy float behavior remains available only when the domain caller chooses
+  the legacy policy explicitly. The focused journal/application/control
+  selection collected 10 tests: 9 passed and 1 capability-gated PostgreSQL
+  test was skipped; no schema or migration changed. This is input-policy
+  evidence, not statutory posting or production assurance.
+
+## E-1115 - Strict canonical Money in bank-control replay (2026-08-29)
+
+- Bank-control report verification now restores `amount_tolerance` and every
+  non-null decision `amount_variance` through the strict canonical Money
+  reader before accepting the decision digest.
+- A re-signed report with padded amount text is rejected before replay
+  acceptance. The focused bank/API/SQLite/PostgreSQL selection passes 11/11
+  with one capability-gated PostgreSQL skip; the full locked Python 3.11
+  regression reaches 100% and exits 0. This is local artifact-integrity
+  evidence, not bank-source authenticity, settlement, posting, or production
+  assurance.
+
+## E-1114 - Current supply-chain claims follow zero npm SRI gap (2026-08-29)
+
+- Current gap, whitepaper, and documentation-drift surfaces now state the
+  validator-backed result of 211 npm registry entries and zero integrity gaps.
+  Historical records retain their earlier revision context.
+- A regression contract executes the current policy validator and rejects the
+  retired current-surface wording. Hosted provenance and external package
+  assurance remain open.
+
+## E-1113 - Strict canonical API and CLI Money inputs (2026-08-29)
+
+- Five consolidation API Money adapters and the intercompany CLI now require
+  exact canonical Money serialization at input. The legacy ownership-change
+  CLI two-field contract remains unchanged and explicitly non-canonical.
+- Padded amount text is rejected before domain arithmetic. Focused interface /
+  domain tests and the full locked Python 3.11 regression pass. This is input
+  contract evidence, not statutory or production assurance.
+
+## E-1112 - Strict PostgreSQL ownership-change Money hydration (2026-08-29)
+
+- PostgreSQL ownership-change persisted request hydration now uses
+  `Money.from_strict_canonical_dict()` for Money fields. Canonical requests
+  remain compatible; non-canonical amount/currency/provenance mappings fail
+  closed before replay.
+- The focused ownership-change persistence/domain selection and full locked
+  Python 3.11 regression pass. This is persisted-artifact integrity evidence,
+  not statutory or production assurance.
+
+## E-1111 - Extend strict canonical-money decoding to replay consumers (2026-08-29)
+
+- Translation-result replay, worksheet replay, impairment-bridge replay, and
+  intercompany source-line decoding now use the additive strict Money reader.
+  API request models and compatibility restoration boundaries remain unchanged.
+- Re-signed padded amount text is rejected before financial arithmetic or
+  artifact reproduction acceptance. The focused selection passes 40/40. This
+  is bounded non-posting replay integrity, not statutory or production
+  assurance.
+
+## E-1110 - Add a strict canonical-money replay reader (2026-08-29)
+
+- `Money.from_strict_canonical_dict()` applies the existing schema, currency
+  policy, registry provenance, and precision checks, then requires the input
+  mapping to equal `Money.to_canonical_dict()` field-for-field.
+- The acquisition bridge, PPA, deferred-tax, and ownership-change replay
+  verifiers use the additive strict reader. Existing compatibility restoration
+  remains unchanged.
+- The focused money/consolidation selection passes 66/66. This is a
+  non-posting replay-integrity control, not statutory or production assurance.
+
+## E-1109 - Enforce strict PPA and deferred-tax replay money (2026-08-28)
+
+- PPA and deferred-tax replay now compare every persisted Money amount string
+  and currency code with the canonical result reconstructed through its policy
+  and registry provenance, before accepting the financial arithmetic.
+- Re-signed padded decimal and lowercase currency payloads fail closed; the
+  top-level reporting currency must also be canonical uppercase text.
+- The focused acquisition/PPA/deferred-tax/impairment suite passes 31/31. This
+  is a local non-posting replay integrity control, not statutory accounting,
+  tax treatment, valuation assurance, or production assurance.
+
+## E-1108 - Enforce strict acquisition bridge replay amounts (2026-08-28)
+
+- Acquisition fair-value/goodwill bridge replay now restores every summary and
+  line amount through `Money.from_canonical_dict()` and compares the persisted
+  amount text and currency code with the producer's canonical representation
+  before arithmetic.
+- Embedded currency policy/registry provenance and reporting-currency equality
+  are enforced; re-signed scientific, non-canonical, malformed, non-finite, or
+  mismatched-money payloads fail closed.
+- The focused acquisition suite passes 13/13. This is a non-posting financial
+  integrity control, not statutory accounting or production assurance.
+
+## E-1107 - Bind deployment-readiness evidence to exact content digests (2026-08-28)
+
+- The closed deployment-readiness matrix now contains one SHA-256 digest for
+  every referenced repository evidence file. The offline reader verifies exact
+  coverage and file bytes before returning the matrix or CLI digest.
+- Missing, extra, malformed, duplicate, escaped, or tampered evidence bindings
+  fail closed. Focused readiness tests cover schema closure, tampering, and
+  coverage gaps.
+- This is evidence-integrity and review-binding control only. It does not
+  authenticate artifacts, prove the underlying runtime event, establish
+  independent assurance, or close production-readiness gaps.
+
+## E-824 - Close local exact container security disposition (2026-08-28)
+
+- The exact candidate image scan now uses checksum-verified Syft 1.51.0 and
+  Grype 0.117.0 with a valid imported v6.1.9 database built at
+  `2026-08-28T09:21:39Z`. The validator passes with zero blockers and zero
+  active exceptions.
+- The retained result records 68 packages, 94.11% license metadata coverage,
+  16 active matches, and three exact Python 3.12.14 High matches governed by
+  hash-bound fixed-only OpenVEX. The current artifact is
+  `CONTAINER_SECURITY_LOCAL_2026-08-28.json`.
+- E-824 is complete for the local exact-image disposition. Hosted clean-build,
+  registry publication, signed provenance, legal license review, and
+  production security effectiveness remain separate open gates. ADR 0768
+  records the database import and verification boundary.
+
+## E-884 - Gate Python 3.12 Alpine base-image upgrade (2026-08-28)
+
+- The two-stage Dockerfile now uses the official Python 3.12 Alpine index
+  digest `sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31`
+  and installs the locked runtime with the Python 3.12 interpreter.
+- Candidate image build, hardened networkless/read-only Doctor, sample
+  validation, demo generation, Docker Scout, full locked Python 3.11/3.12
+  regressions, web gates, package build, API/parity tests, and air-gap rollback
+  drills pass. The candidate image is `sha256:a96d87d994852b9fc7b9f647977413e37f5959a95f0e7d36bc66584a8b529e52`.
+- The previous Python 3.11 image was smoke-tested successfully as the rollback
+  target. Exact release-integrated Syft/Grype evidence was not falsely closed:
+  Syft generated the candidate SBOM, while the Grype database refresh remained
+  stale/blocked. Hosted clean-build, publication, provenance, and production
+  claims remain open under E-824. ADR 0767 records the decision and limits.
+
+## E-1106 - Enforce strict ownership-change result replay amounts (2026-08-28)
+
+- Ownership-change result replay now validates scalar financial fields as
+  strict canonical decimal text and restores line amounts through
+  `Money.from_canonical_dict()` with reporting-currency and registry-policy
+  checks before balance evaluation.
+- Re-signed scientific, non-finite, non-canonical, and mismatched-currency
+  payloads fail closed. The focused suite collected 23 tests with 22 passes
+  and one declared capability skip; full regression and release gates pass.
+  This remains non-posting replay evidence; statutory accounting, provider,
+  settlement, and production assurance remain open.
+
+## E-1105 - Enforce strict canonical ERPNext write-back amounts (2026-08-28)
+
+- ERPNext Journal Entry and Payment Entry drafts now canonicalize financial
+  fields and use strict parsed values before payload digest construction.
+- This is draft/payload integrity evidence only. Feature-disabled default,
+  governed approval and dispatch remain; live posting, provider authenticity,
+  settlement, and production assurance remain open.
+
+## E-1104 - Enforce strict canonical ERPNext read amounts (2026-08-28)
+
+- ERPNext GL Entry and Payment Entry read models now use the shared strict
+  canonical amount boundary, with derived checks using strict parsed values.
+- This is synthetic provider-neutral read evidence only. Live ERPNext
+  authenticity, posting, settlement, write-back, and production assurance
+  remain open.
+
+## E-1103 - Share strict canonical amount validation across reference connectors (2026-08-28)
+
+- REST, ERP, payment-statement, and generic database-reference response models
+  now use `canonical_connector_amount()`, which applies strict parsing and
+  canonical serialization before response digest construction.
+- This is provider-neutral read-only evidence only. Live provider
+  authenticity, settlement, payment initiation, write-back, and production
+  assurance remain open.
+
+## E-1102 - Enforce strict CAMT.053 decimal lexical boundary (2026-08-28)
+
+- The bounded offline CAMT.053 parser now rejects scientific notation,
+  separators, accounting parentheses, malformed values, and non-finite tokens
+  at the source boundary, then uses the strict parser and canonical serializer
+  for signed amounts and source digests.
+- This is synthetic offline ISO-boundary evidence only. Bank dialect support,
+  provider authentication, source authenticity, settlement, payment
+  initiation, and production assurance remain open.
+
+## E-1101 - Enforce strict canonical database-reference amounts (2026-08-28)
+
+- The shared `DatabaseRecordRow` validator now uses `parse_exact_amount()` and
+  returns `canonical_decimal_text()`. Scientific notation and malformed values
+  fail closed; finite non-finite validation wording remains compatible. Exact
+  forms are canonicalized before response digest calculation.
+- This is shared connector input and serialization evidence only. Provider
+  authenticity, external database certification, cross-engine parity, capacity,
+  and production financial assurance remain open.
+
+## E-1100 - Enforce strict PostgreSQL database-connector amount hydration (2026-08-28)
+
+- The read-only PostgreSQL named-query connector now uses
+  `parse_exact_amount()` before constructing `DatabaseRecordRow`. Binary
+  floating-point, boolean, malformed, non-finite, and disallowed amount
+  representations fail closed while existing safe error categories and exact
+  canonical outputs remain compatible.
+- This is connector input-integrity evidence only. Provider authenticity,
+  database-driver certification, cross-engine parity, capacity, and production
+  financial assurance remain open.
+
+## E-1099 - Enforce strict PostgreSQL worker tolerance hydration (2026-08-28)
+
+- PostgreSQL grouped and sequential worker adapters now parse
+  `amount_tolerance` through `parse_exact_amount()` and emit canonical
+  non-scientific text. Binary floating-point, malformed, non-finite, negative,
+  and noncanonical scientific-notation values fail at the worker boundary;
+  existing error wording and supported-mode behavior remain compatible.
+- This closes worker rule-input consistency only. Provider behavior,
+  cross-engine parity, capacity, external authorization, and production
+  financial assurance remain open.
+
+## E-1098 - Enforce strict consolidation minor-amount verification (2026-08-28)
+
+- PostgreSQL consolidation-close worksheet and effect replay now compare
+  persisted amounts with minor-unit-derived expectations through
+  `parse_exact_amount()`. Binary floating-point, malformed, missing, and
+  non-finite adapter values fail closed before journal/effect evidence is
+  accepted.
+- This is a bounded replay-verification control. It does not establish statutory
+  accounting treatment, posting correctness, provider behavior, or production
+  financial assurance.
+
+## E-1097 - Enforce strict ownership-percentage hydration (2026-08-28)
+
+- PostgreSQL and SQLite ownership readers, plus PostgreSQL ownership-change
+  replay, now hydrate persisted percentages through `parse_exact_amount()`.
+  Binary floating-point, malformed, non-finite, and missing values fail closed
+  before effective ownership, NCI, or adjustment calculations; existing domain
+  bounds remain unchanged.
+- This is exact financial replay evidence for three adapter boundaries. It does
+  not establish statutory accounting treatment, driver certification, provider
+  behavior, cross-engine parity, or production financial assurance.
+
+## E-1096 - Bind PostgreSQL matching input persistence to the financial policy (2026-08-28)
+
+- PostgreSQL matching input registration now hydrates source amounts through the
+  same `financial_input_policy` passed to the deterministic engine. Strict mode
+  refuses binary floating-point, malformed, non-finite, and missing amounts by
+  storing no usable amount and marking the source input invalid; the explicit
+  legacy policy retains compatibility conversion.
+- This aligns persisted source evidence with the decision boundary. It is
+  adapter-level input-integrity evidence only; PostgreSQL driver behavior,
+  provider authenticity, cross-engine parity, capacity, and production
+  financial assurance remain open.
+
+## E-1095 - Enforce strict PostgreSQL financial hydration (2026-08-28)
+
+- PostgreSQL policy-analysis scope amount bounds and trial-balance debit/credit
+  totals now use `parse_exact_amount()`. Binary floating-point, malformed,
+  non-finite, and negative present values fail closed at repository hydration;
+  missing trial-balance aggregates retain the explicit zero fallback.
+- This is repository input-integrity evidence only. External IAM, driver
+  certification, statutory posting, provider behavior, and production financial
+  assurance remain open.
+
+## E-1094 - Enforce strict parsing for persisted worker policy amounts (2026-08-28)
+
+- PostgreSQL reconciliation worker authorization now decodes persisted
+  `policy_amount` through `parse_exact_amount()`. Binary floating-point values
+  are refused before the amount reaches claim/lifecycle policy evaluation;
+  valid exact text, integer, and Decimal values retain their behavior.
+- This closes a persisted-rule input seam only. It is not evidence of external
+  IAM, distributed revocation, hosted enforcement, posting correctness, or
+  production authorization effectiveness.
+
+## E-1093 - Enforce strict financial inputs in sequential strategy adapters (2026-08-28)
+
+- Carry-forward and reversal-pairing adapters now parse record amounts and
+  tolerances through `parse_exact_amount()`. Binary floating-point values are
+  rejected before domain matching, closing an adapter-level conversion seam
+  that could have turned a `float` into an apparently exact Decimal.
+- Exact text, integer, and Decimal callers retain their existing behavior and
+  digests. This is strict input-boundary evidence only; broader E-1003
+  cross-engine, hosted, capacity, provider, and production evidence remains
+  open.
+
+## E-1092 - Bound bank-control duplicate-reference evaluation (2026-08-28)
+
+- The bank-statement control now rejects direct inputs above 250,000 records
+  per side, more than 10,000 ledger candidates for one normalized reference,
+  or more than 1,000,000 candidate evaluations per run. It fails closed rather
+  than truncating candidates or emitting a partial artifact.
+- Final unmatched-ledger coverage now uses one referenced-ID set, removing the
+  previous quadratic nested membership scan. Existing duplicate-reference
+  ambiguity and replay behavior remain unchanged below the ceilings. This is
+  bounded local algorithm/input safety evidence, not provider or production
+  banking assurance.
+
+## E-1091 - Enforce hard partition limits during PostgreSQL input streaming (2026-08-28)
+
+- PostgreSQL `iter_input_partitions()` now validates and enforces
+  `max_partition_records` while accumulating the current server-cursor
+  partition. The worker passes the persisted `partition_max_records` value and
+  caps cursor batches to that same declared ceiling.
+- An oversized partition is refused before it is handed to a matcher, with no
+  truncation or partial partition result. The focused PostgreSQL repository
+  regression and the existing worker resume suite pass. This is a bounded
+  materialization control, not total-run capacity, database-side memory, or
+  production sizing evidence.
+
+## E-1090 - Bound stock/GL candidate generation under dense partitions (2026-08-28)
+
+- One-to-one stock/GL candidate generation now partitions by work order and
+  currency and refuses a Cartesian upper bound above 100,000 pairs. The full
+  affected partition is surfaced as explicit `candidate_generation_budget_exceeded`
+  ambiguity evidence; no partial candidate set or assignment is selected.
+- The focused ambiguity/property/stock-GL suite passes. This is bounded
+  algorithm safety evidence, not capacity, throughput, or production evidence.
+
+## E-1089 - Enforce tenant provenance in execution-scope resolution (2026-08-28)
+
+- `request_execution_scope()` now rejects a non-empty principal tenant grant
+  that does not include the validated request tenant before it resolves
+  workspace, organization, or legal-entity scope. The direct sibling-tenant
+  regression passes. Empty grants remain an explicit legacy compatibility seam;
+  this is not independent IAM or production authorization evidence.
+
+## E-1088 - Bind generic server permission dependencies to tenant scope (2026-08-28)
+
+- The central `require_permission` and `require_any_permission` server paths
+  now pass the validated tenant header and the principal's bound tenant grant
+  into policy evaluation. A sibling-tenant principal is denied before the route
+  handler; legacy injected principals without the optional binding use an
+  explicit compatibility fallback. This closes the generic dependency context
+  gap only, not external IAM, distributed revocation, or production assurance.
+
+## E-1087 - Bind authenticated server principals to tenant scope (2026-08-28)
+
+- `AuthenticatedServerRequest` now carries the tenant used during PostgreSQL
+  credential verification, and `ServerPrincipal` preserves it as an explicit
+  authorized tenant grant. Server-scoped policy contexts and the operations
+  queue facade reuse that grant rather than deriving authorization solely from
+  the request header.
+- A bound principal for a sibling tenant is rejected before policy evaluation or
+  repository access. Legacy tuple/test seams without the optional binding retain
+  their named compatibility fallback. This is tenant-context provenance
+  hardening, not independent tenant-membership, distributed IAM, or production
+  effectiveness evidence.
+
+## E-1086 - Bound policy-decision cache freshness (2026-08-28)
+
+- The opt-in `PolicyDecisionCache` now gives allowed decisions a validated
+  maximum age of 30 seconds by default. Expired entries are removed before
+  reuse; denials and delegated decisions remain uncached, and the existing
+  shared-generation invalidation remains the primary cross-process control.
+- Focused policy-cache tests pass. This is bounded local freshness defense in
+  depth only; it does not prove distributed IAM, instant revocation, hosted
+  enforcement, or production effectiveness.
+
+## E-1085 - Prove cross-process engine replay stability (2026-08-28)
+
+- A new test creates a 500-record synthetic dataset and executes Pandas plus
+  forced-partitioned DuckDB in four fresh subprocesses under hash seeds 1 and
+  2. It compares canonical result envelopes, reconciliation signatures,
+  policies, counts, and summary rows across processes and engines.
+- The focused process-replay test passes. This is bounded local process/replay
+  evidence only; it does not close supported Python-version, hosted,
+  PostgreSQL, provider, capacity, or production assurance.
+
+## E-1084 - Freeze critical financial route permission contracts (2026-08-28)
+
+- The central API authorization validator now keeps an explicit reviewed
+  mode/permission tuple for high-risk account reconciliation, close,
+  reconciliation, connector write-back, finance validation, inventory posting,
+  consolidation, evidence verification, and emergency-access mutations.
+- Full application construction requires each critical route to remain
+  registered, while any mode or permission drift fails closed before serving
+  requests. Focused tests cover both full-inventory presence and a tampered
+  critical permission contract. This is local route-contract evidence only; it
+  does not prove external IAM, distributed revocation, hosted enforcement, or
+  production authorization effectiveness.
+
+## E-1083 - Keep CI service-container identity immutable and documentation-aligned (2026-08-28)
+
+- The server-boundary CI job executes PostgreSQL 16 Alpine and Redis 7.4
+  Alpine by exact SHA-256 digest, and passes the Redis digest into the
+  live-report verifier. A new contract test binds both workflow service
+  identities to their reviewed digests and prevents a return to tag-only
+  execution.
+- `DEPENDENCY_RISK.md` and `GAP_MATRIX.md` now reflect the current
+  digest-pinned state rather than reporting mutable service tags. This is
+  local workflow/documentation evidence only; it does not prove image
+  provenance, hosted execution, freshness, independent service assurance, or
+  production readiness.
+
+## E-1082 - Bind PostgreSQL outbox workers to verified manifests (2026-08-28)
+
+- Policy-supplier-backed `PostgresOutboxWorkerSettings` now consumes a
+  verified `WorkerPermissionManifest`. Worker identity, audit principal,
+  discovery permission, and execution permission must match the manifest;
+  configuration drift fails closed before database access.
+- The pre-connection discovery/claim lane uses the manifest discovery grant,
+  while publishing and failure lifecycle mutations use the execution grant.
+  The local SQLite `OutboxWorker` rejects hosted-only manifest/discovery
+  configuration. Focused outbox tests pass 21/21 with two declared live-
+  PostgreSQL skips; full regression and release gates are required as final
+  evidence. This is not external IAM, universal worker coverage, distributed
+  revocation, or production authorization assurance.
+
+## E-1081 - Bind PostgreSQL scheduler workers to verified manifests (2026-08-28)
+
+- `PostgresSchedulerWorkerSettings` now consumes a verified
+  `WorkerPermissionManifest` whenever a policy supplier is configured. Worker
+  identity, audit principal, `schedule.discover`, and `schedule.run` must
+  remain bound to the manifest; the pre-connection lane check uses discovery
+  permission and the post-connection dispatch recheck uses execution
+  permission.
+- Missing manifests and manifest/configuration drift fail before database
+  access. The existing explicit unbound local compatibility mode remains
+  named and bounded. Focused scheduler tests pass 10/10; full regression and
+  release gates are required as final evidence. This does not establish
+  external IAM or universal production-worker coverage.
+
+## E-1080 - Bind PostgreSQL reconciliation workers to verified manifests (2026-08-28)
+
+- `PostgresReconciliationWorkerSettings` now accepts a verified
+  `WorkerPermissionManifest` for workers using a policy supplier. Configuration
+  fails closed when the manifest does not match `worker_id`, `audit_actor_id`,
+  `policy_permission`, or `discovery_policy_permission`.
+- Every discovery and execution policy boundary validates the requested grant
+  against the manifest before `require_service_worker_policy` or any
+  PostgreSQL connection. The explicit `allow_unbound_hosted_policy` path stays
+  available only as a named local compatibility exception. Focused worker
+  tests pass with the declared capability skip; full regression and release
+  gates are required as final evidence. This is not external IAM or universal
+  production-worker coverage.
+
+## E-1079 - Bind governed durable workers to verified permission manifests (2026-08-28)
+
+- `GovernedDurableJobWorkerService` now requires a verified
+  `WorkerPermissionManifest`. Claim and all lease/lifecycle rechecks bind the
+  logical worker ID, service-account principal ID, exact tenant/workspace/
+  organization/entity namespace, and the manifest's non-human execution
+  permission before the repository is touched.
+- The manifest's separate discovery permission cannot be supplied as an
+  execution grant, preventing per-call permission substitution. The generic
+  `DurableJobWorkerService` remains unchanged for Community compatibility.
+  Focused worker/manifest tests pass 22/22; full regression and release gates
+  are required as final slice evidence. This is opt-in local policy evidence,
+  not external IAM provisioning, universal worker adoption, distributed
+  revocation, or production authorization assurance.
+
+## E-1078 - Canonical matching requires explicit currency (2026-08-28)
+
+- The deterministic engine now treats missing currency as a visible
+  `MISSING_CURRENCY` data-quality exception whenever the current
+  `canonical-multiset-occurrence-v1` identity policy is selected. Such records
+  cannot enter candidate selection or produce a financial match.
+- The legacy identity reader remains unchanged for the documented stock/GL
+  compatibility contract. Focused matching tests, full regression, static
+  checks, package/security gates, and diff validation pass as local evidence.
+  This closes one canonical-input safety gap; it does not establish provider,
+  production, statutory, or compliance assurance.
+
+## E-1077 - Tenant-bound emergency mutation policy (2026-08-28)
+
+- Emergency request, approval, rejection, review, and administrator-end
+  mutations now perform a second central policy evaluation carrying the
+  validated tenant scope. Target self-service activation/end behavior keeps
+  its existing human-session, state, version, and repository protections.
+- The helper test and full regression/release gates are the local evidence;
+  PostgreSQL live tests remain conditional on the declared DSN. This is bounded
+  ABAC provenance hardening, not PAM, external IAM, or production assurance.
+
+## E-1076 - Explicit emergency-access request authorization (2026-08-28)
+
+- The PostgreSQL emergency-access request mutation now requires the explicit
+  central `security.emergency.request` permission. The permission is human-only
+  and privileged step-up protected; approval/rejection, activation, ending,
+  independent review, forced RLS, and maker-checker repository guards remain
+  unchanged.
+- The route inventory no longer classifies request creation as identity-only.
+  Focused authorization/policy/emergency tests, full regression, and release
+  quality gates are required evidence. This closes request authorization only;
+  it does not establish external IAM, PAM, MFA coverage, or production
+  effectiveness.
+
+## E-1075 - Exact currency-bound enterprise demo trial balances (2026-08-28)
+
+- Enterprise-demo trial-balance source records now use Decimal account bases
+  and factors and construct each balance through `Money.from_exact` under the
+  entity currency's strict precision policy. The demo no longer introduces a
+  binary floating-point amount before the strict account-import boundary.
+- The exact-money regression and enterprise-demo tests pass. Full regression,
+  Ruff, Mypy, Bandit, pip-audit, package build, YAML validation, and diff checks
+  are required evidence for this slice. This improves synthetic input
+  integrity; it does not establish statutory or production assurance.
+
+## E-1074 - Bind CI image scans to Syft configuration subject (2026-08-28)
+
+- The security and release workflows now derive `IMAGE_CONFIG_DIGEST` from
+  Syft's native `source.metadata.imageID` after the SBOM is written. The new
+  helper validates the image type, canonical config/manifest SHA-256 values,
+  and the required `linux/amd64` platform before returning the subject. This
+  removes the BuildKit manifest-list versus image-configuration identity drift
+  exposed by the local current-image evidence.
+- Focused identity, workflow, supply-chain, signed-release, and container
+  hardening tests pass; Ruff, Mypy, policy validation, and YAML validation pass.
+  E-824 remains open for hosted clean-build/provenance, signed publication,
+  and independent production evidence.
+
+## E-1073 - Checksum-bound Alpine security APK retrieval (2026-08-28)
+
+- The digest-pinned container now retrieves the reviewed OpenSSL runtime APKs
+  by exact URL plus SHA-256 and installs them in both stages, so a stale Alpine
+  index cannot select the old package or weaken the pin. The fresh
+  linux/amd64 build and hardened networkless/non-root doctor smoke pass with
+  `3.5.8-r0`; the OpenSSL CLI is absent.
+- E-824 remains open for current Syft/Grype, hosted clean-build/provenance,
+  signed publication, and independent production evidence. The package
+  retrieval fix does not make those claims.
+
+## E-1072 - Fail-closed local role responses (2026-08-28)
+
+- Local `/api/v1/roles` and role-permission responses now use central
+  allowlists and reject malformed repository output with a bounded API error.
+  Focused tests, full pytest regression, Ruff, Mypy, Bandit, pip-audit, package
+  build, source YAML validation, and diff checks pass. ADR 0732 records the
+  compatibility and rollback boundary. This is response-control evidence,
+  not enterprise PostgreSQL or production-effectiveness evidence.
+
+## Current local runtime and release-gate refresh (2026-08-28)
+
+- The current branch is `money-strict-bank-control`; it contains no Codex
+  wording. The tracked worktree was clean before this documentation update,
+  and the user-created untracked execution files remain untouched.
+- Local CLI evidence is current: `reconforge doctor`, sample-data validation,
+  and the synthetic demo all exit `0`. The demo produced the expected report,
+  review, evidence, reconciliation, and rule artifacts; its warnings and
+  exceptions remain synthetic fixture observations.
+- Frontend evidence is current: install, typecheck, unit tests (`75/75`),
+  production build, and E2E (`16` passed, `5` declared environment-bounded
+  skips) exit `0`. Python full regression and static/release gates also pass:
+  pytest, Ruff, Mypy (`539` files), Bandit, pip-audit, package build, source
+  YAML validation, and diff check.
+- A fresh current-source Docker build was retried with pull/no-cache and
+  failed before image creation because Alpine exposed OpenSSL runtime packages
+  at `3.5.7-r0` while the Dockerfile intentionally pins `3.5.8-r0`; the
+  mirror also reported a TLS unspecified error. The pin remains unchanged.
+  This updates E-824 with a current external drift blocker; it does not
+  replace hosted clean-build, current scanner, provenance, or publication
+  evidence.
+
+## E-1071 - Fail-closed local workflow responses (2026-08-27)
+
+- Workflow object, transition, and history responses now use central
+  projections; focused checks, full regression, and release-gate evidence
+  pass. This is bounded response control, not a claim of PostgreSQL workflow
+  availability or production readiness.
+
+## E-1070 - Fail-closed connector write-back responses (2026-08-27)
+
+- Connector write-back intent and recovery-observation responses now use
+  central nested projections across local and server paths; focused checks,
+  full regression, and release-gate evidence pass. This is bounded response
+  control, not a claim of provider correctness or production readiness.
+
+## E-1069 - Fail-closed evidence coverage responses (2026-08-27)
+
+- Evidence coverage results now have a central nested projection for summary
+  fields and per-object counts across SQLite and PostgreSQL route paths;
+  focused checks, full regression, and release-gate evidence pass. This is
+  bounded response control, not a claim of evidence-store durability or
+  production readiness.
+
+## E-1068 - Fail-closed access policy-analysis responses (2026-08-27)
+
+- Policy-analysis results now have a central recursive projection for result
+  fields and conflict findings; focused checks, full regression, and
+  release-gate evidence pass. This is bounded response control, not a claim of
+  policy correctness or production readiness.
+
+## E-1067 - Fail-closed Security Governance responses (2026-08-27)
+
+- Security integration, retention-policy, pagination, disable, policy-change,
+  and evidence-retention routes now use central projections. Focused checks,
+  full regression, and release gates pass. Policy-analysis artifacts remain a
+  separate contract. This is bounded response disclosure control, not security
+  certification or production readiness.
+
+## E-1066 - Fail-closed access administration responses (2026-08-27)
+
+- Access permission, role, pagination, role-change, and user-role assignment
+  routes now use central nested projections. Focused checks, full regression,
+  and release gates pass. Policy-analysis artifacts remain a separate response
+  contract. This is bounded disclosure control, not universal IAM assurance or
+  production readiness.
+
+## E-1065 - Fail-closed identity administration responses (2026-08-27)
+
+- Identity user/session list and lifecycle mutation routes now use central
+  nested projections. Focused checks, full regression, and release gates pass.
+  This is bounded response disclosure control, not external IAM assurance or
+  production readiness.
+
+## E-1064 - Fail-closed projection for Finance Core snapshots (2026-08-27)
+
+- Finance Core snapshot responses now use a central recursive projection across
+  local SQLite and tenant-scoped PostgreSQL paths. Focused tests and the full
+  regression pass; release gates pass. The projection covers the root contract,
+  source and summary envelopes, chart/account/dimension/journal collections,
+  and nested ledger-entry lines. This is bounded disclosure control, not
+  statutory posting or production readiness.
+
+## E-1063 - Fail-closed projection for consolidation source-bound artifacts (2026-08-27)
+
+- Intercompany Elimination, Consolidation Impairment, and Acquisition
+  Deferred Tax responses now use family-specific closed projections through
+  nested Money, lines/items, resolutions, proposals, and source metadata.
+  Focused and full regression/static/security/package gates pass. This is
+  bounded disclosure control, not statutory accounting or production
+  readiness.
+
+## E-1062 - Fail-closed projection for evidence-link mutation responses (2026-08-27)
+
+- The PostgreSQL evidence-link mutation response now uses a closed link/source
+  projection. Focused and full regression/static/security/package gates pass.
+  This is bounded disclosure control, not evidence-store durability or
+  production readiness.
+
+## E-1061 - Fail-closed projection for consolidation ownership-change artifacts (2026-08-27)
+
+- Consolidation ownership-change prepare/read responses now use a closed
+  artifact projection through nested request/result Money and adjustment-line
+  payloads. Focused and full regression/static/security/package gates pass.
+  This is bounded disclosure control, not statutory accounting or production
+  readiness.
+
+## E-1060 - Fail-closed projection for consolidation PPA artifacts (2026-08-27)
+
+- Consolidation PPA prepare/read responses now use a closed artifact
+  projection through nested request/result Money, item, and goodwill-bridge
+  payloads. Focused and full regression/static/security/package gates pass.
+  This is bounded disclosure control, not statutory acquisition accounting or
+  production readiness.
+
+## E-1059 - Fail-closed projection for consolidation ownership responses (2026-08-27)
+
+- The consolidation ownership save and effective-resolution responses now
+  use closed nested projections for local and tenant-scoped PostgreSQL paths,
+  including the local workspace source marker. Focused tests and target
+  static checks pass; full regression and release-quality gates pass. This is
+  bounded disclosure control, not statutory consolidation or production
+  readiness.
+
+## E-1058 - Fail-closed projection for consolidation evidence-link responses (2026-08-27)
+
+- The five Consolidation Close evidence-link mutation responses now use one
+  closed compatibility projection for local route construction and the
+  tenant-scoped PostgreSQL boundary, including type-specific fields. Focused
+  and full regression/static/security/package gates pass; ADR 0718 records the
+  decision and rollback boundary. This is bounded disclosure control, not
+  statutory posting or production readiness.
+
+## E-1057 - Fail-closed projection for consolidation certification responses (2026-08-27)
+
+- Consolidation certification prepare, review, and read responses now use one
+  nested certification/source projection across local SQLite and tenant-scoped
+  PostgreSQL paths. Focused and full regression/static/security/package gates
+  pass; ADR 0717 records the decision and rollback boundary. This is bounded
+  disclosure control, not statutory close or production readiness.
+
+## E-1056 - Fail-closed projection for legacy audit verification responses (2026-08-27)
+
+- Legacy audit verification now uses one closed projection for local SQLite and
+  tenant-scoped PostgreSQL results, including nested issue objects. Focused and
+  full regression/static/security/package gates pass; ADR 0716 records the
+  decision and rollback boundary. This is bounded disclosure control, not
+  deployed audit effectiveness or production readiness.
+
+## E-1055 - Fail-closed projection for Master Currency Registry binding responses (2026-08-27)
+
+- Explicit Currency Registry binding responses now use one nested projection
+  across local SQLite and tenant-scoped PostgreSQL paths. Focused and full
+  regression/static/security/package gates pass; ADR 0715 records the decision
+  and rollback boundary. This is bounded disclosure control, not registry
+  correctness, live rate sourcing, or production readiness.
+
+## E-1054 - Fail-closed projection for Master Currency Registry reconciliation (2026-08-27)
+
+- Master Currency Registry reconciliation now uses one nested projection across
+  local SQLite and tenant-scoped PostgreSQL responses. Focused and full
+  regression/static/security/package gates pass; ADR 0714 records the decision
+  and rollback boundary. This is bounded disclosure control, not registry
+  correctness, live rate sourcing, or production readiness.
+
+## E-1053 - Explicit financial input policy in risk scoring (2026-08-27)
+
+- Risk scoring now has a typed policy boundary and Stock/Work-order/WIP paths
+  propagate strict v2 or an explicitly named legacy v1 policy. Focused and full
+  regression/static/security/package gates pass; ADR 0713 records the decision
+  and rollback boundary. This is a bounded exactness slice, not closure of all
+  legacy callers or production financial assurance.
+
+## E-1052 - Fail-closed projection for Inventory movement void responses (2026-08-27)
+
+- Inventory movement void responses now use the existing central movement
+  allowlist across local SQLite and tenant-scoped PostgreSQL paths. Focused and
+  full regression/static/security/package gates pass; ADR 0712 records the
+  decision and rollback boundary. This is disclosure control, not inventory
+  posting correctness or production readiness.
+
+## E-1051 - Fail-closed projection for Metrics dashboard and lineage responses (2026-08-27)
+
+- Metrics dashboard and lineage responses now use separate central allowlists
+  across local SQLite and tenant-scoped PostgreSQL paths. Focused and full
+  regression/static/security/package gates pass; ADR 0711 records the decision
+  and rollback boundary. This is bounded disclosure control, not production
+  observability or SLO readiness.
+
+## E-1050 - Fail-closed projection for scope-grant list responses (2026-08-27)
+
+- The authenticated scope-grant list now projects repository mappings through
+  the central `project_scope_grant` allowlist before serialization. Focused and
+  full regression/static/security/package gates pass; ADR 0710 records the
+  decision and rollback boundary. This is bounded disclosure control, not
+  broader authorization or production readiness.
+
+## E-1049 - Fail-closed projection for Auth Me identity responses (2026-08-27)
+
+- `/api/v1/auth/me` now applies the central `project_auth_me` allowlist before
+  serialization and recursively bounds authorized scopes. Focused and full
+  regression/static/security/package gates pass; ADR 0709 records the decision
+  and rollback boundary. This is bounded disclosure control, not universal IAM
+  or production readiness.
+
+## E-1048 - Fail-closed projection for Consolidation Close summary responses (2026-08-27)
+
+- The `/api/v1/consolidation-close/summary` response now applies the central
+  consolidation summary allowlist on local SQLite and tenant-scoped
+  PostgreSQL branches. Declared period/lock/run/reversal counts remain
+  compatible; unknown future fields cannot silently enter the response.
+- Focused field and server-boundary tests plus the full regression/static/
+  security/package gates pass. ADR 0708 records the decision and rollback
+  boundary. This remains a bounded disclosure control, not universal
+  field-level authorization or production readiness.
+
+## E-1047 - Fail-closed projection for Finance summary responses (2026-08-27)
+
+- Finance Core summary responses now use one central projection across the
+  local SQLite, tenant-scoped PostgreSQL Finance Core, and bounded legacy
+  PostgreSQL ledger branches. The allowlist deliberately covers the union of
+  their known count fields and recursively bounds source metadata, removing
+  backend-dependent future-field disclosure.
+- Focused field/server-route tests and the full regression/static/security/
+  package gates pass. ADR 0707 records the compatibility and rollback boundary.
+  This remains a bounded disclosure control, not universal field-level
+  authorization or production readiness.
+
+## E-1046 - Fail-closed projection for Master Data summary responses (2026-08-27)
+
+- The `/api/v1/master-data/summary` response now uses one central
+  `project_master_summary` allowlist on both local SQLite and tenant-scoped
+  PostgreSQL paths. This removes the previous backend-dependent disclosure
+  behavior; unknown future summary fields cannot silently enter the API.
+- Focused field/route tests and the full regression/static/security/package
+  gates pass. ADR 0706 records the decision and rollback boundary. This is a
+  bounded disclosure control, not universal field-level authorization or
+  production readiness.
+
+## E-1045 - Fail-closed projection for Inventory Planning summary responses (2026-08-27)
+
+- The `/api/v1/inventory-planning/summary` response now applies the central
+  `project_inventory_planning_summary` allowlist on both local SQLite and
+  tenant-scoped PostgreSQL branches. Unknown future aggregate fields cannot
+  silently enter the response while the existing workspace and count fields
+  remain compatible.
+- Focused field and server-route tests pass, including a synthetic future
+  summary field. Full regression, static/security/package, YAML, and diff gates
+  are recorded with the slice commit. This remains a bounded disclosure
+  control, not universal field-level authorization or production readiness.
+- ADR 0705 records the decision and rollback boundary.
+
+## E-824 current-image verification attempt (2026-08-27)
+
+- A clean `linux/amd64` Docker build of the current tree succeeded with image
+  config `sha256:0564d0392cc1a2f44346afef40e45343a2b734d3c8a1f145ce1b84cb69b6cf0d`
+  and manifest `sha256:51d8c46ced833ae6f0a6d00d3bae8fec8fb3775d54fc212ab79a7a7a1e259b67`.
+  Hardened no-network/read-only/non-root `reconforge doctor` also exited 0.
+- Syft 1.51.0 and Grype 0.117.0 binaries matched the CI-pinned commits on
+  this Windows host. Syft produced a subject-bound native SBOM and Grype
+  exited 0 using the cached v6.1.9 database, but the database was older than
+  the 120-hour policy ceiling. Refresh failed with a TLS handshake timeout to
+  `grype.anchore.io`; the fail-closed validator therefore rejected the local
+  evidence because the scan configuration was intentionally not weakened.
+- E-824 remains `in_progress`. This attempt is diagnostic evidence only; it
+  does not replace the required fresh database, hosted clean-build, release
+  provenance, or publication evidence.
+
+## E-1044 - Fail-closed projection for Individual Cashflow API responses (2026-08-27)
+
+- The local-only Individual Cashflow run response now uses a central recursive
+  allowlist for the run envelope, decisions, canonical Money values, input
+  digests, and known status counts. Unknown future result fields cannot
+  silently enter the response.
+- Focused field/API tests pass, and the full Python regression passes 100%.
+  Ruff, Mypy across 539 source files, Bandit, pip-audit, package build, source
+  YAML validation across 174 files, and diff checks also pass. pip-audit
+  cannot audit the local distribution because it is not published on PyPI.
+  ADR 0704 records rollback. This remains a bounded disclosure control, not
+  universal field-level authorization or production readiness.
+
+## E-1043 - Fail-closed projection for Inventory Planning API responses (2026-08-27)
+
+- Inventory Planning count-session lifecycle, count-session lists, reorder-rule
+  mutation/list, reorder signals, and snapshots now use central recursive
+  allowlists across local SQLite and tenant-scoped PostgreSQL adapter paths.
+  Unknown future adapter/storage fields cannot silently enter inventory count
+  or reorder-control responses.
+- Focused field/API tests pass (37 tests plus 1 existing live-PostgreSQL skip),
+  and the full Python regression passes 100%. Ruff, Mypy across 539 source
+  files, Bandit, pip-audit, package build, source YAML validation across 174
+  files, and diff checks also pass. pip-audit cannot audit the local
+  distribution because it is not published on PyPI. ADR 0703 records
+  rollback. This remains a bounded disclosure control, not universal
+  field-level authorization or production readiness.
+
+## E-1042 - Fail-closed projection for Finance Core master API responses (2026-08-27)
+
+- Finance Core chart, account, dimension, dimension-value, and journal list
+  and mutation responses now use central allowlists across local SQLite,
+  tenant-scoped PostgreSQL, and the bounded legacy ledger adapter. Unknown
+  future adapter/storage fields cannot silently enter accounting master data
+  responses while the existing workspace, permission, pagination, and posting
+  policy shapes remain compatible.
+- Focused field/API tests pass (42 tests). Full Python regression and
+  release-quality gates pass: full Python regression at 100%, Ruff, Mypy (539
+  source files), Bandit, pip-audit, package build, source YAML validation (174
+  files), and diff checks. The local distribution is not auditable by
+  pip-audit because it is not published on PyPI. ADR 0702 records rollback.
+  This remains a bounded disclosure control, not universal field-level
+  authorization or production readiness.
+
+## E-1041 - Fail-closed projection for Bank Statement Control API responses (2026-08-27)
+
+- Bank Statement Control create, list, and read responses now use central
+  top-level and recursive report, money, decision, and status-count allowlists
+  across local SQLite and tenant-scoped PostgreSQL adapter paths. Unknown
+  future adapter/storage fields cannot silently enter bank reconciliation
+  evidence responses, while malformed nested objects fail closed.
+- Focused field/API tests pass (31 tests plus 1 existing live-PostgreSQL skip).
+  Full Python regression passes at 100%; Ruff, Mypy (539 source files),
+  Bandit, pip-audit, package build, source YAML validation (174 files), and
+  diff checks also pass. The local distribution is not auditable by pip-audit
+  because it is not published on PyPI. ADR 0701 records rollback. This remains
+  a bounded disclosure control, not universal field-level authorization or
+  production readiness.
+
+## E-1040 - Fail-closed projection for Manufacturing Cost Control API responses (2026-08-27)
+
+- Manufacturing cost-control create, list, and read responses now use central
+  top-level and recursive report, money, quantity, decision, and status-count
+  allowlists across local SQLite and tenant-scoped PostgreSQL adapter paths.
+  Unknown future adapter/storage fields cannot silently enter production-cost
+  evidence responses, while malformed nested objects fail closed.
+- Focused field/API tests pass (31 tests plus 1 existing live-PostgreSQL skip).
+  Full Python regression passes at 100%; Ruff, Mypy (539 source files),
+  Bandit, pip-audit, package build, source YAML validation (174 files), and
+  diff checks also pass. The local distribution is not auditable by pip-audit
+  because it is not published on PyPI. ADR 0700 records rollback. This remains
+  a bounded disclosure control, not universal field-level authorization or
+  production readiness.
+
+## E-1039 - Fail-closed projection for Retail Settlement API responses (2026-08-27)
+
+- Retail settlement create, list, and read responses now use central top-level
+  and recursive report, money, decision, and status-count allowlists across
+  local SQLite and tenant-scoped PostgreSQL adapter paths. Unknown future
+  adapter/storage fields cannot silently enter POS settlement evidence.
+- Focused field/API tests pass (31 tests plus 1 existing live-PostgreSQL skip),
+  and the full Python regression passes at 100%. Ruff, Mypy (539 source files),
+  Bandit, pip-audit, package build, targeted YAML validation (9 files), and
+  diff checks also pass. pip-audit cannot audit the local `reconforge-erp`
+  distribution name because it is not published on PyPI. ADR 0699 records
+  rollback.
+
+## E-1038 - Fail-closed projection for professional invoice/payment API responses (2026-08-26)
+
+- Professional invoice/payment evidence responses now use central top-level and
+  recursive report, money, and decision allowlists across local SQLite and
+  tenant-scoped PostgreSQL adapter paths. Unknown future adapter fields cannot
+  silently enter financial evidence responses.
+- Focused field/API tests pass (29 tests plus 1 existing skip), and the full
+  Python regression passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML validation (9 files), and diff checks
+  also pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  name because it is not published on PyPI. ADR 0698 records rollback.
+
+## E-1037 - Fail-closed projection for Receivables API responses (2026-08-26)
+
+- Receivables customer, invoice, receipt, credit-exposure, and aging responses
+  now use central top-level and nested allowlists across local SQLite and
+  tenant-scoped PostgreSQL. Unknown future adapter/storage fields cannot
+  silently enter AR responses.
+- Focused field/API tests pass (24 tests plus 1 existing skip), and the full
+  Python regression passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML validation (9 files), and diff checks
+  also pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  name because it is not published on PyPI. ADR 0697 records rollback.
+
+## E-1036 - Fail-closed projection for Payables supplier-invoice API responses (2026-08-26)
+
+- Payables supplier-invoice create, list, submit, match, and approve responses
+  now use central top-level, nested-line, and three-way-match child
+  allowlists across local SQLite and tenant-scoped PostgreSQL. Unknown future
+  adapter/storage fields cannot silently enter invoice lifecycle responses.
+- Focused field/API tests pass (26 tests at the focused boundary), and the full
+  Python regression passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML validation (9 files), and diff checks
+  also pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  name because it is not published on PyPI. ADR 0696 records rollback.
+
+## E-1035 - Fail-closed projection for Payables goods-receipt API responses (2026-08-26)
+
+- Payables goods-receipt posting responses now use a central top-level and
+  nested-line allowlist across local SQLite and tenant-scoped PostgreSQL.
+  Unknown future adapter/storage fields cannot silently enter receipt
+  responses.
+- Focused field/API tests pass (24 tests at the focused boundary), and the full
+  Python regression passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML validation (9 files), and diff checks
+  also pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  name because it is not published on PyPI. Supplier invoices and three-way-
+  match responses remain separate surfaces. ADR 0695 records rollback.
+
+## E-1034 - Fail-closed projection for Payables purchase-order API responses (2026-08-26)
+
+- Payables purchase-order create, submit, and approve responses now use a
+  central top-level and nested-line allowlist across local SQLite and
+  tenant-scoped PostgreSQL. Unknown future adapter/storage fields cannot
+  silently enter purchase-order lifecycle responses.
+- Focused field/API tests pass (22 tests at the focused boundary), and the full
+  Python regression passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML validation (9 files), and diff checks
+  also pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  name because it is not published on PyPI. Receipts, supplier invoices, and
+  three-way-match responses remain separate surfaces. ADR 0694 records
+  rollback.
+
+## E-1033 - Fail-closed projection for Payables supplier API responses (2026-08-26)
+
+- Payables supplier save and list responses now use a central allowlist across
+  local SQLite and tenant-scoped PostgreSQL. Unknown future adapter/storage
+  fields cannot silently enter the supplier master API response.
+- Focused field/API tests pass (20 tests at the focused boundary), and the full
+  Python regression passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML validation (9 files), and diff checks
+  also pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  name because it is not published on PyPI. Purchase orders, receipts,
+  supplier invoices, and three-way-match responses remain separate surfaces.
+  ADR 0693 records rollback.
+
+## E-1032 - Fail-closed projection for Inventory Core operational API responses (2026-08-26)
+
+- Inventory Core movement list/create/read/post/void responses, exact on-hand
+  balances, control exceptions, summary, and bounded snapshot responses now
+  use central allowlists across local SQLite and PostgreSQL. Movement lines,
+  on-hand balances, control exceptions, snapshot source/summary, and all
+  snapshot collections are projected recursively; malformed nested values fail
+  closed.
+- Focused field/API tests pass (19 tests at the focused boundary), and the full
+  Python regression passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML validation (9 files), and diff checks
+  also pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  name because it is not published on PyPI. This is a bounded disclosure
+  control; universal field-level authorization, external IAM, distributed
+  revocation, disclosure approval, source authenticity, and production
+  effectiveness remain open. ADR 0692 records rollback.
+
+## E-1031 - Fail-closed projection for Inventory Core master API responses (2026-08-26)
+
+- Inventory Core unit-of-measure, item, warehouse, location, and lot/serial
+  list/mutation responses now use central allowlists across local SQLite and
+  PostgreSQL. Unknown future adapter/storage fields cannot silently enter
+  these operational master-data responses.
+- Focused field/API tests and the full Python regression pass at 100%. Ruff,
+  Mypy (539 source files), Bandit, pip-audit, package build, targeted YAML
+  validation (9 files), and diff checks also pass. Movement, on-hand,
+  control-exception, summary, and snapshot responses remain separate surfaces.
+  ADR 0691 records rollback.
+
+## E-1030 - Fail-closed projection for Inventory Valuation Reversal API responses (2026-08-26)
+
+- Inventory Valuation Reversal summary, snapshot, list, create, read,
+  approve, and cancel responses now use central allowlists across local SQLite
+  and PostgreSQL. Reversal effects are projected independently and the
+  snapshot is recursive; malformed nested collections or records fail closed.
+- Focused field/API tests and the full Python regression pass at 100%. Ruff,
+  Mypy (539 source files), Bandit, pip-audit, package build, targeted YAML
+  validation (9 files), and diff checks also pass. This is a bounded disclosure
+  control only;
+  universal field-level authorization, external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness
+  remain open. ADR 0690 records rollback.
+
+## E-1029 - Fail-closed projection for Inventory Valuation policy/layer/snapshot API responses (2026-08-26)
+
+- Inventory Valuation policy, cost-layer, summary, and snapshot responses now
+  use central allowlists across local SQLite and PostgreSQL. Snapshot source,
+  summary, policy, document, and open-layer collections are projected
+  recursively; malformed nested collections or records fail closed.
+- Focused field/API tests and the full Python regression pass at 100%. Ruff,
+  Mypy (539 source files), Bandit, pip-audit, package build, targeted YAML
+  validation (9 files), and diff checks also pass. This is a bounded disclosure
+  control only;
+  universal field-level authorization, external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness
+  remain open. ADR 0689 records rollback.
+
+## E-1028 - Fail-closed projection for Inventory Valuation document API responses (2026-08-26)
+
+- Inventory Valuation document list, create, read, approve, and cancel
+  responses now use central allowlists across local SQLite and PostgreSQL.
+  Input-cost records, valuation lines, and layer-consumption records are
+  projected independently; unknown future adapter/storage fields cannot
+  silently enter the financial response contract.
+- Focused field/API tests and the full Python regression pass at 100%. Ruff,
+  Mypy (539 source files), Bandit, pip-audit, package build, targeted YAML
+  validation (9 files), and diff checks also pass. This is a bounded disclosure
+  control only;
+  universal field-level authorization, external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness
+  remain open. ADR 0688 records rollback.
+
+## E-1027 - Fail-closed projection for Master Data API responses (2026-08-26)
+
+- Master Data currency, organization, legal-entity, branch, and fiscal-period
+  list/mutation responses plus the versioned snapshot now use central
+  allowlists across local SQLite and PostgreSQL shapes. Snapshot collections
+  and currency-registry nested records are projected independently; malformed
+  nested records fail closed.
+- Focused Master Data/field tests and the full Python regression pass at 100%.
+  Ruff, Mypy (539 source files), Bandit, pip-audit, package build, targeted
+  YAML validation (9 files), and diff checks also pass. Broad safe-load
+  parsing of every repository YAML file remains intentionally separate because
+  a synthetic hostile-tag fixture uses a PyYAML-specific Python tag and must
+  not be accepted by `safe_load`. This is a bounded disclosure control only;
+  universal field-level authorization, external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness
+  remain open. ADR 0687 records rollback.
+
+## E-1026 - Fail-closed projection for Finance Core ledger-entry API responses (2026-08-26)
+
+- Finance Core ledger-entry list, read, create, validate, and void responses
+  now use one central allowlist across local SQLite, PostgreSQL Finance Core,
+  and the bounded legacy PostgreSQL ledger shapes. Nested ledger lines are
+  projected independently, so future adapter or storage fields cannot
+  silently become API output.
+- Focused field/API tests and the full Python regression pass at 100%. Ruff,
+  Mypy (539 source files), Bandit, pip-audit, package build, targeted YAML
+  validation (9 files), and diff checks also pass. Broad safe-load parsing of
+  every repository YAML file remains intentionally separate because a
+  synthetic hostile-tag fixture uses a PyYAML-specific Python tag and must not
+  be accepted by `safe_load`. This is a bounded disclosure control only;
+  universal field-level authorization, external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness
+  remain open. ADR 0686 records rollback.
+
+## E-1025 - Fail-closed projection for reconciliation API responses (2026-08-26)
+
+- PostgreSQL reconciliation run, canonical-input, deterministic-result, and
+  exception responses now use central allowlists. Nested run collections are
+  projected before serialization, so unknown adapter fields cannot silently
+  become API output.
+- Focused reconciliation/field/API tests, full Python regression at 100%,
+  Ruff, Mypy, Bandit, pip-audit, package build, YAML validation, and diff
+  checks pass. This is a bounded disclosure control only; universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+  ADR 0685 records rollback.
+
+## E-1024 - Fail-closed projection for account reconciliation API responses (2026-08-26)
+
+- Account reconciliation list, read, create, and lifecycle responses now use a
+  central allowlist over the reviewed local SQLite and PostgreSQL shapes.
+  Nested reconciliation items are projected independently, so future storage
+  or adapter fields cannot silently enter the API response.
+- Focused account/field/API tests, full Python regression at 100%, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML validation, and diff checks pass. This
+  is a bounded disclosure control only; universal field-level authorization,
+  external IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open. ADR 0684 records
+  rollback.
+
+## E-1023 - Fail-closed projection for consolidation-close API responses (2026-08-26)
+
+- Consolidation-close period and run responses now use central allowlists over
+  the reviewed local SQLite and PostgreSQL shapes. Nested journal lines,
+  effect lines, and known PostgreSQL evidence arrays are projected explicitly;
+  future storage/adapter fields cannot silently enter the API response.
+- Focused field/API tests, full Python regression at 100%, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML validation, and diff checks pass. This is a
+  bounded disclosure control only; universal field-level authorization,
+  external IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open. ADR 0683 records
+  rollback.
+
+## E-1022 - Fail-closed projection for Exception API responses (2026-08-26)
+
+- Local exception list, assignment, and status responses now use a central
+  allowlist. A future `exceptions_queue` storage column cannot silently enter
+  the API response.
+- Focused field/API tests, full Python regression at 100%, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML validation, and diff checks pass. This is a
+  bounded local disclosure control; the route remains unavailable in Server
+  Profile and external IAM, distributed revocation, disclosure approval,
+  source authenticity, and production effectiveness remain open. ADR 0682
+  records rollback.
+
+## E-1021 - Fail-closed projection for Close API responses (2026-08-26)
+
+- Close period, task, and readiness responses now use central allowlists over
+  the union of local SQLite and PostgreSQL fields. SQLite `SELECT *` schema
+  growth and future adapter fields cannot silently expand the API response.
+- Focused field/API tests, full Python regression at 100%, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML validation, and diff checks pass. This remains
+  a bounded disclosure control; external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness are
+  open. ADR 0681 records rollback.
+
+## E-1020 - Fail-closed projection for Evidence mutation responses (2026-08-26)
+
+- Server Profile evidence requirement and checksum verification responses now
+  use central allowlists instead of direct adapter serialization. Known fields
+  remain available to the existing authorized operation, additive
+  `field_access` metadata reports the projection, and unknown future fields
+  are dropped.
+- Focused field/API tests, full Python regression at 100%, Ruff, Mypy, package
+  build, YAML validation, and diff checks pass. External IAM, distributed
+  revocation, disclosure approval, source authenticity, and production
+  effectiveness remain open. ADR 0680 records rollback.
+
+## E-1019 - Fail-closed projection for legacy audit event responses (2026-08-26)
+
+- The local and Server Profile `/api/v1/audit/events` response paths now use
+  one central allowlist for their different SQLite/PostgreSQL field aliases.
+  Actor, tenant, target identifiers, request IDs, reasons, and decoded
+  metadata are masked with `[REDACTED]`; unknown future adapter fields are
+  dropped before serialization.
+- Focused field/API tests pass. This closes a disclosure boundary for the
+  legacy event list only; the route still requires `audit.read`, Server Profile
+  still re-evaluates tenant policy, and external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness
+  remain open. ADR 0679 records rollback.
+
+## E-1018 - Extend fail-closed field projection to evidence record responses (2026-08-26)
+
+- Local and Server Profile evidence list/get responses now use the same
+  reviewed record/link allowlist as drill-down; Server Profile registration
+  responses use the sensitive allowlist after `evidence.manage` authorization.
+  Safe reads retain the legacy `***redacted***` token and all unknown adapter
+  fields are dropped.
+- Server Profile list/get requests pass the safe field set through central
+  scoped policy. Focused API/field tests, Ruff, Mypy, full Python regression,
+  YAML, and diff gates pass; package build is the final artifact check.
+  Universal field-level enforcement, external IAM, distributed revocation,
+  and production effectiveness remain open. ADR 0678 records rollback.
+
+## E-1017 - Migrate evidence drill-down to fail-closed field projection (2026-08-26)
+
+- Local and Server Profile evidence drill-down responses now use one reviewed
+  response allowlist for evidence records and nested links. Ordinary reads
+  preserve the legacy `***redacted***` token; sensitive reads remain gated by
+  `evidence.manage` and still drop unknown future fields.
+- Each evidence node exposes projection mode, masked/denied fields, version,
+  and a deterministic digest. Focused field/API tests, Ruff, and Mypy pass.
+  Full Python regression, package build, YAML validation, and diff checks pass.
+  This closes one surface only; universal field-level enforcement, external
+  IAM, distributed revocation, and production effectiveness remain open. ADR
+  0677 records rollback.
+
+## E-1016 - Require explicit policy supplier before PostgreSQL Reconciliation execution (2026-08-26)
+
+- `PostgresReconciliationWorker` now rejects missing policy
+  suppliers before discovery, claim, or execution transaction effects. The
+  explicit `allow_unbound_hosted_policy` compatibility flag is disabled by
+  default; bounded legacy fixtures and benchmarks opt into it explicitly.
+- Focused Reconciliation, persisted-JSON, and grouped-runtime tests pass;
+  Ruff and Mypy pass, the full Python regression passes at 100%, and package
+  build succeeds. External IAM, provider delivery, HA/DR, production SLOs,
+  and production authorization effectiveness remain open. ADR 0676 records
+  rollback.
+
+## E-1015 - Require explicit policy supplier before PostgreSQL Scheduler processing (2026-08-26)
+
+- `PostgresSchedulerWorker` now rejects a valid lane with no
+  policy supplier before connection access or schedule processing. The
+  explicit `allow_unbound_hosted_policy` compatibility flag is disabled by
+  default; bounded legacy fixtures opt into it explicitly.
+- Focused Scheduler worker/notification tests pass (`9 passed, 1 skipped`),
+  Ruff and Mypy pass, the full Python regression passes at 100%, and package
+  build succeeds. E-1016 separately closes the Reconciliation worker boundary;
+  external IAM, provider delivery, HA/DR, production SLOs, and production
+  authorization effectiveness remain open. ADR 0675 records rollback.
+
+## E-1014 - Require explicit policy supplier before PostgreSQL Outbox publishing (2026-08-26)
+
+- `PostgresOutboxWorker` now rejects missing policy suppliers before opening a
+  connection or claiming/publishing an event. The explicit
+  `allow_unbound_hosted_policy` compatibility flag is disabled by default and
+  is rejected by the local SQLite worker; only bounded legacy fixtures and
+  benchmark profiles opt into it.
+- Missing-policy, permission-denial, revocation-before-publisher, hierarchy,
+  payload, notification, local-worker, Ruff, and Mypy gates pass. E-1015 and
+  E-1016 separately close the Scheduler and Reconciliation worker boundaries;
+  external IAM, provider delivery, HA/DR, production SLOs, and production
+  authorization effectiveness remain open. ADR 0674 records rollback.
+
+## E-1013 - Persist Server Profile governed-job facade decisions through policy audit sink (2026-08-26)
+
+- `GovernedDurableJobApplicationService` now accepts an optional
+  provider-neutral `PolicyAuditSink` and passes it to the existing closed
+  `audit_policy_decision` path. Server Profile injects its tenant-scoped
+  PostgreSQL sink; local/Community callers remain sink-free by default and
+  retain structured logging.
+- The synthetic Server Profile route test captures the facade decision through
+  the sink; focused tests, full Python regression, Ruff, Mypy, and package
+  build pass. Universal API coverage, external IAM, distributed revocation,
+  HA/DR, production SLOs, and production authorization effectiveness remain
+  open. ADR 0673 records rollback.
+
+## E-1012 - Use governed durable-job facade in Server Profile queue health (2026-08-26)
+
+- The PostgreSQL Server Profile queue-health route now builds its policy
+  context from the verified `ServerPrincipal` and principal workspace,
+  organization, and legal-entity grants, then calls the governed application
+  facade with actor, selected hierarchy, and request ID.
+- Existing server tenant-policy recheck, transaction-local scope, and RLS
+  remain independent barriers. API contract tests plus Ruff and Mypy pass.
+  E-1013 now also sends the facade decision through the PostgreSQL policy-audit
+  sink; universal API coverage, external IAM,
+  distributed revocation, HA/DR, production SLOs, and production
+  authorization effectiveness remain open. ADR 0672 records rollback.
+
+## E-1011 - Route local operations queue health through governed durable-job facade (2026-08-26)
+
+- The local `/api/v1/ops/durable-jobs/queue` route now builds a scoped policy
+  context from the authenticated local user, local RBAC permissions, and the
+  selected tenant/workspace/organization/entity hierarchy before calling
+  `GovernedDurableJobApplicationService.queue_snapshot`.
+- The sanitized response contract is unchanged. API tests prove facade use and
+  the existing relevant API/application/worker tests pass. Server Profile
+  remains on its dedicated PostgreSQL tenant-policy/RLS path until a proper
+  PostgreSQL audit-sink adapter is added; universal API adoption, external IAM,
+  distributed revocation, HA/DR, production SLOs, and production
+  authorization effectiveness remain open. ADR 0671 records rollback.
+
+## E-1010 - Govern durable-job application queue reads and requeue by exact scope (2026-08-26)
+
+- `GovernedDurableJobApplicationService` now policy-gates `queue_snapshot` and
+  `requeue` alongside submit/cancel. Each decision binds the exact tenant,
+  workspace, organization, entity, object ID, action, and optional request ID
+  before repository access; requeue also checks the persisted job scope before
+  mutation.
+- Focused tests cover denied queue visibility, allowed queue projection,
+  wrong-entity requeue, failed-job recovery, and the existing worker policy
+  contracts. The PostgreSQL governed fixture now supplies the entity context
+  required by the stricter facade. This is local synthetic application-facade
+  evidence only; API route adoption, external IAM, distributed revocation,
+  multi-host coordination, HA/DR, production SLOs, and production
+  authorization effectiveness remain open. ADR 0670 records rollback.
+
+## E-1008 - Re-evaluate governed durable-worker policy at every lifecycle boundary (2026-08-26)
+
+- `GovernedDurableJobWorkerService` now requires a fresh explicit
+  `PolicyEvaluationContext` and permission for every governed worker boundary:
+  claim, partition-effect reads, heartbeat, checkpoint, partition effect,
+  completion, retry, failure, pause, and cancellation.
+- The worker rejects a missing entity context for an entity-scoped lane and
+  requires exact tenant/workspace/organization/entity equality before the
+  repository is called. Decisions are derived with the actual durable-job
+  object ID and lifecycle action, then persisted through the existing closed
+  policy-decision audit path.
+- Focused tests prove that permission revocation after claim cannot extend a
+  lease or complete a job, and a signature inventory prevents future governed
+  lifecycle wrappers from omitting `policy_context`/`required_permission`.
+  This is local service-account governance evidence only; external IAM,
+  distributed revocation, multi-host coordination, provider behavior, HA/DR,
+  production SLOs, and production authorization effectiveness remain open.
+  ADR 0669 records rollback.
+
+## E-974 - Refresh current Community Compose schema, restart, and backup/restore runtime evidence (2026-08-26)
+
+- A fresh current-tree `reconforge:community-local` image was built with
+  Docker Engine `29.7.2` / Compose `v5.4.0`. The disposable runtime reached
+  healthy after restart, returned API health `ok`, and reported SQLite
+  schema `46/46`.
+- Runtime hardening was observed as UID `10001:10001`, read-only root,
+  `CAP_DROP=ALL`, `no-new-privileges`, and an internal Compose network.
+- One synthetic evidence object with `retention_version=1` was registered.
+  `db backup-verify` passed with SHA-256
+  `89cc18067098509ef0de3f08d720ffe52a3958ba54346aea94d4f556e98e9334`, and
+  an independent restore passed with schema `46` and 113 restored tables.
+- The current report is schema-valid, digest-bound, and packaged. Host port
+  `8765` was reserved by the environment, so only in-container health is
+  counted. This is Community/local evidence only; no Team/Enterprise/Regulated,
+  independent HA/DR, external identity, production SLO, or compliance claim
+  follows. ADR 0668 records rollback.
+
+## E-973 - Close SQLite evidence-retention shortening through migration, trigger, and version guard (2026-08-26)
+
+- SQLite migration `46` adds `evidence_registry.retention_version` and a
+  fail-closed trigger for retention-floor and version-transition integrity.
+- `SQLiteEvidenceRegistryRepository` validates existing and requested floors
+  before any object-store upload, preserves a floor when the requested value is
+  unchanged, increments the version only on extension, and rejects shortening
+  through the service boundary. Pre-46 databases retain the compatibility
+  reader until the additive migration is applied.
+- Backup/restore now carries `retention_version`; focused retention, backup,
+  migration-upgrade, and regression tests pass. This is local SQLite
+  integrity evidence only; legal hold, authorized deletion, WORM, provider
+  durability, and production privacy governance remain open. ADR 0667 records
+  the decision and rollback.
+
+## E-970 - Refresh bounded PostgreSQL HA/DR repeated runtime evidence (2026-08-26)
+
+- `.github/scripts/verify_postgres_ha_dr_repeated.py` completed exactly three
+  disposable PostgreSQL `17.10-alpine` primary/synchronous-standby cycles on
+  Docker Engine `29.7.2`.
+- All three runs passed cleanup, recorded zero acknowledged transaction loss,
+  final sequence `4`, failover RTO `11.270-11.721s`, and failback RTO
+  `1.175-1.316s`. The report is schema-valid and is packaged in
+  `MANIFEST.in`.
+- The readiness matrix now points Team/Enterprise/Regulated failure-domain
+  context at this current artifact and its regression test. This remains a
+  single-host, manual-controller, synthetic-data/key drill; no independent
+  failure domain, quorum/witness, automatic failover, site loss, production
+  SLO, Enterprise readiness, or Regulated readiness is claimed. ADR 0664
+  records the evidence refresh.
+
+## E-969 - Refresh the mode-specific readiness matrix with current Community Compose evidence (2026-08-26)
+
+- `DEPLOYMENT_READINESS_MATRIX.v1.yaml` now reflects the current review date
+  and links the Community external-dependency gate to `compose.yaml`, its
+  contract test, and ADR 0662.
+- The matrix regression requires those evidence paths and preserves the
+  boundary that local Compose evidence does not prove host firewall behavior,
+  backup/restore, HA/DR, or production readiness.
+- Team, Enterprise, and Regulated gates remain explicitly partial/open;
+  E-1006 remains in progress. ADR 0663 records the bounded update.
+
+## E-968 - Add a bounded Community Docker Compose profile with live local smoke (2026-08-26)
+
+- `compose.yaml` now supplies one Community/local service backed by a named
+  SQLite volume. Startup runs the idempotent database initializer before the
+  local API, publishes only to loopback, and uses an internal network.
+- The profile is read-only at the container root, non-root (`10001`), drops
+  capabilities, enables `no-new-privileges`, constrains `/tmp`, and checks
+  `/api/v1/health`.
+- Static Compose tests and `docker compose config --quiet` pass. The image
+  built and a live one-off Compose service reached healthy with SQLite at
+  schema `45/45`; after restart it remained healthy and retained the database.
+  The environment reserved host port `8765`, and its Docker Desktop proxy did
+  not expose the temporary alternate mapping; this is recorded as an
+  environment limitation, not application health evidence.
+- This closes only the bounded Community local start path. It does not close
+  Team/Enterprise/Regulated deployment, HA/DR, hosted provenance, production
+  availability, or compliance. ADR 0662 records the decision and rollback.
+
+## E-967 - Synchronize Docker release documentation with the hardened workflow contract (2026-08-26)
+
+- Current Docker instructions now use the pull/no-cache linux/amd64 build and
+  the hardened networkless/read-only runtime profile with dropped capabilities
+  and `no-new-privileges`.
+- At the time of this slice, the current deployment guide no longer implied
+  that a Compose dashboard or `docker-compose.yml` was shipped. Historical
+  strategy notes remain historical. E-968 subsequently introduced the
+  bounded `compose.yaml` Community profile; the release-readiness correction
+  remains documentation/claim-boundary evidence. ADR 0661 records rollback.
+
+## E-966 - Align the standalone Docker workflow with the hardened release runtime gate (2026-08-26)
+
+- `.github/workflows/docker.yml` now builds with `--pull --no-cache
+  --platform linux/amd64`, has a finite 20-minute timeout, and runs Doctor
+  with no network, read-only root, all capabilities dropped, and
+  `no-new-privileges`.
+- A workflow regression test rejects a return to the previous writable,
+  networked smoke invocation. This improves recurring PR/push evidence but does
+  not replace hosted release attestation, independent vulnerability review, or
+  production deployment evidence. ADR 0660 records rollback.
+
+## E-965 - Require every mutating API handler to reach a reviewed server boundary (2026-08-26)
+
+- The authorization inventory now checks each mutating handler individually.
+  Module-level presence of a server marker is no longer sufficient.
+- The gate accepts a direct server-boundary call or a small, module-specific
+  allowlist of reviewed helpers: server adapters/scope helpers, central admin
+  service wrappers, or explicit local fail-closed connection helpers.
+- Focused authorization tests pass. This remains source-level omission
+  detection; it does not prove helper semantics, external IAM, distributed
+  invalidation, worker/export/UI coverage, HA/DR, or production effectiveness.
+  ADR 0659 records the reversible decision.
+
+## E-964 - Add a nonstandard-currency cross-engine parity regression (2026-08-26)
+
+- The matching parity suite now exercises deterministic JPY and KWD generated
+  datasets, covering zero and three minor units respectively.
+- Pandas, DuckDB full-scan, and forced partitioned DuckDB must produce the same
+  result contract and reconciliation signature. The manifest assertion also
+  binds the test to the intended currency policy rather than only the currency
+  label.
+- The focused parity tests and full `python -m pytest -q` suite pass on the
+  current HEAD; only the repository's known dependency/legacy-input warnings
+  are emitted.
+- This is bounded local cross-engine evidence. Supported-version breadth,
+  live-provider behavior, capacity/soak, HA/DR, and production effectiveness
+  remain open. ADR 0658 records the reversible decision.
+
+## E-963 - Reject hosted worker policy configuration in the local outbox runtime (2026-08-26)
+
+- The local SQLite `OutboxWorker` now rejects actor, central-policy supplier,
+  hierarchy/scope supplier, and non-default hosted-permission settings during
+  construction. It cannot enforce tenant/service-account authorization, so it
+  no longer accepts configuration that would be silently ignored.
+- Default Community/local settings remain unchanged. The hosted PostgreSQL
+  path remains `PostgresOutboxWorker`, where tenant/hierarchy scope and policy
+  re-evaluation are implemented.
+- The focused outbox worker and PostgreSQL outbox policy contracts pass for the
+  bounded slice; this remains a fail-closed configuration boundary, not
+  external IAM, distributed invalidation, provider, HA/DR, or production
+  authorization evidence. ADR 0657 records the reversible decision.
+
+## E-962 - Add a regression gate for mutating route server boundaries (2026-08-26)
+
+- The API authorization test suite now parses every route module containing a
+  mutating decorator and requires a visible server scope/fail-closed marker.
+  Authentication, SCIM, and WebAuthn are explicit protocol exceptions rather
+  than implicit omissions.
+- The gate is source-level omission detection: it complements, but does not
+  replace, route-specific ABAC arguments, RLS, SoD, runtime, worker, export,
+  or UI evidence. Focused authorization tests, Ruff, Mypy, full Python
+  regression, YAML, and diff checks pass. ADR 0656 records rollback.
+
+## E-961 - Fail closed for the local-only individual cashflow API in Server Profile (2026-08-26)
+
+- `POST /api/v1/individual/cashflow-controls/run` now preserves its
+  authenticated, non-posting Local Profile behavior but returns
+  `individual_cashflow_server_backend_unavailable` with HTTP 501 when the
+  PostgreSQL Server Profile is active.
+- The route has no tenant-scoped persistence or PostgreSQL adapter; the
+  explicit refusal prevents a server-mode request from being mistaken for a
+  governed enterprise financial surface. No SQLite access or provider call is
+  introduced in Server Profile.
+- The focused individual-cashflow and server-local-boundary suites pass 5/5;
+  the authorization inventory, Ruff, and Mypy gates pass. This remains a
+  classification/fail-closed boundary, not server cashflow support, posting,
+  bank integration, production IAM, or production readiness. ADR 0655 records
+  the reversible decision.
+
+## E-960 - Make write-back rate limiting atomic and registration-scoped (2026-08-26)
+
+- `WritebackNetworkExecutor` now reserves the next rate-limit slot under a
+  process-local lock and performs the injected sleep after releasing the lock.
+  Concurrent workers therefore cannot all observe and reuse the same deadline.
+- The throttle lane is keyed by the immutable registration digest rather than
+  only `connector_id`; tenant/workspace and endpoint registrations are
+  isolated while preserving the existing connector contract.
+- `tests/test_connector_writeback_network.py` passes 35/35, including the
+  concurrent reservation and cross-scope lane tests. This remains
+  process-local evidence only; distributed quota, provider semantics, live
+  interoperability, HA/DR, and production readiness remain open. ADR 0654
+  records the reversible decision.
+
+## E-923 - Live PostgreSQL matching cross-engine replay (2026-08-26)
+
+- The existing live PostgreSQL matching integration test passed with exit 0
+  against a disposable PostgreSQL 16 Alpine `linux/amd64` image bound to
+  `postgres@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`.
+- The run completed four grouped and four sequential synthetic runs, compared
+  persisted worker lineage digests with direct strategy digests, and asserted
+  tenant isolation. No failed runs or duplicate effects were observed. The
+  bounded record is `POSTGRES_MATCHING_LIVE_2026-08-26.json`.
+- This is one-host local runtime evidence only. E-1003 remains open for
+  cross-engine breadth beyond this test, provider/live-rate validation,
+  capacity/soak, posting/write-back, hosted repetition, and production proof.
+- ADR 0653 records the decision and rollback boundary.
+
+## E-959 - Refresh pinned container OpenSSL runtime libraries (2026-08-26)
+
+- The two digest-pinned Docker stages now install only the exact reviewed
+  Alpine package versions `libcrypto3=3.5.8-r0` and `libssl3=3.5.8-r0`. The
+  Python base digest and the trimmed non-root runtime contract remain
+  unchanged; the OpenSSL CLI is not installed. An unavailable fixed package
+  fails the build rather than silently accepting drift.
+- A clean `docker build --pull --no-cache --platform linux/amd64` completed
+  for `reconforge:e824-openssl`. Runtime inspection reports
+  `libcrypto3-3.5.8-r0` and `libssl3-3.5.8-r0`; the hardened `doctor` smoke
+  completed with `--network none`, read-only root, and bounded tmpfs mounts.
+  The Dockerfile regression test passes.
+- The exact local Syft/Grype gate was rerun against the rebuilt image using
+  checksum-verified Syft 1.51.0, Grype 0.117.0, and imported Grype database
+  v6.1.9. The subject-bound validator returned `status=passed` with zero
+  blockers and zero active exceptions. It records 68 packages, 95.58 percent
+  license metadata coverage, three explicitly reviewed fixed CPython High
+  findings, and no unexcepted Critical/High/Unknown finding. Evidence is
+  captured in `CONTAINER_SECURITY_LOCAL_2026-08-26.json`. E-824 remains
+  `in_progress` only because the hosted clean-build/release gate has not run;
+  registry authentication, publication, and production claims remain
+  blocked.
+- ADR 0652 records the package-refresh and evidence boundary.
+
+## E-958 - Bind server write-back registrations to tenant/workspace (2026-08-26)
+
+- `WritebackNetworkRegistration` now accepts an additive tenant/workspace
+  binding and requires both fields together. Bound scope is part of the
+  registration digest; legacy unbound inspection retains its historical digest
+  shape.
+- The server dispatch, recovery, and compensation routes select registrations
+  by connector ID plus exact authenticated tenant/workspace scope. The network
+  executor repeats the check for dispatch, recovery observation/application,
+  and compensation, rejecting unbound or cross-scope configuration before
+  payload/secret resolution and provider I/O.
+- Focused write-back, ERPNext TLS, API, and server-identity tests pass. The
+  boundary is application-level synthetic evidence only; provider
+  interoperability, distributed registry consistency, credential-vault
+  assurance, posting, HA/DR, and production readiness remain open. ADR 0651
+  records the additive compatibility decision.
+
+## E-957 - Recheck consolidation period before run transitions (2026-08-26)
+
+- PostgreSQL consolidation transitions now identify and lock the parent
+  period before locking/re-reading the run; a `Locked` period refuses further
+  run transitions.
+- This restores the existing SQLite invariant for posted-run reversal and
+  keeps the operation non-posting at the source-ERP boundary.
+- Focused parity contracts pass. Full regression and final static/security
+  gates remain the release evidence for this slice.
+
+## E-956 - Serialize consolidation-close run preparation (2026-08-26)
+
+- PostgreSQL `prepare_run` now locks the governed consolidation period with
+  `SELECT ... FOR UPDATE` before accepting a new immutable run.
+- SQLite `prepare_run` now acquires `BEGIN IMMEDIATE` before reading the
+  period and checking lock state; idempotent run lookup and insertion occur
+  inside that writer transaction.
+- Focused local contracts, full Python regression, Ruff, Mypy, Bandit, and a
+  disposable PostgreSQL 16 run with a non-superuser/non-BYPASSRLS role pass.
+- Boundary: this closes the supported adapter race only. It does not prove a
+  distributed lock service, statutory close, source-ERP posting, HA/DR, or
+  production assurance.
+
+## E-955 - Serialize close mutations and protect lock evidence (2026-08-26)
+
+- PostgreSQL generic close task upserts, task status changes, and period status
+  changes now serialize on the parent close-period row with `FOR UPDATE`.
+  Task state is re-read after acquiring the parent lock before dependency and
+  evidence evaluation. A second lock of an already locked period is refused.
+- SQLite migration 45 and PostgreSQL Alembic revision
+  `0092_pg_close_lock_evidence` prevent changing `locked_by` or `locked_at`
+  while a period remains `Locked`; the PostgreSQL downgrade restores the 0091
+  SoD guard rather than dropping it.
+- Focused race-boundary/migration tests, full Python regression, Ruff, Mypy,
+  Bandit, and diff/YAML checks are the evidence. Cross-host distributed lock
+  service, statutory close, source-ERP posting, and production assurance
+  remain open. ADR 0648 records the decision.
+
+## E-954 - Enforce independent close-period reopen actors (2026-08-26)
+
+- Generic close management now persists `locked_by` and `reopened_by` in local
+  SQLite migration 44 and PostgreSQL Alembic revision
+  `0091_pg_close_period_sod`. Legacy locked/reopened rows are marked with the
+  explicit `legacy-unknown` sentinel rather than receiving an invented actor.
+- Local and PostgreSQL adapters require the period to be locked, require a
+  reason, and refuse the locker as the reopen actor. SQLite and PostgreSQL
+  database triggers repeat the critical actor-evidence and independence
+  invariant at the persistence boundary.
+- Focused migration, adapter, and local lifecycle tests are the evidence for
+  this bounded workflow control. It does not claim statutory/legal-book close,
+  source-ERP posting, HA/DR, or production assurance. ADR 0647 records the
+  compatibility and rollback boundary.
+
+## E-953 - Make API version scope backend-aware (2026-08-26)
+
+- `GET /api/v1/version` now retains `local/self-hosted foundation` for Local
+  Profile and returns `postgresql server/self-hosted foundation` when the
+  explicit PostgreSQL Server Profile capability is enabled. Package and API
+  version values remain unchanged.
+- Focused API tests and static checks cover both profiles. This is metadata-only
+  and does not widen schema, production, HA/DR, or compliance claims. ADR 0646
+  records the rollback boundary.
+
+## E-952 - Synchronize current-state PostgreSQL boundary wording (2026-08-26)
+
+- `docs/architecture/current-state.md` now reflects the bounded PostgreSQL
+  adapters actually present through Alembic head
+  `0090_pg_writeback_observations`, while keeping explicit limits for
+  unsupported routes, statutory posting, external providers, and production
+  operations.
+- The Local Profile and explicitly supported tenant-local compatibility remain
+  unchanged. This is a documentation-integrity repair with no runtime or
+  persisted-data change. ADR 0645 records the decision and rollback.
+
+## E-951 - Make API health backend-aware (2026-08-26)
+
+- `GET /api/v1/health` now branches on the explicit PostgreSQL Server Profile
+  capability. Local Profile retains the SQLite response; Server Profile reports
+  PostgreSQL, the Alembic revision state, pending migration count, and the
+  redacted `server-managed` path summary.
+- Server health is `ok` only when migration state is readable and current;
+  connection, driver, or migration failures return a non-diagnostic
+  `degraded` response without DSNs or raw errors. Focused tests, Ruff, Mypy,
+  and diff-check pass. ADR 0644 records the compatibility and rollback scope.
+
+## E-950 — Remove the superseded Inventory Core fail-closed helper and documentation drift (2026-08-26)
+
+- Inventory Core routes now have one authoritative dependency contract:
+  `get_local_db` supplies the local connection only outside Server Profile, and
+  the route dispatches to the PostgreSQL adapter when the server capability is
+  enabled. The unused `get_inventory_local_db` helper and its obsolete 501
+  tests were removed.
+- Current route, authorization, domain, Ruff, and Mypy tests pass. E-941 and
+  ADR 0634 remain the authoritative PostgreSQL server boundary; E-939/ADR
+  0632 are retained as historical evidence and explicitly marked superseded.
+  ADR 0643 records the documentation-drift repair.
+
+## E-949 — Refuse incomplete Finance Core entry scope before legacy fallback (2026-08-26)
+
+- Server Profile `create_entry` now selects Finance Core exclusively. Missing
+  `entity_code`, `period_id`, or `journal_code` returns the explicit
+  `finance_core_entry_scope_required` error before either adapter runs; it no
+  longer falls through to the legacy ledger boundary.
+- A regression test proves both PostgreSQL Finance Core and legacy ledger
+  adapters remain untouched for incomplete scope. Focused tests and static
+  gates pass. ADR 0642 records the compatibility and rollback boundary.
+
+## E-948 — Bind Finance Core API hierarchy codes to authenticated PostgreSQL scope (2026-08-26)
+
+- Finance Core server operations that accept organization or legal-entity
+  selectors now resolve canonical codes from the authenticated hierarchy IDs
+  inside the same `PostgresTenantBoundary` transaction. Mismatched payload
+  selectors fail closed with `organization_scope_denied` or
+  `entity_scope_denied`; omitted selectors inherit the authenticated code
+  before persistence or filtering.
+- Chart, account, dimension, journal, trial-balance, entry-list, and entry
+  creation paths use the scoped adapter while local compatibility remains
+  unchanged. Unit scope tests, focused Finance Core tests, and the disposable
+  PostgreSQL HTTP test pass under image digest
+  `sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  with `rolsuper=false` and `rolbypassrls=false`. ADR 0641 records the
+  boundary; hosted parity and production assurance remain open.
+
+## E-947 — Refuse local user SQLite access before opening a connection in Server Profile (2026-08-26)
+
+- All legacy `/users` endpoints now depend on `get_local_db` and check the
+  local-identity guard before resolving a connection. PostgreSQL Server
+  Profile therefore rejects the shadow local user surface without opening
+  tenant SQLite; Local Profile behavior remains unchanged. Roles already used
+  the same boundary.
+- The server-boundary contract covers user list/create/update/disable/role
+  assignment/role removal/permission reads plus role reads. Authorized reads
+  return `local_identity_surface_disabled`; high-risk mutations can be denied
+  earlier by step-up policy, and all paths fail closed. ADR 0640 records the
+  decision.
+
+## E-946 — Expose Inventory Valuation and Reversal through the live PostgreSQL API boundary (2026-08-26)
+
+- Inventory Valuation and Valuation Reversal server routes now use explicit
+  PostgreSQL adapters for policy, valuation document, FIFO cost-layer,
+  summary, snapshot, reversal, and lifecycle operations. Authenticated
+  workspace, organization, legal-entity, movement, valuation-document,
+  reversal, and actor values are bound before the repository transaction;
+  Server Profile never falls back to tenant SQLite.
+- The live FastAPI contract passed receipt valuation exact `12.34`, maker /
+  checker approval, delivery FIFO exact `4.94`, compensating reversal approval,
+  snapshot, hierarchy binding, and denied workspace scope under a separate
+  non-superuser/no-BYPASSRLS role. This is bounded single-node synthetic
+  evidence only; external IAM, HA/DR, provider behavior, capacity,
+  backup/restore, and production readiness remain open. ADR 0639 records the
+  boundary.
+
+## E-945 — Expose Inventory Planning through the live PostgreSQL API boundary (2026-08-26)
+
+- Inventory Planning server routes now use the PostgreSQL adapter for count
+  sessions, counted quantities, approvals/cancellations, reorder rules,
+  reorder signals, summaries, and snapshots. Authenticated workspace,
+  organization, legal-entity, object, and actor values are bound before the
+  repository transaction; server mode never falls back to tenant SQLite.
+- The live FastAPI contract passed with full organization/entity/fiscal-period
+  hierarchy, seeded Inventory Core movement, exact `2.500` scaled output,
+  maker/checker count approval, reorder signal generation, spoofed payload
+  hierarchy, and denied workspace scope. This is bounded single-node synthetic
+  evidence only; external IAM, HA/DR, provider behavior, capacity,
+  backup/restore, and production readiness remain open. ADR 0638 records the
+  boundary.
+
+## E-944 — Refuse SQLite-only Exceptions and Workflow fallback in Server Profile (2026-08-26)
+
+- The legacy Exceptions queue and Workflow state-machine routes now use the
+  explicit local-database dependency. When PostgreSQL server identity is
+  active they fail closed with route-specific `501` errors before opening a
+  tenant SQLite database; local mode remains unchanged.
+- The HTTP boundary contract covers read and mutation endpoints for both
+  route families and verifies that server mode cannot silently use local
+  persistence. This is a safety boundary, not PostgreSQL Exceptions or
+  Workflow support. ADR 0637 records the decision and the next adapter gate.
+
+## E-943 — Expose Payables through the live PostgreSQL API boundary (2026-08-26)
+
+- Accounts Payable server routes now use an explicit PostgreSQL adapter
+  boundary for suppliers, purchase orders, goods receipts, supplier invoices,
+  three-way matching, and approval. The authenticated tenant/workspace scope
+  is re-evaluated by central policy, bound into a `PostgresTenantBoundary`
+  transaction, and never falls back to tenant SQLite in server mode.
+- Supplier, purchase-order, receipt, and invoice object scopes are checked
+  before mutation; actor identity is bound to the authenticated maker,
+  matcher, or checker; existing maker-checker and exact quantity/matching
+  controls remain in force. Workspace IDs are accepted without breaking the
+  existing workspace-name adapter contract.
+- A disposable PostgreSQL 16 Alpine runtime with a separate
+  non-superuser/no-BYPASSRLS role passed the real FastAPI HTTP lifecycle for
+  the PO/receipt/invoice/three-way-match/approval flow, exact quantity, actor
+  binding, maker denial, and denied workspace scope. This is bounded single-
+  node synthetic evidence only; external IAM, HA/DR, provider behavior,
+  capacity, backup/restore, and production readiness remain open. ADR 0636
+  records the boundary.
+
+## E-942 — Expose Receivables through the live PostgreSQL API boundary (2026-08-26)
+
+- Accounts Receivable server routes now use an explicit PostgreSQL adapter
+  boundary for customer, invoice, receipt, credit-exposure, and aging
+  operations. The request tenant/workspace scope is re-evaluated by central
+  policy, bound into a `PostgresTenantBoundary` transaction, and never falls
+  back to tenant SQLite when the server profile is active.
+- Customer/invoice/receipt hierarchy and actor values are canonicalized from
+  the authenticated request. Invoice object and customer scope are checked
+  before mutation, maker approval is denied by permission/SoD controls, credit
+  approval remains guarded by the existing override permission, and exact
+  minor-unit plus arbitrary-scale quantity serialization is preserved.
+- A disposable PostgreSQL 16 Alpine runtime with a separate
+  non-superuser/no-BYPASSRLS role passed the real FastAPI HTTP lifecycle for
+  the receivables lifecycle, exact quantity, credit exposure, aging, maker /
+  checker separation, and denied workspace scope. This is bounded single-node
+  synthetic evidence only; external IAM, HA/DR, provider behavior, capacity,
+  backup/restore, and production readiness remain open. ADR 0635 records the
+  boundary.
+
+## E-941 — Expose Inventory Core through the live PostgreSQL API boundary (2026-08-26)
+
+- Inventory Core now has an explicit PostgreSQL server route path for all 19
+  operations. Requests bind authenticated tenant/workspace/organization/legal
+  entity scope, re-evaluate central policy, use a tenant-bound PostgreSQL
+  transaction, and never fall back to tenant SQLite in server mode.
+- Movement object scope is checked before read/post/void. Actor identity comes
+  from the authenticated principal, payload hierarchy values are canonicalized
+  to the request scope, and posting retains the existing privilege plus
+  step-up requirement. PostgreSQL output metadata identifies the persistence
+  source accurately while local SQLite output remains compatible.
+- A disposable PostgreSQL 16 Alpine runtime with a separate
+  non-superuser/no-BYPASSRLS role passed the real FastAPI HTTP lifecycle for
+  CRUD, exact scaled quantity output, posting, snapshot, and denied workspace
+  scope. This is bounded single-node synthetic evidence only; external IAM,
+  HA/DR, capacity, provider behavior, backup/restore, and production readiness
+  remain open. ADR 0634 records the boundary.
+
+## E-940 — Expose Account Reconciliation through the live PostgreSQL API boundary (2026-08-26)
+
+- Account Reconciliation now has an explicit PostgreSQL server route path for
+  list/create/read/prepare/submit/review/complete. It resolves the request
+  execution scope, re-evaluates central policy, opens a tenant/workspace-bound
+  transaction, and never falls back to tenant SQLite in server mode.
+- Server actor identity is bound to the authenticated principal: create and
+  prepare bind the maker, review binds both reviewer and actor, and complete
+  binds the authenticated actor. Client-supplied preparer/reviewer values are
+  not trusted. Local SQLite behavior remains compatible.
+- The live FastAPI contract passed on the checked-in PostgreSQL 16 Alpine image
+  digest with a non-superuser/no-BYPASSRLS role. It covered exact decimal
+  serialization, the complete lifecycle, maker-checker separation, and
+  rejection of an ungranted workspace. This is single-node synthetic runtime
+  evidence only; external IAM, HA/DR, provider behavior, capacity, and
+  production readiness remain open. ADR 0633 records the boundary.
+
+## E-939 — Historical interim Inventory Core fail-closed boundary (superseded by E-941)
+
+- E-939 recorded the interim 501 guard before the PostgreSQL Inventory Core
+  adapter was exposed. E-941 and ADR 0634 subsequently superseded that guard
+  with the real scoped PostgreSQL server route for all 19 operations.
+- The historical result remains valid for the pre-E-941 state, but it is not a
+  current runtime claim. E-950 removes the unused helper and synchronizes the
+  route inventory, tests, and documentation with the current implementation.
+
+## E-938 — Verify live PostgreSQL server policy provenance (2026-08-26)
+
+- A disposable PostgreSQL 16 Alpine container at the checked-in image digest
+  ran the server policy sink with a non-superuser application role and
+  `BYPASSRLS` absent. The runtime test passed `1` case.
+- The test verified tenant-scoped insertion into `domain_audit_events`, valid
+  domain hash-chain state, decision-digest object/after-hash binding, no
+  cross-tenant visibility, and no raw tenant/workspace/amount/request values
+  in stored metadata. The disposable database was cleaned through an
+  admin-only trigger-controlled teardown.
+- This closes current local PostgreSQL provenance evidence, not external IAM
+  authenticity, distributed invalidation, HA/DR, customer-managed operation,
+  or production authorization effectiveness.
+
+## E-937 — Persist server policy provenance through a tenant-scoped sink (2026-08-25)
+
+- `audit_policy_decision` now supports one explicit backend-neutral repository
+  or request-scoped `PolicyAuditSink` in addition to the existing local SQLite
+  boundary. Direct persistence options are mutually exclusive.
+- Server API authorization dependencies use a sink that opens a short
+  PostgreSQL tenant-scoped transaction and appends the same closed redacted
+  evidence to `domain_audit_events`. The event binds its object ID and
+  after-hash to the decision digest and stores no raw request/context values in
+  metadata. A configured server audit failure returns a safe 503 rather than
+  silently falling back to logs.
+- Focused policy/API tests, the sink redaction contract, AST caller inventory,
+  Ruff, Mypy, and diff checks pass; the full Python regression reaches 100%
+  with exit code `0`. Live PostgreSQL/RLS execution, external IAM, distributed
+  invalidation, and production authorization effectiveness remain open. ADR
+  0631 records the boundary.
+
+## E-936 — Separate policy provenance from business rollback assertions (2026-08-25)
+
+- The full regression exposed four legacy assertions that counted every
+  `audit_events` row as a business side effect. Local authorization decisions
+  are now durable `authorization.policy_decision` events by design, including
+  when the later business mutation rejects or rolls back.
+- The affected financial idempotency, account workflow, and receivables tests
+  now assert rollback against business audit events while retaining the
+  independent policy-provenance contract. The focused four-test repair passes;
+  Ruff, Mypy, and the full Python regression exit `0`.
+- This is test-contract clarification, not a relaxation of append-only audit
+  behavior. The full run still reports only declared capability skips and
+  existing deprecation/legacy-input warnings.
+
+## E-935 — Persist local policy evidence in the append-only audit ledger (2026-08-25)
+
+- `audit_policy_decision` now accepts an optional SQLite connection and appends
+  the same closed `PolicyDecisionEvidence` into the existing hash-chained
+  `audit_events` ledger as `authorization.policy_decision`.
+- The durable event stores the evidence digest and request-ID digest only; raw
+  tenant, workspace, amount, object, and permission values are not placed in
+  event metadata. Local API dependencies, platform authorization, workflow,
+  and Studio pass their existing SQLite connection.
+- The focused policy/API/Studio/workflow suite, Ruff, and Mypy pass. This closes
+  local durable policy provenance only; server-side append-only storage,
+  external IAM, distributed invalidation, and production effectiveness remain
+  open. ADR 0630 records the boundary.
+
+## E-934 — Repair execution backlog dependency closure (2026-08-25)
+
+- The full regression exposed a stale `E-931 -> E-930` dependency because
+  `E-930` is recorded in execution state but is not a task in the current
+  backlog snapshot. `E-931` now has no unresolved dependency, and E-934 records
+  the metadata repair as a release-process change with no product behavior
+  change.
+- The focused dependency contract passes, and the rerun of the full Python
+  regression exits `0`; declared PostgreSQL/Redis/S3/network/Windows-capability
+  skips and existing dependency/legacy-input warnings remain. The initial
+  failed attempt stays historical and is not counted as a green baseline.
+
+## E-933 — Enforce explicit policy on direct Money constructors (2026-08-25)
+
+- The financial-input AST contract now requires every direct production
+  `Money(...)` call to declare both `input_policy` and `strict_precision`, just
+  as `Money.from_exact(...)` already does. A typed helper parameter may be
+  propagated explicitly.
+- Both intentional strict and compatibility choices remain allowed; the guard
+  prevents omitted precision behavior without removing named legacy readers.
+  The focused financial policy/P0 suite passes, with no production caller
+  violations. ADR 0629 records the reversible contract hardening.
+
+## E-932 — Verify the Docker build and bounded runtime (2026-08-25)
+
+- Docker Desktop `4.87.0` / Engine `29.7.2` built `reconforge:baseline` from
+  the checked-in two-stage Dockerfile and digest-pinned Python base. The build
+  exited `0`.
+- `docker run --rm reconforge:baseline reconforge doctor` exited `0` with the
+  package, config, sample-data, output-path, and validation checks OK; the
+  sample data reported `0` errors and `10` warnings.
+- The container `validate examples/sample_data` and `demo run --output
+  output/baseline-demo` both exited `0`; demo artifacts included the evidence,
+  client-pack, reports, review register, and reconciliation workbooks.
+- The runtime still contains `libcrypto3/libssl3 3.5.7-r0`. E-824 remains
+  blocked by the current OpenSSL finding; successful build/doctor/demo does not
+  override the container security release gate. No image scan, publication, or
+  production-readiness claim is made.
+
+## E-931 — Verify the web quality and bilingual accessibility gates (2026-08-25)
+
+- `npm ci` completed from `apps/web/package-lock.json`; npm audited `161`
+  installed packages with `0` reported vulnerabilities. Web typecheck, `75`
+  Vitest tests across `15` files, and the Vite production build all exit `0`.
+- Standard Playwright Chromium E2E exits `0` with `16` passed and `5` explicitly
+  skipped out of `21`. With `RECONFORGE_LIVE_HTTPS_HOSTING=1`, the local
+  production-bundle HTTPS runtime exits `0` with `17` passed and `4` skipped;
+  the added pass verifies HSTS, CSP, same-origin health, and no inline script or
+  style execution.
+- The remaining four skips are opt-in live browser-session/administration
+  mutation tests. They require an explicitly provisioned API proxy and
+  synthetic mutation target; they remain open and are not counted as live IAM
+  or hosted evidence. ADR 0628 records this evidence boundary.
+
+## E-930 — Bind production policy audits to evaluated context (2026-08-25)
+
+- Every production `audit_policy_decision` call now passes the exact
+  `PolicyEvaluationContext` used for the corresponding policy evaluation,
+  covering API dependencies, platform authorization, workflow transitions,
+  durable jobs, hosted workers, Studio, and PostgreSQL scoped exports.
+- An AST contract prevents future production audit calls from omitting
+  `context=`. The focused policy/API/worker/workflow/Studio collection passes
+  `154` tests; the full Python 3.12 regression exits `0` with `3,204` tests;
+  Ruff, Mypy, and diff-check pass.
+- This closes production caller-to-evidence context binding only. It does not
+  prove principal authenticity, context correctness beyond each caller,
+  append-only storage, external IAM/provider enforcement, distributed cache
+  invalidation, or production authorization effectiveness. ADR 0627 records
+  the reversible decision.
+
+## E-929 — Align deployment-readiness reader with JSON Schema (2026-08-25)
+
+- The readiness reader now rejects boolean schema versions, invalid ISO dates,
+  short claim boundaries, mismatched edition profile commands, and short or
+  whitespace-only gate boundaries. The v1 JSON Schema expresses the same
+  scalar constraints while runtime evidence-path checks remain intentionally
+  stronger.
+- The focused readiness/runtime/profile/admission collection passes `36/36`,
+  including schema/reader rejection parity cases; Ruff and Mypy pass for the
+  changed reader. The full Python 3.12 regression exits `0` with `3,204`
+  collected tests; declared capability skips and existing warnings remain.
+- This closes a local contract-drift gap only. It does not prove current
+  evidence, deployment drills, external IAM/KMS/HSM, live dependencies,
+  independent failure domains, RPO/RTO, or production readiness. ADR 0626
+  records the reversible decision.
+
+## E-928 — Refuse policy evidence built from a mismatched context (2026-08-25)
+
+- `build_policy_decision_evidence` now derives context and typed-scope digests
+  from a supplied `PolicyEvaluationContext` and refuses any pre-bound decision
+  whose digest differs. This prevents silent rebinding of evidence to a
+  different tenant, object, amount, or other policy input while preserving the
+  no-context compatibility path.
+- Focused policy/cache tests pass `92/92`, covering a matching context, both
+  mismatch classes, replay, redaction, closed-shape, and tamper checks. The
+  full Python 3.12 regression exits `0` with a current collection of `3,204`
+  tests; declared capability skips and existing warnings remain. ADR 0625
+  records the reversible guard.
+- This closes a local evidence-construction mismatch only. It does not prove
+  authenticated principals, universal caller context adoption, append-only
+  storage, external IAM enforcement, distributed invalidation, or production
+  authorization effectiveness.
+
+## E-927 — Explicit precision policy for every production Money construction (2026-08-25)
+
+- Every `Money.from_exact` call under `reconforge/` now declares a literal
+  `strict_precision` choice. Domain source helpers in manufacturing and retail
+  reject over-precision; derived deferred-tax, NCI, and ownership-change
+  calculations explicitly retain registry rounding, and zero initializers use
+  strict precision.
+- The new repository AST contract covers all production call sites, while the
+  existing ownership-change rounding regression preserves the visible delta.
+  The focused domain/control collection passes 67/67; Ruff and Mypy pass for
+  the changed scope.
+- This is a financial-construction policy guard only. It does not close the
+  broader financial-path audit, source authenticity, posting, provider,
+  write-back, PostgreSQL parity, HA/DR, or production-readiness gates. ADR
+  0624 records the reversible decision.
+
+## E-926 — Fail-closed deployment-readiness evidence shape (2026-08-25)
+
+- The readiness matrix reader now requires a non-empty boundary for every gate
+  and at least one repository-relative evidence file for every
+  `verified_scoped` gate. Unresolved `partial`/`open` gates remain allowed only
+  with explicit boundaries; no `verified` readiness status is accepted.
+- Runtime evidence canonicalizes edition identity through the immutable profile
+  before producing the digest-bound artifact, so casing/whitespace cannot create
+  a second identity for the same edition.
+- Deployment readiness, runtime evidence, profile, and regulated-admission
+  focused tests pass; Ruff and Mypy pass for the deployment package.
+- This closes a schema/integrity gap only. It does not produce backup/restore,
+  rollback, retention, IAM, failure-domain, KMS/HSM, RPO/RTO, provider, or
+  production-readiness evidence. ADR 0623 records the reversible decision.
+
+## E-925 — Digest-bound central policy decision evidence (2026-08-25)
+
+- `CentralPolicyEngine.evaluate` and `evaluate_any` now attach redacted,
+  deterministic context and typed-scope digests to every returned decision.
+  Tenant, organization, workspace, entity, period, region, and data-class
+  namespaces are separated before hashing; exact Decimal bounds and SoD input
+  history are included without emitting their raw values.
+- `audit_policy_decision` now emits additive closed schema-v1 decision evidence
+  and `verify_policy_decision_evidence` rejects field, version, digest, and
+  mutation drift. Existing permission-contract log fields and authorization
+  behavior remain compatible.
+- Policy-focused tests pass, including replay stability, namespace separation,
+  actor canonicalization, raw-value redaction, and tamper refusal; Ruff and
+  Mypy pass for the policy implementation.
+- This is local redacted evidence-input and policy-engine evidence only. It does
+  not prove append-only log storage, external IAM/provider enforcement,
+  universal route/job/UI adoption, distributed invalidation, or production
+  authorization effectiveness. ADR 0622 records the reversible decision.
+
+## E-924 — Strict currency precision at application financial ingress (2026-08-25)
+
+- On feature branch `money-strict-bank-control`, all application-level
+  `Money.from_exact` source/tolerance readers now pass
+  `strict_precision=True`. The bounded domain calculation readers retain their
+  explicit rounding boundaries.
+- The bank-statement control regression rejects EUR source/tolerance values with
+  three fractional digits instead of silently rounding them. An AST contract
+  covers every `Money.from_exact` call under `reconforge/application/`.
+- Targeted local suites, Ruff, and Mypy pass on Python 3.14 and Python 3.12;
+  related API/SQLite/PostgreSQL-profile suites pass with three declared live
+  PostgreSQL capability skips and the existing Starlette/httpx warning.
+- The full Python 3.12.13 regression collected 3,119 nodes, exited `0`, and
+  took `437,092 ms`; declared capability skips and existing warnings remain.
+- This is a local source-ingress correctness slice only. It does not close
+  E-824, hosted PostgreSQL parity, live provider/source authenticity,
+  posting/write-back, HA/DR, or production readiness.
 
 ## E-923 — Current publication branch uses a neutral name (2026-08-24)
 
@@ -9104,3 +12716,393 @@ evidence remain open. GitHub publication remains deferred by owner policy.
   Distributed soak, queue HA, automatic failover, host loss, capacity,
   throughput, RPO/RTO, and production scheduling remain unverified. GitHub
   publication remains deferred by owner policy.
+
+## E-971 — Opt-in Community local object-store retention path (2026-08-26; ADR 0665)
+
+- `evidence register` now supports the explicit `local-object-store` backend
+  with a bounded `--storage-root`; `evidence verify` can read the same offline
+  object store without network access. The existing `local` backend remains
+  unchanged and continues to reject retention options.
+- The focused CLI and object-storage contract proves tenant/workspace-scoped
+  immutable content plus sidecar checksum/retention metadata, future-retention
+  rejection before registry persistence, source-removal verification, and no
+  object-store fallback. Ruff, Mypy, and the full Python regression pass.
+- Boundary: this is bounded local retention evidence, not a complete privacy
+  administration/deletion/legal-hold lifecycle, backup coupling proof, WORM
+  guarantee, production object-store durability, or Community readiness.
+
+## E-972 — Disposable PostgreSQL identity and retention governance runtime (2026-08-26; ADR 0666)
+
+- A new labelled PostgreSQL `17.10-alpine` container was migrated from empty
+  state to Alembic head `0092_pg_close_lock_evidence`. The dedicated application
+  role was verified as `superuser=false` and `bypassrls=false`.
+- The live security-governance retention test and identity-administration HTTP
+  test passed `2/2` against this fixture. Observed controls include tenant
+  isolation, atomic retention policy lifecycle, non-shortening retention floor,
+  session invalidation, step-up, and last-administrator protection.
+- The closed artifact is
+  `docs/execution/POSTGRES_GOVERNANCE_RUNTIME_E972_2026-08-26.json`; its report
+  digest is `9bb319f7c40b60df240935175fe3375f5044adba61ef631f69844722a95b6cab`.
+- Boundary: one disposable Docker host and synthetic tenants/credentials only;
+  no external IdP/SSO/SCIM, distributed revocation, HA/DR, legal hold, WORM,
+  regulated review, or production IAM claim follows.
+
+## E-1121 — P0 persistence, PostgreSQL hygiene, and evidence-bound Studio presentation (2026-08-30; D-1033/D-1034)
+
+- Commits `57d66bd4`, `459ce612`, `09ad98bc`, `e65249af`, `324f8cf1`, and
+  `cfc67208` close bounded local gaps in matching persistence, PostgreSQL
+  integration isolation, module promotion checks, static release-policy
+  checks, and Studio source disclosure. They are local commits only; no push,
+  release, or public readiness claim was made.
+- New matching jobs reject legacy financial-input policy at both the application
+  and SQLite persistence boundaries before a job or workspace is created.
+  Existing idempotent historical records preserve explicit legacy replay
+  behavior, with non-sensitive policy-use metadata surfaced at the application
+  result boundary.
+- A disposable PostgreSQL 16 run passed the focused RLS/matching/payables/
+  receivables/durable-job matrix. Direct residual queries returned zero rows
+  across the test-owned tenant, reconciliation, audit, AP, AR, and durable-job
+  tables, and no non-internal trigger remained disabled. The 1M/10M durable
+  tiers were intentionally not opted in.
+- Full local Python regression exited 0; Ruff, Mypy, Bandit, pip-audit, wheel/
+  sdist build, static supply-chain policy validation, Studio typecheck,
+  77/77 Studio tests, and the production Studio build all passed. A Docker
+  image built from this tree and completed `reconforge doctor` successfully.
+- Boundary: this strengthens local/synthetic evidence only. It does not prove
+  hosted CI execution, live connectors or providers, multi-host HA/DR,
+  production security, independent penetration testing, regulatory compliance,
+  certification, customer outcomes, or global readiness.
+
+## E-1122 — PostgreSQL isolated restore target access fence (2026-10-04; D-1035)
+
+- `c3addf52` reapplies the no-`PUBLIC EXECUTE` invariant for restored
+  user-schema `SECURITY DEFINER` functions and procedures before profile
+  verification. `c58d1006` creates a restore target with
+  `ALLOW_CONNECTIONS false`, then atomically enables it and revokes
+  `PUBLIC CONNECT` before `pg_restore`. `441f0cf9` adds an opt-in live
+  PostgreSQL assertion for that exact access sequence.
+- The focused native-backup contract, Ruff, and file-level Mypy checks pass.
+  The live PostgreSQL 17 disposable test passed: both owner and runtime roles
+  were denied before the target fence, the maintenance owner connected after
+  it, and an ungranted runtime role remained denied.
+- Boundary: this proves an isolated target-access and post-restore routine-ACL
+  guard only. Native client tools are unavailable on this Windows host, so a
+  full encrypted `pg_dump`/`pg_restore` rehearsal was not counted. It makes no
+  backup duration, RPO/RTO, key-custody, cross-version, HA/DR, promotion, or
+  production-recovery claim.
+
+## Enterprise M2 integration gate — 2026-10-13
+
+M2 adds original-source accrual/deferral schedules over the existing GL and
+shared source claim directory. Ordered revision0141, empty downgrade/re-upgrade,
+41 selected FORCE-RLS tables, no automatic module grants and retained-grant
+downgrade refusal passed two mandatory native PostgreSQL tests with zero skips.
+Thirty route, repository-boundary and metadata tests passed. Critical read
+authorization contracts now receive the same exact permission-drift check as
+critical writes; the accepted492 route digest remains unchanged. These are
+targeted development gates. Integrated Studio, populated restore and final
+frozen-source M2 acceptance remain pending. Benchmarks are deferred by the owner.
+
+### M2 original AD1 Studio / recovery checkpoint
+
+Source `d507b9ffc3060e10560bd51e6c13644b48a7fa3e` passed the actual
+ordered0141 HTTPS/Chromium cycle and populated PostgreSQL17.11 restore:
+one required browser execution, zero skipped/unexpected/flaky cases, ordinary
+non-bypass runtime, three native tamper refusals, unchanged clean tracked
+source/build and owned process/container cleanup. The independent original
+oracle reproduced prepaid10001, tranches3334/3334/3333, exact inverse and
+replacement, six native effects, expense10001/prepaid0/cash-10001. Mobile
+Arabic RTL and keyboard accessibility passed after fixing the original
+scroll-region failure; the failedv1 packet remains. This is a development
+checkpoint, not acceptance of pending ordered142/143 or the final M2 source.
+All-country statutory packs remain unproven, comparative performance remains
+deferred, and operation cost is unknown.
+
+
+### Enterprise M1 closed / M2 original-source development — 2026-10-13
+
+M1 frozen bcc44089 passed its original48-job CI and separate Docker/CodeQL/manual
+image/security closure;55 mandatory native sessions/1620 cases have zero native
+skips,18 original HTTPS reports restore301 tables, and6 isolated original
+financial oracle runs pass. Original closure SHA256
+6de3768e1ec93f857a6ed754161b1d57255f5e2a49077684a85bf0aa633432fe.
+GitHub PR133 final body was patched and independently reread at original v9; exact body SHA ebe2f3db6893abc229df5a24c912fc9fb6e70a5c7918a2a434eca254fe5af454.
+M2 ordered143 actual complete onhand/partial-shortage manufacture passes2 native
+cases; original independent supply cost3600=FG3240+scrap360+WIP0. Five targeted
+quantity/scope cases and two ordered migration gates pass; new Studio ACK
+subject binding is being corrected before final freeze. This is development,
+not final M2 acceptance. See ENTERPRISE_COMPLETION_M2_2026-10-13.md.
+No local benchmarks; cost per operation null; statutory country packs0.
+
+
+### M2 integration correctness and original replay checkpoint — 2026-10-13
+
+Root50739082 adds ordered144 generic quantity compatibility; source143/142
+owner guards/FKs remain immutable. Actual frozen-source selected gates:13
+quantity/Core/scope passes, then2 return roundtrip passes after fixing only a
+private diagnostic URI setup. The red setup packet remains; no skips/xfails.
+M2 source158883f3 strengthens actual unknown-outcome network-loss replay while
+retaining20s transport bounds; wire acceptance remains pending. AD1/PB source
+qualified ordered143 TLS restores328 tables and refuses3 tampers each.
+Original CI38405919474 failed on its6ad source (7 failed producer jobs plus
+aggregate); its security38405919091 Bandit7 findings were fixed, without
+suppression. Whole local source Bandit0 at07da; final hosted source pending.
+M3 exact original Group78 TLS passed with328-table restore/3tampers; actual
+789543-byte downloaded evidence passed standalone -I/-I-O identically.
+New IC2 bundle8 native cases and Project source-close1 native case pass in
+owned fixed-source trees; Root registered API594/legacy492 digest unchanged.
+Final bundle/close TLS and integration gates remain pending. Diagnostic ANSI
+header gap is reproduced and being fixed; original raw reports stay private.
+Comparative performance deferred; transaction cost null; country packs0;
+100K/1M/multi-region HA/DR and whole-platform completion remain unproven.
+
+### Corrected enterprise acceptance source — 2026-10-14
+
+M2 PR134 is still a draft above accepted PR133. Source-qualified actual5130
+MSP HTTPS passed with nine deliberate lost responses, exact sealed command
+replay, clean unchanged source/web, owned cleanup and328-table restore with
+three tamper refusals. The WHOLE original5130 population contains12 effects,
+including2 AP effects; its ME2-only projection contains10. Earlier separate
+13-effect fixtures remain qualified to their own original populations.
+Cost3600=FG3240+scrap360+WIP0; obligation/AP1450. No latency acceptance.
+
+Actual f506 translated-amount and captured JPY/KWD precision authority gates:
+12 mandatory native passes, zero skips. Its original hosted failures are
+retained: eager optional psycopg import during Community doctor, stale native
+migration143/142 expectations against actual145/144, and one deliberately
+synthetic historical diagnostic-password scan finding. Source6db8d0f3 fixes
+these causes without removing guards or rollback/retained-privilege assertions.
+Actual optional-driver doctor red1→green1 and corrected mandatory migration
+roundtrips2 pass; current-tree dummy fixtures remain scanned. New6db Docker
+passed, while full CI and security closure are still pending; this is not
+final M2 acceptance.
+
+M3 draft PR135 adds selected original cashflow/group/project source reporting.
+All three actual265 HTTPS runs passed English/Arabic/current-source contracts,
+328-table restore/3tampers each and eight isolated downloaded-original oracle
+runs. An independent review then reproduced late whole-bundle and publication
+custody drift. The new utility checks all original/helper/proof and write-time
+command/execution/log bytes; the publisher compares the trusted returned
+manifest, refuses drift and quarantines partial output privately.155 focused
+composed cases pass; new frozen-source wire/CI acceptance is in progress.
+
+M4 same-entity inventory transfer is development only. The owned preliminary
+Draft/replay/empty-inverse cases passed2; Root's ordered146 finite structural
+MSP1/IT1 pins and two-location native dispatch require actual qualification.
+Full posting, compensation, current grants, SQL/concurrency and Studio gates
+remain pending. Unsupported reversal/correction cost classes are explicitly
+being bounded before admission. No transfer or full-ERP completion is claimed.
+Comparative performance remains deferred; cost per operation null; statutory
+country packs0. Main and the two original primary-worktree file hashes were
+reverified unchanged on2026-10-14.
+
+### 2026-10-14 — Accepted M2 and current M3/M4 integration subjects
+
+M2 exact6da88aae is accepted for its bounded code/source gates: actual CI54/54,
+22 mandatory pytest partitions/58 sessions/1827 selected with zero skips,
+xfails or xpasses; both Python versions6221 passes with663 separately recorded
+inherited prerequisites;21 actual HTTPS originals/328-table restores/3 tampers.
+Same-source manual security5/5 has0Critical/0High/9Medium/1Negligible and65/68
+licensed packages/3 missing; legal clearance remains false. Original closure
+SHA3b618127092df9eec9afed9b2c5f9f78f4a728d7e4d41938955a34d6fd03a4ab.
+PR134 final body PATCH and independent GET77553ced are published. Old failures
+and their original source subjects remain intact.
+M3 exact33b31d89 currently fails one native restore because CASHFLOW_PROOF_DIR
+was omitted by CI.6baff23e explicitly creates private runner custody; actual
+native qualification is pending. Its24 browser passes and package/security
+components are component-qualified only, not overall acceptance.
+M4 original-source adoption and whole consumed-document read caps close their
+actual counterexamples in16 owned native cases;142 integrated contracts and
+Studio typecheck/build pass. Four migration/catalog, sixteen structural native
+and seven actual contention/retry/SoD cases remain separately source-qualified.
+First actual integrated HTTPS/whole populated restore is pending. No new FIFO,
+valuation or GL engine exists; same-entity transfers preserve original pooled
+costs and financial effects. Multi-item Delivery adoption is explicitly refused.
+Comparative performance is deferred by the owner, cost per operation null,
+statutory country packs0;100K/1M/multi-region HA/DR remain unproven.
+
+### 2026-10-14 — Actual original transfer HTTPS and populated recovery
+
+Frozen0dd49c481226a49ec60f264d4684107c45c13582 passes actual Studio HTTPS1/1,
+zero skipped/unexpected/flaky, ordinary runtime role false/false, English/Arabic
+and exact four lost-response command recoveries. Native populated recovery
+compares333 whole tables/catalogs/ACLs, refuses3 meaningful tampers and retains
+the first trusted original callback after fresh verification. Source and built
+web are clean and unchanged; owned HTTPS process and container are removed.
+Original report2375516B SHA78e7e6072cc07df85024b5aa37fd9ba8e218a0e055548ed664cde580b9602cfa.
+Eight published originals retain exact bytes; actual raw1004702B SHA
+95b43cf262c3e5ae8169aa2f23eb5750f03be7a274c3325009c8bd4e90a5736b.
+Standalone normal/optimized oracle proves original3EA/3600, transfer1EA,
+compensating physical3/0, two Posted transfers, six independent human commands,
+new valuation0 and new GL0. Actual stdout585B preserves canonical WindowsCRLF.
+Original8704 browser passed but publication failed for an exact LF-only writer
+assumption; its raw packet stays private and is not recounted as full acceptance.
+Final same-source hosted acceptance remains pending. No benchmark claim follows.
+M3 frozen6baff native cashflow11 passes without skips/errors/failures, including
+actual328-table populated restore/3tampers/zero new financial writes. XML
+454b314f4b7518793f2939b428ca73e9860fb53506a626ce89ffc366ebb5cb3b.
+Its hosted final gate remains pending; the required private directory is now
+explicitly created before mandatory native execution and raw dumps stay private.
+
+### 2026-10-14 — Exact language qualification and security correction
+
+The earlier0dd receipt's English/Arabic wording exceeded its actual required
+spec: that source proved English desktop plus Axe, not an Arabic/mobile run.
+Original report78e7 stays unchanged and remains English-only. New required
+Arabic390px scope/native-original read, RTL, overflow and Axe assertions are
+being added before final acceptance; no language result is inferred from labels.
+00fc PRSecurity rejected two B608 findings in shared quantity pin composition;
+subsequent Python dependency audits did not execute in those failed jobs.
+The literal approved three-function pin block now checks source body drift at
+import, with no suppression or optional native dependency. Generated UPGRADE
+SQL SHA9b078032e09ae9c70877dc3f912aa4b175d5e4b1eaa17562d3d782220dce386a
+and DOWNGRADE SQL SHAd08e2221d909730dfa213d649416fdc8167f901301ed57a4d412a0ce02da6f9e
+are exactly byte-identical before/after. Sixteen domain/pin-drift cases pass;
+whole source Bandit returns0 findings/errors. Original cloud rejection remains
+retained; final hosted acceptance requires the next exact frozen head.
+
+### 2026-10-14 — Bounded independent intercompany native acceptance
+
+Exact6baff intercompany native job115628650617 was cancelled at its existing
+30-minute job bound. Original515957B log SHAede780e2e151883e55a1a6e4c712a73111cd4eb9d488e69f4de373ed2011e154
+retains complete45/core and11/cashflow finished receipts with zero critical
+skips/xfails/xpasses. The third full invocation has no completion receipt;
+no final native or whole-CI pass is inferred. Its last test ID is not exposed
+by the quiet log and is not invented.
+Split complete original file sets into intercompany-operations,
+intercompany-cashflow and intercompany-group-reporting. Every prior invocation
+and test file remains required once; thirty-minute bound, four-job parallel
+limit, native skip rejection and services stay unchanged. Eight focused CI
+partition contracts pass. No financial runtime, migration, reader or API change.
+Fresh final CI on the new exact source remains required. Earlier browser,
+package and same-source security components are qualified to their own heads.
+
+### 2026-10-14 — Preserve full CI ownership and actual router uniqueness
+
+Current464 Python gates each rejected one stale expected-owner map: all eleven
+retained cashflow/group files were still assigned to the prior combined native
+shard by a separate literal collection contract. Change those eleven labels
+only; preserve whole-map equality, every file, every invocation and native bounds.
+Current4b002 group API native gate stopped before the report/export request:
+FastAPI's retained included-router objects have no direct path attribute.
+Resolve effective route contexts for actual registration counts, preserve each
+operation's count of exactly one and add duplicate/nested/legacy-flat controls.
+The FX client now tests real application assembly without injecting an extra
+router. Production API/authorization/accounting bytes remain unchanged. Preserve
+both rejected sources and raw receipts; fresh source acceptance is required.
+
+### 2026-10-14 — Current original-credit money and authority correction
+
+M5 integrates the independently qualified CR1 correction: exposed quoted prices,
+FIFO values and original source totals use a finite captured-policy READ context;
+phase permissions retain original business-effect amounts. Current human/role/
+catalog and applicable historical scope kinds are locked before source waits.
+Fresh empty or partial snapshots cannot reinstate withdrawn bounded access.
+Original source/ACK/GL/AR and migration126 bytes are preserved; no147 is needed.
+Actual independent9 native cases pass431.652s with zero critical skips; existing
+USD parent/partial-refund compatibility passes separately. Root composed81
+passes. Whole frozen M5 TLS/restore/package/security/CI remains pending.
+Partial-stock CR2 remains design only. StockSales adjacent scope is under actual
+native audit, not yet a proven correction. Comparative benchmarks are deferred.
+
+### 2026-10-14 — Own the real WebCrypto publication test sequence
+
+Currentc65 hosted web component gate rejected only the Arabic original-evidence
+publication case. Its original DOM retained source/native books with no alert,
+no status and no download; no financial or cryptographic defect is inferred.
+The focused unchanged six-case diagnostic passed locally, but that is not flaky
+acceptance. The test now controls the source-response commit and real WebCrypto
+completion separately from publication. Before publication, status/download are
+absent and verify remains disabled; only the genuine checked result releases it.
+Both locales retain actual cryptographic verification and original effect checks.
+No timeout increase, retry, mock digest, skip or production component change.
+
+### 2026-10-14 — Reject actual recovery failures and prove the SQL wait cause
+
+Frozenbb42 and188 each completed one business browser case and rejected both
+language recovery cases, without skips or flaky retries. bb42 used an ambiguous
+global Menu selector at320px; scope the real Topbar Menu.188 reached320/768px
+with zero serious/critical accessibility findings, then rejected two findings
+at1024px. Actual icon-rail CSS hides navigation labels there. Add localized
+accessible names to the same buttons/links, with five regression cases;731 React
+tests, typecheck and build pass. New actual1440px/manual reload and333-table
+restore remain pending. Earlier injected failure does not prove the cause of
+the historical unexplained blank screen.
+
+The existing lost-ACK/period-close native test also failed on188 before cloud
+cancellation. Unchanged-source reproduction observes replay waiting on the
+holder's advisory lock and revocation waiting on the replay's SHARE locks;
+the test thread synchronously waits for revocation before releasing the holder.
+All67 financial tables/148 rows remain byte-identical. Correct the test's two
+lawful linearizations, preserving the original statement timeout and production
+lock order; new source acceptance is still required.
+
+Independent row evidence now binds original row membership and both retained
+I/IO proof files through diagnostic publication. Synthetic drift cases refuse
+changed/missing proof bytes before and after publication. Raw financial rows
+remain private; no actual restored-row oracle pass is inferred from these tests.
+Comparative benchmarks remain deferred by the owner.
+
+### 2026-10-14 — Integrate original partial-credit foundations and native parent order
+
+M6 begins above frozen M5 source23fe490e. Its actual local three-case TLS cohort
+passes with333 restored tables and three tamper refusals;39 private original-row
+inputs yield equal isolated/optimized proofs. Hosted64 jobs succeed; original
+ZIP custody/final evidence publication closes separately. Earlierbb42/188
+recovery failures and the original replay wait-chain rejection stay retained.
+
+Source00929829 fixes the real collection source to lock the immutable approved
+invoice's customer before the existing operational owner locks the invoice.
+The baseline8d951057 new test rejects with LockNotAvailable after an observed
+customer blocker; the corrected target passes, then all27 affected native
+collection/return cases pass with zero skips and unchanged server timeouts.
+Eight posted lines balance70000; AR44000, cash1000 and allocation1000 match
+the independently hand-calculated expectation. No universal deadlock or TPS
+claim follows from this bounded test.
+
+Commercial225 and Native516 provide immutable original-source/cumulative-history
+and nonpostable correction-template contracts. Root7d43 combined184 cases pass;
+targeted Ruff/mypy/Bandit pass. Tax/lot/serial facts are explicitly required,
+32 original FIFO portions and256 history events are bounded, and source/history
+seals reject stale or tampered plans. Positive integral original cost/revenue
+portions only; no implicit rounding. New templates retain original account/
+dimension/journal/currency pins and create no approval, entry ID or full inverse.
+Native ownership, partial-stock posting, API, Studio and migration remain absent.
+ADR0858 and the M6 matrix define remaining shared AR/valuation/receipt guards.
+
+### 2026-10-15 — Integrate native original-source membership before CR2 effects
+
+M7 composes the qualified original partial-return domain with an internal native
+source mapper over existing invoice, issue, valuation, movement, posting and cash
+owners. Agentf3b target1/full6 actual PostgreSQL cases pass with zero skips; all12
+case-bound before/after captures retain unchanged exact row texts from72 tables.
+Native quantity uses NUMERIC::text and retained quantity text, never binary float.
+Reviewed FIFO issue order is preserved despite reversed layer ID ordering.
+Captured inbound currency policy does not replace original consumed/posted cost.
+
+The mapper and observer execute SELECTs; ordinary table ACLs still allow guarded
+DML. Actual current catalog retains15 function definitions/owners/ACLs/configs,
+including three selected inventory definers, and seven FORCE-RLS tables. Five
+ordinary elevated attributes and schemaCREATE remain false; alembic_version
+visibility is explicitly denied, with fixture migration logs retained separately.
+
+Root owns CI mandatory-shard selection, parser inventory, source archive pins,
+module metadata and the integrated freeze. Independent stdlib original-row
+arithmetic and final Root/hosted gates remain pending on this source. The initial
+62d native failure and missing-environment/catalog preflights remain negatives.
+No native CR2 command, partial-stock financial effect, migration147, API or Studio
+workflow is claimed. ADR0859 and the M7 matrix retain the next shared dependencies;
+performance is deferred and all-country statutory packs remain0.
+
+M6 frozenf0 hosted/source acceptance closes atd54c0b57: actual CI64/64/manual
+Security5/5,25 original reports/27 first-attempt cases,333 tables/3 tamper refusals
+and39 private original financial inputs. Root independently rehashed582 originals
+and separately reviewed/published PR138 exact title/body once, then fresh GET
+verified Draft/head/base/body; publication489ce33f. No source/main/merge changed.
+
+M7 Source+oracle integratione0 passes263 pure cases and archive03f4 unchanged,
+as component evidence. The standalone verifier's layer-precision omission was
+found independently: actual layers remain0, but synthetic coherent layer1/missing
+rows passed36cc. Narrowbb806 checks strict integer layer precision0 with67 pure
+cases and new actual unchanged-original isolated readers. Root's corrected final
+source, genuine unposted proposal capture and hosted M7 gates remain required.

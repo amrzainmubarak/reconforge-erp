@@ -1,0 +1,161 @@
+{
+  "browser_regression": {
+    "seconds": 47.9,
+    "passed": 11,
+    "scope": "Actual HTTPS/PG AR scenario plus existing EN/AR keyboard/accessibility/mobile regressions",
+    "log": "ar-ui-browser-final.log"
+  },
+  "runtime": {
+    "synthetic_only": true,
+    "database": "reconforge_ar_ui_20261003",
+    "https": "https://localhost:24446/receivables",
+    "session": 34463
+  },
+  "persistence": "ar-ui-persistence.json",
+  "browser_skill": {
+    "status": "unavailable",
+    "detail": "Bootstrap No browser is available; troubleshooting read and discovery returned []; no in-app verification claimed; repository Playwright was used"
+  },
+  "source_frozen": true,
+  "backend_mutation": false,
+  "troubleshooting": [
+    "Ignored fixture initially imported installed wheel; fixed by inserting repository root before adapter imports. Clean CLI migrations passed unchanged.",
+    "Initial real browser exact label locator did not match nested select label; changed to semantic combobox locator.",
+    "Repeat synthetic run had multiple identical amount texts; scoped expected preview to draft form.",
+    "No flaky rerun without a diagnosed selector or source correction."
+  ],
+  "database_migration": "Existing head0094 only, separate synthetic database",
+  "slice": "PROD012 bounded AR UI",
+  "static": {
+    "typecheck": "pass",
+    "production_build": "pass:677ms Vite",
+    "diff_check": "pass"
+  },
+  "full_unit": {
+    "seconds": 9.75,
+    "passed": 141,
+    "note": "Before final numeric maxlength expanded from bound to64 to reject oversized input without truncation",
+    "log": "ar-ui-unit-final.log"
+  },
+  "adr": "0801 root-owned",
+  "final_focused": {
+    "seconds": 3.0,
+    "passed": 21,
+    "log": "ar-ui-focused-final.log"
+  },
+  "scope_limits": [
+    "Existing customer selection only: create-only customer contract absent",
+    "Amounts are labeled integer minor units; no guessed currency scale",
+    "Each JSON integer <=9007199254740991; quantity <=12 totaldigits; exact BigInt intermediates bounded below10^28",
+    "Draft/submit/independent approval only; receipt and customer API nextcommands documented",
+    "No GL/inventory posting or production readiness claim"
+  ],
+  "final_live": {
+    "seconds": 9.2,
+    "passed": 1,
+    "scope": "Final build, includes oversized-input rejection, exact1376 draft, submit, independent approval, selfapproval/CSRF/foreignscope/staleversion denials and mobile screenshot",
+    "log": "ar-ui-live-final.log"
+  },
+  "screenshots": [
+    "ar-ui-approved-en.png",
+    "ar-ui-approved-ar.png",
+    "ar-ui-approved-mobile-ar.png",
+    "ar-ui-approved-mobile-en.png"
+  ],
+  "source_files": [
+    {
+      "path": "apps/web/README.md",
+      "sha256": "1db86ccc52c5c251e79359463f9a9cab81859112813757c2acda39cefab6cfb0"
+    },
+    {
+      "path": "apps/web/src/App.tsx",
+      "sha256": "7f996d6250fa61da05579355ff2c2d8bb5fd24e8c1069e727845d37522cbb43d"
+    },
+    {
+      "path": "apps/web/src/types.ts",
+      "sha256": "8c26a90155c878c5cb0f9b9dc28d8de0203cf7a9dff274da8b47043934c4dc5c"
+    },
+    {
+      "path": "apps/web/src/i18n.ts",
+      "sha256": "f8f0298fa42a352bb84f17e20386a4a3eaa2019425d74deee5559432b8ff996c"
+    },
+    {
+      "path": "apps/web/src/styles.css",
+      "sha256": "2a080814fddb085273945abcf39647574f36dd448f29aefefd475970acf9fcf8"
+    },
+    {
+      "path": "apps/web/src/components/Navigation.tsx",
+      "sha256": "a263f23e7bb53521cc16f8bfaa8c3accf3e306fcc1f2b44e568e545fd304b776"
+    },
+    {
+      "path": "apps/web/src/components/Topbar.tsx",
+      "sha256": "5a910ebabc2570e5806502af5cef7dfe01a7edfb2fe29321e1b9373d38523be5"
+    },
+    {
+      "path": "apps/web/src/receivables-data.ts",
+      "sha256": "79e0ccebedf83b3a59454c73485dfe37eefac4257881118886f5dfbc5a7d4bcf"
+    },
+    {
+      "path": "apps/web/src/receivables-data.test.ts",
+      "sha256": "6330ae66ef61fb5e18618de8fdc26047085865545e59e7c6b648aee6e8be1258"
+    },
+    {
+      "path": "apps/web/src/receivables-i18n.ts",
+      "sha256": "6813e274bcf94ba59b8e34a9dce22f45cb8398dac287408dca7935ee86a0c8ca"
+    },
+    {
+      "path": "apps/web/src/components/ReceivablesWorkspace.tsx",
+      "sha256": "7d4fbb479bdd613f197ae152539aaae06156f34e0eec1d69bf48cabf94d6e79e"
+    },
+    {
+      "path": "apps/web/src/components/ReceivablesWorkspace.test.tsx",
+      "sha256": "1ea50748e4e7279c1a3656cca39add00775d60fbf26d81b51c3ad77d0c86fdd5"
+    },
+    {
+      "path": "apps/web/e2e/receivables-live.spec.ts",
+      "sha256": "0596e73480c4a2f1c155345d9cb867eeff52617684c2de67be604f75f9b4f4c6"
+    }
+  ],
+  "mobile_followup": {
+    "source_files_changed": [
+      "apps/web/src/components/ReceivablesWorkspace.tsx",
+      "apps/web/src/components/ReceivablesWorkspace.test.tsx",
+      "apps/web/src/receivables-i18n.ts",
+      "apps/web/src/styles.css",
+      "apps/web/e2e/receivables-live.spec.ts"
+    ],
+    "drawer_finding": "Screenshot caught resize transform transition; settled geometry is wholly outside viewport in RTL and LTR; no drawer CSS changed",
+    "live": {
+      "proofs": [
+        "Closed drawer actual bounding rectangle outside viewport in RTL and LTR",
+        "Native arrow-key horizontal scrolling changes scrollLeft",
+        "Tab reaches Review; entire button is inside table region and viewport",
+        "Enter activates Review in both locales",
+        "Full financial journey and EN/AR accessibility still pass"
+      ],
+      "passed": 1,
+      "log": "ar-ui-mobile-live.log",
+      "seconds": 11.5
+    },
+    "fix": "Localized named region, tabIndex0, associated scroll instructions and visible keyboard focus",
+    "confirmed_defect": "AR scroll container lacked a named focusable keyboard region",
+    "red": {
+      "log": "ar-ui-mobile-red.log",
+      "failed": 1,
+      "deselected": 8,
+      "seconds": 2.59
+    },
+    "green": {
+      "passed": 9,
+      "log": "ar-ui-mobile-green.log",
+      "seconds": 2.39
+    },
+    "source_frozen": true,
+    "diff_check": "passed",
+    "build": {
+      "vite_seconds": 0.953,
+      "status": "passed including TypeScript",
+      "log": "ar-ui-mobile-build.log"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 schema_version: 1
 inventory_id: reconforge-file-ingestion
-reviewed_on: "2026-08-11"
+reviewed_on: "2026-10-03"
 owner: platform-security
 claim_boundary: >-
   This inventory proves repository-visible parser coverage and bounded controls only. It does not prove
@@ -305,7 +305,7 @@ surfaces:
     next_action: Bind copied artifacts to separately authenticated scan/provenance and disclosure-approval metadata, test real process/host/filesystem durability, and refuse unscanned redistribution where policy requires scanning.
   - id: FI-013
     name: Internal persisted JSON fields
-    module_ids: [platform.core, finance.controls, reconciliation.core]
+    module_ids: [platform.core, finance.budget-control, finance.controls, reconciliation.core]
     trust: internal-persisted
     entrypoints:
       - reconforge/audit/events.py::_metadata_from_json
@@ -314,15 +314,19 @@ surfaces:
       - reconforge/infrastructure/postgres_ledger.py::PostgresLedgerRepository.verify_audit_events
       - reconforge/infrastructure/postgres_outbox.py::_metadata
       - reconforge/infrastructure/redis.py::TenantRedisStore.get_session
+      - reconforge/infrastructure/budget_control_repository.py::BudgetControlRepositoryBase._command
+      - reconforge/infrastructure/budget_control_verification.py::_json
+      - reconforge/infrastructure/notification_inbox_verification.py::verify_sqlite_inbox_storage
       - reconforge/infrastructure/sqlite_matching.py::SQLiteMatchingRepository._matching_rule_document
       - reconforge/infrastructure/sqlite_payables.py::SQLitePayablesRepository._idempotent
       - reconforge/infrastructure/sqlite_receivables.py::SQLiteReceivablesRepository._idempotent
+      - reconforge/infrastructure/postgres_sales_revenue.py::_json
     formats: [json]
     parser_families: [json-stdlib]
     policy_coverage: partial
     status: partial
     controls: [SEC-C-002, SEC-C-004, SEC-C-005]
-    test_evidence: [tests/test_audit_metadata_json.py, tests/test_postgres_outbox_payload_json.py, tests/test_postgres_reconciliation_persisted_json.py, tests/test_sqlite_matching_rule_json.py, tests/test_redis_session_json.py, tests/test_db_export_persisted_json.py, tests/test_audit_events.py, tests/test_db_export_import.py, tests/test_postgres_ledger.py, tests/test_postgres_outbox.py, tests/test_postgres_reconciliation.py, tests/test_redis_foundation.py, tests/test_payables.py, tests/test_receivables.py, tests/test_financial_idempotency_json.py]
+    test_evidence: [tests/test_audit_metadata_json.py, tests/test_budget_control.py, tests/test_notification_inbox.py, tests/test_postgres_outbox_payload_json.py, tests/test_postgres_reconciliation_persisted_json.py, tests/test_sqlite_matching_rule_json.py, tests/test_redis_session_json.py, tests/test_db_export_persisted_json.py, tests/test_audit_events.py, tests/test_db_export_import.py, tests/test_postgres_ledger.py, tests/test_postgres_outbox.py, tests/test_postgres_reconciliation.py, tests/test_redis_foundation.py, tests/test_payables.py, tests/test_receivables.py, tests/test_financial_idempotency_json.py, tests/test_postgres_sales_revenue.py]
     residual_risk_ids: [R-018]
     limitations:
       - These are database, cache, or event values rather than filesystem ingress and must not be described as accepted upload paths.
@@ -332,10 +336,13 @@ surfaces:
       - "PostgreSQL reconciliation rule, input-attribute, decision-lineage, and exception-evidence JSONB use four named profiles over postgres-reconciliation-object-v1. Rule/lineage/evidence allow 4194304 UTF-8 bytes; attributes preserve the existing 100000-byte producer ceiling."
       - "All reconciliation JSONB profiles allow 100000 nodes, depth 32, 25000 items/collection, unique keys, and finite object values. Attributes allow 100000 and the other profiles 262144 characters/scalar. Canonical bytes preserve JSONB fingerprints; corrupt rows fail before matcher use or public return instead of becoming sentinel values."
       - "SQLite matching rules use sqlite-matching-rule-json-v1: 4194304 UTF-8 bytes, 100000 nodes, depth 32, 25000 items/collection, 262144 characters/scalar, unique keys, finite object values, and historical spaced sorted ASCII text. New producers reject binary floats; historical finite floats remain readable."
+      - "Budget command replay reads canonical retained command/result text after scope and digest checks; the verification reader bounds text to 65536 bytes and rejects duplicate or non-finite values, while legacy replay text has no shared graph-budget profile."
+      - "Inbox verification parses retained audit and outbox metadata only to compare exact expected linkage. It fails closed on malformed values but has no separate pre-parse graph budget for those historical texts."
       - "Tenant-scoped Redis sessions use redis-session-json-v1: 16384 UTF-8 bytes, 16 nodes, depth 2, four fields, and 256 characters/scalar. The closed schema requires string IDs, a lowercase SHA-256 token digest, and explicit UTC expiry; producer rejection precedes client access and corrupt reads do not mutate Redis."
       - "The public SQLite export has a closed registry of JSON fields: audit metadata and both matching rules reuse their established profiles; legacy summaries use sqlite-legacy-import-summary-json-v1; matching lineage uses sqlite-matching-lineage-json-v1; currency-registry snapshots use currency-registry-snapshot-json-v1 with a bounded 1000000-byte/integer-token object profile. All reject malformed values before destination creation and preserve their declared output shapes."
       - "Legacy-summary and matching-lineage producers use their respective contracts. Export preflights every registered row before creating the destination or writing any file, rejects non-text/corrupt values without sentinels, preserves metadata/summary/rule object outputs, and retains lineage_json as its historical string field."
       - Stored values and source artifacts are not authenticated; actor/disclosure authorization, malware quarantine, full business-semantic schemas, and supported-throughput evidence remain outside this structural boundary.
+      - "Sales reads native JSONB quotation, financial parameters and command acknowledgements after tenant/workspace/entity selection. Quotation arithmetic and digest are reproduced and replay binds the retained source and actor; this compatibility string reader has no separate application pre-parse graph budget, so this surface remains partial."
     next_action: Add authenticated producer/source provenance and centralized actor/disclosure authorization, then exercise bounded persisted-state profiles at declared throughput and live-service boundaries.
   - id: FI-014
     name: Local review-state JSON compatibility ingress
@@ -845,7 +852,138 @@ surfaces:
     limitations:
       - The command verifies operator-supplied runtime facts and profile findings locally; it does not probe storage, identity, queue, object-store, key, or backup systems.
     next_action: Bind signed runtime evidence to an independently exercised deployment admission workflow before making mode-readiness claims.
+  - id: FI-043
+    name: Pinned synthetic AMLSim reconciliation workload
+    module_ids: [reconciliation.core]
+    trust: untrusted-local
+    entrypoints: [reconforge/benchmark/amlsim_reconciliation.py::parse_amlsim_sample]
+    formats: [csv]
+    parser_families: [csv-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-006]
+    test_evidence: [tests/test_amlsim_reconciliation.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - Only a profile-pinned synthetic single-transfer format is supported; currency and calendar are scenario assumptions, not upstream facts.
+      - Hash validation binds bytes to the selected profile and does not independently authenticate a user-supplied profile or prove malware absence.
+    next_action: Retain independent fault-oracle and provenance checks when introducing larger workloads or a worker execution path.
+  - id: FI-044
+    name: Retained financial currency policy snapshot reader
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints: [reconforge/domain/finance_policy.py::verified_registry_context]
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: partial
+    status: partial
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_finance_currency_policy.py, tests/test_postgres_finance_currency_policy.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - Text snapshots are bounded to1000000 UTF-8 bytes and reject duplicate keys before registry schema, version and digest validation; mapping inputs come from already-decoded database rows.
+      - The reader does not establish independent source authenticity or a general hostile JSON graph depth budget.
+    next_action: Preserve exact historical policy verification and add a shared graph-budget contract before accepting arbitrary external policy documents.
+  - id: FI-045
+    name: PostgreSQL manual posting effect and command JSONB readers
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_finance_posting.py::PostgresFinancePostingRepository._command
+      - reconforge/infrastructure/postgres_finance_posting.py::PostgresFinancePostingRepository._get_effect
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: partial
+    status: partial
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_finance_posting_domain.py, tests/test_postgres_finance_posting.py, tests/test_postgres_finance_posting_concurrency.py, tests/test_postgres_finance_posting_restore.py]
+    residual_risk_ids: [R-015, R-018]
+    limitations:
+      - Canonical producers and PostgreSQL CHECK constraints limit each stored snapshot or command result to 2097152 bytes of JSONB text; typed snapshot, digest, requested-source, scope, and audit/outbox binding checks run after decoding.
+      - Driver-decoded JSONB and the two json.loads text fallbacks do not provide application pre-parse byte, graph-depth, node, or duplicate-key budgets; JSONB normalization is not duplicate-key rejection of arbitrary external JSON.
+      - The database/schema owner and restore operator remain trusted dependencies that can bypass storage guards; this internal persisted reader is not an authorized upload parser or proof of independent source authenticity.
+    next_action: Add a shared bounded decoder for textual fallbacks before widening this internal producer/database boundary; retain typed source and evidence verification after decoding.
+  - id: FI-046
+    name: Selected original group diagnostic API query
+    module_ids: [finance.core]
+    trust: untrusted-network
+    entrypoints: [reconforge/api/routes/intercompany_group_diagnostic.py::parse_selection]
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: partial
+    status: partial
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_intercompany_group_diagnostic_api.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The query is limited to32768 characters, not32768 UTF-8 bytes, rejects duplicate fields and maps malformed or decoder-recursive JSON to the same safe400 response.
+      - Strict closed typed models admit only1..16 explicit source and report pins; domain validation retains canonical ordering, uniqueness and original seals before current authorized source capture.
+      - No application pre-parse node or graph-depth profile is claimed; this read selection does not authenticate source documents or authorize financial posting.
+    next_action: Keep the exact finite selection and current source authority; use a shared bounded graph decoder before widening the query or accepting uploaded documents.
+  - id: FI-047
+    name: Internal original partial-return evidence and unapproved correction templates
+    module_ids: [platform.core, finance.controls]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/domain/customer_partial_returns.py::OriginalPostingEvidence.snapshot
+      - reconforge/domain/customer_partial_return_posting.py::_decode
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_customer_partial_returns_domain.py, tests/test_customer_partial_return_posting.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - Uses the existing shared structured-document decoder with integer-only tokens, duplicate/non-finite rejection and graph budgets; no new direct json.loads or upload/file parser is introduced.
+      - Original snapshots retain65536 UTF-8 bytes,16384 nodes,depth24,1024 items/collection and65536 characters/scalar; correction templates retain2097152 bytes,32768 nodes,depth32,1024 items/collection and262144 characters/scalar. Root objects and canonical producer text are required before original Finance Posting schema/seal or closed correction-shape validation.
+      - Digests and bounded JSON do not attest native original ownership, account permission, current human authority, period openness, approval, or eligibility for native posting. Correction templates remain unapproved and nonpostable; only the first untaxed functional-currency untracked original-source contract is implemented.
+    next_action: Keep AST coverage exact and bind the future native CR2 source participant, SQL guards and real command/API/Studio acceptance before exposing a partial-stock workflow.
+  - id: FI-048
+    name: Internal canonical observations of a preauthorized native partial-return source
+    module_ids: [platform.core, finance.controls]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_customer_partial_return_source.py::NativePartialReturnSourceEvidence.original_source
+      - reconforge/infrastructure/postgres_customer_partial_return_source.py::NativePartialReturnSourceEvidence.collection_evidence
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_postgres_customer_partial_return_source.py, tests/test_customer_partial_return_source_oracle.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - Reuses the shared structured-document decoder with integer-only tokens, duplicate/non-finite rejection and2097152 UTF-8 bytes,50000 nodes,depth32,1000 items/collection and131072 characters/scalar; no new direct JSON parser or upload boundary is added.
+      - The exact original envelope and collection list root types, closed envelope fields and canonical producer text are required. Returned mutable projections are fresh copies; their strings are canonical decoded observations, not original PostgreSQL byte attestation.
+      - The adapter's supplied connection/envelope must already be authorized; current human/permission/period locks and source revalidation remain the composing owner's responsibility. SELECT-only mapper statements do not imply read-only application table ACLs.
+      - This finite source mapping supplies no claim, approved account, command, physical partial receipt, AR adjustment or financial posting. Independent raw native row-text custody is retained separately and proposals remain unposted.
+    next_action: Bind future native CR2 source ownership, shared AR and same-layer restoration guards before admitting any financial effect; keep byte-original evidence separate from decoded content.
+  - id: FI-049
+    name: Internal explicit restituted-cost original evidence
+    module_ids: [platform.core, finance.controls]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/domain/customer_partial_return_cost_evidence.py::OriginalRestitutedCostEvidence.snapshot
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_customer_partial_return_zero_stock.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-003, R-018]
+    limitations:
+      - Reuses the shared integer-only structured decoder with duplicate and non-finite rejection and bounds of6291456 UTF-8 bytes,131072 nodes,depth48,4096 items per collection and262144 characters per scalar; no upload boundary is introduced.
+      - Canonical root, seven factual fields, explicit restituted Stock-v2 policy, actual valuation/consumption affinity and zero-only absent COGS are required; a digest authenticates supplied content only.
+      - Native source ownership, current actor and third-human duties, exact layer changes, atomic posting and populated restore need independent database evidence; parser tests do not close those gates.
+    next_action: Qualify native zero-cost resale and repeated return, SQL bypass and populated restore before accepting the new factual-source path.
+
 direct_tabular_parser_allowlist:
+  - path: reconforge/benchmark/amlsim_reconciliation.py
+    parser: csv.DictReader
+    call_count: 1
+    surface_id: FI-043
+    rationale: Parses only byte-bounded SHA-256-pinned strict UTF-8 CSV; exact headers, complete rows, unique bounded IDs, exact amounts, single-transfer semantics and profile record ceilings reject source drift.
   - path: reconforge/io/ingress.py
     parser: csv.reader
     call_count: 1
@@ -887,6 +1025,41 @@ direct_tabular_parser_allowlist:
     surface_id: FI-023
     rationale: Parses only size- and hash-verified public responses after strict decoding, then requires an exact unique header set and complete rows before financial normalization.
 direct_json_parser_allowlist:
+  - path: reconforge/api/routes/intercompany_group_diagnostic.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-046
+    rationale: One32768-character bounded external read-selection query with duplicate-key refusal, safe decoder-recursion rejection, strict closed one-to-sixteen source pins and domain canonical validation; a pre-parse graph budget is not claimed.
+  - path: reconforge/infrastructure/postgres_sales_revenue.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-013
+    rationale: Parses only database-returned sales JSONB/text after scoped selection; quotation arithmetic and digest are reproduced, and command replay checks retained source, actor and version. No separate pre-parse graph budget is claimed.
+  - path: reconforge/infrastructure/budget_control_repository.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-013
+    rationale: Reads a previously canonical budget command result only after scope and result-digest validation; retained legacy text has no shared graph-budget profile, so this surface remains partial.
+  - path: reconforge/infrastructure/budget_control_verification.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-013
+    rationale: Reads bounded 64 KiB budget evidence with duplicate-key and non-finite-token refusal before digest, scope, audit, and outbox linkage verification.
+  - path: reconforge/infrastructure/notification_inbox_verification.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-013
+    rationale: Reads retained audit and outbox metadata only to compare exact expected inbox evidence; malformed values fail closed during storage verification.
+  - path: reconforge/infrastructure/postgres_finance_posting.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-045
+    rationale: Reads internal canonical posting JSONB/text with 2 MiB database constraints, then verifies typed content, digest and backing-source/evidence affinity; neither fallback applies an application pre-parse graph budget, so coverage remains partial.
+  - path: reconforge/domain/finance_policy.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-044
+    rationale: Parses only retained snapshot text capped at1000000 UTF-8 bytes with duplicate-key rejection, then verifies the complete currency registry schema, policies, version and digest before financial interpretation.
   - path: reconforge/infrastructure/postgres_master_data.py
     parser: json.loads
     call_count: 1

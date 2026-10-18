@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from decimal import Decimal
 from typing import Annotated, Any
 
@@ -13,6 +13,12 @@ from reconforge.api.dependencies import enforce_server_scoped_permissions, requi
 from reconforge.api.errors import APIError
 from reconforge.api.server_identity import request_execution_scope
 from reconforge.api.server_reconciliation import execute_postgres_reconciliation, server_reconciliation_enabled
+from reconforge.auth.field_access import (
+    project_reconciliation_exception,
+    project_reconciliation_input,
+    project_reconciliation_result,
+    project_reconciliation_run,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.reconciliation.matching import RECORD_IDENTITY_POLICY
 from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY, InvalidAmountError, parse_exact_amount
@@ -143,6 +149,14 @@ def _source() -> dict[str, object]:
     return {"kind": "postgresql-reconciliation-results", "server_mode": True}
 
 
+def _project_run(value: dict[str, object]) -> dict[str, object]:
+    return project_reconciliation_run(value).visible
+
+
+def _project_runs(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [_project_run(value) for value in values]
+
+
 @router.post("/runs", status_code=202)
 def submit_run(
     request: Request,
@@ -235,7 +249,7 @@ def submit_run(
                 valid=item.valid,
                 allowed_uses=item.allowed_uses,
             )
-        return {"run": run, "input_count": len(payload.inputs)}
+        return {"run": _project_run(run), "input_count": len(payload.inputs)}
 
     submitted = execute_postgres_reconciliation(request, submit)
     return {**submitted, "source": _source()}
@@ -264,7 +278,7 @@ def list_runs(
             offset=offset,
         ),
     )
-    return {"runs": runs, "pagination": {"limit": limit, "offset": offset, "returned": len(runs)}, "source": _source()}
+    return {"runs": _project_runs(runs), "pagination": {"limit": limit, "offset": offset, "returned": len(runs)}, "source": _source()}
 
 
 @router.get("/runs/{run_id}")
@@ -281,7 +295,7 @@ def get_run(
         request,
         lambda repository, tenant: repository.get_run_metadata(tenant_id=tenant, run_id=run_id),
     )
-    return {"run": run, "source": _source()}
+    return {"run": _project_run(run), "source": _source()}
 
 
 @router.post("/runs/{run_id}/cancel")
@@ -305,7 +319,7 @@ def cancel_run(
             reason=payload.reason,
         ),
     )
-    return {"run": run, "source": _source()}
+    return {"run": _project_run(run), "source": _source()}
 
 
 @router.post("/runs/{run_id}/requeue")
@@ -329,7 +343,7 @@ def requeue_run(
             reason=payload.reason,
         ),
     )
-    return {"run": run, "source": _source()}
+    return {"run": _project_run(run), "source": _source()}
 
 
 def _list_children(
@@ -359,6 +373,20 @@ def _list_children(
     }
 
 
+def _project_children(
+    values: object,
+    projector: Callable[[dict[str, object]], dict[str, object]],
+) -> list[dict[str, object]]:
+    if not isinstance(values, list):
+        raise TypeError("reconciliation child collection must be a list")
+    projected: list[dict[str, object]] = []
+    for value in values:
+        if not isinstance(value, Mapping):
+            raise TypeError("reconciliation child record must be a mapping")
+        projected.append(projector(dict(value)))
+    return projected
+
+
 @router.get("/runs/{run_id}/inputs")
 def list_inputs(
     run_id: str,
@@ -372,7 +400,7 @@ def list_inputs(
     result = _list_children(
         request, run_id, lambda repository, **values: repository.list_inputs(**values), limit=limit, offset=offset
     )
-    result["inputs"] = result.pop("records")
+    result["inputs"] = _project_children(result.pop("records"), lambda value: project_reconciliation_input(value).visible)
     return result
 
 
@@ -389,7 +417,7 @@ def list_results(
     result = _list_children(
         request, run_id, lambda repository, **values: repository.list_results(**values), limit=limit, offset=offset
     )
-    result["results"] = result.pop("records")
+    result["results"] = _project_children(result.pop("records"), lambda value: project_reconciliation_result(value).visible)
     return result
 
 
@@ -406,5 +434,7 @@ def list_exceptions(
     result = _list_children(
         request, run_id, lambda repository, **values: repository.list_exceptions(**values), limit=limit, offset=offset
     )
-    result["exceptions"] = result.pop("records")
+    result["exceptions"] = _project_children(
+        result.pop("records"), lambda value: project_reconciliation_exception(value).visible
+    )
     return result

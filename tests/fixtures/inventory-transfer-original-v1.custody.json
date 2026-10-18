@@ -1,0 +1,9 @@
+{
+  "schema_version": "inventory-transfer-original-custody-v1",
+  "source_packet": "output/it1-native-canonical146-owned-freeze-v4",
+  "original_sha256": "6c6bc9c46cd8314fe372080fed5393e4eaeb1cd4ad21138ccb4159c77604544e",
+  "original_bytes": 653318,
+  "gzip_sha256": "01d11cb24e8177530eb60a68a422da89ea0e30c5b08a6c4a893d890be2b1aef4",
+  "gzip_bytes": 45687,
+  "purpose": "Genuine ordinary-role original IRP/IT1 forward and independent inverse populations; gzip restores exact original export bytes. No recomputed accounting fields."
+}

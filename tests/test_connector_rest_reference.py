@@ -53,6 +53,7 @@ def test_reference_rest_connector_is_read_only_and_canonicalizes_records() -> No
     result = connector.read_page(idempotency_key="run-1", cursor="next-1")
     assert result.page.next_cursor == "next-2"
     assert [record.record_id for record in result.page.records] == ["R-2", "R-1"]
+    assert [record.amount for record in result.page.records] == ["20", "10"]
     assert result.response_digest
     assert transport.calls[0][0] == REFERENCE_REST_MANIFEST.egress_destinations[0]
 
@@ -76,6 +77,15 @@ def test_reference_rest_rejects_duplicate_ids_and_non_exact_amounts() -> None:
     )
     with pytest.raises(ConnectorNetworkError, match="schema_invalid"):
         malformed_connector.read_page(idempotency_key="malformed-1")
+    scientific = _Transport(
+        b'{"records":[{"id":"R-1","amount":"1e2","currency":"USD","date":"2026-01-01","partition":"AR"}]}'
+    )
+    scientific_connector = ReferenceRestConnector(
+        NetworkConnectorExecutor(scientific, secret_resolver=_Secrets()),
+        reference_rest_registration(credential_reference="vault://tenant-a/reference-rest"),
+    )
+    with pytest.raises(ConnectorNetworkError, match="schema_invalid"):
+        scientific_connector.read_page(idempotency_key="scientific-1")
 
 
 def test_reference_registration_rejects_unallowlisted_endpoint() -> None:

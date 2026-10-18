@@ -8,5 +8,7 @@ export default defineConfig({
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     exclude: ["e2e/**"],
     restoreMocks: true,
+    // Keep DOM workers bounded alongside PostgreSQL and recovery gates.
+    maxWorkers: 2,
   },
 });

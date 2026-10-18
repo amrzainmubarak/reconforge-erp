@@ -1,0 +1,25 @@
+id: postgres-current-bootstrap
+name: Repeatable current PostgreSQL close installation
+version: 1.0.0
+maturity: experimental
+owner: platform-security
+dependencies: [finance.controls, platform.core]
+incompatible_versions: []
+data_classification: financial-workflow-metadata
+retention_policy: preserve-historical-close-schema-and-all-financial-records
+permissions: []
+default_roles: []
+migrations: []
+domain_invariants: [historical0078-sql-byte-identical, current-installation-repeatable-without-constraint-or-policy-drift, synthetic-cleanup-transactionally-restores-guards]
+domain_events: []
+api_routes: []
+cli_commands: []
+ui_routes: []
+import_schemas: []
+export_schemas: []
+synthetic_fixtures: [tests/test_postgres_close_scope_bootstrap.py, tests/test_postgres_matching_application.py]
+threat_model: [constraint-name-catalog-mismatch, missing-test-cleanup-guard-restoration, sibling-scope-access]
+benchmarks: []
+rollback_plan: preserve-schema-data-redeploy-compatible-reader-no-guard-disable-workaround
+test_matrix: [tests/test_postgres_close_scope_bootstrap.py, tests/test_api_server_identity.py, tests/test_postgres_matching_application.py, tests/test_postgres_reconciliation_input_seal.py]
+limitations: [no-historical-migration-rewrite, legacy-global-close-uniques-remain, hosted-acceptance-separate]

@@ -6,6 +6,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -298,7 +299,9 @@ def _cleanup_live(connection: Any, tenant_a: str, tenant_b: str) -> None:
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL service")
-def test_live_scim_http_auth_lifecycle_etag_filter_and_tenant_isolation(tmp_path: Path) -> None:
+def test_live_scim_http_auth_lifecycle_etag_filter_and_tenant_isolation(
+    tmp_path: Path, isolated_postgres_runtime_role: str,
+) -> None:
     pytest.importorskip("psycopg")
     from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, PostgresTenantBoundary
     from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
@@ -312,21 +315,26 @@ def test_live_scim_http_auth_lifecycle_etag_filter_and_tenant_isolation(tmp_path
     factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
     admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
     admin = admin_factory.connect()
-    tenant_a, tenant_b = "scim_http_a", "scim_http_b"
+    suffix = uuid4().hex[:12]
+    tenant_a, tenant_b = f"scim_http_a_{suffix}", f"scim_http_b_{suffix}"
     try:
         with admin.transaction():
             _cleanup_live(admin, tenant_a, tenant_b)
+            # Tenant provisioning fires current permission seeders and belongs
+            # to the administrator, not the SCIM runtime principal.
+            admin.execute(
+                "INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)",
+                (tenant_a, tenant_a, tenant_b, tenant_b),
+            )
             if app_user:
                 admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+                admin.execute(f"GRANT SELECT ON reconforge.tenants TO {app_user}")
                 admin.execute(
-                    f"GRANT SELECT, INSERT, UPDATE, DELETE ON reconforge.tenants, "
+                    f"GRANT SELECT, INSERT, UPDATE, DELETE ON "
                     f"reconforge.identity_users, reconforge.identity_sessions, reconforge.identity_user_roles, "
                     f"reconforge.scim_users, reconforge.scim_groups, reconforge.scim_group_members, "
                     f"reconforge.scim_events, reconforge.scim_credentials TO {app_user}"
                 )
-        for tenant in (tenant_a, tenant_b):
-            with PostgresTenantBoundary(factory).transaction(tenant) as connection:
-                connection.execute("INSERT INTO reconforge.tenants (id,name) VALUES (%s,%s)", (tenant, tenant))
         with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:
             issued = PostgresSCIMCredentialRepository(connection).issue(
                 tenant_id=tenant_a,

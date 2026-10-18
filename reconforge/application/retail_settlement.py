@@ -27,7 +27,7 @@ def _required(record: dict[str, Any], key: str) -> Any:
 
 
 def _money(record: dict[str, Any], key: str, currency: str) -> Money:
-    return Money.from_exact(_required(record, key), currency)
+    return Money.from_exact(_required(record, key), currency, strict_precision=True)
 
 
 def _sha256(path: Path) -> str:
@@ -111,7 +111,7 @@ def run_retail_settlement_files(
     pos_batches, pos_digest = read_retail_pos_batches(pos_path)
     settlements, settlement_digest = read_retail_settlements(settlement_path)
     try:
-        tolerance_money = Money.from_exact(tolerance, currency)
+        tolerance_money = Money.from_exact(tolerance, currency, strict_precision=True)
     except Exception as exc:
         raise RetailSettlementError("retail settlement tolerance is invalid.") from exc
     return run_retail_settlement(

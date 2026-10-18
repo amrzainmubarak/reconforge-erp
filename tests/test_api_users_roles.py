@@ -91,3 +91,30 @@ def test_roles_endpoints_work_without_secret_material(tmp_path: Path) -> None:
     assert permissions.status_code == 200
     assert "audit.read" in permissions.json()["permissions"]
     assert "password" not in roles.text.lower() + permissions.text.lower()
+
+
+def test_roles_endpoint_drops_future_role_fields_before_serialization(tmp_path: Path, monkeypatch: object) -> None:
+    import reconforge.api.routes.roles as roles_routes
+
+    client = _setup(tmp_path)
+    headers = {"Authorization": f"Bearer {_token(client, 'admin')}"}
+
+    class HostileRoleRepository:
+        def list_roles(self) -> list[dict[str, object]]:
+            return [{"id": "role-reviewer", "name": "reviewer", "future_role_field": "must-not-escape"}]
+
+        def role_permissions(self, _role_name: str) -> list[str]:
+            return ["audit.read"]
+
+    class HostileAuthService:
+        def __init__(self, _connection: object) -> None:
+            self.roles = HostileRoleRepository()
+
+    monkeypatch.setattr(roles_routes, "LocalAuthService", HostileAuthService)
+
+    response = client.get("/api/v1/roles", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json() == {"roles": [{"id": "role-reviewer", "name": "reviewer"}]}
+    assert "future_role_field" not in response.text
+    assert "must-not-escape" not in response.text

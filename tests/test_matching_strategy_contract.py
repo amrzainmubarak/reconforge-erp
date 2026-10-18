@@ -409,6 +409,29 @@ def test_strategy_rejects_limits_and_unsafe_numeric_payloads_before_matching(tmp
         connection.close()
 
 
+@pytest.mark.parametrize(
+    ("strategy", "mode", "left_amount", "right_amount"),
+    (
+        (CarryForwardFifoStrategy(), "carry-forward", 10.0, "10"),
+        (ReversalPairingStrategy(), "reversal-pairing", 10.0, "-10"),
+    ),
+)
+def test_sequential_strategy_adapters_reject_binary_float_amounts(
+    strategy: CarryForwardFifoStrategy | ReversalPairingStrategy,
+    mode: str,
+    left_amount: object,
+    right_amount: object,
+) -> None:
+    request = MatchingStrategyRequest(
+        left_records=({"id": "L1", "amount": left_amount, "date": "2026-01-01", "currency": "USD", "partition": "P1"},),
+        right_records=({"id": "R1", "amount": right_amount, "date": "2026-01-02", "currency": "USD", "partition": "P1", "reversal_of": "L1"},),
+        mode=mode,
+        date_window_days=5,
+    )
+    with pytest.raises(MatchingStrategyContractError, match="binary floating-point"):
+        strategy.execute(request)
+
+
 def test_carry_forward_strategy_is_published_bounded_and_permutation_invariant() -> None:
     strategy = CarryForwardFifoStrategy()
     request = MatchingStrategyRequest(

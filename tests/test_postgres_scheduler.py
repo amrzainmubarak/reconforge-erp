@@ -25,6 +25,7 @@ from reconforge.infrastructure.postgres_scheduler import (
     PostgresScheduleRepository,
     install_postgres_scheduler_schema,
 )
+from tests.postgres_test_hygiene import grant_native_owner_reads
 
 
 def _registration(
@@ -84,7 +85,9 @@ def test_postgres_scheduler_schema_has_versioning_rls_append_only_and_job_fk() -
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
-def test_live_postgres_scheduler_is_atomic_idempotent_coordinated_and_scoped() -> None:
+def test_live_postgres_scheduler_is_atomic_idempotent_coordinated_and_scoped(
+    isolated_postgres_runtime_role: str,
+) -> None:
     pytest.importorskip("psycopg")
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
@@ -103,6 +106,7 @@ def test_live_postgres_scheduler_is_atomic_idempotent_coordinated_and_scoped() -
         with admin.transaction():
             install_postgres_scheduler_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            grant_native_owner_reads(admin, app_user, ("schedule_notification_subscriptions", "notification_routes"))
             admin.execute(
                 f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.schedules,reconforge.schedule_dispatches,"
                 f"reconforge.schedule_events,reconforge.durable_jobs,reconforge.durable_job_transitions TO {app_user}"

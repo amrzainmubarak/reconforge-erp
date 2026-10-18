@@ -72,6 +72,9 @@ def _run_contract() -> dict[str, object]:
     bucket = _required("RECONFORGE_TEST_S3_BUCKET")
     lock_bucket = _required("RECONFORGE_TEST_S3_LOCK_BUCKET")
     image_digest = _required("RECONFORGE_S3_IMAGE_DIGEST")
+    image_digest_kind = os.environ.get("RECONFORGE_S3_IMAGE_DIGEST_KIND", "oci-manifest")
+    if image_digest_kind not in {"oci-manifest", "oci-config"}:
+        raise RuntimeError("RECONFORGE_S3_IMAGE_DIGEST_KIND must identify an OCI manifest or config")
     if not image_digest.startswith(IMAGE_DIGEST_PATTERN) or len(image_digest) != len(IMAGE_DIGEST_PATTERN) + 64:
         raise RuntimeError("RECONFORGE_S3_IMAGE_DIGEST must be a full sha256 digest")
     endpoint_shape = _endpoint_shape(endpoint)
@@ -198,6 +201,7 @@ def _run_contract() -> dict[str, object]:
         "status": "verified",
         "provider": "minio",
         "image_digest": image_digest,
+        "image_digest_kind": image_digest_kind,
         "endpoint": endpoint_shape,
         "bucket_profile": "synthetic-disposable-normal-and-object-lock-buckets",
         "observed": observed,
@@ -215,6 +219,8 @@ def _run_contract() -> dict[str, object]:
 def verify_report(report: dict[str, object]) -> None:
     if report.get("report_id") != REPORT_ID or report.get("status") != "verified":
         raise ValueError("Live object-storage report identity or status is invalid")
+    if report.get("image_digest_kind", "oci-manifest") not in {"oci-manifest", "oci-config"}:
+        raise ValueError("Live object-storage image digest kind is invalid")
     observed = report.get("observed")
     if not isinstance(observed, dict) or set(observed) != {
         "hierarchical_scope_isolation",

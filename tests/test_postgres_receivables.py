@@ -21,13 +21,19 @@ from reconforge.infrastructure.postgres import (
     install_postgres_rls_schema,
 )
 from reconforge.infrastructure.postgres_domain import install_postgres_domain_schema
+from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data import POSTGRES_MASTER_DATA_SCHEMA_SQL
 from reconforge.infrastructure.postgres_receivables import (
     POSTGRES_RECEIVABLES_SCHEMA_SQL,
     PostgresReceivablesRepository,
     _quantity,
+    install_postgres_receivables_schema,
 )
 from reconforge.platform.common import PlatformError
+from tests.postgres_test_hygiene import (
+    RECEIVABLES_TENANT_CLEANUP_PLAN,
+    cleanup_postgres_test_tenants_as_admin,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -80,7 +86,7 @@ def test_all_receivables_signatures_match_application_contract() -> None:
     methods = (
         "upsert_customer", "create_invoice", "submit_invoice", "approve_invoice",
         "post_receipt", "allocate_receipt", "get_customer", "get_invoice",
-        "get_receipt", "list_customers", "list_invoices", "credit_exposure", "aging_report",
+        "get_receipt", "list_customers", "list_invoices", "credit_exposure", "aging_report", "aging_report_by_currency",
     )
     for method_name in methods:
         assert inspect.signature(getattr(PostgresReceivablesRepository, method_name)) == inspect.signature(
@@ -111,7 +117,7 @@ def test_invoice_line_total_mismatch_fails_before_transaction() -> None:
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
 def test_live_postgres_receivables_lifecycle_credit_allocation_aging_and_rls() -> None:
-    psycopg = pytest.importorskip("psycopg")
+    pytest.importorskip("psycopg")
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
     app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
@@ -128,15 +134,43 @@ def test_live_postgres_receivables_lifecycle_credit_allocation_aging_and_rls() -
             install_postgres_rls_schema(admin)
             install_postgres_domain_schema(admin)
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
-            admin.execute(POSTGRES_RECEIVABLES_SCHEMA_SQL)
+            admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
+            install_postgres_receivables_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             tables = (
                 "tenants,organizations,currencies,legal_entities,domain_workspaces,"
                 "domain_audit_ledger_state,domain_audit_events,outbox_events,"
                 "ar_customers,ar_invoices,ar_invoice_lines,ar_receipts,"
-                "ar_receipt_allocations,ar_idempotency_keys"
+                "ar_receipt_allocations,ar_idempotency_keys,currency_registry_bindings,currency_registry_snapshots"
             )
             admin.execute(f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}")
+            assert tuple(
+                admin.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=%s", (app_user,)).fetchone()
+            ) == (False, False)
+            for dependency in ("operational_finance_plans", "operational_finance_links", "sales_revenue_documents", "stock_sales_orders", "stock_sales_issue_claims"):
+                qualified = f"reconforge.{dependency}"
+                if admin.execute("SELECT to_regclass(%s)", (qualified,)).fetchone()[0] is None:
+                    continue
+                previous_dml = admin.execute(
+                    "SELECT has_table_privilege(%s,%s,'INSERT'),has_table_privilege(%s,%s,'UPDATE'),"
+                    "has_table_privilege(%s,%s,'DELETE')",
+                    (app_user, qualified, app_user, qualified, app_user, qualified),
+                ).fetchone()
+                admin.execute(f"GRANT SELECT ON {qualified} TO {app_user}")
+                assert tuple(
+                    admin.execute(
+                        "SELECT has_table_privilege(%s,%s,'SELECT'),has_table_privilege(%s,%s,'INSERT'),"
+                        "has_table_privilege(%s,%s,'UPDATE'),has_table_privilege(%s,%s,'DELETE')",
+                        (app_user, qualified, app_user, qualified, app_user, qualified, app_user, qualified),
+                    ).fetchone()
+                ) == (True, *previous_dml)
+                assert tuple(
+                    admin.execute(
+                        "SELECT pg_get_userbyid(relowner)<>%s,relrowsecurity,relforcerowsecurity "
+                        "FROM pg_class WHERE oid=to_regclass(%s)",
+                        (app_user, qualified),
+                    ).fetchone()
+                ) == (True, True, True)
             admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)", (tenant_a, tenant_a, tenant_b, tenant_b))
         for tenant in (tenant_a, tenant_b):
             with PostgresTenantBoundary(factory).transaction(tenant) as connection:
@@ -161,10 +195,11 @@ def test_live_postgres_receivables_lifecycle_credit_allocation_aging_and_rls() -
             assert repository.list_customers(workspace="Receivables") == []
             assert repository.list_invoices(workspace="Receivables") == []
     finally:
-        for tenant in (tenant_a, tenant_b):
-            try:
-                with PostgresTenantBoundary(factory).transaction(tenant) as connection:
-                    connection.execute("DELETE FROM reconforge.tenants WHERE id=%s", (tenant,))
-            except psycopg.Error:
-                pass
-        admin.close()
+        try:
+            cleanup_postgres_test_tenants_as_admin(
+                admin,
+                tenant_ids=(tenant_a, tenant_b),
+                plan=RECEIVABLES_TENANT_CLEANUP_PLAN,
+            )
+        finally:
+            admin.close()

@@ -1,0 +1,42 @@
+id: intercompany_fx
+name: Paired Intercompany Foreign Trade Account Owner v2
+version: 2.0.0
+maturity: experimental
+owner: ReconForge finance maintainers
+dependencies: [finance_core, finance_posting, finance_policy, operational_fx_tax, master_data, identity, audit, outbox]
+incompatible_versions: []
+data_classification: confidential_financial
+retention_policy: immutable_original_financial_history
+permissions: [intercompany_fx.read, intercompany_fx.prepare, intercompany_fx.review, intercompany_fx.post, finance_core.read, finance_core.manage, finance_core.validate, finance_core.post, finance_core.reverse]
+default_roles: {reader: [intercompany_fx.read, finance_core.read], maker: [intercompany_fx.prepare, finance_core.manage], checker: [intercompany_fx.review, finance_core.validate], poster: [intercompany_fx.post, finance_core.post]}
+migrations: [0139_pg_intercompany_fx]
+backends: {postgresql: implemented_targeted_validation_in_progress, sqlite: unavailable}
+domain_invariants:
+  - Three distinct native legal entities; seller and buyer have different immutable functional currencies
+  - Transaction currency and per-party functional policies share the captured workspace registry version and digest
+  - Exact historical and closing rates retain source and UTC effective date; canonical ROUND_HALF_UP only
+  - Canonical FX conversion and inverse are reused; no alternate ledger or FX calculator
+  - Cumulative historical release conserves the full original carrying amount across partial settlements
+  - Every phase commits complete native book membership, claims, audit, outbox and original acknowledgement atomically
+  - Maker, reviewer and poster are distinct currently authorized human identities
+  - A revaluation inverse binds its active original plan and actual native effect IDs
+  - Native group elimination equals both reviewed translated original trade and residual party balances
+  - Translated membership and CTA remain explicit management reporting effects; actual group journals are separately identified
+domain_events: [intercompany_fx_prepared, intercompany_fx_reviewed, intercompany_fx_posted]
+api_routes: [/api/v1/intercompany-fx, '/api/v1/intercompany-fx/sources/{source_id}/native-evidence-bundle']
+cli_commands: [.github/scripts/verify_intercompany_fx_cycle_oracle.py]
+ui_routes: [intercompany-fx]
+import_schemas: [intercompany-fx-source-v2, intercompany-fx-plan-v2]
+export_schemas: [intercompany-fx-native-evidence-v2, intercompany-fx-management-report-v2, intercompany-fx-independent-oracle-v2, intercompany-fx-source-native-evidence-bundle-v1]
+synthetic_fixtures: [tests/intercompany_fx_fixture.py, tests/test_postgres_intercompany_fx.py]
+threat_model:
+  - Tampered source rates, account maps, residuals, GL snapshots, elimination translations or effect membership
+  - Manual publication or detached inverse bypassing the complete source owner
+  - Lost acknowledgement, duplicate command, competing settlement, late-effect failure and scope revocation during source wait
+  - Closed periods, stale digest, incomplete entity grants, cross-workspace and cross-tenant reads
+benchmarks: deferred_human_measurement
+rollback_plan: populated_downgrade_refuses_history_loss_restore_verified_backup_or_preserve_forward_schema
+test_matrix: [pure_cycle, canonical_rounding_ties, cumulative_carry, native_three_actor_cycle, native_revaluation_inverse, full_settlement, sql_tamper, transaction_rollback, competing_commands, current_authority, period_lock_reopen, populated_native_restore, independent_stdlib_effect_oracle, api_contract, studio_retry_and_rtl]
+claims:
+  allowed: Experimental source-owned paired foreign trade management cycle with evidence-specific targeted verification
+  excluded: [standalone_foreign_AP, parallel_ledger, NCI, investment_elimination, profit_in_stock, hyperinflation, full_IFRS, US_GAAP, country_tax, statutory_consolidation, Community_backend_parity, measured_performance]

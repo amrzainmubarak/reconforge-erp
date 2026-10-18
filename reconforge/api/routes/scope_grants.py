@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from reconforge.api.dependencies import enforce_server_tenant_permission, require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_identity import execute_postgres_identity, request_tenant_id, server_identity_enabled
+from reconforge.auth.field_access import project_scope_grant
 from reconforge.auth.models import LocalUser
 from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 from reconforge.platform.common import platform_id
@@ -56,7 +57,13 @@ def list_scope_grants(
         )
     except ValueError as exc:
         raise APIError(status_code=400, code="scope_grant_invalid", message=str(exc)) from exc
-    return {"grants": grants}
+    return {
+        "grants": [
+            project_scope_grant(grant).visible
+            for grant in grants
+            if isinstance(grant, dict)
+        ]
+    }
 
 
 @router.post("")

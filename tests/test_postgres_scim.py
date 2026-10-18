@@ -104,7 +104,9 @@ def test_etag_is_versioned_weak_and_does_not_reveal_external_id() -> None:
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL service")
-def test_live_postgres_scim_idempotency_deactivation_sessions_and_rls() -> None:
+def test_live_postgres_scim_idempotency_deactivation_sessions_and_rls(
+    isolated_postgres_runtime_role: str,
+) -> None:
     pytest.importorskip("psycopg")
     from reconforge.infrastructure.postgres import (
         PostgresConnectionFactory,
@@ -129,19 +131,17 @@ def test_live_postgres_scim_idempotency_deactivation_sessions_and_rls() -> None:
             admin.execute(POSTGRES_IDENTITY_SCHEMA_SQL)
             admin.execute(POSTGRES_SCIM_SCHEMA_SQL)
             _cleanup(admin, tenant_a, tenant_b)
+            admin.execute(
+                "INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)",
+                (tenant_a, tenant_a, tenant_b, tenant_b),
+            )
             if app_user:
                 admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
                 admin.execute(
-                        f"GRANT SELECT, INSERT, UPDATE, DELETE ON reconforge.tenants, "
+                        f"GRANT SELECT, INSERT, UPDATE, DELETE ON "
                         f"reconforge.identity_users, reconforge.identity_sessions, reconforge.identity_user_roles, "
                     f"reconforge.scim_users, reconforge.scim_groups, "
                     f"reconforge.scim_group_members, reconforge.scim_events TO {app_user}"
-                )
-        for tenant in (tenant_a, tenant_b):
-            with PostgresTenantBoundary(factory).transaction(tenant) as connection:
-                connection.execute(
-                    "INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s) ON CONFLICT DO NOTHING",
-                    (tenant, tenant),
                 )
         def provision_once() -> tuple[Any, bool]:
             with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:

@@ -1,0 +1,85 @@
+{
+  "schema_version": "reconforge-flat-evidence-capsule-extension-v1",
+  "capsules": [
+    {
+      "file_name": "wave5-v5-paired1k-636-22-power-stop-negative-v1.zip",
+      "sha256": "b2466af34fbfea82c6a00459c1eba05613788c4ddeb96eda47e44bd52879aa4a",
+      "bytes": 730859,
+      "file_count": 80,
+      "raw_bytes": 4055725,
+      "index_name": "wave5-v5-paired1k-636-22-power-stop-negative-v1.index.json",
+      "index_sha256": "faed5126c09d38d3fc8bf57061dfd00d5d86a3f1baf733bc30051150f5069f30",
+      "coverage": {
+        "owner_original_sha256": "3135177c777cf2e6023630551f212e4781e851cf06529fa9f2e81cd8e1133818",
+        "owner_status": "failed",
+        "primary_failure": "Observed AC/saver-off required",
+        "power_breach_at": "2026-10-12T15:32:48.230589+00:00",
+        "raw_ac": 0,
+        "battery_percent": 98,
+        "saver_on": false,
+        "completed_positive_children": [
+          "1-baseline",
+          "1-candidate",
+          "2-candidate"
+        ],
+        "completed_positive_measured_cycles": 3000,
+        "completed_positive_separate_warmups": 60,
+        "completed_positive_verified_read_requests": 9999,
+        "independent_minor_per_complete_child": "493671004",
+        "aborted_child": "2-baseline",
+        "aborted_raw_sha256": "2869d101a5eca762c3817a677791ab277c977234ae61a6eb9e804b74cc3afe7a",
+        "aborted_reported_posting_completed": 1000,
+        "aborted_reported_posting_errors": 0,
+        "aborted_successful_request_duration_entries": 2489,
+        "aborted_retained_effect_visits": 4766,
+        "aborted_last_read_sample_status": "running166effects",
+        "aborted_failed_request_markers": 0,
+        "aborted_source_after_present": false,
+        "aborted_secondary_exception": "OutOfOrderTransactionNesting",
+        "aborted_complete_financial_acceptance": false,
+        "secondary_error_cause_proven": false,
+        "unperformed_children": [
+          "3-baseline",
+          "3-candidate"
+        ],
+        "four_exact_owned_cleanup_closures": true,
+        "aborted_process_cleanup": "gracefully_stopped_without_force",
+        "all_four_acknowledged_CIDs": "verified_absent",
+        "baseline_source": "6362724f2337a79c3d7569574f7bf9591a018524",
+        "accepted_candidate_source": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+        "current_candidate_physical_source_sha256": "dfdf4296eb27e088ae91790af2d2d280880fb70e4edb151e50f2b9f2940a4535",
+        "historical_cf9_populations_combined": false,
+        "readiness_sha256": "7b904ff39d3db18634b581e83dde73d928d1e9d8783466749f9e42e3fbff33ca",
+        "normal_optimized_negative_pairs": 2,
+        "complete_six_run_population": false,
+        "six_complete_comparator_or_replay_executed": false,
+        "comparative_medians_computed": false,
+        "performance_comparison_accepted": false,
+        "RPO_RTO_claimed": false,
+        "workload_retry": false,
+        "partial_raw_or_prior_capsules_rewritten": false
+      }
+    }
+  ],
+  "prior_capsule_references": [
+    {
+      "file_name": "wave5-quiet2-discovery-636-22-fourprofiles-v1.zip",
+      "bytes": 1184732,
+      "sha256": "3dc3b141f59b401366c80e42de425244bbc8f2af5779f65fdcacb7c60673ba16",
+      "index_name": "wave5-quiet2-discovery-636-22-fourprofiles-v1.index.json",
+      "index_sha256": "187460fe995d71a46e0ce55652baf20ea3248851cbc3a052dd6bb1e64bc52f2c",
+      "original_directory": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-quiet2-discovery-public-capsule-20261012-v1"
+    },
+    {
+      "file_name": "wave5-native10k-62-38252859442-v1.zip",
+      "bytes": 1500461,
+      "sha256": "18f271117f6f88514ec4e73cc14ba0390dcf6653096b3d8cca24698e3f74cd9e",
+      "index_name": "wave5-native10k-62-38252859442-v1.index.json",
+      "index_sha256": "61eb967e91a52d99cfc12701dc68dff2d4bac078221c8fc9de49dcaa303403b2",
+      "original_directory": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native10k-public-capsule-20261012-v1"
+    }
+  ],
+  "terminal_negative_subject": true,
+  "source_subjects_rebound": false,
+  "performance_comparison_accepted": false
+}

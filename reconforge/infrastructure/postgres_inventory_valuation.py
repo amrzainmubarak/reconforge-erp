@@ -8,14 +8,21 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
-from decimal import ROUND_HALF_EVEN, Decimal
 from hashlib import sha256
 from typing import Any
 
 from reconforge.application.inventory_valuation import InventoryValuationSummary
 from reconforge.auth.rbac import same_actor
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.domain.finance_policy import POLICY_COLUMNS, FinancePolicyError
+from reconforge.domain.inventory_costing import allocate_fifo_value
+from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
+from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_inventory_quantity_coordination import lock_inventory_quantity_pools
+from reconforge.infrastructure.postgres_repository_scope import (
+    PostgresRepositoryScopeError,
+    ensure_repository_tenant_scope,
+)
 from reconforge.io.persisted import PersistedJsonError, encode_postgres_outbox_payload
 from reconforge.platform.common import PlatformError, platform_id
 from reconforge.platform.inventory_values import (
@@ -194,6 +201,15 @@ END $rls$;
 """
 
 
+def install_postgres_inventory_valuation_schema(connection: Any) -> None:
+    """Install foundations without overwriting a current monetary owner."""
+    from reconforge.infrastructure.postgres_monetary_installation import verify_monetary_installation_if_present
+
+    if verify_monetary_installation_if_present(connection):
+        return
+    connection.execute(POSTGRES_INVENTORY_VALUATION_SCHEMA_SQL)
+
+
 class PostgresInventoryValuationRepository:
     """Tenant-scoped PostgreSQL FIFO valuation adapter (approval follows)."""
 
@@ -205,8 +221,10 @@ class PostgresInventoryValuationRepository:
     def _transaction(self) -> Iterator[None]:
         try:
             with self.connection.transaction():
-                set_local_tenant_scope(self.connection, self.tenant_id)
+                ensure_repository_tenant_scope(self.connection, self.tenant_id)
                 yield
+        except PostgresRepositoryScopeError as exc:
+            raise PlatformError(str(exc)) from exc
         except (PlatformError, PostgresInventoryValuationError):
             raise
         except Exception as exc:
@@ -219,9 +237,11 @@ class PostgresInventoryValuationRepository:
         return dict(row)
 
     def _workspace_id(self, workspace: str) -> str:
+        cleaned = clean_text(workspace, "Workspace name")
         row = self.connection.execute(
-            "SELECT id FROM reconforge.domain_workspaces WHERE tenant_id=%s AND name=%s",
-            (self.tenant_id, clean_text(workspace, "Workspace name")),
+            "SELECT id FROM reconforge.domain_workspaces WHERE tenant_id=%s AND (id=%s OR name=%s) "
+            "ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END LIMIT 1",
+            (self.tenant_id, cleaned, cleaned, cleaned),
         ).fetchone()
         if row is None:
             raise PlatformError("Inventory valuation workspace was not found.")
@@ -482,12 +502,10 @@ class PostgresInventoryValuationRepository:
 
     def _public_document(self, document: Mapping[str, object], *, details: bool) -> dict[str, Any]:
         result = public_record(document)
-        currency = self._one(
-            "SELECT minor_units FROM reconforge.currencies WHERE tenant_id=%s AND code=%s",
-            (self.tenant_id, document["currency_code"]),
-            "Valuation currency is unavailable.",
-        )
-        minor_units = int(currency["minor_units"])
+        monetary_policy, _ = FinancePolicyStore(self.connection, tenant_id=self.tenant_id).entry(document)
+        minor_units = monetary_policy.precision
+        for column in POLICY_COLUMNS:
+            result.pop(column, None)
         result["total_value"] = minor_to_text(int(result.pop("total_value_minor")), minor_units)
         if details:
             costs = self.connection.execute(
@@ -623,6 +641,10 @@ class PostgresInventoryValuationRepository:
                 (self.tenant_id, policy["currency_code"]),
                 "Valuation currency is unavailable.",
             )
+            monetary_policy, _ = FinancePolicyStore(self.connection, tenant_id=self.tenant_id).capture(
+                workspace_id=str(movement["workspace_id"]), currency_code=str(policy["currency_code"]),
+                minor_units=int(currency["minor_units"]), actor_label=clean_text(actor_label, "Actor label"),
+            )
             prepared: dict[int, int] = {}
             for value in input_costs:
                 if not isinstance(value, Mapping):
@@ -641,7 +663,7 @@ class PostgresInventoryValuationRepository:
                 raise PlatformError("Every inbound movement line requires exactly one input total cost.")
             document_id = platform_id("IVD", movement["workspace_id"], number)
             self.connection.execute(
-                """INSERT INTO reconforge.inventory_valuation_documents(tenant_id,id,workspace_id,organization_id,legal_entity_id,period_id,movement_id,policy_id,valuation_number,valuation_date,currency_code,status,created_by) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Draft',%s)""",
+                """INSERT INTO reconforge.inventory_valuation_documents(tenant_id,id,workspace_id,organization_id,legal_entity_id,period_id,movement_id,policy_id,valuation_number,valuation_date,currency_code,status,created_by,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Draft',%s,%s,%s,%s,%s)""",
                 (
                     self.tenant_id,
                     document_id,
@@ -655,6 +677,7 @@ class PostgresInventoryValuationRepository:
                     movement["movement_date"],
                     policy["currency_code"],
                     clean_text(actor_label, "Actor label"),
+                    *monetary_policy.values(),
                 ),
             )
             for line_number, total in sorted(prepared.items()):
@@ -728,13 +751,10 @@ class PostgresInventoryValuationRepository:
 
     @staticmethod
     def _allocated_value(remaining_value: int, remaining_quantity: int, consumed_quantity: int) -> int:
-        if consumed_quantity == remaining_quantity:
-            return remaining_value
-        exact = Decimal(remaining_value) * Decimal(consumed_quantity) / Decimal(remaining_quantity)
-        value = int(exact.to_integral_value(rounding=ROUND_HALF_EVEN))
-        if value <= 0 or value >= remaining_value:
-            raise PlatformError("A partial FIFO issue cannot be represented exactly enough in currency minor units.")
-        return value
+        try:
+            return allocate_fifo_value(remaining_value, remaining_quantity, consumed_quantity)
+        except ValueError as exc:
+            raise PlatformError(str(exc)) from exc
 
     def _finance_draft(
         self,
@@ -743,6 +763,7 @@ class PostgresInventoryValuationRepository:
         movement: Mapping[str, Any],
         postings: Sequence[tuple[str, int, int]],
     ) -> str:
+        monetary_policy, _ = FinancePolicyStore(self.connection, tenant_id=self.tenant_id).entry(document)
         grouped: dict[tuple[str, str], int] = {}
         for account, debit, credit in postings:
             if debit:
@@ -767,7 +788,7 @@ class PostgresInventoryValuationRepository:
         entry_id = platform_id("GLE", document["workspace_id"], entry_number)
         now = utc_now_text()
         self.connection.execute(
-            """INSERT INTO reconforge.finance_entries(tenant_id,id,workspace_id,journal_id,organization_code,entity_code,period_id,entry_number,posting_date,description,external_reference,source_type,status,currency_code,total_debit_minor,total_credit_minor,created_by,created_at,updated_at) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'InventoryValuation','Draft',%s,%s,%s,%s,%s,%s)""",
+            """INSERT INTO reconforge.finance_entries(tenant_id,id,workspace_id,journal_id,organization_code,entity_code,period_id,entry_number,posting_date,description,external_reference,source_type,status,currency_code,total_debit_minor,total_credit_minor,created_by,created_at,updated_at,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'InventoryValuation','Draft',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
             (
                 self.tenant_id,
                 entry_id,
@@ -786,6 +807,7 @@ class PostgresInventoryValuationRepository:
                 document["created_by"],
                 now,
                 now,
+                *monetary_policy.values(),
             ),
         )
         ordered = sorted(grouped.items(), key=lambda item: (item[0][1] != "debit", item[0][0]))
@@ -823,6 +845,12 @@ class PostgresInventoryValuationRepository:
                 raise PlatformError("Segregation of duties prevents approving your own inventory valuation.")
             movement = self._movement(str(document["movement_id"]))
             policy = self._policy(str(document["policy_id"]))
+            period = self.connection.execute(
+                "SELECT status FROM reconforge.fiscal_periods WHERE tenant_id=%s AND id=%s FOR SHARE",
+                (self.tenant_id, document["period_id"]),
+            ).fetchone()
+            if period is None or period["status"] != "Open":
+                raise PlatformError("Valuation approval requires an Open period.")
             if movement["status"] != "Posted" or movement["period_status"] != "Open":
                 raise PlatformError("Valuation approval requires a Posted movement in an Open period.")
             if (
@@ -851,18 +879,46 @@ class PostgresInventoryValuationRepository:
                 raise PlatformError(
                     "Valuation approval cannot generate a Finance Draft while required dimensions are configured."
                 )
+            # Serialize chronology and inbound creation with the same legacy FIFO
+            # keys used by outbound allocation and reviewed source posting.
+            lock_inventory_quantity_pools(self.connection, self.tenant_id, str(document["workspace_id"]),
+                                          str(document["legal_entity_id"]),
+                                          (str(line["item_id"]) for line in self._movement_lines(str(movement["id"]))
+                                           if line["inventory_lot_id"] is None))
+            fifo_keys = {
+                f"{document['legal_entity_id']}|{line['item_id']}|{line['inventory_lot_id'] or ''}"
+                for line in self._movement_lines(str(movement["id"]))
+            }
+            for lock_key in sorted(fifo_keys):
+                self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))", (lock_key,))
             earlier_sql = (
                 """SELECT e.movement_number FROM reconforge.inventory_movements c JOIN reconforge.inventory_movements e ON e.tenant_id=c.tenant_id AND e.workspace_id=c.workspace_id AND e.organization_id=c.organization_id AND e.legal_entity_id=c.legal_entity_id AND e.status='Posted' AND e.movement_type<>'Transfer' AND (e.movement_date<c.movement_date OR (e.movement_date=c.movement_date AND e.movement_number<c.movement_number)) WHERE c.tenant_id=%s AND c.id=%s AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_documents d WHERE d.tenant_id=e.tenant_id AND d.movement_id=e.id AND d.status='Approved') AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_reversals r WHERE r.tenant_id=e.tenant_id AND r.reversal_movement_id=e.id AND r.status='Approved') ORDER BY e.movement_date,e.movement_number LIMIT 1"""
                 if self._reversal_schema_available()
                 else """SELECT e.movement_number FROM reconforge.inventory_movements c JOIN reconforge.inventory_movements e ON e.tenant_id=c.tenant_id AND e.workspace_id=c.workspace_id AND e.organization_id=c.organization_id AND e.legal_entity_id=c.legal_entity_id AND e.status='Posted' AND e.movement_type<>'Transfer' AND (e.movement_date<c.movement_date OR (e.movement_date=c.movement_date AND e.movement_number<c.movement_number)) WHERE c.tenant_id=%s AND c.id=%s AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_documents d WHERE d.tenant_id=e.tenant_id AND d.movement_id=e.id AND d.status='Approved') ORDER BY e.movement_date,e.movement_number LIMIT 1"""
             )
+            # Chronology follows the same entity/item/lot pool as the FIFO locks;
+            # another warehouse shares that pool, an unrelated item does not.
+            earlier_sql = earlier_sql.replace("ORDER BY e.movement_date", """AND EXISTS(
+                SELECT 1 FROM reconforge.inventory_movement_lines current_line
+                JOIN reconforge.inventory_movement_lines candidate_line
+                  ON candidate_line.tenant_id=current_line.tenant_id
+                 AND candidate_line.item_id=current_line.item_id
+                 AND candidate_line.inventory_lot_id IS NOT DISTINCT FROM current_line.inventory_lot_id
+                WHERE current_line.tenant_id=c.tenant_id AND current_line.movement_id=c.id
+                  AND candidate_line.movement_id=e.id) ORDER BY e.movement_date""")
             earlier = self.connection.execute(earlier_sql, (self.tenant_id, movement["id"])).fetchone()
             if earlier is not None:
                 raise PlatformError(
                     f"FIFO approval requires earlier Posted movement {earlier['movement_number']} to be valued first."
                 )
             later = self.connection.execute(
-                """SELECT d.valuation_number FROM reconforge.inventory_movements c JOIN reconforge.inventory_movements l ON l.tenant_id=c.tenant_id AND l.workspace_id=c.workspace_id AND l.organization_id=c.organization_id AND l.legal_entity_id=c.legal_entity_id AND (l.movement_date>c.movement_date OR (l.movement_date=c.movement_date AND l.movement_number>c.movement_number)) JOIN reconforge.inventory_valuation_documents d ON d.tenant_id=l.tenant_id AND d.movement_id=l.id AND d.status='Approved' WHERE c.tenant_id=%s AND c.id=%s ORDER BY l.movement_date,l.movement_number LIMIT 1""",
+                """SELECT d.valuation_number FROM reconforge.inventory_movements c JOIN reconforge.inventory_movements l ON l.tenant_id=c.tenant_id AND l.workspace_id=c.workspace_id AND l.organization_id=c.organization_id AND l.legal_entity_id=c.legal_entity_id AND (l.movement_date>c.movement_date OR (l.movement_date=c.movement_date AND l.movement_number>c.movement_number)) JOIN reconforge.inventory_valuation_documents d ON d.tenant_id=l.tenant_id AND d.movement_id=l.id AND d.status='Approved' WHERE c.tenant_id=%s AND c.id=%s
+                AND EXISTS(SELECT 1 FROM reconforge.inventory_movement_lines current_line
+                  JOIN reconforge.inventory_movement_lines candidate_line ON candidate_line.tenant_id=current_line.tenant_id
+                  AND candidate_line.item_id=current_line.item_id
+                  AND candidate_line.inventory_lot_id IS NOT DISTINCT FROM current_line.inventory_lot_id
+                  WHERE current_line.tenant_id=c.tenant_id AND current_line.movement_id=c.id AND candidate_line.movement_id=l.id)
+                ORDER BY l.movement_date,l.movement_number LIMIT 1""",
                 (self.tenant_id, movement["id"]),
             ).fetchone()
             if later is not None:
@@ -897,13 +953,30 @@ class PostgresInventoryValuationRepository:
                     self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))", (lock_key,))
                     needed = int(line["quantity_scaled"])
                     layers = self.connection.execute(
-                        """SELECT * FROM reconforge.inventory_cost_layers WHERE tenant_id=%s AND legal_entity_id=%s AND item_id=%s AND inventory_lot_id IS NOT DISTINCT FROM %s AND remaining_quantity_scaled>0 ORDER BY created_at,id FOR UPDATE""",
+                        """SELECT l.*,d.currency_precision,d.currency_rounding_policy,
+                            d.currency_registry_version,d.currency_registry_digest
+                            FROM reconforge.inventory_cost_layers l
+                            JOIN reconforge.inventory_valuation_lines v
+                              ON v.tenant_id=l.tenant_id AND v.id=l.source_valuation_line_id
+                            JOIN reconforge.inventory_valuation_documents d
+                              ON d.tenant_id=v.tenant_id AND d.id=v.valuation_document_id
+                            WHERE l.tenant_id=%s AND l.legal_entity_id=%s AND l.item_id=%s
+                              AND l.inventory_lot_id IS NOT DISTINCT FROM %s
+                              AND l.remaining_quantity_scaled>0 AND d.status='Approved'
+                            ORDER BY l.created_at,l.id FOR UPDATE OF l""",
                         (self.tenant_id, document["legal_entity_id"], line["item_id"], line["inventory_lot_id"]),
                     ).fetchall()
                     for layer_row in layers:
                         if needed <= 0:
                             break
                         layer = dict(layer_row)
+                        policy_store = FinancePolicyStore(self.connection, tenant_id=self.tenant_id)
+                        source_policy, _ = policy_store.entry(layer)
+                        document_policy, _ = policy_store.entry(document)
+                        try:
+                            document_policy.require_compatible(source_policy)
+                        except FinancePolicyError as exc:
+                            raise PlatformError(str(exc)) from exc
                         if (
                             int(layer["quantity_precision"]) != int(line["quantity_precision"])
                             or layer["uom_id"] != line["uom_id"]
@@ -1029,14 +1102,19 @@ class PostgresInventoryValuationRepository:
         with self._transaction():
             workspace_id = self._workspace_id(workspace)
             rows = self.connection.execute(
-                """SELECT l.*,i.item_code,u.uom_code,lot.lot_serial_code,e.entity_code,d.valuation_number,c.minor_units FROM reconforge.inventory_cost_layers l JOIN reconforge.inventory_items i ON i.tenant_id=l.tenant_id AND i.id=l.item_id JOIN reconforge.inventory_units_of_measure u ON u.tenant_id=l.tenant_id AND u.id=l.uom_id LEFT JOIN reconforge.inventory_lots lot ON lot.tenant_id=l.tenant_id AND lot.id=l.inventory_lot_id JOIN reconforge.legal_entities e ON e.tenant_id=l.tenant_id AND e.id=l.legal_entity_id JOIN reconforge.inventory_valuation_lines v ON v.tenant_id=l.tenant_id AND v.id=l.source_valuation_line_id JOIN reconforge.inventory_valuation_documents d ON d.tenant_id=l.tenant_id AND d.id=v.valuation_document_id JOIN reconforge.currencies c ON c.tenant_id=l.tenant_id AND c.code=l.currency_code WHERE l.tenant_id=%s AND l.workspace_id=%s AND d.status='Approved' AND (%s=FALSE OR l.remaining_quantity_scaled>0) ORDER BY l.created_at,l.id LIMIT %s OFFSET %s""",
+                """SELECT l.*,i.item_code,u.uom_code,lot.lot_serial_code,e.entity_code,d.valuation_number,
+                d.currency_precision,d.currency_rounding_policy,d.currency_registry_version,d.currency_registry_digest
+                FROM reconforge.inventory_cost_layers l JOIN reconforge.inventory_items i ON i.tenant_id=l.tenant_id AND i.id=l.item_id JOIN reconforge.inventory_units_of_measure u ON u.tenant_id=l.tenant_id AND u.id=l.uom_id LEFT JOIN reconforge.inventory_lots lot ON lot.tenant_id=l.tenant_id AND lot.id=l.inventory_lot_id JOIN reconforge.legal_entities e ON e.tenant_id=l.tenant_id AND e.id=l.legal_entity_id JOIN reconforge.inventory_valuation_lines v ON v.tenant_id=l.tenant_id AND v.id=l.source_valuation_line_id JOIN reconforge.inventory_valuation_documents d ON d.tenant_id=l.tenant_id AND d.id=v.valuation_document_id WHERE l.tenant_id=%s AND l.workspace_id=%s AND d.status='Approved' AND (%s=FALSE OR l.remaining_quantity_scaled>0) ORDER BY l.created_at,l.id LIMIT %s OFFSET %s""",
                 (self.tenant_id, workspace_id, open_only, limit, offset),
             ).fetchall()
             result = []
             for row in rows:
                 value = public_record(row)
                 precision = int(value["quantity_precision"])
-                minor = int(value.pop("minor_units"))
+                monetary_policy, _ = FinancePolicyStore(self.connection, tenant_id=self.tenant_id).entry(value)
+                minor = monetary_policy.precision
+                for column in POLICY_COLUMNS:
+                    value.pop(column, None)
                 value["original_quantity"] = scaled_to_text(int(value.pop("original_quantity_scaled")), precision)
                 value["remaining_quantity"] = scaled_to_text(int(value.pop("remaining_quantity_scaled")), precision)
                 value["original_value"] = minor_to_text(int(value.pop("original_value_minor")), minor)

@@ -1,3 +1,10 @@
+## Single working directory policy (2026-10-18)
+
+The user requires all ongoing work in `F:\reconforge-erp`. Do not create new
+Git worktrees. Use branches in this directory when isolation is needed. This
+directive supersedes older worktree or parallel-checkout instructions below
+and in historical execution records. Preserve recovery bundles and evidence.
+
 RECONFORGE WORLD-CLASS EXECUTION MASTER PROMPT
 برومبت تنفيذي لبناء منصة عالمية لسلامة البيانات المالية والمصالحات والرقابة
 أنت تعمل مباشرة داخل المستودع التالي:

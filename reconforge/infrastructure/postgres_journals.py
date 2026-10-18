@@ -23,6 +23,7 @@ from reconforge.platform.common import (
     read_local_record_document,
     to_bool,
 )
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY
 
 
 class PostgresJournalControlError(RuntimeError):
@@ -216,7 +217,10 @@ class PostgresJournalControlRepository:
         actor_label: str = "local-cli",
     ) -> int:
         try:
-            threshold = journal_threshold(high_value_threshold)
+            threshold = journal_threshold(
+                high_value_threshold,
+                financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+            )
         except JournalPolicyError as exc:
             raise PlatformError(str(exc)) from exc
         high_risk = {item.strip() for item in high_risk_accounts.split(",") if item.strip()}
@@ -236,7 +240,11 @@ class PostgresJournalControlRepository:
             count = 0
             for row in rows:
                 for policy_code, risk_rating, description in evaluate_journal_policies(
-                    row, period_end=period_end, high_value_threshold=threshold, high_risk_accounts=high_risk
+                    row,
+                    period_end=period_end,
+                    high_value_threshold=threshold,
+                    high_risk_accounts=high_risk,
+                    financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
                 ):
                     exception_id = platform_id("JEX", row["id"], policy_code)
                     created_at = utc_now_text()

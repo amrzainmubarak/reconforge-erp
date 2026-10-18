@@ -1,0 +1,54 @@
+{
+  "schema_version": "stock-monetary-valuation-v1",
+  "id": "FX1-11111111111111111111111111111111",
+  "source_order_id": "monetary-stock",
+  "fx_source_id": "fx-source",
+  "workspace_id": "work",
+  "organization_id": "organization",
+  "legal_entity_id": "entity",
+  "fx_source_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "origin_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "kind": "revalue",
+  "status": "Posted",
+  "phase": 2,
+  "plan_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "period_id": "period",
+  "posting_date": "2026-10-15",
+  "reason": "Synthetic closing observation",
+  "transaction_policy": {
+    "currency_code": "EUR",
+    "currency_precision": 2,
+    "currency_rounding_policy": "ROUND_HALF_UP",
+    "currency_registry_version": "synthetic-v1",
+    "currency_registry_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "functional_policy": {
+    "currency_code": "USD",
+    "currency_precision": 2,
+    "currency_rounding_policy": "ROUND_HALF_UP",
+    "currency_registry_version": "synthetic-v1",
+    "currency_registry_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "monetary": {
+    "transaction_outstanding_minor": "560",
+    "functional_historical_outstanding_minor": "700",
+    "functional_valued_outstanding_minor": "840",
+    "functional_unrealized_gain_minor": "140",
+    "functional_unrealized_loss_minor": "0",
+    "functional_turnover_minor": "140"
+  },
+  "closing_rate": {
+    "rate": "1.50",
+    "source": "Synthetic closing source",
+    "effective_at": "2026-10-15T12:00:00Z"
+  },
+  "unrealized_gain_account_code": "UGAIN",
+  "unrealized_loss_account_code": "ULOSS",
+  "original_id": null,
+  "entry_id": "valuation-entry",
+  "validation_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "posting_effect_id": "valuation-effect",
+  "preparer_actor_id": "maker",
+  "reviewer_actor_id": "checker",
+  "posted_actor_id": "poster"
+}

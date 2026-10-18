@@ -10,7 +10,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "docs/schemas/postgres_writeback_identity_migration_matrix.schema.json"
-REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-08-22.json"
+REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-08.json"
 RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py"
 OBSERVATION_RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_identity_migration.py"
 POLICY_PATH = ROOT / "docs/security/supply-chain-policy.v1.json"
@@ -25,9 +25,10 @@ def _report() -> dict[str, object]:
     return json.loads(REPORT_PATH.read_text(encoding="utf-8"))
 
 
-def test_retained_postgres_writeback_identity_matrix_is_closed_digest_bound_and_parity_checked() -> None:
+@pytest.mark.parametrize("report_date", ["2026-08-22", "2026-10-03", "0094_2026-10-03", "CLEANUP_2026-10-03", "0094_CLEANUP_2026-10-03", "0095_2026-10-03", "0096_2026-10-03", "0097_2026-10-03", "0098_2026-10-03", "0099_2026-10-03", "2026-10-08"])
+def test_retained_postgres_writeback_identity_matrix_is_closed_digest_bound_and_parity_checked(report_date: str) -> None:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    report = _report()
+    report = json.loads((ROOT / f"docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_{report_date}.json").read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator.check_schema(schema)
     jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(report)
 
@@ -68,6 +69,15 @@ def test_matrix_subject_supply_chain_and_package_contracts_bind_current_sources(
     assert {
         "include .github/scripts/verify_postgres_writeback_identity_migration_matrix.py",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-08-22.json",
+        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-08.json",
+        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-03.json",
+        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0094_2026-10-03.json",
+        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_CLEANUP_2026-10-03.json",
+        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0095_2026-10-03.json",
+        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0096_2026-10-03.json",
+        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0097_2026-10-03.json",
+        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0098_2026-10-03.json",
+        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0099_2026-10-03.json",
         "include docs/schemas/postgres_writeback_identity_migration_matrix.schema.json",
         "include tests/test_postgres_writeback_identity_migration_matrix.py",
         "include docs/adr/0541-prove-writeback-migration-supported-version-matrix.md",
@@ -76,9 +86,9 @@ def test_matrix_subject_supply_chain_and_package_contracts_bind_current_sources(
 
 def test_ci_runs_and_preserves_the_closed_writeback_migration_matrix() -> None:
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
-    policy = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
+    current_policy = json.loads((ROOT / "docs/security/postgres-current-images.wave5.v1.json").read_text(encoding="utf-8"))
     job = workflow["jobs"]["server-boundaries"]
-    assert job["services"]["postgres"]["image"] == policy["container_resolution"]["service_images"]["postgres_16_ci"]
+    assert job["services"]["postgres"]["image"] == current_policy["current_images"]["server_boundaries"]
 
     steps = job["steps"]
     names = [str(step.get("name", "")) for step in steps]

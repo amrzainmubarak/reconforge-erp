@@ -12,7 +12,7 @@ This page documents commands for local verification. If Docker is not available 
 ## Build
 
 ```bash
-docker build -t reconforge-erp .
+docker build --pull --no-cache --platform linux/amd64 -t reconforge-erp .
 ```
 
 ## Run Doctor
@@ -20,20 +20,21 @@ docker build -t reconforge-erp .
 Linux/macOS Bash:
 
 ```bash
-docker run --rm reconforge-erp reconforge doctor
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge doctor
+docker run --rm --network=none --read-only --cap-drop=ALL \
+  --security-opt=no-new-privileges reconforge-erp reconforge doctor
 ```
 
 Windows PowerShell:
 
 ```powershell
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge doctor
+docker run --rm --network=none --read-only --cap-drop=ALL `
+  --security-opt=no-new-privileges reconforge-erp reconforge doctor
 ```
 
 Windows Command Prompt:
 
 ```cmd
-docker run --rm -v %cd%\output:/app/output reconforge-erp reconforge doctor
+docker run --rm --network=none --read-only --cap-drop=ALL --security-opt=no-new-privileges reconforge-erp reconforge doctor
 ```
 
 ## Run The Demo
@@ -62,21 +63,41 @@ before running; do not make a sensitive export directory broadly writable.
 - If WSL cannot reach Docker, confirm Docker Desktop WSL integration is enabled for the distro.
 - Use PowerShell commands from the repository root unless you intentionally change the mounted folder.
 
-## Docker Compose
+## Docker Compose — Community local profile
 
-If `docker-compose.yml` is present:
+The repository ships one bounded Compose profile for Community/local use. It
+runs a single non-root ReconForge API container with SQLite in a named volume;
+it does not provision PostgreSQL, Redis, object storage, identity providers,
+or any hosted service. The port is published on loopback only and the Compose
+network is internal. This is a local operator profile, not a Team/Enterprise/
+Regulated deployment contract or a production-availability claim.
+
+Build and start it from the repository root:
 
 ```bash
-docker compose build
-docker compose run --rm reconforge reconforge doctor
-docker compose run --rm reconforge reconforge demo run --output output/demo
+docker compose -f compose.yaml build --pull
+docker compose -f compose.yaml up -d
+docker compose -f compose.yaml ps
 ```
 
-The dashboard service exposes the local dashboard on port `8501`:
+The first start runs the idempotent SQLite migration initializer before the
+API process. Verify the local health endpoint:
 
 ```bash
-docker compose up dashboard
+curl --fail http://127.0.0.1:8765/api/v1/health
 ```
+
+Stop it while retaining the named `reconforge-data` volume:
+
+```bash
+docker compose -f compose.yaml down
+```
+
+To remove the local data volume, use `docker compose -f compose.yaml down -v`
+only after confirming that the data is disposable or backed up. The profile
+has a bounded live smoke in the execution evidence; a host port conflict or a
+Docker Desktop port-proxy failure is an environment failure and must not be
+reported as application health evidence.
 
 ## Security Notes
 
@@ -96,9 +117,13 @@ docker compose up dashboard
 Before claiming Docker runtime verification for a release, run:
 
 ```bash
-docker build -t reconforge-erp .
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge doctor
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge demo run --output output/demo
+docker build --pull --no-cache --platform linux/amd64 -t reconforge-erp .
+docker run --rm --network=none --read-only --cap-drop=ALL \
+  --security-opt=no-new-privileges reconforge-erp reconforge doctor
+docker run --rm --network=none --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m,uid=10001,gid=10001,mode=0700 \
+  --tmpfs /app/output:rw,noexec,nosuid,size=256m,uid=10001,gid=10001,mode=0700 \
+  reconforge-erp reconforge demo run --output output/demo
 ```
 
 Record the Docker version, operating system, and command output in the release notes or maintainer notes.
@@ -109,7 +134,7 @@ Record the Docker version, operating system, and command output in the release n
 | --- | --- | --- |
 | `Cannot connect to the Docker daemon` | Docker Desktop or Docker Engine is not running | Start Docker and rerun `docker version`. |
 | Files are not written to `output/` | Volume path is wrong or Docker cannot mount the folder | Run from the repository root and confirm the local `output/` path exists or can be created. |
-| `reconforge: command not found` inside container | Image was not rebuilt after local changes | Rerun `docker build -t reconforge-erp .`. |
+| `reconforge: command not found` inside container | Image was not rebuilt after local changes | Rerun the pull/no-cache build command above. |
 | Permission errors on Linux | Host user permissions on mounted `output/` | Check owner/mode of `output/` or run with an appropriate user mapping for your environment. |
 
 ## Current Verification Status

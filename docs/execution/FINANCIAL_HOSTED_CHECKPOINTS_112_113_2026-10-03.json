@@ -1,0 +1,277 @@
+{
+  "schema_version": 1,
+  "independent_exact_heads": true,
+  "reports": {
+    "112": {
+      "observed_at_utc": "2026-10-03T12:20:29.125854+00:00",
+      "pull_request": 112,
+      "head_sha": "8d76647c96c9a25c9b56bc061c619f70a28a7d13",
+      "pr_url": "https://github.com/amrzainmubarak/reconforge-erp/pull/112",
+      "all_executed_checks_successful": true,
+      "skipped_checks": [
+        {
+          "name": "Exact-image SBOM, vulnerability, and license gate",
+          "workflow": "Security",
+          "details_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120161519/job/111194554284",
+          "conclusion": "SKIPPED"
+        }
+      ],
+      "workflow_results": [
+        {
+          "workflow": "CI",
+          "run_id": 37120161694,
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120161694",
+          "status": "completed",
+          "conclusion": "success",
+          "job_count": 11
+        },
+        {
+          "workflow": "Security",
+          "run_id": 37120161519,
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120161519",
+          "status": "completed",
+          "conclusion": "success",
+          "job_count": 5
+        },
+        {
+          "workflow": "Docker",
+          "run_id": 37120161462,
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120161462",
+          "status": "completed",
+          "conclusion": "success",
+          "job_count": 1
+        },
+        {
+          "workflow": "CodeQL",
+          "run_id": 37120161559,
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120161559",
+          "status": "completed",
+          "conclusion": "success",
+          "job_count": 1
+        }
+      ],
+      "completed_job_log_summaries": {
+        "python312": {
+          "job_id": 111194554474,
+          "summary_lines": [
+            "2026-10-03T11:46:47.3102956Z 3834 passed, 308 skipped, 24 warnings in 614.50s (0:10:14)",
+            "2026-10-03T11:47:03.2508526Z Successfully built reconforge_erp-0.7.1.tar.gz and reconforge_erp-0.7.1-py3-none-any.whl"
+          ]
+        },
+        "server-boundaries": {
+          "job_id": 111196231170,
+          "summary_lines": []
+        }
+      },
+      "limits": [
+        "Exact-image SBOM, vulnerability, and license gate is skipped on this pull-request event; it is not a passing measurement.",
+        "This report verifies hosted checks for PR112 head8d76647c only; it does not replace local8054 or PR113 evidence."
+      ],
+      "retained_raw_report": {
+        "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\hosted-pr112-8d-final\\report.json",
+        "sha256": "e9ca421b2d27475c288e170420b15a3bc67586c582d0adb3b043beb3aea48c7e"
+      },
+      "server_boundary_job": {
+        "completedAt": "2026-10-03T12:06:03Z",
+        "conclusion": "success",
+        "databaseId": 111196231170,
+        "name": "server-boundaries",
+        "startedAt": "2026-10-03T11:47:11Z",
+        "status": "completed",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120161694/job/111196231170"
+      }
+    },
+    "113": {
+      "observed_at_utc": "2026-10-03T12:25:54.095413+00:00",
+      "pull_request": 113,
+      "head_sha": "8ba6772dabe4ba0ed8576ed123fbc4f5ba801ffd",
+      "run_id": 37120309536,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309536",
+      "other_checks": [
+        {
+          "name": "test (3.11)",
+          "workflow": "CI",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309536/job/111194970168"
+        },
+        {
+          "name": "Analyze Python",
+          "workflow": "CodeQL",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309502/job/111194969672"
+        },
+        {
+          "name": "docker-build",
+          "workflow": "Docker",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309535/job/111194969898"
+        },
+        {
+          "name": "Locked Python audit (3.11)",
+          "workflow": "Security",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309602/job/111194970012"
+        },
+        {
+          "name": "test (3.12)",
+          "workflow": "CI",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309536/job/111194970134"
+        },
+        {
+          "name": "Locked Python audit (3.12)",
+          "workflow": "Security",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309602/job/111194970199"
+        },
+        {
+          "name": "web",
+          "workflow": "CI",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309536/job/111194970112"
+        },
+        {
+          "name": "Secret and npm policy gates",
+          "workflow": "Security",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309602/job/111194970202"
+        },
+        {
+          "name": "Exact-image SBOM, vulnerability, and license gate",
+          "workflow": "Security",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309602/job/111194970616"
+        },
+        {
+          "name": "engine-parity (3.11, lower-bounds, 1.26.4, 2.2.0, 1.0.0)",
+          "workflow": "CI",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309536/job/111194970107"
+        },
+        {
+          "name": "engine-parity (3.12, lower-bounds, 1.26.4, 2.2.0, 1.0.0)",
+          "workflow": "CI",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309536/job/111194970218"
+        },
+        {
+          "name": "engine-parity (3.11, current-compatible-2026-07-25, 2.4.3, 3.0.5, 1.5.5)",
+          "workflow": "CI",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309536/job/111194970208"
+        },
+        {
+          "name": "engine-parity (3.12, current-compatible-2026-07-25, 2.4.3, 3.0.5, 1.5.5)",
+          "workflow": "CI",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309536/job/111194970142"
+        },
+        {
+          "name": "postgres-ha-dr",
+          "workflow": "CI",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309536/job/111194970181"
+        },
+        {
+          "name": "python-security",
+          "workflow": "Security",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309602/job/111195051085"
+        },
+        {
+          "name": "object-storage",
+          "workflow": "CI",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309536/job/111194970022"
+        },
+        {
+          "name": "docker-parity",
+          "workflow": "CI",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309536/job/111196584084"
+        },
+        {
+          "name": "CodeQL",
+          "workflow": "",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/amrzainmubarak/reconforge-erp/runs/111195295111"
+        }
+      ],
+      "limits": [
+        "Cancelled is not passed; no completed boundary result is inferred from preceding successful checks."
+      ],
+      "cancellation_cause": "GitHub maximum job execution time of30m0s was exceeded, confirmed by check-run annotation.",
+      "annotations": [
+        {
+          "path": ".github",
+          "blob_href": "https://github.com/amrzainmubarak/reconforge-erp/blob/8ba6772dabe4ba0ed8576ed123fbc4f5ba801ffd/.github",
+          "start_line": 1,
+          "start_column": null,
+          "end_line": 1,
+          "end_column": null,
+          "annotation_level": "failure",
+          "title": "",
+          "message": "The job has exceeded the maximum execution time of 30m0s",
+          "raw_details": ""
+        },
+        {
+          "path": ".github",
+          "blob_href": "https://github.com/amrzainmubarak/reconforge-erp/blob/8ba6772dabe4ba0ed8576ed123fbc4f5ba801ffd/.github",
+          "start_line": 317,
+          "start_column": null,
+          "end_line": 317,
+          "end_column": null,
+          "annotation_level": "failure",
+          "title": "",
+          "message": "The operation was canceled.",
+          "raw_details": ""
+        },
+        {
+          "path": ".github",
+          "blob_href": "https://github.com/amrzainmubarak/reconforge-erp/blob/8ba6772dabe4ba0ed8576ed123fbc4f5ba801ffd/.github",
+          "start_line": 1,
+          "start_column": null,
+          "end_line": 1,
+          "end_column": null,
+          "annotation_level": "notice",
+          "title": "",
+          "message": "\"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748\"",
+          "raw_details": ""
+        }
+      ],
+      "retained_raw_report": {
+        "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\hosted-pr113-8ba-final\\report-with-annotations.json",
+        "sha256": "226d7edb1b7c1806bfd54ebdc77d592f3ad0afee3f883ab2daf3178c81beef95"
+      },
+      "server_boundary_job": {
+        "completedAt": "2026-10-03T12:19:53Z",
+        "conclusion": "cancelled",
+        "databaseId": 111196584144,
+        "name": "server-boundaries",
+        "startedAt": "2026-10-03T11:49:35Z",
+        "status": "completed",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37120309536/job/111196584144"
+      }
+    }
+  }
+}

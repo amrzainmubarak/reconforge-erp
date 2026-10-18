@@ -10,11 +10,13 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import OrderedDict
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import fields
 from datetime import datetime
 from decimal import Decimal
 from threading import RLock
+from time import monotonic
 from typing import Protocol
 
 from reconforge.auth.policy import (
@@ -98,18 +100,28 @@ class PolicyDecisionCache:
         self,
         *,
         max_entries: int = 1024,
+        cache_ttl_seconds: int = 30,
         policy_version: str = POLICY_VERSION,
         version_store: PolicyCacheVersionStore | None = None,
+        clock: Callable[[], float] | None = None,
     ) -> None:
         if not isinstance(max_entries, int) or isinstance(max_entries, bool) or not 1 <= max_entries <= 100_000:
             raise PolicyCacheError("max_entries must be between 1 and 100000")
+        if (
+            not isinstance(cache_ttl_seconds, int)
+            or isinstance(cache_ttl_seconds, bool)
+            or not 1 <= cache_ttl_seconds <= 3_600
+        ):
+            raise PolicyCacheError("cache_ttl_seconds must be between 1 and 3600")
         if not policy_version.strip():
             raise PolicyCacheError("policy_version must be non-empty")
         self._max_entries = max_entries
+        self._cache_ttl_seconds = cache_ttl_seconds
         self._policy_version = policy_version
         self._version_store = version_store
+        self._clock = clock or monotonic
         self._entries: OrderedDict[
-            str, tuple[PolicyDecision, str | None, str | None, str | None]
+            str, tuple[PolicyDecision, str | None, str | None, str | None, float]
         ] = OrderedDict()
         self._lock = RLock()
 
@@ -156,7 +168,7 @@ class PolicyDecisionCache:
         )
         with self._lock:
             cached = self._entries.pop(key, None)
-            if cached is not None:
+            if cached is not None and self._clock() - cached[4] < self._cache_ttl_seconds:
                 self._entries[key] = cached
                 return cached[0]
         decision = engine.evaluate(
@@ -168,7 +180,13 @@ class PolicyDecisionCache:
         if not decision.allowed:
             return decision
         with self._lock:
-            self._entries[key] = (decision, context.tenant_id, context.organization_id, context.workspace_id)
+            self._entries[key] = (
+                decision,
+                context.tenant_id,
+                context.organization_id,
+                context.workspace_id,
+                self._clock(),
+            )
             self._entries.move_to_end(key)
             while len(self._entries) > self._max_entries:
                 self._entries.popitem(last=False)
@@ -225,7 +243,7 @@ class PolicyDecisionCache:
                 return removed
             keys = [
                 key
-                for key, (_decision, entry_tenant, entry_organization, entry_workspace) in self._entries.items()
+                for key, (_decision, entry_tenant, entry_organization, entry_workspace, _created_at) in self._entries.items()
                 if entry_tenant == tenant_id
                 and (organization_id is None or entry_organization == organization_id)
                 and (workspace_id is None or entry_workspace == workspace_id)

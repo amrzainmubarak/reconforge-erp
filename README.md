@@ -29,6 +29,29 @@ ReconForge works beside ERP, accounting, inventory, banking, payroll, commerce, 
 
 It is deliberately positioned as a **finance-controls platform**, not a replacement ERP. The project prioritizes financial correctness, reproducibility, explainability, and honest capability boundaries over opaque automation.
 
+The development branch also contains **experimental operational transaction
+modules** that compose its existing financial engines under
+[ADR0841](docs/adr/0841-composed-sales-procurement-operational-finance.md):
+
+- [Service sales and revenue](docs/operations/sales-revenue.md): customer,
+  discounted quotation, independent approval, order, service completion,
+  AR/revenue posting, and one full cash collection with cash/AR posting.
+- [Stock purchase to pay](docs/runbooks/procurement-operations.md): supplier,
+  independently approved one-line PO, full receiving and FIFO with inventory/GL
+  posting, three-way supplier invoice, AP accrual, and reviewed full payment.
+- [Operational Finance](docs/operator/operational-finance.md): reviewed native
+  AR/AP source posting, immutable effect references, and a net posted period
+  activity trial balance with JSON export.
+
+These modules use authenticated PostgreSQL workspaces and the live Studio
+routes `/sales-revenue`, `/procurement-operations` and `/enterprise-finance`.
+They require configured master data and scoped human permissions. The initial
+cycles use functional currency and zero tax; stock sales/COGS, partial
+receiving or settlement, returns, credit notes, tax/FX and live bank execution
+remain outside their supported boundary. The
+[execution state](docs/execution/STATE.md) records acceptance for an exact source;
+the modules do not imply a complete ERP or production release.
+
 > [!IMPORTANT]
 > ReconForge is an alpha-stage, local-first toolkit for evaluation and controlled pilots. It does not issue audit opinions, provide compliance certification, or write transactions back to a source ERP.
 
@@ -48,7 +71,7 @@ It is deliberately positioned as a **finance-controls platform**, not a replacem
 
 ## Product tour
 
-The views below are rendered by the real React Studio from versioned, synthetic ReconForge contracts. The modern Studio is currently a read-only experimental client; mutation workflows remain in the current local Studio and CLI.
+The views below are rendered by the real React Studio from versioned, synthetic ReconForge contracts. Financial showcase pages are read-only and experimental. Separate authenticated pages support administration and a bounded AR workflow: invoice creation, submission, independent approval, receipt recording and allocation. AR money uses the retained currency policy, with exact textual reads and English/Arabic review. Complete purchase/sales/inventory/GL workflows remain under development. See the [AR browser evidence](docs/execution/RECEIVABLES_POLICY_UI_2026-10-03.json) and [current production audit and acceptance gates](docs/execution/PRODUCTION_AUDIT_2026-10-03.md).
 
 ![ReconForge executive control dashboard](docs/assets/screenshots/dashboard.png)
 
@@ -207,7 +230,7 @@ Read the [current-state architecture](docs/architecture/current-state.md), [targ
 
 ## Control packs and mappings
 
-ReconForge ships 19 control-pack directories covering audit basics, inventory valuation, purchase-to-pay, month-end close, fixed assets, warehouse controls, WIP, fleet/workshop/service operations, high-risk transactions, and fraud indicators.
+ReconForge ships 24 control-pack directories covering audit basics, inventory valuation, purchase-to-pay, month-end close, fixed assets, warehouse controls, WIP, fleet/workshop/service operations, high-risk transactions, and fraud indicators.
 
 ```bash
 reconforge rules validate --pack control-packs/audit-basic
@@ -247,8 +270,8 @@ The current version is **v0.7.1**, classified as alpha/foundation-stage software
 | --- | --- |
 | Implemented | Export validation and mapping, stock-to-GL and workshop reconciliation, deterministic control packs, risk/exceptions, local review state, reports/evidence, CLI, synthetic demos, and server-rendered Studio |
 | Foundation-stage | SQLite-backed finance/inventory/AP/AR services, local users and RBAC, workflows, audit events, API routes, backup/import/export, module registry, and governed master data |
-| Experimental | Read-only React Studio, inventory planning, FIFO valuation and exact reversal, Finance Core Draft bridge, and optional DuckDB analytical execution |
-| Planned | Broader reconciliation templates, write-enabled modern Studio, remaining PostgreSQL/Redis/S3 server-profile integration, tenant propagation across all services, resumable large-data jobs, richer observability, and separately tested live connectors |
+| Experimental | React synthetic showcase and authenticated AR invoice/receipt workflows, inventory planning, FIFO valuation and exact reversal, Finance Core Draft bridge, and optional DuckDB analytical execution |
+| Planned | Broader reconciliation templates and governed React write workflows, remaining PostgreSQL/Redis/S3 server-profile integration, tenant propagation across all services, resumable large-data jobs, richer observability, and separately tested live connectors |
 | Outside released scope | Complete ERP transaction processing, automatic source-system posting, hosted multi-tenant service, and formal audit/compliance assurance |
 
 Implementation status is tracked in the [engineering audit](docs/engineering-audit.md), [repository audit](docs/analysis/repository-audit.md), [risk register](docs/risk-register.md), and [roadmap](docs/roadmap.md). Feature labels and screenshots are not evidence of production readiness; executable tests and release gates remain authoritative.
@@ -256,10 +279,15 @@ Implementation status is tracked in the [engineering audit](docs/engineering-aud
 ## Docker
 
 ```bash
-docker build -t reconforge-erp .
-docker run --rm reconforge-erp reconforge doctor
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp \
-  reconforge demo run --output output/demo
+docker build --pull --no-cache --platform linux/amd64 -t reconforge-erp .
+docker run --rm --network=none --read-only --cap-drop=ALL \
+  --security-opt=no-new-privileges reconforge-erp reconforge doctor
+
+# Bounded demo smoke; artifacts are intentionally ephemeral.
+docker run --rm --network=none --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m,uid=10001,gid=10001,mode=0700 \
+  --tmpfs /app/output:rw,noexec,nosuid,size=256m,uid=10001,gid=10001,mode=0700 \
+  reconforge-erp reconforge demo run --output output/demo
 ```
 
 Use the [Docker deployment guide](docs/docker-deployment.md), [deployment smoke check](docs/deployment-smoke-check.md), and [Docker verification guide](docs/docker-verification.md). Runtime verification depends on a working local Docker environment and should be treated as a release gate, not inferred from the presence of a Dockerfile.

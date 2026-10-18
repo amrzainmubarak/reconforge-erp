@@ -1,0 +1,31 @@
+{
+  "capsules": [
+    {
+      "bytes": 22268230,
+      "coverage": {
+        "actual_https_requests": 378,
+        "cost_per_transaction": null,
+        "fair_performance_comparison_accepted": false,
+        "financial_reproduction": "passed",
+        "original_runtime_source": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+        "repeats": 3,
+        "separate_resource_description_source": "53b6495ccb1fb687095ad7631297631116561041",
+        "separate_yaml_contract_source": "a8742d1cbe855aa7d58748267ce22323bf0ce0bb",
+        "source_archive": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+        "successful_cohorts": 9,
+        "tenant_qualified_original_effects": 99,
+        "tenant_qualified_timed_effects": 81
+      },
+      "file_count": 147,
+      "file_name": "wave5-d3-actual-mixed-api-package-independent-v1.zip",
+      "index_name": "wave5-d3-actual-mixed-api-package-independent-v1.index.json",
+      "index_sha256": "7fdb28cf36b0356e49ab3f291ceb0e613bc785d66e38b41738446dfef4d2cb3f",
+      "raw_bytes": 30457308,
+      "sha256": "90a5b1d7afad3cba8f955c3f90ceca36b1b77f1cb5ed2aac1fb97ce59f354113"
+    }
+  ],
+  "capture_for_root_commit": "d3e227b7d46be7e7d3b73ac39fa82615943319e8",
+  "original_sources_unchanged": true,
+  "raw_byte_verification": "Every ZIP entry is compared byte-for-byte to original input and every input hash is rechecked after assembly.",
+  "schema_version": "reconforge-flat-evidence-capsule-index-v1"
+}

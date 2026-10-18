@@ -37,6 +37,7 @@ from reconforge.infrastructure.postgres_scheduler import PostgresScheduleReposit
 from reconforge.workers.outbox import OutboxWorkerSettings
 from reconforge.workers.postgres_outbox import PostgresOutboxWorker
 from reconforge.workers.postgres_scheduler import PostgresSchedulerWorker, PostgresSchedulerWorkerSettings
+from tests.postgres_test_hygiene import grant_native_owner_reads
 
 
 def _schedule(tenant_id: str, workspace_id: str, entity_id: str) -> ScheduleRegistration:
@@ -117,7 +118,9 @@ class _SuccessfulTransport:
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
-def test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_audited() -> None:
+def test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_audited(
+    isolated_postgres_runtime_role: str,
+) -> None:
     pytest.importorskip("psycopg")
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
@@ -135,6 +138,7 @@ def test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_a
         with admin.transaction():
             install_postgres_notification_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            grant_native_owner_reads(admin, app_user, ("outbox_delivery_evidence",))
             admin.execute(
                 f"GRANT SELECT,INSERT,UPDATE ON reconforge.notification_routes,"
                 f"reconforge.schedule_notification_subscriptions,reconforge.notification_delivery_events,"
@@ -187,7 +191,9 @@ def test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_a
                 factory,
                 tenant_supplier=lambda: (tenant,),
                 settings=PostgresSchedulerWorkerSettings(
-                    worker_id="scheduler-worker", poll_interval_seconds=0
+                    worker_id="scheduler-worker",
+                    poll_interval_seconds=0,
+                    allow_unbound_hosted_policy=True,
                 ),
                 clock=lambda: datetime(2026, 6, 2, 12, tzinfo=UTC),
             )
@@ -243,6 +249,7 @@ def test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_a
                     batch_size=10,
                     max_attempts=2,
                     retry_base_seconds=0,
+                    allow_unbound_hosted_policy=True,
                 ),
             )
             first = failed_worker.process_once()
@@ -276,6 +283,7 @@ def test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_a
                     batch_size=10,
                     max_attempts=2,
                     retry_base_seconds=0,
+                    allow_unbound_hosted_policy=True,
                 ),
             )
             success = successful_worker.process_once()

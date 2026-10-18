@@ -1,0 +1,54 @@
+[
+  {
+    "python": "3.11",
+    "bytes": 573503,
+    "sha256": "eb7e2822453cdee3a7e8a4aafe02d32a595639939d87a5a4794a71c71e2d586e",
+    "status": "passed",
+    "source_commit": "375bf7c5e8bc6aca87bc98f6008a576d88c96efc",
+    "source_unchanged": true,
+    "tracked_clean_before": true,
+    "tracked_clean_after": true,
+    "extraction_removed": true,
+    "migrations": {
+      "count": 132,
+      "head": "0132_pg_stock_inverse_dispatch",
+      "oldest": "0001_postgres_tenant_boundary",
+      "complete_linear_chain": true
+    },
+    "same_normal_optimized": true,
+    "financial_verification": "passed",
+    "performance_comparison_accepted": false,
+    "resource_improvement_acceptance": false,
+    "power_counts": {
+      "ac": 248,
+      "battery": 263,
+      "unavailable": 0
+    }
+  },
+  {
+    "python": "3.12",
+    "bytes": 573503,
+    "sha256": "6f9b5ceb393a3bece537481fc9a9c8172838d1c92dc38d2bb4fded62d4340238",
+    "status": "passed",
+    "source_commit": "375bf7c5e8bc6aca87bc98f6008a576d88c96efc",
+    "source_unchanged": true,
+    "tracked_clean_before": true,
+    "tracked_clean_after": true,
+    "extraction_removed": true,
+    "migrations": {
+      "count": 132,
+      "head": "0132_pg_stock_inverse_dispatch",
+      "oldest": "0001_postgres_tenant_boundary",
+      "complete_linear_chain": true
+    },
+    "same_normal_optimized": true,
+    "financial_verification": "passed",
+    "performance_comparison_accepted": false,
+    "resource_improvement_acceptance": false,
+    "power_counts": {
+      "ac": 248,
+      "battery": 263,
+      "unavailable": 0
+    }
+  }
+]

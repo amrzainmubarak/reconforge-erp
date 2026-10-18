@@ -1,0 +1,5 @@
+.source-cashflow .cashflow-totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:1rem;margin:0}
+.source-cashflow .cashflow-totals div{padding:1rem;border-inline-start:3px solid var(--brand-strong,#0c6257);background:var(--surface,#f8faf9)}
+.source-cashflow .cashflow-totals dd{margin:.5rem 0 0;font-weight:700;font-variant-numeric:tabular-nums}
+.source-cashflow .cashflow-opening{display:flex;align-items:center;gap:.8rem}.source-cashflow .cashflow-opening input{flex:none}
+.source-cashflow .reporting-table td{max-width:32rem;overflow-wrap:anywhere}.source-cashflow .reporting-table code{font-size:.8rem}

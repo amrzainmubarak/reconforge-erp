@@ -9,8 +9,12 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from reconforge.utils.money import (
+    LEGACY_FINANCIAL_INPUT_POLICY,
     STRICT_FINANCIAL_INPUT_POLICY,
     FinancialInputPolicy,
+    FinancialInputPolicyObservation,
+    resolve_historical_financial_replay_policy,
+    resolve_new_financial_write_policy,
     validate_financial_input_policy,
 )
 
@@ -50,6 +54,14 @@ class MatchRunResult:
             "financial_input_policy",
             validate_financial_input_policy(self.financial_input_policy),
         )
+
+    @property
+    def financial_input_policy_observation(self) -> FinancialInputPolicyObservation:
+        """Expose whether this persisted result used strict creation or legacy replay."""
+
+        if self.financial_input_policy == LEGACY_FINANCIAL_INPUT_POLICY:
+            return resolve_historical_financial_replay_policy(self.financial_input_policy)
+        return resolve_new_financial_write_policy(self.financial_input_policy)
 
 
 @dataclass(frozen=True)
@@ -165,7 +177,18 @@ class MatchingApplicationService:
         actor_label: str = "local-cli",
         financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
         record_identity_policy: str = LEGACY_RECORD_IDENTITY_POLICY,
+        historical_replay: bool = False,
     ) -> MatchRunResult:
+        """Persist a new job, or explicitly replay a historical policy-bound job."""
+
+        if not isinstance(historical_replay, bool):
+            raise ValueError("historical financial replay flag must be boolean")
+        if historical_replay:
+            if not idempotency_key:
+                raise ValueError("historical financial replay requires an idempotency key")
+            policy_observation = resolve_historical_financial_replay_policy(financial_input_policy)
+        else:
+            policy_observation = resolve_new_financial_write_policy(financial_input_policy)
         return self.repository.run(
             left_path=left_path,
             right_path=right_path,
@@ -185,7 +208,7 @@ class MatchingApplicationService:
             reference_normalization_rules=reference_normalization_rules,
             idempotency_key=idempotency_key,
             actor_label=actor_label,
-            financial_input_policy=financial_input_policy,
+            financial_input_policy=policy_observation.policy,
             record_identity_policy=record_identity_policy,
         )
 

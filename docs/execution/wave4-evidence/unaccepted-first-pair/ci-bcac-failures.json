@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "head_sha": "bcac325cb73dc76d374ce34fa7a742e6df5a2c61",
+  "run_id": 38051765152,
+  "pull_request": 130,
+  "accepted": false,
+  "source_binding": "source-binding.json",
+  "failures": [
+    {
+      "job_id": 114212164412,
+      "job": "server-boundaries (finance-integrity)",
+      "accepted": false,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38051765152/job/114212164412",
+      "api_path": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114212164412/logs",
+      "raw_log": "job-114212164412.log",
+      "raw_bytes": 384317,
+      "raw_sha256": "16b91344e975882a1b947131bd5f154ee47fe0025cd13afbc8e57d81a9fdfd76",
+      "failed_case_ids": [
+        "tests/test_postgres_operational_fx_tax.py::test_direct_sql_native_ar_state_allocation_and_detached_gl_are_refused"
+      ],
+      "diagnosis": "The detached inverse is correctly refused with FinancePostingError; expected regex 'source inverse' does not match actual 'Foreign sources require their exact reviewed source-owned inverse.' at line171. Complete prior corrective dispatch4 and snapshot7 commands passed with mandatory zero skips. Subsequent financial-read-plans command was not reached."
+    },
+    {
+      "job_id": 114212164452,
+      "job": "test (3.11)",
+      "accepted": false,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38051765152/job/114212164452",
+      "api_path": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114212164452/logs",
+      "raw_log": "job-114212164452.log",
+      "raw_bytes": 126798,
+      "raw_sha256": "cd3f3e32911773086f04c074cd0ed3fc1f61f4bd3b481e0855d7cf02fecaaa53",
+      "failed_case_ids": [
+        "tests/test_ci_server_boundary_shards.py::test_every_live_command_has_one_shard_and_proof_owner",
+        "tests/test_ci_server_boundary_shards.py::test_unconfigured_python_partition_cannot_drop_stock_native_coverage",
+        "tests/test_ci_server_boundary_shards.py::test_integrity_owners_execute_complete_files_once_without_filtered_admission",
+        "tests/test_postgres_parity_inventory.py::test_postgres_parity_inventory_covers_every_application_service_exactly"
+      ],
+      "diagnosis": "Strict CI contracts retain51 commands but actual corrected workflow contains52; new full stock_sales_reversal_dispatch file is absent expected finance-integrity mapping and derived exclusions. POSTGRES_PARITY_INVENTORY.yaml omits SupplierReturnsService present in strict boundary inventory. Actual4failed/4837passed/663 existing prerequisite skips/912.56seconds. Package/archive steps not reached; absent archive retention is secondary."
+    },
+    {
+      "job_id": 114212164540,
+      "job": "test (3.12)",
+      "accepted": false,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38051765152/job/114212164540",
+      "api_path": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114212164540/logs",
+      "raw_log": "job-114212164540.log",
+      "raw_bytes": 127571,
+      "raw_sha256": "de478176bc6712fe2aed15aa0e64329e4725e4f659e08b33b69478e233fddcc8",
+      "failed_case_ids": [
+        "tests/test_ci_server_boundary_shards.py::test_every_live_command_has_one_shard_and_proof_owner",
+        "tests/test_ci_server_boundary_shards.py::test_unconfigured_python_partition_cannot_drop_stock_native_coverage",
+        "tests/test_ci_server_boundary_shards.py::test_integrity_owners_execute_complete_files_once_without_filtered_admission",
+        "tests/test_postgres_parity_inventory.py::test_postgres_parity_inventory_covers_every_application_service_exactly"
+      ],
+      "pytest_summary": {
+        "failed": 4,
+        "passed": 4837,
+        "skipped": 663,
+        "seconds": 810.39
+      },
+      "diagnosis": "Same four strict CI/adapter inventory omissions independently executed under3.12. Package build/archive verification not reached because pytest failed."
+    }
+  ],
+  "scope": "Read-only hosted log/API diagnosis. No local workloads or tracked source changes.",
+  "retained_prior_failure_packet": "../hosted-pr130-monitor/failure-triage-6642ab61-v2.json",
+  "retained_prior_packet": {
+    "file": "failure-triage-bcac325c-v1.json",
+    "sha256": "011bf7464671f7e026a88fa6355622111fd3820c9df2240d506f908ac23a97ca"
+  },
+  "latest_observed_status": {
+    "captured_at_utc": "2026-10-10T12:51:04Z",
+    "snapshot_file": "latest-ci-snapshot.json",
+    "snapshot_sha256": "295e2a013df99a30b2fc5ac2d1825182e656465a3640cf629419c3e3d99489a7",
+    "claim_boundary": "Only observed hosted API job conclusions; completed native metadata is not a substitute for original runtime packet extraction."
+  }
+}

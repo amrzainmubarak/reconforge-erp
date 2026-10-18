@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from decimal import Decimal
 from importlib import import_module
 from pathlib import Path
@@ -68,6 +69,48 @@ def test_missing_financial_values_and_dates_never_become_zero() -> None:
     with pytest.raises(InvalidAmountError):
         money_difference(None, "1.00")
     assert date_diff_days("bad-date", "2026-01-01") is None
+
+
+def test_application_money_ingress_declares_currency_precision_policy() -> None:
+    root = Path(__file__).resolve().parents[1]
+    application_root = root / "reconforge" / "application"
+    offenders: list[str] = []
+    for path in sorted(application_root.glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+                continue
+            if node.func.attr != "from_exact" or not isinstance(node.func.value, ast.Name) or node.func.value.id != "Money":
+                continue
+            strict_precision = next((keyword.value for keyword in node.keywords if keyword.arg == "strict_precision"), None)
+            if not isinstance(strict_precision, ast.Constant) or strict_precision.value is not True:
+                offenders.append(f"{path.relative_to(root)}:{node.lineno}")
+    assert offenders == [], "application financial ingress must reject over-precision: " + ", ".join(offenders)
+
+
+def test_production_money_construction_declares_rounding_policy() -> None:
+    """Every production Money.from_exact call must choose strict or explicit rounding."""
+
+    root = Path(__file__).resolve().parents[1]
+    production_root = root / "reconforge"
+    offenders: list[str] = []
+    for path in sorted(production_root.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+                continue
+            if (
+                node.func.attr != "from_exact"
+                or not isinstance(node.func.value, ast.Name)
+                or node.func.value.id != "Money"
+            ):
+                continue
+            strict_precision = next(
+                (keyword.value for keyword in node.keywords if keyword.arg == "strict_precision"), None
+            )
+            if not isinstance(strict_precision, ast.Constant) or not isinstance(strict_precision.value, bool):
+                offenders.append(f"{path.relative_to(root)}:{node.lineno}")
+    assert offenders == [], "production Money.from_exact calls must declare strict_precision: " + ", ".join(offenders)
 
 
 def test_unbound_actors_are_rejected_outside_trusted_local_mode(tmp_path: Path) -> None:

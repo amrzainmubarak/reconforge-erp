@@ -96,15 +96,27 @@ def test_live_schema_reinstall_preserves_composed_business_policies() -> None:
     factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
     connection = factory.connect()
     try:
-        with connection.transaction():
+        profile_sql = """SELECT original FROM (
+            SELECT to_jsonb(p)::text original FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='reconforge'
+            UNION ALL SELECT to_jsonb(t)::text FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid
+                JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='reconforge'
+            UNION ALL SELECT to_jsonb(p)::text FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid
+                JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='reconforge'
+            ) profiles ORDER BY original COLLATE "C"
+            """
+        before = [row["original"] for row in connection.execute(profile_sql).fetchall()]
+        # Exercise the complete historical reinstallation contract, then roll
+        # back that simulation so current owner bodies/OIDs/policies survive.
+        with connection.transaction(force_rollback=True):
             for schema in _BUSINESS_SCHEMA_REINSTALLERS:
                 connection.execute(schema)
-        duplicates = connection.execute(
-            "SELECT tablename FROM pg_policies WHERE schemaname='reconforge' "
-            "GROUP BY tablename HAVING bool_or(policyname='tenant_scope') "
-            "AND bool_or(policyname='tenant_isolation') ORDER BY tablename"
-        ).fetchall()
-        assert duplicates == []
+            duplicates = connection.execute(
+                "SELECT tablename FROM pg_policies WHERE schemaname='reconforge' "
+                "GROUP BY tablename HAVING bool_or(policyname='tenant_scope') "
+                "AND bool_or(policyname='tenant_isolation') ORDER BY tablename"
+            ).fetchall()
+            assert duplicates == []
+        assert [row["original"] for row in connection.execute(profile_sql).fetchall()] == before
     finally:
         connection.close()
 

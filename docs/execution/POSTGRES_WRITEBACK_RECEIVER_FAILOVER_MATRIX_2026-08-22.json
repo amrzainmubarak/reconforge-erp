@@ -21,7 +21,7 @@
     "canonical_history_sha256": "5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14"
   },
   "profile": "single-host-synchronous-receiver-failover-matrix",
-  "report_digest": "5ae22491c01eb93daf38dd7fe6788c4daa7a0d648fb7dfa53ca7edf11d5e07d1",
+  "report_digest": "2054b5e292b9b655caf51f43fd74555eb931bf4f4af909f6b60d0911a542c902",
   "runs": [
     {
       "cases": {
@@ -213,6 +213,6 @@
     "matrix_runner_source_sha256": "39937d4dc02ef458784352f3b50c739f3ce55b09687b41066b4cc57879dcb0a8",
     "postgres_receiver_source_sha256": "8e28ff1c284259684f2397aa766066fa5ae1f6ec8a7cc286e722d6423f3fa43f",
     "receiver_source_sha256": "9dfcf1e6c4df485f2c6275dfb597a9d695ccfeef79616af2d0b62c38955b60b4",
-    "supply_chain_policy_sha256": "15675362650f9b2691251da77dd01538d72b3a7249c7a60c7591b7bbe0a48cae"
+    "supply_chain_policy_sha256": "d9474480aab505346e9cdb1164e3a74c5d51eee1796c7fa886a732929f6bafe1"
   }
 }

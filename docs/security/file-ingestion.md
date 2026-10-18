@@ -61,6 +61,16 @@ delimited, PyYAML, and `defusedxml` CAMT parser call. A new direct parser fails
 the test until it is routed through the central policy or explicitly recorded
 with an owner, limitation, risk, and next action.
 
+FI-047 routes original partial-return evidence and unapproved correction text
+through the existing shared structured-document decoder. Both require integer
+tokens, duplicate/non-finite rejection, object roots and exact canonical text.
+Original evidence is capped at65,536 UTF-8 bytes,16,384 nodes,depth24 and1,024
+items per collection; templates use2,097,152 bytes,32,768 nodes,depth32 and1,024
+items per collection. Scalar ceilings are65,536 and262,144 characters respectively.
+The original Finance Posting schema/seal and closed template source/role/portion
+checks still run after decoding. These internal text profiles are not upload,
+authorization, native ownership or approved financial-posting boundaries.
+
 ## Current budgets
 
 | Budget | Limit |

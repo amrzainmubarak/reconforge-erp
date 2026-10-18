@@ -12,12 +12,16 @@ from typing import Any, TypeVar
 
 from reconforge.application.master_data import DEFAULT_LIST_LIMIT, MasterDataSummary
 from reconforge.domain.models import utc_now_text
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.infrastructure.postgres_master_data import (
     PostgresMasterDataError,
     PostgresMasterDataRepository,
     PostgresMasterDataValidationError,
+)
+from reconforge.infrastructure.postgres_repository_scope import (
+    PostgresRepositoryScopeError,
+    ensure_repository_tenant_scope,
 )
 from reconforge.io.persisted import encode_postgres_outbox_payload
 from reconforge.platform.common import PlatformError
@@ -79,8 +83,10 @@ class PostgresMasterDataApplicationRepository:
     def _transaction(self) -> Iterator[None]:
         try:
             with self.connection.transaction():
-                set_local_tenant_scope(self.connection, self.tenant_id)
+                ensure_repository_tenant_scope(self.connection, self.tenant_id)
                 yield
+        except PostgresRepositoryScopeError as exc:
+            raise PlatformError(str(exc)) from exc
         except PlatformError:
             raise
         except (PostgresMasterDataValidationError, PostgresMasterDataError) as exc:
@@ -903,6 +909,9 @@ END $reconforge$;
 
 
 def install_postgres_master_data_application_schema(connection: Any) -> None:
+    from reconforge.infrastructure.postgres_master_data_authority import install_postgres_master_data_authority_schema
+
     connection.execute(POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL)
     connection.execute(POSTGRES_CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL)
     connection.execute(POSTGRES_CURRENCY_REGISTRY_BINDING_SCHEMA_SQL)
+    install_postgres_master_data_authority_schema(connection)

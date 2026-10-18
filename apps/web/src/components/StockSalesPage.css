@@ -1,0 +1,28 @@
+.stock-sales { max-width: 80rem; margin: 0 auto; padding: 1.25rem; }
+.stock-sales header { margin-bottom: 1.5rem; }
+.stock-sales form, .stock-sales fieldset, .stock-sales section { display: grid; gap: .8rem; margin-block: 1rem; min-inline-size: 0; }
+.stock-sales fieldset { grid-template-columns: repeat(auto-fit,minmax(min(13rem,100%),1fr)); border: 1px solid var(--border-color,#8793a1); border-radius: .5rem; padding: 1rem; margin-inline: 0; max-inline-size: 100%; }
+.stock-sales label { display: grid; gap: .35rem; }
+.stock-sales input, .stock-sales select, .stock-sales button { font: inherit; min-height: 2.75rem; padding: .55rem .75rem; border-radius: .35rem; }
+.stock-sales input, .stock-sales select { inline-size: 100%; min-inline-size: 0; max-inline-size: 100%; }
+.stock-sales button { cursor: pointer; min-inline-size: 0; max-inline-size: 100%; white-space: normal; }
+.stock-sales button:disabled { cursor: default; opacity: .65; }
+.stock-sales :focus-visible { outline: 3px solid #126abf; outline-offset: 3px; }
+.stock-sales [role=alert], .stock-sales aside { padding: 1rem; border: 2px solid #a13520; border-radius: .4rem; }
+.stock-sales ul { display: grid; gap: .6rem; padding: 0; list-style: none; }
+.stock-sales ul li, .stock-sales-toolbar { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+.stock-sales dl { display: grid; grid-template-columns: minmax(7rem,1fr) minmax(0,2fr); gap: .4rem; }
+.stock-sales code { overflow-wrap: anywhere; }
+.stock-sales dd { margin: 0; }
+.stock-sales-boundary { border-inline-start: 4px solid #126abf; padding-inline-start: .9rem; }
+@media(max-width: 40rem) { .stock-sales { padding: .75rem; } .stock-sales fieldset, .stock-sales dl { grid-template-columns: 1fr; } .stock-sales button { width: 100%; } }
+.stock-commerce { min-inline-size: 0; max-inline-size: 100%; border-block-start: 2px solid var(--border, #b5c1d2); margin-block: 1.5rem; padding-block: 1.5rem; }
+.stock-commerce > *, .stock-commerce article, .stock-commerce form, .stock-commerce label { min-inline-size: 0; max-inline-size: 100%; }
+.stock-commerce input, .stock-commerce select, .stock-commerce button { box-sizing: border-box; min-inline-size: 0; max-inline-size: 100%; inline-size: 100%; color: var(--text, #14211f); background: var(--surface-raised, #fff); border: 1px solid var(--border, #b5c1d2); }
+.stock-commerce p, .stock-commerce h2, .stock-commerce h3, .stock-commerce li { overflow-wrap: anywhere; }
+.stock-commerce-table { min-inline-size: 0; max-inline-size: 100%; overflow-x: auto; margin-block: 1rem; }
+.stock-commerce table { border-collapse: collapse; width: 100%; min-inline-size: 42rem; }
+.stock-commerce th, .stock-commerce td { padding: .65rem; border: 1px solid #b5c1d2; text-align: start; }
+.stock-commerce fieldset { min-width: 0; }
+.stock-commerce code { overflow-wrap: anywhere; }
+.stock-commerce nav { display: flex; flex-wrap: wrap; gap: .75rem; }

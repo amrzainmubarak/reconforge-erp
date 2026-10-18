@@ -28,6 +28,7 @@ from reconforge.infrastructure.postgres_inventory_planning import (
     POSTGRES_INVENTORY_PLANNING_SCHEMA_SQL,
     PostgresInventoryPlanningRepository,
 )
+from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data import POSTGRES_MASTER_DATA_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data_application import (
     install_postgres_master_data_application_schema,
@@ -127,6 +128,7 @@ def test_live_postgres_count_adjustment_reorder_and_rls() -> None:
             install_postgres_rls_schema(admin)
             install_postgres_domain_schema(admin)
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
+            admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             install_postgres_master_data_application_schema(admin)
             install_postgres_finance_core_schema(admin)
             admin.execute(POSTGRES_INVENTORY_CORE_SCHEMA_SQL)

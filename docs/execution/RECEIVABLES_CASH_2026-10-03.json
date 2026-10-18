@@ -1,0 +1,237 @@
+{
+  "schema_version": "receivables-cash-acceptance-v1",
+  "executed_at": "2026-10-03T09:13:57.467693+00:00",
+  "status": "passed-bounded-scoped-ar-cash-workflow",
+  "migration_target": "0097_pg_reconciliation_seal",
+  "source_binding": "canonical UTF-8 LF hashes plus full browser raw before/after artifact",
+  "sources": {
+    "apps/web/e2e/receivables-cash-live.spec.ts": "4719ecc336efb390aac7bc8bcba0199339d4151f9c55964f51aef591a6aa1fb6",
+    "apps/web/src/App.test.tsx": "fc0ac88d3aa5b1119b3188eef53f50be798f08d12d88fa8e1856d97463ef1f00",
+    "apps/web/src/App.tsx": "c0635672a49d976e877af6f855d64f87ba884b6cdbb256a91fcf7ec05817f510",
+    "apps/web/src/browserSession.test.tsx": "5e7ef262470a75a140b6b9ddc182f98b4df8645422b775f2869edf964667a717",
+    "apps/web/src/browserSession.tsx": "a843212d72d23ea0a825c5f6296ec3391d921212c3a4a1cc2e7d1521e249689a",
+    "apps/web/src/components/AdminAccessMutations.tsx": "22e9a2b33bd60a5a831a951ab4ad9e77fe0c4480929a4c98b311219ceeb63f45",
+    "apps/web/src/components/AdminAudit.test.tsx": "6f220aa2e08e1268fa5793549644d22f690de2a3791d172b08d2dfb53545d1f3",
+    "apps/web/src/components/AdminAudit.tsx": "3a5314471a09be9503441948445c268cc58ca640027a4b86f1590cd0248c0621",
+    "apps/web/src/components/AdminGovernanceMutations.tsx": "d0248eb4794b881d3a8d4e66951c7c5b53581c63183ddfb4e2d11d94c76fffb2",
+    "apps/web/src/components/BankStatementStudio.test.tsx": "9d114618946ac733f316b59e475756a8516bdbf24f766c4e7e8f01c7a66396f1",
+    "apps/web/src/components/BankStatementStudio.tsx": "34fc0269184aae1e287e7cbb704737ceee5bdd9c777f0fd22c7ee2998aaa87c8",
+    "apps/web/src/components/Dashboard.tsx": "931bab097e7a307aa4046c808f9a9210e84945ded3d23b0fdd9687548b7d99c7",
+    "apps/web/src/components/EvidenceBinder.tsx": "a1253d3f626ec0ced939de2ca1f1bb2f923f10c0d9707ac7c3d35833804dfdc9",
+    "apps/web/src/components/ExceptionQueue.tsx": "071d2552a81a4ba8931451b3bd955deb6ebb35f8ecb737f2242558a67de93fcc",
+    "apps/web/src/components/IndividualCashflowStudio.test.tsx": "ba3b0787b6f1548940d93092e1d61fb12cb90f0e3ce9ee6b8d004dee7d4eaa53",
+    "apps/web/src/components/IndividualCashflowStudio.tsx": "e965c1c8183d02afa62fe9a905c816487cd608179c697fceeebfbb3ef0d77265",
+    "apps/web/src/components/InventoryControl.tsx": "55bd30dc453f6073c4bd9c97af609cc5b7807eaddbca843239ca0cfe8ee435dd",
+    "apps/web/src/components/LiveStudio.test.tsx": "d964dea05da444a0ef6dc783400d5ca5e17c686905337e5f78a1e129b0814779",
+    "apps/web/src/components/LiveStudio.tsx": "ee20d133d90d68d60ace114b6fed4e36e28a58ba4d4bb3d82246fef871276fdc",
+    "apps/web/src/components/ManufacturingCostStudio.test.tsx": "4fc44135b5abb30d1c5494672e9dd66e69363aa740da025a4ff9cbce1610304e",
+    "apps/web/src/components/ManufacturingCostStudio.tsx": "04e0a3f53e53c5310bc10540e7c995ba3faf12683e239073e279355a2876197c",
+    "apps/web/src/components/MappingStudio.test.tsx": "81c9ffb54542adbb609da50ba62dfa381047b1194a68549229666754f0988996",
+    "apps/web/src/components/MappingStudio.tsx": "6aec9aadfcd88eb3dc4648efb986dc28bb8f9e22d680c3002367dbf987c3640b",
+    "apps/web/src/components/Navigation.tsx": "588f31581849bc467b5c5c4958a42895208e9f894c082c8109789d61a397d555",
+    "apps/web/src/components/Overlays.tsx": "079e724dcf69ec47173605941bc296c07ea366a35382ff5cd6caffed5fa28359",
+    "apps/web/src/components/ProfessionalInvoicePaymentStudio.test.tsx": "fac5c878cf85343b621d86beff4fe19f343be0968bf5c22a35869887ea0b110b",
+    "apps/web/src/components/ProfessionalInvoicePaymentStudio.tsx": "3061556589d91b4736a2896b9fb128c064dc16606c27bba1d81cd4ccef5a166c",
+    "apps/web/src/components/ReceivablesCash.test.tsx": "0eccb746dde6de2ebef0d109ee8952c5870240dc0eed5c29cbf6aec66fc1580d",
+    "apps/web/src/components/ReceivablesCash.tsx": "a91b2edfa4e9678c0e5a96c20357493fbd424c046ec50224c809d392ad427399",
+    "apps/web/src/components/ReceivablesWorkspace.test.tsx": "d86ce28ba1bf9a1bd798ef4ad174fdc334875b5b1f848d7328bb9980c6b4aa02",
+    "apps/web/src/components/ReceivablesWorkspace.tsx": "b1ba80981f0418a46f44ab9074eb2b5c9f0386e541e94a8df8cdfde45940d745",
+    "apps/web/src/components/RetailSettlementStudio.test.tsx": "11da1dd91c654867efe92bb5798c76cb128d2139f3a480ba73f132f6f38f4c9d",
+    "apps/web/src/components/RetailSettlementStudio.tsx": "e161e38e9b294905ce03ce53fb61b742f84d9ce7aa48786b881d4bea818cbde2",
+    "apps/web/src/components/RuleStudio.test.tsx": "f0e9bb4c7b60233a5ab741d1a251934285dd0db3368f401b20d6d5c0ce0891e5",
+    "apps/web/src/components/RuleStudio.tsx": "5cba2077c4e9352d3b62d4731107c9baf7fcf11f83bf4d75f09f73518ef49526",
+    "apps/web/src/components/StateViews.tsx": "07d9ffed104f188757c767099a5cb8748ae80336a63c1620b5e2ab950ce64630",
+    "apps/web/src/components/Topbar.tsx": "84502a294c7b7db2e328b846c10fb986b280ff6259dac5cd9392d5babcfa952f",
+    "apps/web/src/data.admin.test.ts": "e7d6bf7ba4bbc3f86c2c0bb08a07dc4f2cf3b3c7a9b58279c739163bcf9c86b6",
+    "apps/web/src/data.live.test.ts": "385a68766b42cc93e7480980ae44ca91eee957a945ff5c1c00c716748fe74348",
+    "apps/web/src/data.ts": "feaf00241bc806475b45a4676bff3b2f6c17a536e1a16b1e5401abeb29316f89",
+    "apps/web/src/i18n.test.ts": "307e75feff6e9b7976511eac1b3691d352eb001f855d1dbb9e08ad0754ee061a",
+    "apps/web/src/i18n.ts": "43eb301dd965b63436b000698c59ac0232a8526a461a2b01065355c269f6d475",
+    "apps/web/src/locale-format.test.ts": "70a34d62cd6ff0f5df407b138fe310126214b36e701ab538059f851427b3f3f2",
+    "apps/web/src/locale-format.ts": "08f29fc01204ba50515db00f417a26af15b5c1a4c504f8effb5ec06884a4af9f",
+    "apps/web/src/main.tsx": "84f8381c05afcb814abb84e23b500fb9e1295fdecbbd276527945cbb6be55195",
+    "apps/web/src/mapping.test.ts": "3113292831f2a9f1fffe5918bc82e7814df324ba997d5a2fe8ca65cceb6e1e39",
+    "apps/web/src/mapping.ts": "9299e9211938eeb386499376d0cdb6d054074adea7429d5a0afa499680e1ea8c",
+    "apps/web/src/preferences.ts": "dce7fcb1dff9793a896a6881489774682a4b40b59174199cd0d45f9815209cc5",
+    "apps/web/src/receivables-cash-data.test.ts": "f07f6232cda8c4bc760a2ecb5aefe29e86c2db89867ec585e905485be9540baa",
+    "apps/web/src/receivables-data.test.ts": "6330ae66ef61fb5e18618de8fdc26047085865545e59e7c6b648aee6e8be1258",
+    "apps/web/src/receivables-data.ts": "a5c7adc20dec4703a24cd0731e48a7a9a3e321dca77d3d395f27444e64ee21c2",
+    "apps/web/src/receivables-i18n.ts": "cc13761a2a5691e418d27580f4f27e89c0f75269e9b0ba12a98a6545f7ee5b55",
+    "apps/web/src/ruleStudio.test.ts": "5f0a1d62f9b896e4b66ab5433c5daa7b3d17000a3765a43eab6e9b80a6d24570",
+    "apps/web/src/ruleStudio.ts": "c88c2e642ae9ae17f767b57a80d487ed5939ce09e13458e2a69bae8c8f195acd",
+    "apps/web/src/styles.css": "5308c6558070c0b509e0248116a313d7f418ee09a25d5b067b40e7bd6a32f801",
+    "apps/web/src/test/setup.ts": "07b0e08ab2fc003148d445db72319c4e087914aa354ab18426f5a6d5d69a56ca",
+    "apps/web/src/types.ts": "6d63e488657781c1cc1f09ef717fa85d7bea53228701972c57a027ee49979afa",
+    "apps/web/src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
+    "reconforge/api/dependencies.py": "c858c58795b4e3236dda242921363fb815394444ec35bfd4be8d591103fef15a",
+    "reconforge/api/routes/receivables.py": "c81119df3d9af2732c354320808e6a65824a9d91ad253143c65a9c3c74f60659",
+    "reconforge/api/server_receivables.py": "75225d09e65df8d61fa0d8fb3ec3e043a653d9cb35377cae7156d57c1af2d3bd",
+    "reconforge/application/receivables.py": "ac1b0c336a1abd861a90e52a74b59236e1e6dd9a79ecbd8cca20b7825689f030",
+    "reconforge/auth/policy.py": "5133553fd8ee00ef3d575a49e107072d3499d154339c744e808957dd8a44523d",
+    "reconforge/domain/receivables_receipt_replay.py": "e280e5dafcccd7552549b8199a620ccc365328d6cb80b8d20533fe9ebda23240",
+    "reconforge/infrastructure/postgres_receivables.py": "668c8772507387f0d032b5d8d27352761fd8c58d228bfc78bd9dab5d3593aff4",
+    "reconforge/infrastructure/sqlite_receivables.py": "4e2bcd944b955eed8805300eca2c9ed1b53c35b2bf517abda16f146e36077438",
+    "tests/receivables_cash_runtime.py": "d1b1691e43547edc9884260971ddff978607477bc4323eec82732d0f90ea1702",
+    "tests/serve_receivables_cash.py": "68e1dd185d8af756a47c7107147e7e1d0a575159985bbf014a56604b297bd80f"
+  },
+  "actual_browser": {
+    "passed": true,
+    "elapsed_seconds": 19.9,
+    "sources_unchanged": true,
+    "database_removed": true,
+    "receipt_minor": 1376,
+    "allocated_minor": 1376,
+    "receipt_version": 3,
+    "invoice_status": "Paid",
+    "invoice_version": 6,
+    "customer_exposure_minor": 0,
+    "exact_creation_retry": true,
+    "accessibility": {
+      "en": "no WCAG2A/AA/2.1AA axe violations",
+      "ar": "no WCAG2A/AA/2.1AA axe violations",
+      "mobile_width": 390
+    },
+    "progressive_disclosure": {
+      "new_invoice_collapsed_during_review": true,
+      "receipt_identity_hidden_until_requested": true,
+      "keyboard_enter_space_en_ar": true
+    },
+    "persistence": {
+      "receipts": [
+        {
+          "receipt_number": "CASH-UI-001",
+          "customer_id": "ARCUS-53bb5e3328ee1018",
+          "organization_id": "cash-org",
+          "legal_entity_id": "cash-entity-a",
+          "amount_minor": 1376,
+          "row_version": 3
+        }
+      ],
+      "allocations": [
+        {
+          "receipt_id": "ARRCT-6b7a5843172f9aea",
+          "invoice_id": "ARINV-eff85bff731bb02d",
+          "amount_minor": 1376
+        }
+      ],
+      "invoices": [
+        {
+          "invoice_number": "INV-CASH-A",
+          "status": "Paid",
+          "row_version": 6,
+          "total_minor": 1376
+        },
+        {
+          "invoice_number": "INV-CASH-B",
+          "status": "Approved",
+          "row_version": 3,
+          "total_minor": 1376
+        }
+      ],
+      "audit": [
+        {
+          "action": "ar_receipt_allocated",
+          "count": 2
+        },
+        {
+          "action": "ar_receipt_posted",
+          "count": 1
+        }
+      ],
+      "outbox": [
+        {
+          "event_type": "ar_receipt_allocated",
+          "count": 2
+        },
+        {
+          "event_type": "ar_receipt_posted",
+          "count": 1
+        }
+      ]
+    },
+    "browser_artifact": {
+      "path": "output/verification-2026-10-03/prod031-browser-final-checkpoint/browser.json",
+      "sha256": "c907051764941e2fbde95666a93e4b531292e6ff44800eabde775fefd2420e71"
+    },
+    "database_artifact": {
+      "path": "output/verification-2026-10-03/prod031-browser-final-checkpoint/persistence.json",
+      "sha256": "0f6d90a6b48f90e07c8c680103d556f328a01be97aaaa466ca5c8b93398c0c57"
+    }
+  },
+  "backend_gates": [
+    {
+      "tests": 95,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 95,
+      "seconds": 105.655,
+      "path": "output/verification-2026-10-03/prod031-backend.xml",
+      "sha256": "72ebb254ac8dcc2f58a630ece1b4cc5e9801871c21abac22fe7eadc630111d7f"
+    },
+    {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 2,
+      "seconds": 37.052,
+      "path": "output/verification-2026-10-03/prod031-cash-final.xml",
+      "sha256": "fe00fbac2fb7dff2082e48536fcf9f9a767df443b72b690698aad0ff192a44f4"
+    }
+  ],
+  "web_gates": {
+    "unit_tests": 159,
+    "files": 21,
+    "typecheck": "passed",
+    "production_build": "passed",
+    "general_browser_tests": 16
+  },
+  "retained_artifact_index": {
+    "path": "output/verification-2026-10-03/prod031-evidence-index.json",
+    "sha256": "2e7b65332338eb2f2d28e9d62cfc5feb245318012e856b1cb8c72f267544c08d"
+  },
+  "owned_source_manifest": {
+    "path": "output/verification-2026-10-03/prod031-owned-source-freeze.json",
+    "sha256": "eeeda196ac2d0a2588a3929908a6b84ac17418d441bb61f0a136b54230c0bc22"
+  },
+  "before_and_harness_attempts": [
+    {
+      "name": "original actual0097 receipt probe",
+      "status": "initial200 / GET404 / exact retry503; no cross-entity leak demonstrated",
+      "artifact": {
+        "path": "output/verification-2026-10-03/PROD031-RECEIPT-BEFORE-EXACT.json",
+        "sha256": "624d175009e2f025c4e1d0bbbc7679b2ce309bd33525a2da823f6144c4dd4006"
+      }
+    },
+    {
+      "name": "browser attempt1",
+      "status": "browser passed but harness/source binding unverified; retained as non-acceptance"
+    },
+    {
+      "name": "coordination-aborted run",
+      "status": "aborted before browser writes; no acceptance"
+    },
+    {
+      "name": "attempt3",
+      "status": "passed before UI polish; distinct earlier source"
+    },
+    {
+      "name": "polished Arabic selector attempt",
+      "status": "failed localized harness locator; financial persistence/source binding/cleanup retained",
+      "artifact": {
+        "path": "output/verification-2026-10-03/prod031-browser-polished/harness-status.json",
+        "sha256": "a5066230befa2d9de0ffaaa9b6fd2bd06571b1253739ccefcfd3830a1766e476"
+      }
+    }
+  ],
+  "limitations": [
+    "AR cash subledger only; no GL/inventory integration",
+    "historical precision not inferred; exact minor-unit display",
+    "MFA challenge UI not included; backend configured method remains enforced",
+    "legacy response-only mutation retry fails closed and objects remain available by GET",
+    "analogous AP JSONB replay needs separate runtime acceptance",
+    "synthetic single-node workload; no real banking, customer ROI or auditor acceptance"
+  ],
+  "report_digest": "a11289853064194cda38609e6e20a576981107846146148609f4fdf2ed6e8a09"
+}

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Sequence
-from decimal import Decimal
 from typing import Any
 
 from reconforge.auth.rbac import same_actor
@@ -20,6 +19,7 @@ from reconforge.platform.common import (
     require_permission,
 )
 from reconforge.platform.inventory_values import clean_text, code
+from reconforge.utils.money import parse_exact_amount
 
 OWNERSHIP_READ_PERMISSION = "finance_core.read"
 OWNERSHIP_MANAGE_PERMISSION = "finance_core.manage"
@@ -194,7 +194,7 @@ class SQLiteConsolidationOwnershipRepository:
                     interest_id=str(row["interest_id"]),
                     parent_entity_code=str(row["parent_entity_code"]),
                     subsidiary_entity_code=str(row["subsidiary_entity_code"]),
-                    direct_ownership_percentage=Decimal(str(row["direct_ownership_percentage"])),
+                    direct_ownership_percentage=parse_exact_amount(row["direct_ownership_percentage"]),
                     effective_from=str(row["effective_from"]),
                     effective_to=str(row["effective_to"]),
                     version=str(row["version"]),

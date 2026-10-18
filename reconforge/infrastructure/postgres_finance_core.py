@@ -6,16 +6,21 @@ import re
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import date
-from decimal import Decimal
 from typing import Any
 
 from reconforge.application.finance_core import MAX_LIST_LIMIT, FinanceCoreSummary
+from reconforge.domain.finance_policy import POLICY_COLUMNS, FinanceCurrencyPolicy, FinancePolicyError
 from reconforge.domain.models import utc_now_text
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
+from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_repository_scope import (
+    PostgresRepositoryScopeError,
+    ensure_repository_tenant_scope,
+)
 from reconforge.io.persisted import PersistedJsonError, encode_postgres_outbox_payload
-from reconforge.platform.common import PlatformError, platform_id
-from reconforge.utils.money import InvalidAmountError, Money
+from reconforge.platform.common import PlatformError, current_server_principal, platform_id
+from reconforge.utils.money import CurrencyRegistryContext, InvalidAmountError, Money, minor_units_to_decimal
 
 _CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9._-]{0,63}$")
 ACCOUNT_TYPES = ("Asset", "Liability", "Equity", "Income", "Expense", "Off Balance")
@@ -91,9 +96,11 @@ def _iso_date(value: object, label: str) -> date:
     return parsed
 
 
-def _amount_to_minor(value: object, currency_code: str, label: str) -> int:
+def _amount_to_minor(
+    value: object, currency_code: str, label: str, registry_context: CurrencyRegistryContext | None = None
+) -> int:
     try:
-        money = Money.from_exact(value, currency=currency_code, strict_precision=True)
+        money = Money.from_exact(value, currency=currency_code, strict_precision=True, registry_context=registry_context)
     except InvalidAmountError as exc:
         message = str(exc)
         if "binary floating-point" in message:
@@ -110,7 +117,7 @@ def _amount_to_minor(value: object, currency_code: str, label: str) -> int:
 
 
 def _minor_to_text(value: int, minor_units: int) -> str:
-    amount = Decimal(value).scaleb(-minor_units)
+    amount = minor_units_to_decimal(value, precision=minor_units)
     return f"{amount:.{minor_units}f}"
 
 
@@ -212,36 +219,45 @@ class PostgresFinanceCoreRepository:
         "journal_code",
         "chart_code",
         "period_name",
+        *POLICY_COLUMNS,
     )
 
     def __init__(self, connection: Any, tenant_id: str) -> None:
         self.connection = connection
         self.tenant_id = validate_tenant_id(tenant_id)
+        self._policies = FinancePolicyStore(connection, tenant_id=self.tenant_id)
 
     @contextmanager
     def _transaction(self) -> Iterator[None]:
         try:
             with self.connection.transaction():
-                set_local_tenant_scope(self.connection, self.tenant_id)
+                ensure_repository_tenant_scope(self.connection, self.tenant_id)
                 yield
+        except PostgresRepositoryScopeError as exc:
+            raise PlatformError(str(exc)) from exc
         except (PlatformError, PostgresFinanceCoreError):
             raise
+        except FinancePolicyError as exc:
+            raise PlatformError(str(exc)) from exc
         except Exception as exc:
             raise PostgresFinanceCoreError("PostgreSQL Finance Core operation failed.") from exc
 
     def _workspace_id(self, workspace: str, *, required: bool = True) -> str | None:
         workspace_value = _text(workspace, "Workspace name")
-        row = self.connection.execute(
+        rows = self.connection.execute(
             """SELECT id FROM reconforge.domain_workspaces
                WHERE tenant_id=%s AND (id=%s OR name=%s)
-               ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END LIMIT 1""",
+               ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END,id LIMIT 2""",
             (self.tenant_id, workspace_value, workspace_value, workspace_value),
-        ).fetchone()
-        if row is None:
+        ).fetchall()
+        if not rows:
             if required:
                 raise PostgresFinanceCoreError("Finance Core workspace was not found for this tenant.")
             return None
-        return str(row["id"] if isinstance(row, Mapping) else row[0])
+        identifier = str(rows[0]["id"] if isinstance(rows[0], Mapping) else rows[0][0])
+        if len(rows) > 1 and identifier != workspace_value:
+            raise PostgresFinanceCoreError("Finance Core workspace name is ambiguous; use its explicit ID.")
+        return identifier
 
     def _required_workspace_id(self, workspace: str) -> str:
         workspace_id = self._workspace_id(workspace)
@@ -267,6 +283,22 @@ class PostgresFinanceCoreRepository:
             actor_label=actor_label, object_type=object_type, object_id=object_id, action=action, metadata=metadata
         )
 
+    def _posting_provenance_available(self) -> bool:
+        # Historical migration fixtures remain readable without inventing review evidence.
+        return self.connection.execute(
+            "SELECT 1 FROM pg_attribute WHERE attrelid='reconforge.finance_entries'::regclass "
+            "AND attname='preparer_actor_id' AND NOT attisdropped"
+        ).fetchone() is not None
+
+    @staticmethod
+    def _authenticated_actor(actor_label: str) -> str | None:
+        principal = current_server_principal()
+        if principal is None or principal.principal_type != "user":
+            return None
+        if actor_label not in {principal.user.id, principal.user.username}:
+            raise PlatformError("Actor label does not match the authenticated human.")
+        return principal.user.id
+
     def upsert_chart(
         self,
         *,
@@ -285,8 +317,8 @@ class PostgresFinanceCoreRepository:
             if (
                 normalized_org
                 and self.connection.execute(
-                    "SELECT 1 FROM reconforge.organizations WHERE tenant_id=%s AND organization_code=%s AND active=TRUE",
-                    (self.tenant_id, normalized_org),
+                    "SELECT 1 FROM reconforge.organizations WHERE tenant_id=%s AND application_workspace_id=%s AND organization_code=%s AND active=TRUE",
+                    (self.tenant_id, workspace_id, normalized_org),
                 ).fetchone()
                 is None
             ):
@@ -543,8 +575,8 @@ class PostgresFinanceCoreRepository:
             if (
                 org_code
                 and self.connection.execute(
-                    "SELECT 1 FROM reconforge.organizations WHERE tenant_id=%s AND organization_code=%s",
-                    (self.tenant_id, org_code),
+                    "SELECT 1 FROM reconforge.organizations WHERE tenant_id=%s AND application_workspace_id=%s AND organization_code=%s",
+                    (self.tenant_id, workspace_id, org_code),
                 ).fetchone()
                 is None
             ):
@@ -734,8 +766,8 @@ class PostgresFinanceCoreRepository:
         with self._transaction():
             workspace_id = self._required_workspace_id(workspace)
             organization = self.connection.execute(
-                "SELECT active FROM reconforge.organizations WHERE tenant_id=%s AND organization_code=%s",
-                (self.tenant_id, org_code),
+                "SELECT active FROM reconforge.organizations WHERE tenant_id=%s AND application_workspace_id=%s AND organization_code=%s",
+                (self.tenant_id, workspace_id, org_code),
             ).fetchone()
             if organization is None or not bool(
                 organization["active"] if isinstance(organization, Mapping) else organization[0]
@@ -890,8 +922,8 @@ class PostgresFinanceCoreRepository:
         with self._transaction():
             workspace_id = self._required_workspace_id(workspace)
             organization = self.connection.execute(
-                "SELECT id,active FROM reconforge.organizations WHERE tenant_id=%s AND organization_code=%s",
-                (self.tenant_id, org_code),
+                "SELECT id,active FROM reconforge.organizations WHERE tenant_id=%s AND application_workspace_id=%s AND organization_code=%s",
+                (self.tenant_id, workspace_id, org_code),
             ).fetchone()
             if organization is None or not bool(
                 organization["active"] if isinstance(organization, Mapping) else organization[1]
@@ -932,11 +964,24 @@ class PostgresFinanceCoreRepository:
             if entity_currency != currency_code:
                 raise PlatformError("Journal and legal-entity currencies must match in this finance-core version.")
             currency = self.connection.execute(
-                "SELECT minor_units,active FROM reconforge.currencies WHERE tenant_id=%s AND code=%s",
+                "SELECT minor_units,active FROM reconforge.currencies WHERE tenant_id=%s AND code=%s FOR SHARE",
                 (self.tenant_id, currency_code),
             ).fetchone()
             if currency is None or not bool(currency["active"] if isinstance(currency, Mapping) else currency[1]):
                 raise PlatformError("Ledger-control entries require an active currency reference.")
+            entry_id = platform_id("GLE", workspace_id, number)
+            policy_row = self.connection.execute(
+                """SELECT currency_code,currency_precision,currency_rounding_policy,currency_registry_version,
+                          currency_registry_digest FROM reconforge.finance_entries
+                   WHERE tenant_id=%s AND workspace_id=%s AND entry_number=%s FOR UPDATE""",
+                (self.tenant_id, workspace_id, number),
+            ).fetchone()
+            existing_policy = None if policy_row is None else _row(policy_row, ("currency_code", *POLICY_COLUMNS))
+            policy, operation_context = self._policies.capture(
+                workspace_id=workspace_id, currency_code=currency_code,
+                minor_units=int(currency["minor_units"] if isinstance(currency, Mapping) else currency[0]),
+                actor_label=actor_label or "local-cli", existing=existing_policy,
+            )
             required_rows = self.connection.execute(
                 """SELECT id,dimension_code FROM reconforge.finance_dimensions
                    WHERE tenant_id=%s AND workspace_id=%s AND active=TRUE AND required_on_entries=TRUE
@@ -951,24 +996,36 @@ class PostgresFinanceCoreRepository:
             }
             prepared_lines: list[dict[str, Any]] = []
             total_debit = total_credit = 0
+            account_codes = []
+            for line in lines:
+                if not isinstance(line, Mapping):
+                    raise PlatformError("Each ledger line must be an object.")
+                account_codes.append(_code(line.get("account_code"), "Account code"))
+            accounts = {
+                str(row["account_code"]): row
+                for row in (
+                    _row(value, ("account_code", "id", "active", "allow_posting", "allow_manual_posting"))
+                    for value in self.connection.execute(
+                        """SELECT account_code,id,active,allow_posting,allow_manual_posting
+                           FROM reconforge.finance_accounts
+                           WHERE tenant_id=%s AND chart_id=%s AND account_code=ANY(%s)""",
+                        (self.tenant_id, journal_data["chart_id"], sorted(set(account_codes))),
+                    ).fetchall()
+                )
+            }
             for line_number, line in enumerate(lines, start=1):
                 if not isinstance(line, Mapping):
                     raise PlatformError("Each ledger line must be an object.")
                 account_code = _code(line.get("account_code"), "Account code")
-                account = self.connection.execute(
-                    """SELECT id,active,allow_posting,allow_manual_posting FROM reconforge.finance_accounts
-                       WHERE tenant_id=%s AND chart_id=%s AND account_code=%s""",
-                    (self.tenant_id, journal_data["chart_id"], account_code),
-                ).fetchone()
-                if account is None:
+                account_data = accounts.get(account_code)
+                if account_data is None:
                     raise PlatformError("Financial account was not found in the selected chart.")
-                account_data = _row(account, ("id", "active", "allow_posting", "allow_manual_posting"))
                 if not bool(account_data["active"]) or not bool(account_data["allow_posting"]):
                     raise PlatformError("Ledger lines require an active posting-enabled account.")
                 if selected_source == "Manual" and not bool(account_data["allow_manual_posting"]):
                     raise PlatformError("Manual entries cannot use an account that blocks manual posting.")
-                debit_minor = _amount_to_minor(line.get("debit", "0"), currency_code, "Line debit")
-                credit_minor = _amount_to_minor(line.get("credit", "0"), currency_code, "Line credit")
+                debit_minor = _amount_to_minor(line.get("debit", "0"), currency_code, "Line debit", operation_context)
+                credit_minor = _amount_to_minor(line.get("credit", "0"), currency_code, "Line credit", operation_context)
                 if (debit_minor > 0) == (credit_minor > 0):
                     raise PlatformError("Each ledger line must contain exactly one non-zero debit or credit amount.")
                 dimensions = self._prepare_dimensions(
@@ -1015,24 +1072,37 @@ class PostgresFinanceCoreRepository:
             created_at = (
                 str(existing["created_at"] if isinstance(existing, Mapping) else existing[3]) if existing else now
             )
+            provenance = self._posting_provenance_available()
+            authenticated_actor = self._authenticated_actor(actor_label) if provenance else None
+            if existing is not None and provenance:
+                stored = self.connection.execute(
+                    "SELECT preparer_actor_id FROM reconforge.finance_entries WHERE tenant_id=%s AND id=%s",
+                    (self.tenant_id, entry_id),
+                ).fetchone()
+                preparer = stored["preparer_actor_id"] if isinstance(stored, Mapping) else stored[0]
+                if preparer is not None and preparer != authenticated_actor:
+                    raise PlatformError("Only the captured preparer may replace an authenticated ledger Draft.")
             if existing is not None:
                 self.connection.execute(
                     "DELETE FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s",
                     (self.tenant_id, entry_id),
                 )
-            self.connection.execute(
-                """INSERT INTO reconforge.finance_entries
+            insert_sql = """INSERT INTO reconforge.finance_entries
                    (tenant_id,id,workspace_id,journal_id,organization_code,entity_code,period_id,entry_number,
                     posting_date,description,external_reference,source_type,status,currency_code,total_debit_minor,
-                    total_credit_minor,created_by,created_at,updated_at)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Draft',%s,%s,%s,%s,%s,%s)
+                    total_credit_minor,created_by,created_at,updated_at,
+                    currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Draft',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                    ON CONFLICT (tenant_id,workspace_id,entry_number) DO UPDATE SET
                     journal_id=excluded.journal_id,organization_code=excluded.organization_code,
                     entity_code=excluded.entity_code,period_id=excluded.period_id,posting_date=excluded.posting_date,
                     description=excluded.description,external_reference=excluded.external_reference,
                     source_type=excluded.source_type,total_debit_minor=excluded.total_debit_minor,
-                    total_credit_minor=excluded.total_credit_minor,updated_at=excluded.updated_at""",
-                (
+                    total_credit_minor=excluded.total_credit_minor,updated_at=excluded.updated_at"""
+            if provenance:
+                insert_sql = insert_sql.replace("currency_registry_digest)", "currency_registry_digest,preparer_actor_id)", 1)
+                insert_sql = insert_sql.replace("%s)\n                   ON CONFLICT", "%s,%s)\n                   ON CONFLICT", 1)
+            insert_parameters: tuple[object, ...] = (
                     self.tenant_id,
                     entry_id,
                     workspace_id,
@@ -1051,15 +1121,16 @@ class PostgresFinanceCoreRepository:
                     created_by,
                     created_at,
                     now,
-                ),
-            )
+                    *policy.values(),
+                )
+            if provenance:
+                insert_parameters += (authenticated_actor,)
+            self.connection.execute(insert_sql, insert_parameters)
+            line_rows: list[tuple[object, ...]] = []
+            dimension_rows: list[tuple[object, ...]] = []
             for prepared in prepared_lines:
                 line_id = platform_id("GLL", entry_id, prepared["line_number"])
-                self.connection.execute(
-                    """INSERT INTO reconforge.finance_entry_lines
-                       (tenant_id,id,entry_id,line_number,account_id,description,debit_minor,credit_minor,currency_code)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                    (
+                line_rows.append((
                         self.tenant_id,
                         line_id,
                         entry_id,
@@ -1069,14 +1140,18 @@ class PostgresFinanceCoreRepository:
                         prepared["debit_minor"],
                         prepared["credit_minor"],
                         currency_code,
-                    ),
-                )
+                    ))
                 for dimension_id, value_id in prepared["dimensions"].items():
-                    self.connection.execute(
-                        """INSERT INTO reconforge.finance_entry_line_dimensions
-                           (tenant_id,entry_line_id,dimension_id,dimension_value_id) VALUES (%s,%s,%s,%s)""",
-                        (self.tenant_id, line_id, dimension_id, value_id),
-                    )
+                    dimension_rows.append((self.tenant_id, line_id, dimension_id, value_id))
+            self._insert_entry_rows(
+                "INSERT INTO reconforge.finance_entry_lines "
+                "(tenant_id,id,entry_id,line_number,account_id,description,debit_minor,credit_minor,currency_code)",
+                line_rows, width=9,
+            )
+            self._insert_entry_rows(
+                "INSERT INTO reconforge.finance_entry_line_dimensions "
+                "(tenant_id,entry_line_id,dimension_id,dimension_value_id)", dimension_rows, width=4,
+            )
             self._validate_entry_integrity(entry_id)
             self._event(
                 actor_label=actor_label,
@@ -1088,26 +1163,61 @@ class PostgresFinanceCoreRepository:
                     "line_count": len(prepared_lines),
                     "currency_code": currency_code,
                     "total_minor": total_debit,
+                    **policy.metadata(),
                 },
             )
             return self._get_entry_in_transaction(entry_id)
+
+    def _insert_entry_rows(self, statement: str, rows: Sequence[tuple[object, ...]], *, width: int) -> None:
+        """Bound wire batches; PostgreSQL still evaluates every RLS policy and row trigger."""
+        for offset in range(0, len(rows), 128):
+            batch = rows[offset:offset + 128]
+            placeholders = ",".join("(" + ",".join(["%s"] * width) + ")" for _ in batch)
+            self.connection.execute(statement + " VALUES " + placeholders,
+                tuple(value for row in batch for value in row))
 
     def validate_entry(self, entry_id: str, *, reason: str, actor_label: str = "local-cli") -> dict[str, Any]:
         identifier = _text(entry_id, "Ledger-entry identifier")
         validation_reason = _text(reason, "Validation reason", maximum=500)
         validator = _text(actor_label or "local-cli", "Actor label")
         with self._transaction():
+            initial = self._entry_row(identifier)
+            self.connection.execute(
+                "SELECT status FROM reconforge.fiscal_periods WHERE tenant_id=%s AND id=%s FOR SHARE",
+                (self.tenant_id, initial["period_id"]),
+            ).fetchone()
             entry = self._entry_row(identifier, lock=True)
+            if entry["period_id"] != initial["period_id"]:
+                raise PlatformError("Ledger-control period changed concurrently; reload and retry.")
             if entry["status"] != "Draft":
                 raise PlatformError("Only Draft ledger-control entries can be validated.")
             if str(entry["created_by"]) == validator:
                 raise PlatformError("Segregation of duties prevents validating your own ledger-control entry.")
             self._validate_entry_integrity(identifier)
             now = utc_now_text()
+            update_sql = """UPDATE reconforge.finance_entries SET status='Validated',validated_by=%s,validated_at=%s,
+                   validation_reason=%s,updated_at=%s WHERE tenant_id=%s AND id=%s AND status='Draft'"""
+            extra_parameters: tuple[object, ...] = ()
+            if self._posting_provenance_available():
+                from reconforge.domain.finance_posting import VALIDATION_CONTRACT_VERSION, validation_digest
+                from reconforge.infrastructure.postgres_finance_posting import posting_entry, posting_snapshot
+
+                provenance_entry = posting_entry(self.connection, self.tenant_id, identifier)
+                authenticated = self._authenticated_actor(actor_label)
+                if authenticated is not None and provenance_entry["preparer_actor_id"] is not None:
+                    if authenticated == provenance_entry["preparer_actor_id"]:
+                        raise PlatformError("Segregation of duties prevents validating your own ledger-control entry.")
+                    isolation = self.connection.execute("SHOW transaction_isolation").fetchone()
+                    if (isolation["transaction_isolation"] if isinstance(isolation, Mapping) else isolation[0]) != "read committed":
+                        raise PlatformError("Independent posting review requires READ COMMITTED.")
+                    seal = validation_digest(posting_snapshot(self.connection, self.tenant_id, provenance_entry))
+                    update_sql = """UPDATE reconforge.finance_entries SET status='Validated',validated_by=%s,validated_at=%s,
+                       validation_reason=%s,updated_at=%s,validator_actor_id=%s,validation_digest=%s,validation_contract_version=%s
+                       WHERE tenant_id=%s AND id=%s AND status='Draft'"""
+                    extra_parameters = (authenticated, seal, VALIDATION_CONTRACT_VERSION)
             cursor = self.connection.execute(
-                """UPDATE reconforge.finance_entries SET status='Validated',validated_by=%s,validated_at=%s,
-                   validation_reason=%s,updated_at=%s WHERE tenant_id=%s AND id=%s AND status='Draft'""",
-                (validator, now, validation_reason, now, self.tenant_id, identifier),
+                update_sql,
+                (validator, now, validation_reason, now, *extra_parameters, self.tenant_id, identifier),
             )
             if cursor.rowcount != 1:
                 raise PlatformError("Ledger-control entry changed concurrently; reload and retry.")
@@ -1126,6 +1236,12 @@ class PostgresFinanceCoreRepository:
         actor = _text(actor_label or "local-cli", "Actor label")
         with self._transaction():
             entry = self._entry_row(identifier, lock=True)
+            self._policies.entry(entry)
+            if self._posting_provenance_available() and self.connection.execute(
+                "SELECT 1 FROM reconforge.finance_posting_effects WHERE tenant_id=%s AND entry_id=%s",
+                (self.tenant_id, identifier),
+            ).fetchone():
+                raise PlatformError("Operationally posted entries are immutable; prepare a linked full reversal.")
             if entry["status"] != "Validated":
                 raise PlatformError("Only Validated ledger-control entries can be voided.")
             now = utc_now_text()
@@ -1173,7 +1289,9 @@ class PostgresFinanceCoreRepository:
                 entries.external_reference,entries.source_type,entries.status,entries.currency_code,
                 entries.total_debit_minor,entries.total_credit_minor,entries.created_by,entries.validated_by,
                 entries.voided_by,entries.validation_reason,entries.void_reason,entries.created_at,entries.updated_at,
-                entries.validated_at,entries.voided_at,journals.journal_code,charts.chart_code,periods.name AS period_name
+                entries.validated_at,entries.voided_at,journals.journal_code,charts.chart_code,periods.name AS period_name,
+                entries.currency_precision,entries.currency_rounding_policy,
+                entries.currency_registry_version,entries.currency_registry_digest
                 FROM reconforge.finance_entries entries JOIN reconforge.finance_journals journals
                  ON journals.tenant_id=entries.tenant_id AND journals.id=entries.journal_id
                 JOIN reconforge.finance_charts charts ON charts.tenant_id=journals.tenant_id AND charts.id=journals.chart_id
@@ -1221,8 +1339,8 @@ class PostgresFinanceCoreRepository:
             if period is None:
                 raise PlatformError("Fiscal-period reference was not found.")
             organization = self.connection.execute(
-                "SELECT id FROM reconforge.organizations WHERE tenant_id=%s AND organization_code=%s",
-                (self.tenant_id, org_code),
+                "SELECT id FROM reconforge.organizations WHERE tenant_id=%s AND application_workspace_id=%s AND organization_code=%s",
+                (self.tenant_id, workspace_id, org_code),
             ).fetchone()
             if organization is None:
                 raise PlatformError("Organization reference was not found.")
@@ -1243,22 +1361,37 @@ class PostgresFinanceCoreRepository:
             minor_units = int(currency["minor_units"] if isinstance(currency, Mapping) else currency[0])
             rows = self.connection.execute(
                 """SELECT accounts.account_code,accounts.name,accounts.account_type,accounts.normal_balance,
-                    SUM(lines.debit_minor),SUM(lines.credit_minor) FROM reconforge.finance_entry_lines lines
+                    SUM(lines.debit_minor),SUM(lines.credit_minor),entries.currency_code,
+                    entries.currency_precision,entries.currency_rounding_policy,
+                    entries.currency_registry_version,entries.currency_registry_digest
+                    FROM reconforge.finance_entry_lines lines
                     JOIN reconforge.finance_entries entries ON entries.tenant_id=lines.tenant_id AND entries.id=lines.entry_id
                     JOIN reconforge.finance_accounts accounts ON accounts.tenant_id=lines.tenant_id AND accounts.id=lines.account_id
                     WHERE entries.tenant_id=%s AND entries.workspace_id=%s AND entries.organization_code=%s
                       AND entries.entity_code=%s AND entries.period_id=%s AND entries.status='Validated'
-                    GROUP BY accounts.id,accounts.account_code,accounts.name,accounts.account_type,accounts.normal_balance
+                    GROUP BY accounts.id,accounts.account_code,accounts.name,accounts.account_type,accounts.normal_balance,
+                    entries.currency_code,entries.currency_precision,entries.currency_rounding_policy,
+                    entries.currency_registry_version,entries.currency_registry_digest
                     ORDER BY accounts.account_code""",
                 (self.tenant_id, workspace_id, org_code, entity_code_value, period_identifier),
             ).fetchall()
             records: list[dict[str, object]] = []
             total_debit = total_credit = 0
+            selected_policy: FinanceCurrencyPolicy | None = None
             for row in rows:
                 data = _row(
                     row,
-                    ("account_code", "account_name", "account_type", "normal_balance", "debit_minor", "credit_minor"),
+                    ("account_code", "account_name", "account_type", "normal_balance", "debit_minor", "credit_minor", "currency_code", *POLICY_COLUMNS),
                 )
+                policy, _ = self._policies.entry(data)
+                if policy.currency_code != currency_code:
+                    raise PlatformError("finance_currency_policy_mismatch: entry and entity currencies differ.")
+                if selected_policy is not None:
+                    selected_policy.require_compatible(policy)
+                selected_policy = policy
+                minor_units = policy.precision
+                for key in ("currency_code", *POLICY_COLUMNS):
+                    data.pop(key)
                 debit_minor, credit_minor = int(data["debit_minor"] or 0), int(data["credit_minor"] or 0)
                 total_debit += debit_minor
                 total_credit += credit_minor
@@ -1389,14 +1522,16 @@ class PostgresFinanceCoreRepository:
                 entries.external_reference,entries.source_type,entries.status,entries.currency_code,
                 entries.total_debit_minor,entries.total_credit_minor,entries.created_by,entries.validated_by,
                 entries.voided_by,entries.validation_reason,entries.void_reason,entries.created_at,entries.updated_at,
-                entries.validated_at,entries.voided_at,journals.journal_code,charts.chart_code,periods.name AS period_name
+                entries.validated_at,entries.voided_at,journals.journal_code,charts.chart_code,periods.name AS period_name,
+                entries.currency_precision,entries.currency_rounding_policy,
+                entries.currency_registry_version,entries.currency_registry_digest
                 FROM reconforge.finance_entries entries JOIN reconforge.finance_journals journals
                  ON journals.tenant_id=entries.tenant_id AND journals.id=entries.journal_id
                 JOIN reconforge.finance_charts charts ON charts.tenant_id=journals.tenant_id AND charts.id=journals.chart_id
                 JOIN reconforge.fiscal_periods periods ON periods.tenant_id=entries.tenant_id AND periods.id=entries.period_id
                 WHERE entries.tenant_id=%s AND entries.id=%s"""
         if lock:
-            query += " FOR UPDATE"  # nosec B608 -- fixed allowlisted clause, never user controlled
+            query += " FOR UPDATE OF entries"  # Lock the entry being mutated, not its reference metadata.
         row = self.connection.execute(
             query,
             (self.tenant_id, entry_id),
@@ -1407,13 +1542,8 @@ class PostgresFinanceCoreRepository:
 
     def _get_entry_in_transaction(self, entry_id: str) -> dict[str, Any]:
         entry = self._entry_row(entry_id)
-        currency = self.connection.execute(
-            "SELECT minor_units FROM reconforge.currencies WHERE tenant_id=%s AND code=%s",
-            (self.tenant_id, entry["currency_code"]),
-        ).fetchone()
-        if currency is None:
-            raise PlatformError("Currency reference was not found.")
-        minor_units = int(currency["minor_units"] if isinstance(currency, Mapping) else currency[0])
+        policy, _ = self._policies.entry(entry)
+        minor_units = policy.precision
         line_rows = self.connection.execute(
             """SELECT lines.id,lines.line_number,lines.account_id,lines.description,lines.debit_minor,
                       lines.credit_minor,lines.currency_code,accounts.account_code,accounts.name AS account_name
@@ -1428,10 +1558,9 @@ class PostgresFinanceCoreRepository:
                 ON dimensions.tenant_id=links.tenant_id AND dimensions.id=links.dimension_id
                JOIN reconforge.finance_dimension_values values_ ON values_.tenant_id=links.tenant_id
                 AND values_.id=links.dimension_value_id
-               JOIN reconforge.finance_entry_lines lines ON lines.tenant_id=links.tenant_id
-                AND lines.id=links.entry_line_id WHERE links.tenant_id=%s AND lines.entry_id=%s
+               WHERE links.tenant_id=%s AND links.entry_line_id=ANY(%s)
                ORDER BY links.entry_line_id,dimensions.dimension_code""",
-            (self.tenant_id, entry_id),
+            (self.tenant_id, [row["id"] if isinstance(row, Mapping) else row[0] for row in line_rows]),
         ).fetchall()
         dimensions_by_line: dict[str, dict[str, str]] = {}
         for row in dimension_rows:
@@ -1480,6 +1609,7 @@ class PostgresFinanceCoreRepository:
 
     def _validate_entry_integrity(self, entry_id: str) -> None:
         entry = self._entry_row(entry_id)
+        self._policies.entry(entry)
         period = self.connection.execute(
             "SELECT start_date,end_date,status FROM reconforge.fiscal_periods WHERE tenant_id=%s AND id=%s",
             (self.tenant_id, entry["period_id"]),
@@ -1497,13 +1627,15 @@ class PostgresFinanceCoreRepository:
         ):
             raise PlatformError("Posting date must remain inside the selected fiscal period.")
         scope = self.connection.execute(
-            """SELECT organizations.active,entities.active,journals.active,charts.active,currencies.active,
-                      entities.currency_code,journals.currency_code,journals.organization_code
+            """SELECT organizations.active AS organization_active,entities.active AS entity_active,
+                      journals.active AS journal_active,charts.active AS chart_active,currencies.active AS currency_active,
+                      entities.currency_code AS entity_currency,journals.currency_code AS journal_currency,
+                      journals.organization_code AS journal_organization_code
                FROM reconforge.finance_entries entries
                JOIN reconforge.finance_journals journals ON journals.tenant_id=entries.tenant_id AND journals.id=entries.journal_id
                JOIN reconforge.finance_charts charts ON charts.tenant_id=journals.tenant_id AND charts.id=journals.chart_id
                JOIN reconforge.organizations organizations ON organizations.tenant_id=entries.tenant_id
-                AND organizations.organization_code=entries.organization_code
+                AND organizations.application_workspace_id=entries.workspace_id AND organizations.organization_code=entries.organization_code
                JOIN reconforge.legal_entities entities ON entities.tenant_id=entries.tenant_id
                 AND entities.organization_id=organizations.id AND entities.entity_code=entries.entity_code
                JOIN reconforge.currencies currencies ON currencies.tenant_id=entries.tenant_id AND currencies.code=entries.currency_code
@@ -1542,13 +1674,14 @@ class PostgresFinanceCoreRepository:
         ):
             raise PlatformError("Ledger-control entry contains an inactive or inconsistent finance reference.")
         totals = self.connection.execute(
-            """SELECT COUNT(*),COALESCE(SUM(debit_minor),0),COALESCE(SUM(credit_minor),0)
+            """SELECT COUNT(*) AS line_count,COALESCE(SUM(debit_minor),0) AS debit_minor,
+                      COALESCE(SUM(credit_minor),0) AS credit_minor,ARRAY_AGG(id ORDER BY line_number) AS line_ids
                FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s""",
             (self.tenant_id, entry_id),
         ).fetchone()
         if totals is None:
             raise PostgresFinanceCoreError("Unable to verify PostgreSQL Finance Core entry totals.")
-        total_data = _row(totals, ("line_count", "debit_minor", "credit_minor"))
+        total_data = _row(totals, ("line_count", "debit_minor", "credit_minor", "line_ids"))
         if (
             int(total_data["line_count"]) < 2
             or int(total_data["debit_minor"]) <= 0
@@ -1571,25 +1704,37 @@ class PostgresFinanceCoreRepository:
             """SELECT 1 FROM reconforge.finance_entry_line_dimensions links
                JOIN reconforge.finance_dimensions dimensions ON dimensions.tenant_id=links.tenant_id AND dimensions.id=links.dimension_id
                JOIN reconforge.finance_dimension_values values_ ON values_.tenant_id=links.tenant_id AND values_.id=links.dimension_value_id
-               JOIN reconforge.finance_entry_lines lines ON lines.tenant_id=links.tenant_id AND lines.id=links.entry_line_id
-               WHERE links.tenant_id=%s AND lines.entry_id=%s AND
+               WHERE links.tenant_id=%s AND links.entry_line_id=ANY(%s) AND
                 (NOT dimensions.active OR NOT values_.active OR dimensions.workspace_id<>%s
                  OR (dimensions.organization_code<>'' AND dimensions.organization_code<>%s)
                  OR values_.dimension_id<>dimensions.id) LIMIT 1""",
-            (self.tenant_id, entry_id, entry["workspace_id"], entry["organization_code"]),
+            (self.tenant_id, total_data["line_ids"], entry["workspace_id"], entry["organization_code"]),
         ).fetchone()
-        missing_dimension = self.connection.execute(
-            """SELECT 1 FROM reconforge.finance_entry_lines lines CROSS JOIN reconforge.finance_dimensions dimensions
-               WHERE lines.tenant_id=%s AND lines.entry_id=%s AND dimensions.tenant_id=lines.tenant_id
-                AND dimensions.workspace_id=%s AND dimensions.active=TRUE AND dimensions.required_on_entries=TRUE
-                AND (dimensions.organization_code='' OR dimensions.organization_code=%s) AND NOT EXISTS (
-                 SELECT 1 FROM reconforge.finance_entry_line_dimensions links WHERE links.tenant_id=lines.tenant_id
-                  AND links.entry_line_id=lines.id AND links.dimension_id=dimensions.id) LIMIT 1""",
-            (self.tenant_id, entry_id, entry["workspace_id"], entry["organization_code"]),
-        ).fetchone()
+        # Authorize current required dimensions before planning link coverage.
+        # The usual zero-required case avoids duplicating the complete line RLS
+        # hierarchy in a correlated anti-join. Nonempty coverage is exact over
+        # the already scoped entry lines; every query still enforces FORCE RLS.
+        required = self.connection.execute(
+            """SELECT id FROM reconforge.finance_dimensions WHERE tenant_id=%s
+               AND workspace_id=%s AND active=TRUE AND required_on_entries=TRUE
+               AND (organization_code='' OR organization_code=%s) ORDER BY id""",
+            (self.tenant_id, entry["workspace_id"], entry["organization_code"]),
+        ).fetchall()
+        missing_dimension = False
+        if required:
+            required_ids = [row["id"] if isinstance(row, Mapping) else row[0] for row in required]
+            coverage = self.connection.execute(
+                """SELECT dimension_id,COUNT(DISTINCT entry_line_id) AS line_count FROM reconforge.finance_entry_line_dimensions
+                   WHERE tenant_id=%s AND entry_line_id=ANY(%s) AND dimension_id=ANY(%s)
+                   GROUP BY dimension_id""",
+                (self.tenant_id, total_data["line_ids"], required_ids),
+            ).fetchall()
+            coverage_rows = [_row(row, ("dimension_id", "line_count")) for row in coverage]
+            counts = {row["dimension_id"]: int(row["line_count"]) for row in coverage_rows}
+            missing_dimension = any(counts.get(identifier, 0) != int(total_data["line_count"]) for identifier in required_ids)
         if invalid_dimension is not None:
             raise PlatformError("Ledger-control entry contains an inactive or cross-scope accounting dimension.")
-        if missing_dimension is not None:
+        if missing_dimension:
             raise PlatformError("Ledger-control entry is missing a required accounting dimension.")
 
 
@@ -1688,6 +1833,17 @@ END $reconforge$;
 
 
 def install_postgres_finance_core_schema(connection: Any) -> None:
-    """Install additive, tenant-scoped Finance Core tables."""
+    """Install current Finance tables with canonical scope prerequisites and guards."""
 
     connection.execute(POSTGRES_FINANCE_CORE_SCHEMA_SQL)
+    from reconforge.infrastructure.finance_policy_schema import POSTGRES_FINANCE_POLICY_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_finance_posting_schema import install_postgres_finance_posting_schema
+    from reconforge.infrastructure.postgres_finance_scope import install_postgres_finance_scope_schema
+    from reconforge.infrastructure.postgres_master_data_application import (
+        install_postgres_master_data_application_schema,
+    )
+
+    install_postgres_master_data_application_schema(connection)
+    connection.execute(POSTGRES_FINANCE_POLICY_SCHEMA_SQL)
+    install_postgres_finance_scope_schema(connection)
+    install_postgres_finance_posting_schema(connection)

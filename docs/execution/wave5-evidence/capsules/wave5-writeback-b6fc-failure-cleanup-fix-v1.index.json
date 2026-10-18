@@ -1,0 +1,490 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-writeback-b6fc-failure-cleanup-fix-v1.zip",
+  "capture_for_root_commit": "a2e555b89c91a9be88017a95b27c12e337755e41",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "original_failed_source": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+    "original_run": 38198974522,
+    "original_job": 114647963500,
+    "complete_failed_step_preserved": true,
+    "original_failure_never_rebound_to_pass": true,
+    "reviewed_fix_commit": "a2e555b89c91a9be88017a95b27c12e337755e41",
+    "targeted_tests": {
+      "tests": 29,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "actual_readonly_absence_format": "Verified against a known removed owned ID; not a new actual lifecycle run.",
+    "root_offline_contract_gate": {
+      "tests": 99,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "original_failed_mixedr1": "Full source-bound report/proofs/log and retrospective owner metadata retained; remains failed and performance-comparison-unaccepted.",
+    "fresh_actual_fixed_ci": "Required, not yet claimed."
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 49,
+  "raw_bytes": 2993862,
+  "records": [
+    {
+      "entry_name": "commercial/output/wave5-mixed-owner-namespace-review.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-mixed-owner-namespace-review.json",
+      "bytes": 378,
+      "sha256": "0358efed23a5e5d1adfe600f80c1d962d8654404a2026fcbf9c1fec2a9e788db",
+      "source_commit": null,
+      "source_attribution": "Original scoped-owner failure/recheck metadata; exact checker hashes retained. Corrected retrospective check explicitly benchmark_accepted=false.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/output/wave5-owner-namespace-recheck.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-owner-namespace-recheck.json",
+      "bytes": 613,
+      "sha256": "7510c4dc908b5b91fc6284c60827791bb7e15406f1cdd736ed54d2f937e5e3c9",
+      "source_commit": null,
+      "source_attribution": "Original scoped-owner failure/recheck metadata; exact checker hashes retained. Corrected retrospective check explicitly benchmark_accepted=false.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-writeback-b6fc-failure-38198974522/artifact-projection.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-writeback-b6fc-failure-38198974522\\artifact-projection.json",
+      "bytes": 10926,
+      "sha256": "200253ef88bb195a6f6d003403a145386a475944703d89c5a77617a3f4019fbf",
+      "source_commit": null,
+      "source_attribution": "Original b6fc failed CI headers and safe byte-span hashes, unchanged historical provenance, and per-checkpoint provisional/final isolated cleanup tests remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-writeback-b6fc-failure-38198974522/capture-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-writeback-b6fc-failure-38198974522\\capture-provenance.json",
+      "bytes": 842,
+      "sha256": "9500f4705756ceab29bbaea3fff7d6dffe15cb5f0d621bf0e4c05e0416404d4e",
+      "source_commit": null,
+      "source_attribution": "Original b6fc failed CI headers and safe byte-span hashes, unchanged historical provenance, and per-checkpoint provisional/final isolated cleanup tests remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-writeback-b6fc-failure-38198974522/cleanup-fix-attribution.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-writeback-b6fc-failure-38198974522\\cleanup-fix-attribution.json",
+      "bytes": 1241,
+      "sha256": "ed67b7dd54a6644f77a6d64a866681a28b0bdeb9c82185955b721332c82fcdb2",
+      "source_commit": null,
+      "source_attribution": "Original b6fc failed CI headers and safe byte-span hashes, unchanged historical provenance, and per-checkpoint provisional/final isolated cleanup tests remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-writeback-b6fc-failure-38198974522/failed-recovery-compensation-step.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-writeback-b6fc-failure-38198974522\\failed-recovery-compensation-step.log",
+      "bytes": 30378,
+      "sha256": "ab256cc27eb6c22bd8c02584ca95b39fe7dee9ab8febff89a3c8f14d1bab2ec4",
+      "source_commit": null,
+      "source_attribution": "Original b6fc failed CI headers and safe byte-span hashes, unchanged historical provenance, and per-checkpoint provisional/final isolated cleanup tests remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-writeback-b6fc-failure-38198974522/failure-classification.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-writeback-b6fc-failure-38198974522\\failure-classification.json",
+      "bytes": 1028,
+      "sha256": "dc953f60b9ddb0cac5070390412840b5920d63fd30fd6dbd4caa554275622766",
+      "source_commit": null,
+      "source_attribution": "Original b6fc failed CI headers and safe byte-span hashes, unchanged historical provenance, and per-checkpoint provisional/final isolated cleanup tests remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-writeback-b6fc-failure-38198974522/historical-runner-bindings.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-writeback-b6fc-failure-38198974522\\historical-runner-bindings.json",
+      "bytes": 1550,
+      "sha256": "71956477017e9169978365c6b8efa0587a10468c28d060b1cc178c75df8b0bb8",
+      "source_commit": null,
+      "source_attribution": "Original b6fc failed CI headers and safe byte-span hashes, unchanged historical provenance, and per-checkpoint provisional/final isolated cleanup tests remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-writeback-b6fc-failure-38198974522/job-projection.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-writeback-b6fc-failure-38198974522\\job-projection.json",
+      "bytes": 7137,
+      "sha256": "2a6d84188bd676cbeb8fd7bea969be21ccfe80ba04966400858f1c57a4603eab",
+      "source_commit": null,
+      "source_attribution": "Original b6fc failed CI headers and safe byte-span hashes, unchanged historical provenance, and per-checkpoint provisional/final isolated cleanup tests remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-writeback-b6fc-failure-38198974522/run-projection.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-writeback-b6fc-failure-38198974522\\run-projection.json",
+      "bytes": 406,
+      "sha256": "1a64d10deb50d19cc530e6cddd721af3a8bb2ba9588cec26436fefa621495700",
+      "source_commit": null,
+      "source_attribution": "Original b6fc failed CI headers and safe byte-span hashes, unchanged historical provenance, and per-checkpoint provisional/final isolated cleanup tests remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-writeback-b6fc-failure-38198974522/targeted-cleanup-deadline.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-writeback-b6fc-failure-38198974522\\targeted-cleanup-deadline.log",
+      "bytes": 81,
+      "sha256": "c2d871562b2fa0c02e95fde1458fcfd7ee7f58c9b51d93bfda0cbce141d2c2a5",
+      "source_commit": null,
+      "source_attribution": "Original b6fc failed CI headers and safe byte-span hashes, unchanged historical provenance, and per-checkpoint provisional/final isolated cleanup tests remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-writeback-b6fc-failure-38198974522/targeted-cleanup-deadline.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-writeback-b6fc-failure-38198974522\\targeted-cleanup-deadline.xml",
+      "bytes": 5566,
+      "sha256": "39d9dd25ee680273dfd726dbc7a0f1fe0013b6e670505a5479b613d719d44022",
+      "source_commit": null,
+      "source_attribution": "Original b6fc failed CI headers and safe byte-span hashes, unchanged historical provenance, and per-checkpoint provisional/final isolated cleanup tests remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-writeback-b6fc-failure-38198974522/targeted-cleanup-proposed.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-writeback-b6fc-failure-38198974522\\targeted-cleanup-proposed.log",
+      "bytes": 81,
+      "sha256": "d99cd6a203c4081e96697f8a2863e9155d78d633d9eb71d8d73ec6f445a0fc26",
+      "source_commit": null,
+      "source_attribution": "Original b6fc failed CI headers and safe byte-span hashes, unchanged historical provenance, and per-checkpoint provisional/final isolated cleanup tests remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/output/wave5-writeback-b6fc-failure-38198974522/targeted-cleanup-proposed.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-writeback-b6fc-failure-38198974522\\targeted-cleanup-proposed.xml",
+      "bytes": 5392,
+      "sha256": "ddb15378ac5e1a5d1b8fb1cadab3dbb56c1dc4ab45e7ddfde874755dbdbc28b3",
+      "source_commit": null,
+      "source_attribution": "Original b6fc failed CI headers and safe byte-span hashes, unchanged historical provenance, and per-checkpoint provisional/final isolated cleanup tests remain distinct.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "reviewed-cleanup-source/.github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\.github\\scripts\\verify_postgres_writeback_recovery_compensation_matrix.py",
+      "bytes": 29079,
+      "sha256": "95189f7a39ffbdf5627da8bece24d61c38db32ae0a2e184a932c8011dc634d67",
+      "source_commit": "a2e555b89c91a9be88017a95b27c12e337755e41",
+      "source_attribution": "Exact isolated lifecycle-only Amr commit; original financial application/runtime untouched.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "reviewed-cleanup-source/tests/test_postgres_writeback_recovery_compensation_matrix.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\tests\\test_postgres_writeback_recovery_compensation_matrix.py",
+      "bytes": 14351,
+      "sha256": "e26d5bde67af3fb5c9ece68baeb9efee97f2fbd311f6c191acf2f469080048f1",
+      "source_commit": "a2e555b89c91a9be88017a95b27c12e337755e41",
+      "source_attribution": "Exact isolated lifecycle-only Amr commit; original financial application/runtime untouched.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-docker-absence-readonly.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-docker-absence-readonly.json",
+      "bytes": 353,
+      "sha256": "d4c675fd24f6a66d48a54667f21310222a96b53ca86664395e207f6b7bb07b2e",
+      "source_commit": "bbb3013d1590b5ec435cb6fec13f35fb55f75118",
+      "source_attribution": "Actual read-only Docker absence format of a known previously removed owned container; no stop/remove action, no new lifecycle acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-measurement-oracles.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-measurement-oracles.log",
+      "bytes": 162,
+      "sha256": "82a3a258c6f69f2a8d5e4821da8ff03dedc871d780293b208337ea9327d3b163",
+      "source_commit": "bbb3013d1590b5ec435cb6fec13f35fb55f75118",
+      "source_attribution": "Root-reported integrated99 offline owner43/FX35/mixed21 tests, no failure/error/skip; JUnit has no embedded source commit. This is not an actual fixed cleanup or mixed runtime acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-final-measurement-oracles.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-final-measurement-oracles.xml",
+      "bytes": 16493,
+      "sha256": "24ebd18000b3f3076178b09f483942450b02ce870d103410e489012f846db95b",
+      "source_commit": "bbb3013d1590b5ec435cb6fec13f35fb55f75118",
+      "source_attribution": "Root-reported integrated99 offline owner43/FX35/mixed21 tests, no failure/error/skip; JUnit has no embedded source commit. This is not an actual fixed cleanup or mixed runtime acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1.log",
+      "bytes": 305,
+      "sha256": "7173673e3196543c63c6af65e9062174b70e90d602f038b59217180e34caf596",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed mixedr1 log, unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0000/intercompany/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0000\\intercompany\\ic-group-report.json",
+      "bytes": 39422,
+      "sha256": "1d549e8363e66acdae302807002be1132459a3aee0f6221787d9c444069d1465",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0000/intercompany/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0000\\intercompany\\ic-proof-0.json",
+      "bytes": 22859,
+      "sha256": "40dac1ef9f83e32367d7ca199dcbc9561d3e1b114943aeef2126dec883683686",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0000/intercompany/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0000\\intercompany\\ic-proof-1.json",
+      "bytes": 21406,
+      "sha256": "f5dfe3136547c180ff7b14fd2dfb0567c8cc1f0929cfb4e514f3aa8d38b586b4",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0000/intercompany/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0000\\intercompany\\ic-proof-2.json",
+      "bytes": 16203,
+      "sha256": "50f27bdc33b1ba8a4b9ba2ea23ffe365de4d1fa8f51ba1836aba7b02313a6384",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0000/intercompany/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0000\\intercompany\\independent-oracle.json",
+      "bytes": 2747,
+      "sha256": "6543b953ff3453b581bb8a9d5f962170234480dda40b0c15fe1109a1daa795d6",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0000/manufacturing/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0000\\manufacturing\\independent-oracle.json",
+      "bytes": 996,
+      "sha256": "2487ec14150c4fb127fb9cea8c8da1b6627c48aaebfedaf06bfadd23f01381bf",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0000/manufacturing/manufacturing-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0000\\manufacturing\\manufacturing-proof.json",
+      "bytes": 697501,
+      "sha256": "c61f5e45e787ad5598ed6c6a0425684d53260c1f8feac66d46decf4660db9c29",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0000/manufacturing/public-order.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0000\\manufacturing\\public-order.json",
+      "bytes": 42222,
+      "sha256": "e1fe4a7b26530a3322a082f0136450fdaa25ada78ebfbcf83541d98b0a9ab5a6",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0001/intercompany/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0001\\intercompany\\ic-group-report.json",
+      "bytes": 39422,
+      "sha256": "d9bcde5578206be1a5ae21809212d9efc52b42a574e7e7baf0979eeb1873bd1d",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0001/intercompany/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0001\\intercompany\\ic-proof-0.json",
+      "bytes": 22859,
+      "sha256": "3ef7a027d4f15e2aecf4b7cd109a47fa8028cd10c372e49aabdae26a106948e6",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0001/intercompany/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0001\\intercompany\\ic-proof-1.json",
+      "bytes": 21406,
+      "sha256": "0ca16050fb8850367a315219e8c4b212363c88782248e3a4aaec11a8a40eea64",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0001/intercompany/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0001\\intercompany\\ic-proof-2.json",
+      "bytes": 16203,
+      "sha256": "c494d671e70167f35328adaace2aca94b42889fab5e04577641aab2193e29643",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0001/intercompany/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0001\\intercompany\\independent-oracle.json",
+      "bytes": 2747,
+      "sha256": "c08e703365415abbec232fd34f6007ca7dcb279ececc880fd8353262951a17e2",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0001/manufacturing/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0001\\manufacturing\\independent-oracle.json",
+      "bytes": 996,
+      "sha256": "40a6734070e5989f94ec06852e4f8a4438b2f2ba7fd4eece21295dc6acd86677",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0001/manufacturing/manufacturing-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0001\\manufacturing\\manufacturing-proof.json",
+      "bytes": 697498,
+      "sha256": "7ccda158b4234aec4265c42079f5875a990b68fb32b9fdb92610144593c59129",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0001/manufacturing/public-order.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0001\\manufacturing\\public-order.json",
+      "bytes": 42222,
+      "sha256": "d229bde2f7693ab006cdc8fcf961610bbc94d81e2052357f246853f4a8d471a1",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0002/intercompany/ic-group-report.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0002\\intercompany\\ic-group-report.json",
+      "bytes": 39422,
+      "sha256": "1b8d34af02744cd39d5c19a946e20b7dc3b21413a574cbd2af13ef1890a60d54",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0002/intercompany/ic-proof-0.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0002\\intercompany\\ic-proof-0.json",
+      "bytes": 22859,
+      "sha256": "0b01d4103ac147d39fce9121b955380138e2dab01fe83ec85791986068bf91f5",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0002/intercompany/ic-proof-1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0002\\intercompany\\ic-proof-1.json",
+      "bytes": 21406,
+      "sha256": "a14da80f0670c7c84cdd79d93942c60131a93530ede914049009788b9c627712",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0002/intercompany/ic-proof-2.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0002\\intercompany\\ic-proof-2.json",
+      "bytes": 16203,
+      "sha256": "d75b0a1b2f3732c077d4a77f4220d2ef2fa3b32d973a475e45a0e0db721359a8",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0002/intercompany/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0002\\intercompany\\independent-oracle.json",
+      "bytes": 2747,
+      "sha256": "48ab5811394dd8e2b97bba2d04885242d2438af24a2ec956ff6a34a871c8e8a4",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0002/manufacturing/independent-oracle.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0002\\manufacturing\\independent-oracle.json",
+      "bytes": 996,
+      "sha256": "090d56d8bd94a525eae9690ffa3993d213e253fc6555b4e2c3fd6328807b94d8",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0002/manufacturing/manufacturing-proof.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0002\\manufacturing\\manufacturing-proof.json",
+      "bytes": 697505,
+      "sha256": "ba64818e48b5e3c1579a9fc70b0061f9b8396b0ed33c4c8d5fc04eaf11be3476",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/cycle-0002/manufacturing/public-order.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\cycle-0002\\manufacturing\\public-order.json",
+      "bytes": 42222,
+      "sha256": "01edb8b213cdf9f9383bc05df3fa50e4cdfda9f721e07be6e577db77acd40734",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/https-runtime.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\https-runtime.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\migration.log",
+      "bytes": 23616,
+      "sha256": "cbba54d8da1909bd5edb8c8279ef886e13f674a78fd06fc1268c1f945b4f76af",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/progress.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\progress.json",
+      "bytes": 50888,
+      "sha256": "74ac773406631c745cdc5d73c139851dafaea79dd2130e2ab57478d3372c4ed2",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\result.json",
+      "bytes": 262397,
+      "sha256": "22c38fffde155990e440e343567b08c82a908eeb8db4218d3c21b16fe53d80b6",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "root/output/wave5-mixed-api-b6fcf71d-r1/server-identity.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave5\\reconforge-erp\\output\\wave5-mixed-api-b6fcf71d-r1\\server-identity.json",
+      "bytes": 530,
+      "sha256": "83d34fd6d2b6ba34df35bdb1606f6bca2b055e316b82d3947cafbfc308c8abad",
+      "source_commit": "b6fcf71d59d88baf735d53f2f78ff8702bbf405b",
+      "source_attribution": "Original failed three-cohort mixed runtime report, requests, synthetic financial proofs and oracle records; failure remains failed, no fair performance or retrospective acceptance.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

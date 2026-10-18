@@ -20,15 +20,24 @@ from reconforge.api.browser_session import (
 )
 from reconforge.api.errors import APIError
 from reconforge.api.security import SessionError, authenticate_token
+from reconforge.api.server_audit import execute_postgres_policy_audit, server_audit_administration_enabled
 from reconforge.api.server_identity import (
     authenticate_server_request,
     record_emergency_authority_use,
+    request_tenant_id,
     server_identity_enabled,
     server_principal_from_authentication,
 )
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService
 from reconforge.auth.models import LocalUser
-from reconforge.auth.policy import CentralPolicyEngine, PolicyDecision, PolicyEvaluationContext, audit_policy_decision
+from reconforge.auth.policy import (
+    CentralPolicyEngine,
+    PolicyAuditSink,
+    PolicyDecision,
+    PolicyDecisionEvidence,
+    PolicyEvaluationContext,
+    audit_policy_decision,
+)
 from reconforge.auth.policy_cache import PolicyDecisionCache
 from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.db import DatabaseError, connect
@@ -51,6 +60,36 @@ def _required_step_up_method(request: Request) -> str | None:
         if isinstance(getattr(request.app.state, "webauthn_runtime", None), WebAuthnRuntime)
         else None
     )
+
+
+def _server_policy_audit_sink(
+    request: Request,
+    *,
+    actor_id: str,
+) -> PolicyAuditSink | None:
+    """Return a tenant-scoped sink for server authorization provenance."""
+
+    if not server_audit_administration_enabled(request):
+        return None
+
+    def persist(evidence: PolicyDecisionEvidence) -> None:
+        def append(repository: Any, _tenant_id: str) -> None:
+            repository.append(
+                actor_user_id=actor_id.strip() or None,
+                actor_label="policy-engine",
+                object_type="authorization.policy_decision",
+                object_id=evidence.decision_digest,
+                action="evaluated",
+                after_hash=evidence.decision_digest,
+                metadata={
+                    "policy_decision_evidence": evidence.to_dict(),
+                    "request_id_digest": evidence.request_id_digest,
+                },
+            )
+
+        execute_postgres_policy_audit(request, append)
+
+    return persist
 
 
 def _permission_contract(values: set[str] | frozenset[str]) -> frozenset[str]:
@@ -137,7 +176,11 @@ def get_db(request: Request) -> Iterator[sqlite3.Connection]:
     """Open and close one SQLite connection per request."""
 
     try:
-        connection = connect(get_db_path(request), require_exists=True)
+        # FastAPI can enter, use and finalize a synchronous request dependency
+        # on different pool workers. The connection belongs to one request;
+        # dependency calls are sequential and concurrent requests get their own
+        # connection. Preserve strict affinity for ordinary DB callers.
+        connection = connect(get_db_path(request), require_exists=True, check_same_thread=False)
     except DatabaseError as exc:
         raise APIError(status_code=503, code="database_unavailable", message=str(exc)) from exc
     try:
@@ -283,6 +326,10 @@ def enforce_server_scoped_permissions(
     organization_id: str | None = None,
     entity_id: str | None = None,
     amount: Decimal | None = None,
+    requested_field_names: frozenset[str] = frozenset(),
+    authorized_field_names: frozenset[str] = frozenset(),
+    object_type: str | None = None,
+    action: str | None = None,
 ) -> None:
     """Re-evaluate one of several permissions against the server hierarchy.
 
@@ -343,6 +390,9 @@ def enforce_server_scoped_permissions(
         principal = current_server_principal()
     if principal is None:
         raise APIError(status_code=401, code="auth_required", message="Authentication required.")
+    if principal.authorized_tenant_ids and tenant_id not in principal.authorized_tenant_ids:
+        raise APIError(status_code=403, code="tenant_scope_denied", message="Tenant scope is not authorized.")
+    authorized_tenant_ids = principal.authorized_tenant_ids or frozenset({tenant_id})
     context = PolicyEvaluationContext(
         user_id=principal.user.id,
         username=principal.user.username,
@@ -356,11 +406,15 @@ def enforce_server_scoped_permissions(
         workspace_id=workspace_id,
         organization_id=organization_id,
         entity_id=entity_id,
-        authorized_tenant_ids=frozenset({tenant_id}),
+        authorized_tenant_ids=authorized_tenant_ids,
         authorized_workspace_ids=principal.authorized_workspace_ids,
         authorized_organization_ids=principal.authorized_organization_ids,
         authorized_entity_ids=principal.authorized_legal_entity_ids,
         amount=amount,
+        requested_field_names=requested_field_names,
+        authorized_field_names=authorized_field_names,
+        object_type=object_type,
+        action=action,
     )
     decision = _evaluate_any_policy(request, context, required_permissions=permissions)
     audit_policy_decision(
@@ -370,6 +424,8 @@ def enforce_server_scoped_permissions(
         surface=f"server.scoped:{','.join(sorted(permissions))}",
         request_id=str(getattr(request.state, "request_id", "")),
         principal_type=principal.principal_type,
+        context=context,
+        audit_sink=_server_policy_audit_sink(request, actor_id=principal.user.id),
     )
     if decision.allowed:
         return
@@ -380,6 +436,8 @@ def enforce_server_scoped_permissions(
         "entity_scope_denied",
         "step_up_required",
         "mfa_required",
+        "master_data_authority_denied",
+        "human_principal_required",
     } else "permission_denied"
     message = {
         "step_up_required": "Recent human reauthentication is required.",
@@ -388,6 +446,8 @@ def enforce_server_scoped_permissions(
         "workspace_scope_denied": "Workspace scope is not authorized.",
         "organization_scope_denied": "Organization scope is not authorized.",
         "entity_scope_denied": "Legal-entity scope is not authorized.",
+        "master_data_authority_denied": "The selected authority cannot mutate shared master data.",
+        "human_principal_required": "Human authentication is required.",
     }.get(code, "Permission denied.")
     raise APIError(status_code=403, code=code, message=message)
 
@@ -401,9 +461,28 @@ def enforce_server_scoped_permission(
     organization_id: str | None = None,
     entity_id: str | None = None,
     amount: Decimal | None = None,
+    requested_field_names: frozenset[str] = frozenset(),
+    authorized_field_names: frozenset[str] = frozenset(),
+    object_type: str | None = None,
+    action: str | None = None,
 ) -> None:
     """Re-evaluate one permission against the selected server hierarchy."""
 
+    if requested_field_names or authorized_field_names or object_type is not None or action is not None:
+        enforce_server_scoped_permissions(
+            request,
+            permissions=frozenset({permission}),
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            organization_id=organization_id,
+            entity_id=entity_id,
+            amount=amount,
+            requested_field_names=requested_field_names,
+            authorized_field_names=authorized_field_names,
+            object_type=object_type,
+            action=action,
+        )
+        return
     enforce_server_scoped_permissions(
         request,
         permissions=frozenset({permission}),
@@ -453,18 +532,26 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
             principal = getattr(request.state, "server_principal", None)
             if not isinstance(principal, ServerPrincipal):
                 principal = current_server_principal()
+            tenant_id = request_tenant_id(request)
+            policy_context = PolicyEvaluationContext(
+                user_id=current_user.id if principal is not None else "",
+                username=current_user.username,
+                user_permissions=principal.permissions if principal is not None else frozenset(),
+                principal_type=principal.principal_type if principal is not None else "user",
+                step_up_active=principal.step_up_active if principal is not None else False,
+                step_up_enforced=True,
+                required_step_up_method=_required_step_up_method(request),
+                step_up_method=principal.step_up_method if principal is not None else None,
+                tenant_id=tenant_id,
+                authorized_tenant_ids=(
+                    principal.authorized_tenant_ids
+                    if principal is not None and principal.authorized_tenant_ids
+                    else frozenset({tenant_id}) if principal is not None else frozenset()
+                ),
+            )
             decision = _evaluate_policy(
                 request,
-                PolicyEvaluationContext(
-                    user_id=current_user.id if principal is not None else "",
-                    username=current_user.username,
-                    user_permissions=principal.permissions if principal is not None else frozenset(),
-                    principal_type=principal.principal_type if principal is not None else "user",
-                    step_up_active=principal.step_up_active if principal is not None else False,
-                    step_up_enforced=True,
-                    required_step_up_method=_required_step_up_method(request),
-                    step_up_method=principal.step_up_method if principal is not None else None,
-                ),
+                policy_context,
                 required_permission=required_permission,
             )
             allowed = principal is not None and principal.user.id == current_user.id and decision.allowed
@@ -475,6 +562,8 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
                 surface=surface,
                 request_id=str(getattr(request.state, "request_id", "")),
                 principal_type=principal.principal_type if principal is not None else "user",
+                context=policy_context,
+                audit_sink=_server_policy_audit_sink(request, actor_id=current_user.id),
             )
             if not allowed:
                 code = decision.reason_code if decision.reason_code in {"step_up_required", "mfa_required"} else "permission_denied"
@@ -496,13 +585,14 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
             raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
         try:
             service = LocalAuthService(connection)
+            policy_context = PolicyEvaluationContext(
+                user_id=current_user.id,
+                username=current_user.username,
+                user_permissions=service.roles.user_permissions(current_user.username),
+            )
             decision = _evaluate_policy(
                 request,
-                PolicyEvaluationContext(
-                    user_id=current_user.id,
-                    username=current_user.username,
-                    user_permissions=service.roles.user_permissions(current_user.username),
-                ),
+                policy_context,
                 required_permission=required_permission,
             )
             allowed = decision.allowed
@@ -514,6 +604,8 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
             required_permissions=contract,
             surface=surface,
             request_id=str(getattr(request.state, "request_id", "")),
+            context=policy_context,
+            audit_connection=connection,
         )
         if not allowed:
             raise APIError(status_code=403, code="permission_denied", message="Permission denied.")
@@ -540,18 +632,26 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
             principal = getattr(request.state, "server_principal", None)
             if not isinstance(principal, ServerPrincipal):
                 principal = current_server_principal()
+            tenant_id = request_tenant_id(request)
+            policy_context = PolicyEvaluationContext(
+                user_id=current_user.id if principal is not None else "",
+                username=current_user.username,
+                user_permissions=principal.permissions if principal is not None else frozenset(),
+                principal_type=principal.principal_type if principal is not None else "user",
+                step_up_active=principal.step_up_active if principal is not None else False,
+                step_up_enforced=True,
+                required_step_up_method=_required_step_up_method(request),
+                step_up_method=principal.step_up_method if principal is not None else None,
+                tenant_id=tenant_id,
+                authorized_tenant_ids=(
+                    principal.authorized_tenant_ids
+                    if principal is not None and principal.authorized_tenant_ids
+                    else frozenset({tenant_id}) if principal is not None else frozenset()
+                ),
+            )
             decision = _evaluate_any_policy(
                 request,
-                PolicyEvaluationContext(
-                    user_id=current_user.id if principal is not None else "",
-                    username=current_user.username,
-                    user_permissions=principal.permissions if principal is not None else frozenset(),
-                    principal_type=principal.principal_type if principal is not None else "user",
-                    step_up_active=principal.step_up_active if principal is not None else False,
-                    step_up_enforced=True,
-                    required_step_up_method=_required_step_up_method(request),
-                    step_up_method=principal.step_up_method if principal is not None else None,
-                ),
+                policy_context,
                 required_permissions=contract,
             )
             allowed = principal is not None and principal.user.id == current_user.id and decision.allowed
@@ -562,6 +662,8 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
                 surface=surface,
                 request_id=str(getattr(request.state, "request_id", "")),
                 principal_type=principal.principal_type if principal is not None else "user",
+                context=policy_context,
+                audit_sink=_server_policy_audit_sink(request, actor_id=current_user.id),
             )
             if not allowed:
                 code = decision.reason_code if decision.reason_code in {"step_up_required", "mfa_required"} else "permission_denied"
@@ -583,13 +685,14 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
             raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
         try:
             service = LocalAuthService(connection)
+            policy_context = PolicyEvaluationContext(
+                user_id=current_user.id,
+                username=current_user.username,
+                user_permissions=service.roles.user_permissions(current_user.username),
+            )
             decision = _evaluate_any_policy(
                 request,
-                PolicyEvaluationContext(
-                    user_id=current_user.id,
-                    username=current_user.username,
-                    user_permissions=service.roles.user_permissions(current_user.username),
-                ),
+                policy_context,
                 required_permissions=contract,
             )
             allowed = decision.allowed
@@ -601,6 +704,8 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
             required_permissions=contract,
             surface=surface,
             request_id=str(getattr(request.state, "request_id", "")),
+            context=policy_context,
+            audit_connection=connection,
         )
         if not allowed:
             raise APIError(status_code=403, code="permission_denied", message="Permission denied.")

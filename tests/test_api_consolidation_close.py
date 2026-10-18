@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
@@ -37,6 +38,19 @@ def test_consolidation_close_api_is_scoped_replay_checked_and_read_only(tmp_path
         worksheet=worksheet,
         actor_label=admin.username,
     )
+    connection.execute(
+        "ALTER TABLE consolidation_close_periods "
+        "ADD COLUMN unknown_future_column TEXT DEFAULT 'must-not-escape'"
+    )
+    connection.execute(
+        "ALTER TABLE consolidation_runs "
+        "ADD COLUMN unknown_future_column TEXT DEFAULT 'must-not-escape'"
+    )
+    connection.execute(
+        "ALTER TABLE consolidation_run_lines "
+        "ADD COLUMN unknown_future_column TEXT DEFAULT 'must-not-escape'"
+    )
+    connection.commit()
     repository.create_period(
         group_code="OTHER-GROUP",
         period_id="2026-08",
@@ -60,6 +74,8 @@ def test_consolidation_close_api_is_scoped_replay_checked_and_read_only(tmp_path
     periods = client.get("/api/v1/consolidation-close/periods?workspace=default", headers=headers)
     assert periods.status_code == 200
     assert [item["id"] for item in periods.json()["periods"]] == [period["id"]]
+    assert "unknown_future_column" not in periods.text
+    assert "must-not-escape" not in periods.text
     other = client.get("/api/v1/consolidation-close/periods?workspace=other", headers=headers)
     assert other.status_code == 200
     assert len(other.json()["periods"]) == 1
@@ -71,11 +87,14 @@ def test_consolidation_close_api_is_scoped_replay_checked_and_read_only(tmp_path
     detail = client.get(f"/api/v1/consolidation-close/runs/{run['id']}", headers=headers)
     assert detail.status_code == 200, detail.text
     assert detail.json()["run"]["worksheet"]["worksheet_id"] == run["worksheet_id"]
+    assert detail.json()["run"]["reporting_currency"] == "USD"
     assert detail.json()["run"]["journal_lines"]
     assert detail.json()["run"]["translation_evidence"]["result_digest"] == run["translation_result_digest"]
     assert detail.json()["run"]["translation_evidence"]["line_count"] == 4
     assert detail.json()["run"]["management_statement"]["total_balance"]["amount"] == "0.00"
     assert detail.json()["run"]["effects"] == []
+    assert "unknown_future_column" not in detail.text
+    assert "must-not-escape" not in detail.text
     assert detail.json()["source"]["kind"] == "sqlite-consolidation-close"
 
     tamper = connect(db_path)
@@ -280,6 +299,7 @@ def test_consolidation_close_certification_api_is_posted_only_and_maker_checker_
     assert fetched.status_code == 200
     assert fetched.json()["certification"]["reviewed_by"] == "reviewer"
     assert fetched.json()["certification"]["object_type"] == "consolidation_close_run"
+    assert set(fetched.json()) == {"certification", "source"}
 
 
 def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
@@ -306,6 +326,21 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
 
         def get_run(self, *_: object, **__: object) -> dict[str, object]:
             return {"id": "run-b", "workspace_id": "workspace-b"}
+
+        def summary(self, **_: object) -> SimpleNamespace:
+            return SimpleNamespace(
+                to_dict=lambda: {
+                    "workspace": "workspace-a",
+                    "periods": 1,
+                    "locked_periods": 1,
+                    "prepared_runs": 2,
+                    "approved_runs": 3,
+                    "posted_runs": 4,
+                    "reversal_prepared_runs": 5,
+                    "reversed_runs": 6,
+                    "unknown_summary_field": "must-not-escape",
+                }
+            )
 
         def attach_intercompany_artifact(self, *_: object, **__: object) -> dict[str, object]:
             return {"id": "link-a", "artifact_id": "ice-" + "a" * 32, "matched_elimination_ids": ["ELIM-1"]}
@@ -448,3 +483,8 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
         "tenant_id": "tenant-a",
         "workspace_id": "workspace-a",
     }
+
+    summary = client.get("/api/v1/consolidation-close/summary", headers=headers)
+    assert summary.status_code == 200
+    assert summary.json()["summary"]["workspace"] == "workspace-a"
+    assert "unknown_summary_field" not in summary.text

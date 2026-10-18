@@ -15,12 +15,22 @@ def _backlog() -> dict[str, Any]:
     return loaded
 
 
+def test_completion_program_uses_one_authoritative_matrix_and_one_domain() -> None:
+    backlog = _backlog()
+    assert backlog["phase"] == "Enterprise ERP v1.0 — Functional Completion"
+    assert backlog["completion_source_of_truth"] == "docs/execution/ENTERPRISE_COMPLETION_MASTER_MATRIX.md"
+    assert (ROOT / backlog["completion_source_of_truth"]).is_file()
+    assert type(backlog["major_domain_wip_limit"]) is int and backlog["major_domain_wip_limit"] == 1
+    assert set(backlog["completion_status_values"]) == {
+        "VERIFIED COMPLETE", "INCOMPLETE", "BLOCKED", "NOT STARTED",
+    }
+
+
 def test_phase4_goal_covers_all_seven_workstreams_without_relabeling_old_closure() -> None:
     backlog = _backlog()
     tasks = backlog["tasks"]
     phase4 = [task for task in tasks if task["id"].startswith("P4-")]
 
-    assert backlog["phase"] == "Phase 4 — Global Capability Expansion"
     assert {task["goal_workstream"] for task in phase4} == {
         "deep_close_and_consolidation",
         "advanced_matching",
@@ -131,6 +141,31 @@ def test_native_tool_verifier_is_packaged_and_executable_from_workflow() -> None
     assert "shell=False" in source
     assert "_REQUIRED_TOOLS" in source
     assert "--expected-major" in source
+
+
+def test_server_boundary_service_images_are_immutable_and_subject_bound() -> None:
+    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    services = workflow["jobs"]["server-boundaries"]["services"]
+    postgres_image = str(services["postgres"]["image"])
+    redis_image = str(services["redis"]["image"])
+
+    assert postgres_image == (
+        "postgres:16.15-alpine@sha256:"
+        "1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551"
+    )
+    assert redis_image == (
+        "redis:7.4-alpine@sha256:"
+        "e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2"
+    )
+    assert postgres_image.count("@sha256:") == 1
+    assert redis_image.count("@sha256:") == 1
+
+    live_boundary_step = next(
+        step
+        for step in workflow["jobs"]["server-boundaries"]["steps"]
+        if step.get("name") == "Run live server-boundary tests"
+    )
+    assert live_boundary_step["env"]["RECONFORGE_REDIS_IMAGE_DIGEST"] == redis_image.split("@", 1)[1]
 
 
 def test_server_boundaries_matrix_retains_the_repaired_postgres_failure_surfaces() -> None:

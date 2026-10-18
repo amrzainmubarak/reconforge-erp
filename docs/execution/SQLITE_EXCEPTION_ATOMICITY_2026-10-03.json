@@ -1,0 +1,53 @@
+{
+  "task": "SQLite exception caller-owned transaction and AP partial-commit repair",
+  "frozen": true,
+  "synthetic_only": true,
+  "base_commit": "f7232325c552dfed684a7fdcc1764836e3ab2e1c",
+  "baseline_source_commit": "70dac5cf8bcbf1da37341a58680c1794cda31d48",
+  "changed_files": [
+    "reconforge/infrastructure/sqlite_exceptions.py",
+    "tests/test_sqlite_exception_transaction_ownership.py"
+  ],
+  "behavior": [
+    "Default autocommit=True retains unchanged commit_audited durable finalization.",
+    "autocommit=False appends audit only in an active caller transaction and leaves commit/rollback to the caller.",
+    "Caller-owned INSERT/UPDATE and audit failures preserve caller pending work until explicit rollback.",
+    "Late final AP audit/outbox failures roll back exception, match, invoice transition, audit head and outbox together."
+  ],
+  "red": {
+    "log": "output/verification-2026-10-03/sqlite-exception-ownership-red.log",
+    "passed": 5,
+    "failed": 6,
+    "seconds": 5.16
+  },
+  "peer_sql_error_red": {
+    "deselected": 11,
+    "log": "output/verification-2026-10-03/sqlite-exception-sql-ownership-red.log",
+    "failed": 2,
+    "seconds": 1.44
+  },
+  "final_gate": {
+    "command": ".venv-baseline-20261003/Scripts/python.exe -m pytest -q -o addopts= tests/test_sqlite_exception_transaction_ownership.py tests/test_payables.py tests/test_atomic_legacy_services.py tests/test_platform_controls_matching_exceptions.py tests/test_application_exceptions.py tests/test_application_journals.py tests/test_application_intercompany.py tests/test_application_controls.py",
+    "log": "output/verification-2026-10-03/sqlite-exception-ownership-final.log",
+    "passed": 54,
+    "seconds": 17.55
+  },
+  "static_checks": {
+    "mypy_source": "passed",
+    "ruff": "passed",
+    "diff_check": "passed"
+  },
+  "composition_evidence": {
+    "cases_per_run": 11,
+    "baseline_seconds": 3.546,
+    "after_fix_seconds": 3.611,
+    "after_narrow_fix": "output/verification-2026-10-03/sqlite-composition-7f802d7f3a26/report.json",
+    "remaining": "General Finance/AR/Inventory composition gaps remain; no posting UoW implementation claim.",
+    "design": "output/verification-2026-10-03/PROD024-SQLITE-COMPOSITION-DESIGN.md",
+    "baseline": "output/verification-2026-10-03/sqlite-composition-976fdc3ce27a/report.json"
+  },
+  "sha256": {
+    "tests/test_sqlite_exception_transaction_ownership.py": "685ad6ec9d45a4139838435e1436c20e933b2bc0a105cfff12e6b1e4df88697c",
+    "reconforge/infrastructure/sqlite_exceptions.py": "9de77bfa54b514713a000f2187c93c6402f55604f6b50fd9e063d24ee68c969b"
+  }
+}

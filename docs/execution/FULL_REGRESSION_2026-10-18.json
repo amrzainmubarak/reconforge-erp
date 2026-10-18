@@ -1,0 +1,96 @@
+{
+  "schema_version": "full-regression-final-closure-v1",
+  "status": "passed_required_profiles",
+  "tested_commit": "099d5dde4d113a8df2a1df35325c4a51ff6b87c3",
+  "created_at": "2026-10-18T07:47:46.373339+00:00",
+  "generic": [
+    {
+      "python": "3.11",
+      "passed": 9583,
+      "inherited_prerequisite_skips": 663,
+      "pytest_seconds": 909.66,
+      "log_sha256": "cc0fd81e34983e6f7be4978a70b16f0e9ca175e6dfbaf48a1ecad0f09fd3f9ca"
+    },
+    {
+      "python": "3.12",
+      "passed": 9583,
+      "inherited_prerequisite_skips": 663,
+      "pytest_seconds": 1053.18,
+      "log_sha256": "dc83750d65ddf5be949804052193181da4cd9a73befef994ab56bbf61916120a"
+    }
+  ],
+  "local_frozen_profiles": [
+    {
+      "profile": "final-additional-native",
+      "counts": {
+        "passed": 194,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "modules": 75,
+      "wall_seconds": 834.141,
+      "result_sha256": "73907532e80c8bf6ce6b407c50b41daf1f847616a8381b434bdd0768ac47d501"
+    },
+    {
+      "profile": "final-receivables-shard",
+      "counts": {
+        "passed": 314,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "modules": 15,
+      "wall_seconds": 281.234,
+      "result_sha256": "07d462bb8a84a68d55da2aafb3221e78540195b395247847e0b847f9b00fe136"
+    }
+  ],
+  "ci": {
+    "run": 39103245278,
+    "jobs_passed": 79,
+    "head_sha": "099d5dde4d113a8df2a1df35325c4a51ff6b87c3"
+  },
+  "other_workflows": [
+    {
+      "id": 39103245269,
+      "name": "Security",
+      "head_sha": "099d5dde4d113a8df2a1df35325c4a51ff6b87c3",
+      "conclusion": "success"
+    },
+    {
+      "id": 39103245273,
+      "name": "Docker",
+      "head_sha": "099d5dde4d113a8df2a1df35325c4a51ff6b87c3",
+      "conclusion": "success"
+    },
+    {
+      "id": 39103245270,
+      "name": "CodeQL",
+      "head_sha": "099d5dde4d113a8df2a1df35325c4a51ff6b87c3",
+      "conclusion": "success"
+    }
+  ],
+  "web": {
+    "component_tests_passed": 1111,
+    "general_e2e_passed": 19,
+    "log_sha256": "47d2462ce449d68a9a80990713f14a7cc80d86259ee601b216e12c4bf4f9ee6c"
+  },
+  "hosted_browser_reports": 30,
+  "hosted_collection_sha256": "f7602fbba0dd12a508032607289f96ce862c2e8145b003e9b0961a8f177bb2a0",
+  "tree_bindings": [
+    {
+      "source_commit": "a42b6bee278eba1a448f6a35d117be4d57e74f90",
+      "source_tree": "e154dcbf6b639118779ee87f14842c368cb7e3a7",
+      "tested_commit": "099d5dde4d113a8df2a1df35325c4a51ff6b87c3",
+      "tested_tree": "e154dcbf6b639118779ee87f14842c368cb7e3a7",
+      "equal": true
+    }
+  ],
+  "publication_closure_sha256": "eb20ad53c5226f352b5407616ae8ed9b691078d2c28739fc89fdf12e1b66031d",
+  "limits": [
+    "Generic prerequisite skips are not relabeled as passes; configured mandatory profiles are separate.",
+    "Heavy1M/10M and public connector network evidence retain their existing opt-in admission.",
+    "Earlier extra Windows monetary browser deadline/render negatives remain historical component evidence.",
+    "No whole-M7, production deployment, certification or throughput claim."
+  ]
+}

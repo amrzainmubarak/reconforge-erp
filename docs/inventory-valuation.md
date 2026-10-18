@@ -4,6 +4,16 @@ ReconForge includes an experimental, local-first FIFO valuation foundation backe
 
 The accounting bridge stops deliberately at **Finance Core Draft**. Approval of a valuation does not validate that entry, post to a statutory ledger, update a source ERP, infer a supplier invoice, or certify the resulting accounting treatment.
 
+SQLite callers can explicitly compose Core movement and FIFO valuation commands
+inside `SQLiteInventoryUnitOfWork(connection)`. Obtain participating adapters
+with `owner.core()` and `owner.valuation()` inside the `with` block. The owner
+starts on a clean connection and finalizes once; child commands append audit
+and outbox evidence without committing. A failed child makes the entire owner
+rollback-only even when the caller catches the error. Independent commands
+with pending caller writes are refused before changing those writes. See
+[ADR0818](adr/0818-explicit-sqlite-inventory-unit-of-work.md) for the compatibility
+and evidence boundary. The Finance result still remains a Draft.
+
 ![Synthetic read-only FIFO valuation view](assets/screenshots/inventory-valuation.png)
 
 ## Scope and prerequisites

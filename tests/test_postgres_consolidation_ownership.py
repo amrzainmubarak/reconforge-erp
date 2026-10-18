@@ -91,6 +91,24 @@ def test_postgres_adapter_refuses_actor_mismatch_before_connection_use() -> None
         )
 
 
+def test_postgres_ownership_hydration_rejects_binary_float_percentage() -> None:
+    row = {
+        "interest_id": "OWN-PG-FLOAT",
+        "parent_entity_code": "PARENT",
+        "subsidiary_entity_code": "SUB",
+        "direct_ownership_percentage": 0.80,
+        "effective_from": "2026-01-01",
+        "effective_to": "",
+        "version": "1.0.0",
+        "source_digest": "a" * 64,
+        "prepared_by": "ownership-preparer",
+        "approved_by": "ownership-reviewer",
+        "approved_at": "2026-08-01T00:00:00Z",
+    }
+    with pytest.raises(PlatformError, match="deterministic replay"):
+        PostgresConsolidationOwnershipRepository._from_row(row)
+
+
 @pytest.mark.skipif(
     not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"),
     reason="requires a live PostgreSQL application role",

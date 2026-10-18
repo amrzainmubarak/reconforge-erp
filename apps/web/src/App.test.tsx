@@ -206,8 +206,9 @@ test("follows the guided showcase from executive signal to the exception contrac
 
   fireEvent.click(screen.getByRole("button", { name: /Triage exceptions/ }));
 
-  expect(await screen.findByRole("heading", { level: 1, name: "Exception queue" })).toBeInTheDocument();
-  expect(screen.getByText("Synthetic inventory variance needs evidence.")).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Exception review" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Sign in to review exceptions" })).toBeInTheDocument();
+  expect(screen.queryByText("Synthetic inventory variance needs evidence.")).not.toBeInTheDocument();
   expect(window.location.pathname).toBe("/exceptions");
 });
 
@@ -222,20 +223,17 @@ test("opens the keyboard command palette", async () => {
   expect(within(dialog).getByRole("button", { name: /Exceptions/ })).toBeInTheDocument();
 });
 
-test("navigates to the native exception queue and filters its versioned contract", async () => {
+test("navigates to the governed exception review boundary without a synthetic fallback", async () => {
   render(<App />);
   await controlRoomHeading();
 
   const primaryNavigation = screen.getByRole("navigation", { name: "Primary navigation" });
   fireEvent.click(within(primaryNavigation).getByRole("button", { name: /Exceptions/ }));
 
-  expect(await screen.findByRole("heading", { level: 1, name: "Exception queue" })).toBeInTheDocument();
-  expect(screen.getByText("Synthetic inventory variance needs evidence.")).toBeInTheDocument();
-  expect(window.location.pathname).toBe("/exceptions");
-
-  fireEvent.change(screen.getByRole("textbox", { name: "Filter exceptions" }), { target: { value: "ABCDEF123456" } });
+  expect(await screen.findByRole("heading", { level: 1, name: "Exception review" })).toBeInTheDocument();
+  expect(screen.getByText("Records are limited to the tenant and workspace selected from the authenticated identity. Each action is checked again by the server.")).toBeInTheDocument();
   expect(screen.queryByText("Synthetic inventory variance needs evidence.")).not.toBeInTheDocument();
-  expect(screen.getByText("Synthetic high-value journal requires review.")).toBeInTheDocument();
+  expect(window.location.pathname).toBe("/exceptions");
 });
 
 test("navigates to the native evidence binder without exposing source paths", async () => {
@@ -441,6 +439,22 @@ test("discloses the bounded synthetic workspace", async () => {
   fireEvent.click(screen.getByLabelText("Workspace details"));
 
   expect(screen.getByText("Only workspace in this preview")).toBeVisible();
+});
+
+test("marks bundled Studio fixtures as synthetic rather than live operational evidence in both locales", async () => {
+  render(<App />);
+  await controlRoomHeading();
+
+  const provenance = screen.getByRole("status", { name: /Data provenance/ });
+  expect(provenance).toHaveAttribute("data-provenance-state", "synthetic_demo");
+  expect(provenance).toHaveAttribute("data-operational-evidence", "false");
+  expect(within(provenance).getByText("Synthetic demo — not live operational evidence")).toBeVisible();
+  expect(within(provenance).getByText("bundled_local_fixture")).toBeVisible();
+
+  fireEvent.click(screen.getByTestId("locale-toggle"));
+
+  expect(await screen.findByText("عرض اصطناعي — وليس دليلًا تشغيليًا حيًا")).toBeVisible();
+  expect(document.documentElement).toHaveAttribute("dir", "rtl");
 });
 
 test("renders explicit empty states for an empty synthetic snapshot", async () => {

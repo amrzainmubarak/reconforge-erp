@@ -90,6 +90,18 @@ def test_identity_admin_http_is_human_mfa_governed_paginated_redacted_and_disabl
     repository = _Repository()
     user = LocalUser(id="user-admin", username="admin", display_name="Admin")
 
+    original_asdict = routes.asdict
+
+    def future_asdict(value: Any) -> dict[str, object]:
+        result = original_asdict(value)
+        if isinstance(value, IdentityUserSummary):
+            result["future_identity_field"] = "must-not-escape"
+        if isinstance(value, IdentitySessionSummary):
+            result["future_session_field"] = "must-not-escape"
+        return result
+
+    monkeypatch.setattr(routes, "asdict", future_asdict)
+
     def authenticate(request: Any, token: str) -> AuthenticatedServerRequest | None:
         assert request_tenant_id(request) == "tenant-a"
         profiles = {
@@ -117,6 +129,7 @@ def test_identity_admin_http_is_human_mfa_governed_paginated_redacted_and_disabl
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     monkeypatch.setattr(routes, "execute_postgres_identity_administration", execute)
     root = tmp_path / "tenants"
     root.mkdir()
@@ -158,6 +171,7 @@ def test_identity_admin_http_is_human_mfa_governed_paginated_redacted_and_disabl
         "/api/v1/admin/identity/users", params={"limit": 1, "cursor": cursor}, headers=headers("human-ok")
     )
     assert second.status_code == 200 and second.json()["users"][0]["id"] == "user-target"
+    assert "future_identity_field" not in second.text
     tampered = client.get(
         "/api/v1/admin/identity/users", params={"cursor": cursor[:-1] + "A"}, headers=headers("human-ok")
     )
@@ -167,18 +181,21 @@ def test_identity_admin_http_is_human_mfa_governed_paginated_redacted_and_disabl
         "/api/v1/admin/identity/sessions", params={"user_id": "user-target"}, headers=headers("human-ok")
     )
     assert sessions.status_code == 200, sessions.text
+    assert "future_session_field" not in sessions.text
     disabled = client.post(
         "/api/v1/admin/identity/users/user-target/status",
         headers=headers("human-ok"),
         json={"disabled": True, "expected_lifecycle_version": 1},
     )
     assert disabled.status_code == 200 and disabled.json()["revoked_sessions"] == 1
+    assert "future_identity_field" not in disabled.text
     revoked = client.post(
         "/api/v1/admin/identity/sessions/session-target/revoke",
         headers=headers("human-ok"),
         json={"expected_lifecycle_version": 1, "reason_code": "security_response"},
     )
     assert revoked.status_code == 200 and revoked.json()["session"]["status"] == "revoked"
+    assert "future_session_field" not in revoked.text
     hostile = client.post(
         "/api/v1/admin/identity/users/user-target/status",
         headers=headers("human-ok"),

@@ -18,6 +18,7 @@ from reconforge.infrastructure.postgres import PostgresConnectionFactory, Postgr
 from reconforge.infrastructure.postgres_access_administration import PostgresAccessAdministrationRepository
 from reconforge.infrastructure.postgres_identity import POSTGRES_IDENTITY_SCHEMA_SQL, PostgresIdentityRepository
 from reconforge.infrastructure.postgres_identity_administration import PostgresIdentityAdministrationRepository
+from tests.postgres_seed_contract import CURRENT_TENANT_SEEDED_PERMISSIONS
 
 
 def test_access_lifecycle_schema_is_closed_versioned_and_forced_rls() -> None:
@@ -168,7 +169,9 @@ def test_live_access_admin_is_atomic_tenant_isolated_and_invalidates_authority(
 
         permissions = client.get("/api/v1/admin/access/permissions", headers=actor_headers)
         assert permissions.status_code == 200
-        assert {item["name"] for item in permissions.json()} == {"audit.read", "reports.read", "roles.manage"}
+        assert {item["name"] for item in permissions.json()} == (
+            CURRENT_TENANT_SEEDED_PERMISSIONS | {"audit.read", "reports.read", "roles.manage"}
+        )
         first = client.get("/api/v1/admin/access/roles", params={"limit": 1}, headers=actor_headers)
         assert first.status_code == 200, first.text
         cursor = first.json()["pagination"]["next_cursor"]

@@ -9,7 +9,7 @@ import re
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation, localcontext
+from decimal import ROUND_HALF_UP, Decimal, Inexact, InvalidOperation, Rounded, localcontext
 from importlib.resources import files
 from inspect import currentframe
 from pathlib import Path
@@ -32,6 +32,41 @@ FinancialInputPolicy = Literal[
     "strict-financial-input-v2",
 ]
 CURRENT_FINANCIAL_INPUT_POLICY: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY
+FinancialInputPolicyUse = Literal[
+    "new-financial-write",
+    "historical-financial-replay",
+]
+FinancialInputPolicyOrigin = Literal[
+    "explicit-policy",
+    "implicit-missing-historical-policy",
+]
+NEW_FINANCIAL_WRITE: Literal["new-financial-write"] = "new-financial-write"
+HISTORICAL_FINANCIAL_REPLAY: Literal["historical-financial-replay"] = "historical-financial-replay"
+
+
+@dataclass(frozen=True)
+class FinancialInputPolicyObservation:
+    """Describe the policy and compatibility mode used at a financial boundary."""
+
+    policy: FinancialInputPolicy
+    use: FinancialInputPolicyUse
+    origin: FinancialInputPolicyOrigin
+
+    @property
+    def legacy_compatibility(self) -> bool:
+        """Whether this boundary replayed the legacy-v1 compatibility behavior."""
+
+        return self.policy == LEGACY_FINANCIAL_INPUT_POLICY
+
+    def audit_metadata(self) -> dict[str, str | bool]:
+        """Return stable, non-sensitive metadata suitable for audit events."""
+
+        return {
+            "financial_input_policy": self.policy,
+            "financial_input_policy_use": self.use,
+            "financial_input_policy_origin": self.origin,
+            "legacy_financial_input_compatibility": self.legacy_compatibility,
+        }
 
 
 _SCIENTIFIC_NOTATION_PATTERN = re.compile(r"[eE]")
@@ -88,6 +123,51 @@ def validate_financial_input_policy(value: object) -> FinancialInputPolicy:
     if value in {LEGACY_FINANCIAL_INPUT_POLICY, STRICT_FINANCIAL_INPUT_POLICY}:
         return cast(FinancialInputPolicy, value)
     raise InvalidAmountError("unsupported financial input policy")
+
+
+def resolve_new_financial_write_policy(value: object) -> FinancialInputPolicyObservation:
+    """Require strict-v2 before a newly-created financial record can be persisted."""
+
+    policy = validate_financial_input_policy(value)
+    if policy != STRICT_FINANCIAL_INPUT_POLICY:
+        raise InvalidAmountError(
+            "new financial writes require strict-financial-input-v2; "
+            "legacy-financial-input-v1 is reserved for explicit historical replay"
+        )
+    return FinancialInputPolicyObservation(
+        policy=policy,
+        use=NEW_FINANCIAL_WRITE,
+        origin="explicit-policy",
+    )
+
+
+def resolve_historical_financial_replay_policy(
+    value: object | None,
+    *,
+    missing_policy_is_legacy_v1: bool = False,
+) -> FinancialInputPolicyObservation:
+    """Resolve persisted historical policy metadata without silently inferring legacy mode.
+
+    Callers that read an artifact predating the policy field must explicitly
+    declare that its missing field represents legacy-v1 behavior. The returned
+    observation can be attached to an audit event or surfaced to an operator.
+    """
+
+    if value is None:
+        if not missing_policy_is_legacy_v1:
+            raise InvalidAmountError(
+                "historical financial replay requires a persisted policy or explicit legacy-v1 fallback"
+            )
+        return FinancialInputPolicyObservation(
+            policy=LEGACY_FINANCIAL_INPUT_POLICY,
+            use=HISTORICAL_FINANCIAL_REPLAY,
+            origin="implicit-missing-historical-policy",
+        )
+    return FinancialInputPolicyObservation(
+        policy=validate_financial_input_policy(value),
+        use=HISTORICAL_FINANCIAL_REPLAY,
+        origin="explicit-policy",
+    )
 
 
 def _rounding_mode(policy: str) -> str:
@@ -149,8 +229,12 @@ def _divide_for_money(
     with localcontext() as context:
         context.prec = required_precision
         context.rounding = _rounding_mode(rounding_policy)
+        # Currency rounding is deliberate; caller diagnostic traps must not turn
+        # a nonterminating but valid quotient into a different financial result.
+        context.traps[Inexact] = False
+        context.traps[Rounded] = False
         quotient = numerator / denominator
-    return _quantize_decimal(quotient, precision=precision, rounding_policy=rounding_policy)
+        return _quantize_decimal(quotient, precision=precision, rounding_policy=rounding_policy)
 
 
 def _normalize_financial_text(
@@ -992,6 +1076,17 @@ def _resolve_currency_policy(
     return (registry_context or CurrencyRegistry).resolve(code)
 
 
+def minor_units_to_decimal(minor_units: int, *, precision: int) -> Decimal:
+    """Decode exact integer units with the recorded scale, without context arithmetic."""
+
+    if isinstance(minor_units, bool) or not isinstance(minor_units, int):
+        raise InvalidAmountError("minor_units must be an integer")
+    if isinstance(precision, bool) or not isinstance(precision, int) or not 0 <= precision <= 8:
+        raise InvalidAmountError("financial precision must be between 0 and 8")
+    components = Decimal(minor_units).as_tuple()
+    return Decimal((components.sign, components.digits, -precision))
+
+
 class Money:
     """Canonical representation of an amount bound to an explicit currency."""
 
@@ -1126,8 +1221,8 @@ class Money:
         return self._registry_digest
 
     def to_minor_units(self) -> int:
-        factor = Decimal(10) ** self._minor_units
-        return int(self._amount * factor)
+        factor = Decimal((0, (1,), self._minor_units))
+        return int(_exact_multiply(self._amount, factor))
 
     @classmethod
     def from_minor_units(
@@ -1137,11 +1232,10 @@ class Money:
         *,
         registry_context: CurrencyRegistryContext | None = None,
     ) -> Money:
-        if not isinstance(minor_units, int):
+        if isinstance(minor_units, bool) or not isinstance(minor_units, int):
             raise InvalidAmountError("minor_units must be an integer")
         resolution = _resolve_currency_policy(currency, registry_context)
-        factor = Decimal(10) ** resolution.spec.minor_units
-        amount = Decimal(minor_units) / factor
+        amount = minor_units_to_decimal(minor_units, precision=resolution.spec.minor_units)
         return cls._from_resolved(amount, resolution, strict_precision=True)
 
     def as_canonical_str(self) -> str:
@@ -1228,6 +1322,27 @@ class Money:
             registry_digest=registry_digest,
         )
         return cls._from_resolved(data["amount"], historical_resolution, strict_precision=True)
+
+    @classmethod
+    def from_strict_canonical_dict(
+        cls,
+        data: Mapping[str, object],
+        *,
+        registry_context: CurrencyRegistryContext | None = None,
+    ) -> Money:
+        """Restore a canonical value only when its serialized form is exact.
+
+        ``from_canonical_dict`` remains a compatibility reader for values whose
+        financial policy is valid but whose text can be normalized during
+        restoration. This stricter boundary is for persisted evidence and
+        replay paths that must prove the supplied bytes reproduce the producer's
+        deterministic serialization.
+        """
+
+        value = cls.from_canonical_dict(data, registry_context=registry_context)
+        if dict(data) != value.to_canonical_dict():
+            raise InvalidAmountError("canonical money dictionary is not deterministic canonical serialization")
+        return value
 
     def _check_currency(self, other: Money) -> None:
         if not isinstance(other, Money):
@@ -1419,3 +1534,28 @@ class ExchangeRate:
             )
         converted_amount = _exact_multiply(money.amount, self.rate)
         return Money._from_resolved(converted_amount, self._quote_policy)
+
+    def convert_inverse(self, money: Money) -> Money:
+        """Convert quote to base using the original rate and captured policies.
+
+        Do not serialize a rounded reciprocal: dividing the original amount by
+        its original rate retains the direction/source/date and rounds once at
+        the target currency boundary. Conversion is not a lossless round trip.
+        """
+        if not isinstance(money, Money):
+            raise InvalidAmountError("money must be a Money object")
+        if money.currency != self.quote_currency:
+            raise CurrencyMismatchError(
+                f"Exchange rate quote currency ({self.quote_currency}) does not match money currency ({money.currency})"
+            )
+        if money.currency_policy_digest != self._quote_policy.policy_digest:
+            raise CurrencyPolicyMismatchError(
+                f"Exchange rate quote policy does not match the {self.quote_currency} Money policy"
+            )
+        converted_amount = _divide_for_money(
+            money.amount,
+            self.rate,
+            precision=self._base_policy.spec.minor_units,
+            rounding_policy=self._base_policy.spec.rounding_policy,
+        )
+        return Money._from_resolved(converted_amount, self._base_policy, strict_precision=True)

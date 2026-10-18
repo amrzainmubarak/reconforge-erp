@@ -1,0 +1,54 @@
+{
+  "observed_utc": "2026-10-10T13:34:38.931990+00:00",
+  "status": "passed",
+  "identical_instrumentation": [
+    {
+      "path": ".github/scripts/benchmark_enterprise_finance.py",
+      "baseline_sha256": "a860640697ea42d9c3a4cae42e26e2140adea78d35a56126111f57f9a40943bc",
+      "candidate_sha256": "a860640697ea42d9c3a4cae42e26e2140adea78d35a56126111f57f9a40943bc"
+    },
+    {
+      "path": ".github/scripts/benchmark_global_engineering_pair.py",
+      "baseline_sha256": "5086ee51416636d34c080da155a9980092d2876eb97b4c00ed517b4391086e63",
+      "candidate_sha256": "5086ee51416636d34c080da155a9980092d2876eb97b4c00ed517b4391086e63"
+    },
+    {
+      "path": "reconforge/benchmark/container_resource_counters.py",
+      "baseline_sha256": "ada84e8cc39762b3f6e37637a073ecc3d370a9ed9c421b82ecf4ac290b911e5f",
+      "candidate_sha256": "ada84e8cc39762b3f6e37637a073ecc3d370a9ed9c421b82ecf4ac290b911e5f"
+    },
+    {
+      "path": "reconforge/benchmark/enterprise_posting_profile.py",
+      "baseline_sha256": "bd6ce80b935df0e79e291e8109a49f336235be047d6af865b424bcb2e490eb20",
+      "candidate_sha256": "bd6ce80b935df0e79e291e8109a49f336235be047d6af865b424bcb2e490eb20"
+    },
+    {
+      "path": "reconforge/benchmark/server_query_profile.py",
+      "baseline_sha256": "febd2ca7793376aa3ef9f7fb1ea0cd977c813ae103eca9cca7019982b4f48fad",
+      "candidate_sha256": "febd2ca7793376aa3ef9f7fb1ea0cd977c813ae103eca9cca7019982b4f48fad"
+    },
+    {
+      "path": "reconforge/benchmark/resource_sampling.py",
+      "baseline_sha256": "2465b7d997edce94e7a798785e05a45053acc2a4182b251a00efd2b77f3351e1",
+      "candidate_sha256": "2465b7d997edce94e7a798785e05a45053acc2a4182b251a00efd2b77f3351e1"
+    },
+    {
+      "path": "reconforge/benchmark/host_processor_observation.py",
+      "baseline_sha256": "fb947fc70811b8b8c13dd1ef53d7a6f7cab55b2e48ef4e8f52353b57526e2ed7",
+      "candidate_sha256": "fb947fc70811b8b8c13dd1ef53d7a6f7cab55b2e48ef4e8f52353b57526e2ed7"
+    }
+  ],
+  "baseline": "b7df92711d52bde1adb735e3d1ab538eb2f4e5cc",
+  "candidate": "07452da8742406d2223ce522c87aee0fcd223a90",
+  "baseline_reconforge_changes": [
+    "reconforge/benchmark/container_resource_counters.py",
+    "reconforge/benchmark/enterprise_posting_profile.py",
+    "reconforge/benchmark/host_processor_observation.py",
+    "reconforge/benchmark/resource_sampling.py",
+    "reconforge/benchmark/server_query_profile.py"
+  ],
+  "limits": [
+    "Host shared with existing idle services; no hardware-exclusive claim",
+    "Baseline business source unchanged; instrumentation only under reconforge/benchmark"
+  ]
+}

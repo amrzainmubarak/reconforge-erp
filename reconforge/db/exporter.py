@@ -21,6 +21,7 @@ from typing import Any
 from reconforge.audit import append_audit_event
 from reconforge.db.connection import connect, resolve_db_path
 from reconforge.db.migrations import database_status
+from reconforge.io.finance_posting import decode_posting_receipt, decode_posting_snapshot
 from reconforge.io.persisted import (
     PersistedJsonError,
     PersistedJsonObjectDocument,
@@ -98,6 +99,8 @@ SELECT_QUERIES = {
     "accounts": "SELECT * FROM accounts ORDER BY account_code, id",
     "finance_journals": "SELECT * FROM finance_journals ORDER BY workspace_id, organization_id, journal_code",
     "ledger_entries": "SELECT * FROM ledger_entries ORDER BY workspace_id, posting_date, entry_number",
+    "finance_posting_effects": "SELECT * FROM finance_posting_effects ORDER BY id",
+    "finance_posting_commands": "SELECT * FROM finance_posting_commands ORDER BY workspace_id, command_id",
     "ledger_lines": "SELECT * FROM ledger_lines ORDER BY entry_id, line_number",
     "ledger_line_dimensions": "SELECT * FROM ledger_line_dimensions ORDER BY line_id, dimension_value_id",
     "reconciliations": "SELECT * FROM reconciliations ORDER BY created_at, id",
@@ -157,6 +160,8 @@ EXPORT_JSON_FIELDS: Mapping[
 ] = MappingProxyType(
     {
         ("currency_registry_snapshots", "snapshot_json"): (decode_currency_registry_snapshot, "snapshot"),
+        ("finance_posting_effects", "snapshot_json"): (decode_posting_snapshot, "snapshot"),
+        ("finance_posting_commands", "result_json"): (decode_posting_receipt, "result"),
         ("audit_events", "metadata_json"): (decode_audit_metadata, "metadata"),
         ("legacy_import_records", "summary_json"): (
             decode_sqlite_legacy_import_summary,
@@ -638,11 +643,19 @@ def _legacy_payload(connection: sqlite3.Connection) -> dict[str, Any]:
 
 
 def _finance_payload(connection: sqlite3.Connection) -> dict[str, Any]:
+    from reconforge.infrastructure.sqlite_finance_posting import verify_posting_storage
+
+    try:
+        verify_posting_storage(connection)
+    except (TypeError, ValueError, sqlite3.DatabaseError) as exc:
+        raise DBBridgeError("Operational posting export integrity verification failed.") from exc
     return {
         "finance_journals": _rows(connection, "finance_journals"),
         "ledger_entries": _rows(connection, "ledger_entries"),
         "ledger_lines": _rows(connection, "ledger_lines"),
         "ledger_line_dimensions": _rows(connection, "ledger_line_dimensions"),
+        "finance_posting_effects": _json_rows(connection, "finance_posting_effects"),
+        "finance_posting_commands": _json_rows(connection, "finance_posting_commands"),
         "account_reconciliation_templates": _rows(connection, "account_reconciliation_templates"),
         "trial_balance_rows": _rows(connection, "trial_balance_rows"),
         "account_reconciliation_records": _rows(connection, "account_reconciliation_records"),
@@ -704,6 +717,18 @@ def _inventory_payload(connection: sqlite3.Connection) -> dict[str, Any]:
 
 def build_public_export_payloads(connection: sqlite3.Connection, *, schema_version: int) -> dict[str, dict[str, Any]]:
     """Build sanitized export payloads that exclude credential and session material."""
+
+    owns_snapshot = not connection.in_transaction
+    if owns_snapshot:
+        connection.execute("BEGIN")
+    try:
+        return _build_public_export_payloads(connection, schema_version=schema_version)
+    finally:
+        if owns_snapshot:
+            connection.rollback()
+
+
+def _build_public_export_payloads(connection: sqlite3.Connection, *, schema_version: int) -> dict[str, dict[str, Any]]:
 
     metadata = {
         "export_format_version": EXPORT_FORMAT_VERSION,

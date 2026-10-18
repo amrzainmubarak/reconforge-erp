@@ -36,8 +36,26 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None:
     assert POSTGRES_OPERATIONS_SCHEMA_SQL.count("FORCE ROW LEVEL SECURITY") == 2
     assert "FOREIGN KEY (tenant_id, workspace_id)" in POSTGRES_OPERATIONS_SCHEMA_SQL
-    assert POSTGRES_MIGRATION_REVISIONS[-1] == "0090_pg_writeback_observations"
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 90
+    assert POSTGRES_MIGRATION_REVISIONS[124] == "0125_pg_landed_cost_cancellation"
+    assert POSTGRES_MIGRATION_REVISIONS[125:] == (
+        "0126_pg_customer_returns", "0127_pg_procurement_commitments",
+        "0128_pg_operational_fx_tax", "0129_pg_financial_read_plans",
+        "0130_pg_supplier_returns", "0131_pg_fx_revaluation",
+        "0132_pg_stock_inverse_dispatch",
+        "0133_pg_manufacturing_execution", "0134_pg_intercompany_operations",
+        "0135_pg_procurement_sourcing",
+        "0136_pg_inventory_scope",
+        "0138_pg_manufacturing_v2",
+        "0139_pg_intercompany_fx",
+        "0140_pg_people_project_payroll",
+        "0141_pg_accrual_deferral", "0142_pg_manufacturing_supply", "0143_pg_project_billing", "0144_pg_inventory_contracts", "0145_pg_supply_closure",
+        "0146_pg_inventory_transfer",
+        "0147_pg_customer_partial_returns",
+        "0148_pg_partial_return_rounding",
+        "0149_pg_monetary_partial_returns",
+        "0150_pg_native_query_plans",
+    )
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 149
 
 
 def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:
@@ -56,6 +74,7 @@ def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain(
         previous = str(assignments["revision"])
         discovered.append(previous)
     assert tuple(discovered) == POSTGRES_MIGRATION_REVISIONS
+    assert all(len(revision) <= 32 for revision in discovered), "Revision IDs must fit Alembic's installed version table"
 
 
 class _MigrationCursor:

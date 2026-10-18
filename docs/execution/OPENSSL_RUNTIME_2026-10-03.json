@@ -1,0 +1,208 @@
+{
+  "schema_version": "openssl-runtime-provenance-v1",
+  "status": "passed-local-provenance-installation-and-build",
+  "source_commit": "68bfea5b0adc7def1526b015ef5a950d086b265b",
+  "provenance": {
+    "decision": "Evidence supports reviewed x86_64 Alpine v3.24 OpenSSL runtime APK pin update to 3.5.9-r0; root owns patch and full CI validation.",
+    "base": "python:3.12-alpine@sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31",
+    "alpine_release": "3.24.1",
+    "apk_tools": "3.0.6-r0",
+    "previous_installed_versions": {
+      "libssl3": "3.5.7-r0",
+      "libcrypto3": "3.5.7-r0"
+    },
+    "approved_artifacts": {
+      "libssl3": {
+        "version": "3.5.9-r0",
+        "bytes": 381860,
+        "sha256": "05e3393fb95aa5751ca2f9d242f659f6cff82c1cc7767cc2df4a086f7ad01877"
+      },
+      "libcrypto3": {
+        "version": "3.5.9-r0",
+        "bytes": 1980198,
+        "sha256": "6632d758d8f5e9ea3b650fe966f23bbf9a202f8b8dceecac93da135dec5e3689"
+      }
+    },
+    "both_official_hosts": "dl-cdn.alpinelinux.org and dl-3.alpinelinux.org, v3.24/main/x86_64",
+    "signed_index_sha256": "ea1722957448032530273eeae1a584416cad4ed367f0a0816c338dc034a22d57",
+    "signed_index_bytes": 528370,
+    "key_name": "alpine-devel@lists.alpinelinux.org-6165ee59.rsa.pub",
+    "key_sha256": "207e4696d3c05f7cb05966aee557307151f1f00217af4143c1bcaf33b8df733f",
+    "key_source": "Existing /etc/apk/keys from exact pinned base; no key downloaded or trust override",
+    "source_build_commit": "29b9ec24b1b5b39aeef51fa2a044210e2ec5258e",
+    "index_checksum_binding": [
+      {
+        "package": "libcrypto3",
+        "control_compressed_sha1_q1": "Q1HA3ulzTPIvyXzdGBkTu9cQ5t+wg=",
+        "control_expanded_sha1_q1": "Q1sSqBhuKVFn6GuvinLkCIVyWVl64=",
+        "matches_both_signed_indexes": true
+      },
+      {
+        "package": "libssl3",
+        "control_compressed_sha1_q1": "Q1IMTJDqnSCp3ToE3q3yxsT2QjNkM=",
+        "control_expanded_sha1_q1": "Q1C5RyNuyI1gGY82V+xiGULnnHLac=",
+        "matches_both_signed_indexes": true
+      }
+    ],
+    "bounded_reader_limits": {
+      "compressed_bytes": 16777216,
+      "expanded_bytes": 67108864,
+      "metadata_member_bytes": 8388608
+    },
+    "verify_all_four_packages": true,
+    "verify_both_signed_indexes": true,
+    "offline_install_passed": true,
+    "python_ssl_smoke": {
+      "openssl": "OpenSSL 3.5.9 29 Sep 2026",
+      "ssl_module": "/usr/local/lib/python3.12/lib-dynload/_ssl.cpython-312-x86_64-linux-musl.so",
+      "cipher_count": 17,
+      "sha256_smoke": "passed",
+      "memory_bio_client_hello_bytes": 1524,
+      "installed_versions": {
+        "libcrypto3": "3.5.9-r0",
+        "libssl3": "3.5.9-r0"
+      },
+      "loaded_libraries": {
+        "/usr/lib/libcrypto.so.3": "bb2d86be6845456696f90f0948b6de6369f66612b7cf3ffa755e664436fdbc88",
+        "/usr/lib/libssl.so.3": "ed8d30405217b3904a8df9ac311002d0ae43df516e60c5b3a8a998eda68ee340"
+      }
+    },
+    "network": "none; repositories /dev/null for install; readonly artifact mounts; no allow-untrusted",
+    "owned_cleanup_verified_absent": true,
+    "dockerfile_unchanged": true,
+    "dockerfile_sha256": "d732cf5e06b639ea00be8432b5a81a1926bb6d15361657cf4340ddd5b8e57a04",
+    "commands_and_durations": "install-attempt2/container-verification.json",
+    "preserved_first_attempt": "container-verification.json: packages/indexes/install passed; optional ldd Python-extension diagnostic failed on unresolved Py* symbols; correct loaded-library/MemoryBIO probe replaces it in fresh attempt2.",
+    "ci_failure_status": "The unidentified cf9... checksum returned by CI is unresolved; prior red CI and root transport evidence remain retained. No flaky-network or CDN-replacement cause is established by this verification.",
+    "scope": "Package authenticity/source/index binding and installation in pinned base. This does not replace Dockerfile build, dependency install, container functional/security scanning, or CI on the eventual patch."
+  },
+  "full_image": {
+    "source_commit": "68bfea5b0adc7def1526b015ef5a950d086b265b",
+    "dockerfile_sha256": "261e4ea483cc29f72cbe2e9f55b6b934a010c47e22acc5542edfd1bf3d2877e7",
+    "started_at": "2026-10-03T11:21:39.453440+00:00",
+    "commands": [
+      {
+        "name": "build",
+        "command": [
+          "docker",
+          "build",
+          "--iidfile",
+          "F:\\reconforge-erp\\output\\verification-2026-10-03\\ci-triage\\openssl-359.iid",
+          "-t",
+          "reconforge:openssl-359-20261003",
+          "."
+        ],
+        "exit_code": 0,
+        "duration_seconds": 52.18,
+        "log": "openssl-359-build.log",
+        "sha256": "e7b117a36baa7aa3803949bac59b1e2db59453a0df9e810ce219bb963d02e3b0"
+      },
+      {
+        "name": "doctor",
+        "command": [
+          "docker",
+          "run",
+          "--rm",
+          "reconforge:openssl-359-20261003",
+          "reconforge",
+          "doctor"
+        ],
+        "exit_code": 0,
+        "duration_seconds": 18.747,
+        "log": "openssl-359-doctor.log",
+        "sha256": "011c4651aee4407ec9aced841e5bb39ac2770c016405627628712a6720ab108f"
+      },
+      {
+        "name": "validate",
+        "command": [
+          "docker",
+          "run",
+          "--rm",
+          "reconforge:openssl-359-20261003",
+          "reconforge",
+          "validate",
+          "examples/sample_data"
+        ],
+        "exit_code": 0,
+        "duration_seconds": 18.057,
+        "log": "openssl-359-validate.log",
+        "sha256": "d6c22324a1af0ccbaae2246ab884a09d49d1693d608cdd4b8271bae7cf307f91"
+      },
+      {
+        "name": "rules",
+        "command": [
+          "docker",
+          "run",
+          "--rm",
+          "reconforge:openssl-359-20261003",
+          "reconforge",
+          "rules",
+          "validate",
+          "--pack",
+          "control-packs/audit-basic"
+        ],
+        "exit_code": 0,
+        "duration_seconds": 17.15,
+        "log": "openssl-359-rules.log",
+        "sha256": "a6e7c05dc0dd469f27c62d027d1dd57dd5006a0f7bae902eb02609a112fd2bad"
+      },
+      {
+        "name": "offline-doctor",
+        "command": [
+          "docker",
+          "run",
+          "--rm",
+          "--network=none",
+          "--read-only",
+          "--cap-drop=ALL",
+          "--security-opt=no-new-privileges",
+          "reconforge:openssl-359-20261003",
+          "reconforge",
+          "doctor"
+        ],
+        "exit_code": 0,
+        "duration_seconds": 17.392,
+        "log": "openssl-359-offline-doctor.log",
+        "sha256": "011c4651aee4407ec9aced841e5bb39ac2770c016405627628712a6720ab108f"
+      },
+      {
+        "name": "ssl",
+        "command": [
+          "docker",
+          "run",
+          "--rm",
+          "--network=none",
+          "reconforge:openssl-359-20261003",
+          "/app/.venv/bin/python",
+          "-c",
+          "import ssl; assert \"OpenSSL 3.5.9 \" in ssl.OPENSSL_VERSION; print(ssl.OPENSSL_VERSION)"
+        ],
+        "exit_code": 0,
+        "duration_seconds": 1.093,
+        "log": "openssl-359-ssl.log",
+        "sha256": "6b246f0cf76e9153ea7e92f087a0b9e01bff4be56b81a0906169676ae0288880"
+      }
+    ],
+    "after_commit": "68bfea5b0adc7def1526b015ef5a950d086b265b",
+    "sources_unchanged": true,
+    "tracked_tree_clean": true,
+    "image_config_digest": "sha256:0ad93a89f742a6996b2ce5d1e8a3977832efebc3c8072effd6be83576dcf351b"
+  },
+  "artifacts": {
+    "apk-transport-20261003/report.json": "1ad7687c014148a933bca0102e146b583bf387def4c691857ae936e7d6f8cc60",
+    "apk-verify-20261003/report.json": "f4a74e0f36a4d028b3ff917140ba38196049e29a411f4a142790c3d385c04dcf",
+    "apk-verify-20261003/bounded-metadata.json": "0b25dc5c08affe1f4864bddc3771934b00891d4004bd8e562fef00f2c0150d57",
+    "apk-verify-20261003/index-transport.json": "63e1211f44ce81af58819fb1c60f65c1c8ce3ee54c0200e29286c6a196440d92",
+    "apk-verify-20261003/index-checksum-binding.json": "1579d371c66e135c1fa716300a1be39bb99a65306065fe95ab9526dbd859ee3c",
+    "apk-verify-20261003/install-attempt2/container-verification.json": "57e6486a02b28ee8f59d96edb0adcbd8d3fd36907c868063c80b10087ee4f30c",
+    "openssl-359-image.json": "d3e0f38f4238ce807666d4f09722b17d0b21bb3a5b9d0571b7d1f4fa7776ff83",
+    "pr113-docker-build-failed.log": "b341c89c99c6f57230c126ca4ae6b9f6a280f8f77af02da862d312d84d0e92f5",
+    "pr113-docker-parity-failed.log": "1a84e677cd7d44c3f10d6c549a9b1646bf2c4eae9f5f2abf08f26fb5da7d1c9c"
+  },
+  "scope": [
+    "reviewed x86_64 official APK provenance",
+    "exact pinned-base installation",
+    "full local image build and six functional commands",
+    "hosted/zero-vulnerability/production claims excluded"
+  ]
+}

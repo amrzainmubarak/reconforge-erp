@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict
 
-from reconforge.api.dependencies import get_db, require_any_permission, require_permission
+from reconforge.api.dependencies import get_local_db, require_any_permission, require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_identity import server_identity_enabled
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService
@@ -55,6 +55,13 @@ def _require_local_identity_profile(request: Request) -> None:
         )
 
 
+def _local_connection(request: Request, connection: sqlite3.Connection | None) -> sqlite3.Connection:
+    _require_local_identity_profile(request)
+    if connection is None:
+        raise APIError(status_code=503, code="database_unavailable", message="Local identity storage is unavailable.")
+    return connection
+
+
 def user_payload(service: LocalAuthService, user: LocalUser) -> dict[str, object]:
     return {
         "id": user.id,
@@ -71,13 +78,12 @@ def user_payload(service: LocalAuthService, user: LocalUser) -> dict[str, object
 def list_users(
     current_user: ReadUsers,
     request: Request,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     """List local users without credential material."""
 
-    _require_local_identity_profile(request)
     try:
-        service = LocalAuthService(connection)
+        service = LocalAuthService(_local_connection(request, connection))
         users = [user_payload(service, user) for user in service.users.list()]
     except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
         raise APIError(status_code=400, code="users_read_failed", message="Unable to read local users.") from exc
@@ -89,13 +95,12 @@ def create_user(
     payload: CreateUserRequest,
     current_user: ManageUsers,
     request: Request,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     """Create a local user and assign one role."""
 
-    _require_local_identity_profile(request)
     try:
-        service = LocalAuthService(connection)
+        service = LocalAuthService(_local_connection(request, connection))
         user = service.create_user(
             username=payload.username,
             password=payload.password,
@@ -115,13 +120,12 @@ def patch_user(
     payload: PatchUserRequest,
     current_user: ManageUsers,
     request: Request,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     """Update local user metadata."""
 
-    _require_local_identity_profile(request)
     try:
-        service = LocalAuthService(connection)
+        service = LocalAuthService(_local_connection(request, connection))
         user = service.update_user(
             username=username,
             actor_label=current_user.username,
@@ -139,13 +143,12 @@ def disable_user(
     username: str,
     current_user: ManageUsers,
     request: Request,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     """Disable a local user."""
 
-    _require_local_identity_profile(request)
     try:
-        service = LocalAuthService(connection)
+        service = LocalAuthService(_local_connection(request, connection))
         user = service.disable_user(username=username, actor_label=current_user.username)
         return {"user": user_payload(service, user)}
     except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
@@ -158,13 +161,12 @@ def assign_role(
     payload: RoleRequest,
     current_user: ManageUsers,
     request: Request,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     """Assign a role to a local user."""
 
-    _require_local_identity_profile(request)
     try:
-        service = LocalAuthService(connection)
+        service = LocalAuthService(_local_connection(request, connection))
         service.assign_role(username=username, role=payload.role, actor_label=current_user.username)
         return {"username": username, "roles": service.roles.user_roles(username)}
     except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
@@ -177,13 +179,12 @@ def remove_role(
     role_name: str,
     current_user: ManageUsers,
     request: Request,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     """Remove a role from a local user."""
 
-    _require_local_identity_profile(request)
     try:
-        service = LocalAuthService(connection)
+        service = LocalAuthService(_local_connection(request, connection))
         service.remove_role(username=username, role=role_name, actor_label=current_user.username)
         return {"username": username, "roles": service.roles.user_roles(username)}
     except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
@@ -195,13 +196,12 @@ def user_permissions(
     username: str,
     current_user: ReadUsers,
     request: Request,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     """List effective permissions for a local user."""
 
-    _require_local_identity_profile(request)
     try:
-        service = LocalAuthService(connection)
+        service = LocalAuthService(_local_connection(request, connection))
         permissions = sorted(service.roles.user_permissions(username))
     except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
         raise APIError(status_code=400, code="permissions_read_failed", message=str(exc)) from exc

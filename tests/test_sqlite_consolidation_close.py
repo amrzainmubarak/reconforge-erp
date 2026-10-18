@@ -414,6 +414,35 @@ def test_full_lifecycle_is_exact_attributable_immutable_and_replay_verified(tmp_
         connection.close()
 
 
+def test_prepare_run_reads_period_after_acquiring_writer_lock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    connection = _database(tmp_path)[1]
+    repository = SQLiteConsolidationCloseRepository(connection)
+    repository.create_period(
+        group_code="GLOBAL-GROUP",
+        period_id="2026-08",
+        reporting_currency="USD",
+        period_start_date="2026-08-01",
+        period_end_date="2026-08-31",
+        reporting_date="2026-08-01",
+        actor_label="consolidation-preparer",
+    )
+    observed_transaction_state: list[bool] = []
+    original_period = repository._period
+
+    def observe_period(identifier: str) -> dict[str, object]:
+        observed_transaction_state.append(connection.in_transaction)
+        return original_period(identifier)
+
+    monkeypatch.setattr(repository, "_period", observe_period)
+    repository.prepare_run(
+        run_number="RUN-LOCK-BOUNDARY",
+        worksheet=_worksheet(),
+        actor_label="consolidation-preparer",
+    )
+    assert observed_transaction_state == [True]
+    connection.close()
+
+
 def test_posted_run_certification_is_replayable_and_maker_checker_bound(tmp_path: Path) -> None:
     _path, connection = _database(tmp_path)
     try:

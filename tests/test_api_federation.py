@@ -6,6 +6,7 @@ import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -22,6 +23,7 @@ from reconforge.infrastructure.oidc import OIDCStaticJWKSVerifier
 from reconforge.infrastructure.postgres_federation import FederationLoginChallenge
 from reconforge.infrastructure.postgres_identity import PostgresSession
 from reconforge.infrastructure.saml import RSA_SHA256, SAMLProviderMaterial, SAMLResponseVerifier
+from tests.postgres_test_hygiene import grant_native_owner_reads
 
 CHALLENGE_ID = "server-issued-challenge-id-0123456789abcdef"
 
@@ -412,7 +414,9 @@ def test_air_gap_mode_denies_network_required_provider_before_verifier(monkeypat
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
-def test_live_http_oidc_session_logout_replay_and_tenant_isolation(tmp_path: Path) -> None:
+def test_live_http_oidc_session_logout_replay_and_tenant_isolation(
+    tmp_path: Path, isolated_postgres_runtime_role: str,
+) -> None:
     pytest.importorskip("psycopg")
     from reconforge.infrastructure.postgres import (
         PostgresConnectionFactory,
@@ -433,8 +437,9 @@ def test_live_http_oidc_session_logout_replay_and_tenant_isolation(tmp_path: Pat
         pytest.fail("RECONFORGE_TEST_POSTGRES_APP_USER contains unsafe characters")
     factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
     admin = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False)).connect()
-    tenant_a = "federation_http_a"
-    tenant_b = "federation_http_b"
+    suffix = uuid4().hex[:12]
+    tenant_a = f"federation_http_a_{suffix}"
+    tenant_b = f"federation_http_b_{suffix}"
     provider = _oidc_provider()
     private, jwks = _oidc_material()
     principal = FederatedPrincipal(
@@ -460,6 +465,13 @@ def test_live_http_oidc_session_logout_replay_and_tenant_isolation(tmp_path: Pat
                     f"reconforge.federation_assertion_replays, "
                     f"reconforge.federation_identity_links, reconforge.federation_identity_events TO {app_user}"
                 )
+                grant_native_owner_reads(admin, app_user, (
+                    "identity_step_up_assertions", "emergency_access_permissions", "principal_scope_grants",
+                ))
+                # Current human authentication also expires due emergency
+                # authority. Provision its existing guarded runtime operations.
+                admin.execute(f"GRANT SELECT,UPDATE ON reconforge.emergency_access_requests TO {app_user}")
+                admin.execute(f"GRANT SELECT,INSERT ON reconforge.emergency_access_events TO {app_user}")
         for tenant_id in (tenant_a, tenant_b):
             with PostgresTenantBoundary(factory).transaction(tenant_id) as connection:
                 connection.execute("INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s)", (tenant_id, tenant_id))

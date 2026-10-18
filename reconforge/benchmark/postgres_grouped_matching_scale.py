@@ -407,6 +407,7 @@ def run_postgres_grouped_matching_scale_profile(
                 batch_size=declared.batch_size,
                 lease_seconds=declared.lease_seconds,
                 poll_interval_seconds=0,
+                allow_unbound_hosted_policy=True,
             ),
         )
 

@@ -11,6 +11,7 @@ from uuid import uuid4
 
 import pytest
 
+from reconforge.infrastructure.outbox_fencing_schema import POSTGRES_OUTBOX_FENCING_SCHEMA_SQL
 from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
     PostgresSettings,
@@ -108,6 +109,7 @@ def test_live_postgres_consumer_receipt_prevents_duplicate_effect_after_ack_cras
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
             admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_OUTBOX_APPLICATION_SCHEMA_SQL)
+            admin.execute(POSTGRES_OUTBOX_FENCING_SCHEMA_SQL)
             admin.execute(POSTGRES_OUTBOX_CONSUMER_SCHEMA_SQL)
             admin.execute(
                 """
@@ -183,7 +185,7 @@ def test_live_postgres_consumer_receipt_prevents_duplicate_effect_after_ack_cras
         assert duplicate.status == "duplicate"
         with PostgresTenantBoundary(factory).transaction(tenant_id) as connection:
             PostgresOutboxRepository(connection).mark_published(
-                tenant_id=tenant_id, event_id=event_id, worker_id="publisher-b"
+                tenant_id=tenant_id, event_id=event_id, worker_id="publisher-b", lease_generation=retry[0].lease_generation
             )
             count = connection.execute(
                 "SELECT effect_count FROM reconforge.consumer_effect_probe WHERE tenant_id=%s AND event_id=%s",

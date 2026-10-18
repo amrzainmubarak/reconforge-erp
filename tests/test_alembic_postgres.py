@@ -113,6 +113,28 @@ def test_writeback_recovery_observation_migration_is_versioned_scoped_and_revers
     assert "DROP TABLE IF EXISTS reconforge.connector_writeback_recovery_observations" in migration
 
 
+def test_close_period_sod_migration_is_versioned_scoped_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0091_postgres_close_period_sod.py").read_text(encoding="utf-8")
+    schema = (ROOT / "reconforge/infrastructure/postgres_close.py").read_text(encoding="utf-8")
+
+    assert 'revision = "0091_pg_close_period_sod"' in migration
+    assert 'down_revision = "0090_pg_writeback_observations"' in migration
+    assert "ADD COLUMN IF NOT EXISTS locked_by" in migration
+    assert "legacy-unknown" in migration
+    assert "requires an independent actor" in migration
+    assert "DROP COLUMN IF EXISTS locked_by" in migration
+    assert "guard_close_period_sod" in schema
+
+
+def test_close_lock_evidence_migration_is_additive_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0092_postgres_close_lock_evidence.py").read_text(encoding="utf-8")
+
+    assert 'revision = "0092_pg_close_lock_evidence"' in migration
+    assert 'down_revision = "0091_pg_close_period_sod"' in migration
+    assert "locked close-period evidence is immutable" in migration
+    assert "def downgrade" in migration
+
+
 def test_reconciliation_entity_scope_migration_is_versioned_and_reversible() -> None:
     migration = (ROOT / "alembic/versions/0072_postgres_reconciliation_entity_scope.py").read_text(
         encoding="utf-8"

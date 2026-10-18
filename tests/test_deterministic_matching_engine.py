@@ -8,6 +8,7 @@ from reconforge.db.connection import connect
 from reconforge.db.migrations import run_migrations
 from reconforge.infrastructure.sqlite_matching import SQLiteMatchingRepository
 from reconforge.reconciliation.deterministic_engine import DeterministicMatchingEngine
+from reconforge.reconciliation.matching import RECORD_IDENTITY_POLICY
 
 
 def _currency_precision(code: str) -> tuple[int | None, str | None]:
@@ -75,3 +76,22 @@ def test_direct_engine_matches_sqlite_delegation_and_record_permutations(tmp_pat
     assert direct == delegated
     assert permuted == direct
     assert [result["status"] for result in direct.results] == ["Matched", "Matched"]
+
+
+def test_canonical_identity_policy_rejects_missing_currency_without_defaulting() -> None:
+    def resolve_currency(code: str) -> tuple[int | None, str | None]:
+        return (2, None) if code == "USD" else (None, "UNKNOWN_CURRENCY")
+
+    output = DeterministicMatchingEngine(resolve_currency).match_records(
+        left_records=[{"id": "L1", "reference": "REF", "amount": "1.00", "date": "2026-08-01"}],
+        right_records=[{"id": "R1", "reference": "REF", "amount": "1.00", "date": "2026-08-01"}],
+        record_identity_policy=RECORD_IDENTITY_POLICY,
+    )
+
+    assert [result["status"] for result in output.results] == ["Invalid", "Invalid"]
+    assert [result["reason_code"] for result in output.results] == ["MISSING_CURRENCY", "MISSING_CURRENCY"]
+    assert [exception["reason_code"] for exception in output.exceptions] == [
+        "MISSING_CURRENCY",
+        "MISSING_CURRENCY",
+    ]
+    assert not any(result["status"] == "Matched" for result in output.results)

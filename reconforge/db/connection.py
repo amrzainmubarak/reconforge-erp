@@ -57,6 +57,7 @@ def connect(
     create_parent: bool = False,
     require_exists: bool = False,
     busy_timeout_ms: int | None = None,
+    check_same_thread: bool = True,
 ) -> sqlite3.Connection:
     """Open a SQLite connection with row dictionaries and foreign keys enabled."""
 
@@ -70,7 +71,9 @@ def connect(
         selected_busy_timeout = SQLITE_BUSY_TIMEOUT_MS if busy_timeout_ms is None else int(busy_timeout_ms)
         if selected_busy_timeout <= 0:
             raise DatabaseError("SQLite busy timeout must be positive.")
-        connection = sqlite3.connect(resolved, timeout=selected_busy_timeout / 1_000)
+        connection = sqlite3.connect(
+            resolved, timeout=selected_busy_timeout / 1_000, check_same_thread=check_same_thread
+        )
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
         connection.execute(f"PRAGMA busy_timeout = {selected_busy_timeout}")

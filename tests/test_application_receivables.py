@@ -71,6 +71,11 @@ class _RecordingReceivablesRepository:
         self.arguments = {"workspace": workspace, "as_of_date": as_of_date}
         return {"workspace": workspace, "as_of_date": as_of_date, "total_outstanding_minor": 123}
 
+    def aging_report_by_currency(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]:
+        self.operation = "aging_report_by_currency"
+        self.arguments = {"workspace": workspace, "as_of_date": as_of_date}
+        return {"schema_version": 1, "as_of_date": as_of_date, "currency_groups": []}
+
 
 def _service(repository: _RecordingReceivablesRepository) -> ReceivablesApplicationService:
     return ReceivablesApplicationService(cast(ReceivablesRepositoryProtocol, repository))
@@ -124,6 +129,10 @@ def test_receivables_application_delegates_credit_override_version_and_aging_dat
     report = service.aging_report(workspace="regulated", as_of_date="2026-07-31")
     assert report["total_outstanding_minor"] == 123
     assert repository.arguments == {"workspace": "regulated", "as_of_date": "2026-07-31"}
+    grouped = service.aging_report_by_currency(workspace="regulated", as_of_date="2026-08-01")
+    assert repository.operation == "aging_report_by_currency"
+    assert repository.arguments == {"workspace": "regulated", "as_of_date": "2026-08-01"}
+    assert grouped == {"schema_version": 1, "as_of_date": "2026-08-01", "currency_groups": []}
 
 
 def test_receivables_application_boundary_has_no_database_or_infrastructure_dependency() -> None:

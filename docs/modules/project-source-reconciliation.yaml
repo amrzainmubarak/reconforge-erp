@@ -1,0 +1,55 @@
+id: project-source-reconciliation
+name: Governed Project source cost revenue and whole-document settlement
+version: 1.1.0
+maturity: experimental
+owner: Amr
+dependencies: [identity, finance-core, finance-operational-posting, people-project-payroll, project-time-billing, receivables, outbox]
+incompatible_versions: []
+data_classification: confidential_aggregate_project_financial_evidence
+retention_policy: preserve_original_source_and_evidence_bytes
+permissions: [people_project_payroll.read, project_time_billing.read, finance_core.read, receivables.read]
+default_roles: []
+migrations: []
+domain_invariants:
+  - One Project and period must refer to the same fully consumed whole approved time set in wage and billing sources
+  - Original public wage allocations conserve the complete source without reading private employee earnings
+  - Effective independently approved original customer prices bind exact service-minute lineage and captured policy
+  - Every source matches its immutable native header effect reviewed snapshot post command audit and outbox references
+  - Native account role chart currency and Project dimension membership remain exact
+  - Other posted Expense or Income for the selected Project and period refuses a complete-source interpretation
+  - Cash and AR totals describe whole original documents and never invent per-Project cash allocations
+  - Every emitted financial source and original price retains current scope permissions and captured amount ceilings
+  - One PostgreSQL statement captures public source and native rows in one MVCC snapshot
+  - Personnel-group or superuser/BYPASSRLS connections are refused
+  - A separate derived diagnostic retains unchanged original source evidence and its canonical byte anchor
+  - Selected source obligations and consumed whole-time claims do not imply formal period close or whole-period coverage
+  - Exact referenced native period metadata is observed in one read-only statement without adding period row locks
+domain_events: []
+api_routes: ["/api/v1/project-source-reconciliation/report", "/api/v1/project-source-reconciliation/evidence", "/api/v1/project-source-reconciliation/close-diagnostics", "/api/v1/project-source-reconciliation/close-diagnostics/evidence"]
+cli_commands: []
+ui_routes: [/project-source-reconciliation]
+import_schemas: []
+export_schemas: [project-source-reconciliation-evidence-v1, project-source-reconciliation-v1, project-source-close-diagnostic-v1, project-source-close-evidence-v1]
+synthetic_fixtures: [tests/fixtures/project_source_reconciliation_original_golden_v2.json, tests/fixtures/project_source_close_partial_native_v1.json, tests/fixtures/project_source_close_final_native_v1.json]
+threat_model: docs/architecture/PROJECT_SOURCE_RECONCILIATION.md
+benchmarks: []
+rollback_plan: Remove this optional read-only surface. No schema or original financial history is modified.
+test_matrix:
+  native: tests/test_postgres_project_source_reconciliation.py
+  native_http: tests/test_postgres_project_source_reconciliation_api.py
+  native_read_browser_fixture: tests/test_postgres_project_source_reconciliation_browser_fixture.py
+  independent_oracle: tests/test_project_source_reconciliation_oracle.py
+  source_obligation_native: tests/test_postgres_project_source_close.py
+  source_obligation_pure: tests/test_project_source_close.py
+  source_obligation_oracle: tests/test_project_source_close_oracle.py
+  studio: apps/web/src/components/ProjectSourceReconciliationPage.test.tsx
+runtime_acceptance: Development ordered141 plus owned PB tables executed three native current-read/privacy cases and a later four-case native/HTTP group with zero skips. The subsequently strengthened original-price and complete-metadata capture executed two native/HTTP cases with zero skips. The controlled HTTP test mounts the owned router explicitly; central registrations socket TLS browser and final CI are separate pending gates.
+fixed_checkpoint_acceptance: Fixed backend59c747d3 and Studio8a6fa868 executed4 focused native and controlled-HTTP cases with zero skips in166.527s. Its actual original export passed isolated normal and optimized stdlib verification with identical outputs. Independent adversarial cases49 pass. The subsequent stable read-browser fixture executed1 native source-and-tamper case with zero skips in48.343s;21 Studio tests and typecheck pass. Playwright collected1 test only, with no wire execution or central143 acceptance inferred.
+registered_ordered143_read_gate: Own clean mergea187c069 of rootbc814871 executed3 public-read production-factory HTTP and stable browser-fixture tests with zero skips in173.887s. This is authenticated TestClient with HTTPS scheme and real ordinary PostgreSQL, separately from socket TLS and populated dump restore.
+source_obligation_development_gate: Extension on source-bound uncommitted208298f3 development executed1 actual ordered143 partial-to-final wage and AR lifecycle with zero skips in62.846s. It verified four then six original effects, remaining1501 wage and5236 AR then zero, production-factory ordinary HTTP, allfour amount contexts and cached persisted permission revocation. Two original exports passed four isolated normal and optimized stdlib executions with pairwise identical outputs. Period Open is observed; no formal Close or new wire acceptance is inferred.
+limitations:
+  - PostgreSQL only. Community SQLite is explicitly unavailable for this source pair.
+  - One functional currency Project period payrun and original invoice only.
+  - Private earnings and original private time-request hashes remain opaque custody anchors; their formulas are not rerun here.
+  - Independent evidence verifier proves exported arithmetic and custody rather than current SQL authority or the entire audit chain.
+  - No comprehensive Project P-and-L bank execution statutory payroll tax cost efficiency or competitor superiority claim.

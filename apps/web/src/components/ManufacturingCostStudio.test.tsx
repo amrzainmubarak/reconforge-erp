@@ -32,8 +32,13 @@ const contract: ManufacturingCostStudioContract = {
   notices: [],
 };
 
+const loadedContract = {
+  ...contract,
+  provenance: { state: "synthetic_demo", source: "bundled_local_fixture", operational_evidence: false },
+} satisfies Awaited<ReturnType<typeof loadManufacturingCostStudio>>;
+
 beforeEach(() => {
-  vi.mocked(loadManufacturingCostStudio).mockResolvedValue(contract);
+  vi.mocked(loadManufacturingCostStudio).mockResolvedValue(loadedContract);
 });
 
 describe("ManufacturingCostStudio", () => {

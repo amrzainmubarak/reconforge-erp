@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "status": "bounded_current_head_restore_passed",
+  "head_before_repair": "8054cd454e14f29a6d0316029aa88acafdaab0a1",
+  "observed_failure": "Current Alembic0099 did not match proof runner0098; first new matrix schema also omitted0099. Both failed runs retained.",
+  "runtime_revision": "0099_pg_receivables_policy",
+  "historical_migration_subject": "0089_postgres_writeback_proposal_identity",
+  "historical_reports_unchanged": true,
+  "native_runs": [
+    {
+      "kind": "drill",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        ".github/scripts/verify_postgres_writeback_identity_migration.py",
+        "--output",
+        "F:\\reconforge-erp\\docs\\execution\\POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0099_2026-10-03.json"
+      ],
+      "started_at": "2026-10-03T12:20:04.418249+00:00",
+      "duration_seconds": 30.829,
+      "exit_code": 0,
+      "log": "restore-0099-drill.log",
+      "log_sha256": "ebf05d61c332f9202c771d2dbceb35d143c9962cba21b732cfc7f7bbba4bccbc",
+      "report": "docs\\execution\\POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0099_2026-10-03.json",
+      "report_exists": true,
+      "source_unchanged": true,
+      "report_sha256": "c7314f7d2d4f15d556e2982c0a109d66e495159afc5d9b9306675117ac18e073"
+    },
+    {
+      "kind": "matrix",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py",
+        "--output",
+        "F:\\reconforge-erp\\docs\\execution\\POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0099_2026-10-03.json"
+      ],
+      "started_at": "2026-10-03T12:20:04.409998+00:00",
+      "duration_seconds": 54.779,
+      "exit_code": 0,
+      "log": "restore-0099-matrix.log",
+      "log_sha256": "be19d97352e209de976efef3bb097be6a43545333fd1bfe94ab8ae3878de9116",
+      "report": "docs\\execution\\POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0099_2026-10-03.json",
+      "report_exists": true,
+      "source_unchanged": true,
+      "report_sha256": "d449241fb0b7beb86bcd06bca52f99b17381ef39299bd60f7c71a529c411bd24"
+    }
+  ],
+  "contract_runs": [
+    {
+      "artifact": "output\\verification-2026-10-03\\prod033-current-drill-contract.xml",
+      "sha256": "908c678b2d0f7051a79c219fef066d17fc3f948bdd9ab4cee245b26dfcbfcaed",
+      "tests": 78,
+      "failed": 1,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 22.101
+    },
+    {
+      "artifact": "output\\verification-2026-10-03\\prod033-current-drill-contract-fixed.xml",
+      "sha256": "4071a970ac9fd28340115328e61caec6a66f603eafdf88894154cf65b1ee9390",
+      "tests": 78,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 11.087
+    }
+  ],
+  "secret_review": "RECEIVABLES_EMPTY_TABLE_DIGEST_REVIEW_2026-10-03.json",
+  "secret_history": {
+    "version": "8.30.1",
+    "exit_code": 0,
+    "findings": 0,
+    "commits": 1023,
+    "seconds": 10.2,
+    "artifact": "output/verification-2026-10-03/prod033-secret-after.json",
+    "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+  },
+  "whole_regression_prior": "RECEIVABLES_INVENTORY_REGRESSION_8054_2026-10-03.json",
+  "limitations": [
+    "writeback migration history only; separate AR policy-native acceptance retains populated AR snapshot proof",
+    "new whole-regression and hosted gates remain separate",
+    "raw working-directory scan included installed virtual environments and prior synthetic artifacts; not a clean repository checkout"
+  ],
+  "exported_repository_tree_scan": {
+    "exit_code": 0,
+    "findings": 0,
+    "files": 3048,
+    "manifest_sha256": "a834b7f33bc5fb6f6f921fa9fc26897a266fbc8a9fbb930a47bda7475878a6ed",
+    "artifact": "output/verification-2026-10-03/prod033-repository-tree-secret.json",
+    "artifact_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "immutable_export_hashes_match": true,
+    "root_changes_since_export": [],
+    "excluded_local_dependencies_and_generated_outputs": true
+  }
+}

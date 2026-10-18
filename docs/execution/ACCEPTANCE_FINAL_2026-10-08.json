@@ -1,0 +1,969 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-08",
+  "status": "bounded_local_acceptance_passed_hosted_gaps_remain",
+  "tested_code_commit": "832ceeee075330931a494215c68c350867e93600",
+  "latest_live_fixture_commit": "98e3b0a34ed3f7339392263acef6af61e9408ede",
+  "source_binding": "Full regression on clean832ceeee; later live-only fixture cleanup changes no runtime/CI/web source and passes34 cases at its retained exact diff.",
+  "audit_branch": "amr/baseline-refresh-20261008",
+  "baseline_source": "636786e8eeda82a8a74291c572deb8dd3bc3fe1c",
+  "main_unchanged": "b61ea56bb9c135fda12546e173795af3c243e4fb",
+  "python": {
+    "passed": 4429,
+    "skipped": 490,
+    "failures": 0,
+    "warnings": 27,
+    "pytest_duration_seconds": 952.19
+  },
+  "skip_reasons": {
+    "PG-INBOX-ENV: live PostgreSQL acceptance requires application/admin DSNs; ADR0825": 4,
+    "PROD-002 requires a live PostgreSQL nonowner application profile; review 2026-10-04": 13,
+    "PROD-007 requires migrated live PostgreSQL app-role profile; review 2026-10-03": 58,
+    "PROD031 live cash contract requires isolated PostgreSQL creation credentials; review 2026-10-10": 1,
+    "PROD033 API requires disposable live PostgreSQL app/admin profile; review 2026-10-03": 6,
+    "Windows symlink creation requires an external privilege": 1,
+    "live PostgreSQL boundary prerequisite; covered by the Amr live acceptance gate": 15,
+    "live public network evidence is opt-in and may drift": 1,
+    "requires a disposable PostgreSQL administration service": 186,
+    "requires a live PostgreSQL application role": 2,
+    "requires a live PostgreSQL migration service": 1,
+    "requires a live PostgreSQL service": 21,
+    "requires a live Redis service": 3,
+    "requires a live S3-compatible service": 1,
+    "requires a live object-lock-enabled S3-compatible bucket": 1,
+    "requires an owned PostgreSQL administrator DSN": 1,
+    "requires an owned live PostgreSQL administrator DSN": 1,
+    "requires disposable PostgreSQL source and maintenance services": 1,
+    "requires live PostgreSQL": 78,
+    "requires live PostgreSQL service": 12,
+    "requires owned live PostgreSQL administrator and application DSNs": 1,
+    "requires owned live PostgreSQL fixture": 80,
+    "symbolic links are not available in this environment": 1,
+    "symbolic-link creation is unavailable": 1
+  },
+  "environment": {
+    "os": "Windows11 build26200",
+    "python": "3.12.13",
+    "node": "26.3.0",
+    "npm": "11.16.0",
+    "postgres": "17.10",
+    "postgres_head": "0106_pg_ap_link_reversal",
+    "sqlite_head": 55
+  },
+  "native_postgres": {
+    "container": "reconforge-native-20261008-ca22dcfd",
+    "container_id": "218b0696f223db9899373818673996b25eb5b853af3180d2b66ca775e4511e6a",
+    "image": "postgres@sha256:dc17045ccfd343b49600570ea734b9c4991cf1c3f3302e67df51e3b402dd55c4",
+    "cleanup": true,
+    "application_role": {
+      "superuser": false,
+      "bypassrls": false
+    },
+    "server_version": "17.10",
+    "migration_head": "0106_pg_ap_link_reversal",
+    "restored_revision": "0106_pg_ap_link_reversal",
+    "restored_public_definer_execute": 0,
+    "native_backup_restore_passed": true,
+    "wrong_source_revision_refused": true,
+    "restored_database_removed": true,
+    "artifact_sha256": "781428ada13a9a5faef16638676219d281c577d030b9b71ff0077fe62d35bd68",
+    "artifact_bytes": 1463810
+  },
+  "native_regressions": {
+    "passed": 97,
+    "skipped": 0
+  },
+  "http_fixture_cleanup": {
+    "container": "reconforge-native-20261008-868a1de3",
+    "container_id": "229d1879aeda2fd14ab3e43b45c307db5980c347a7a3fc5c97920c101765e680",
+    "image": "postgres@sha256:dc17045ccfd343b49600570ea734b9c4991cf1c3f3302e67df51e3b402dd55c4",
+    "cleanup": true,
+    "application_role": {
+      "superuser": false,
+      "bypassrls": false
+    },
+    "server_version": "17.10",
+    "migration_head": "0106_pg_ap_link_reversal",
+    "restored_revision": "0106_pg_ap_link_reversal",
+    "restored_public_definer_execute": 0,
+    "native_backup_restore_passed": true,
+    "wrong_source_revision_refused": true,
+    "restored_database_removed": true,
+    "artifact_sha256": "273999ff9c48cbc163a808070134b9ffe6d189ae09dcc2bfb74bbcb481771bce",
+    "artifact_bytes": 1482066
+  },
+  "http_regressions": {
+    "passed": 34,
+    "skipped": 0
+  },
+  "fixture_acceptance": "docs/execution/HTTP_FIXTURE_CLEANUP_2026-10-08.json",
+  "hosted_full_regression": [
+    {
+      "job_id": 113092365189,
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "log": "output/baseline-2026-10-08/hosted-python311-final.log",
+      "log_sha256": "2aaf0c24490246e40946c2019c34f60a78e5152c540d8c57ba8d5eff6d525928",
+      "pytest": {
+        "passed": 4431,
+        "skipped": 488,
+        "warnings": 10,
+        "duration_seconds": 879.37
+      }
+    },
+    {
+      "job_id": 113092365465,
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "log": "output/baseline-2026-10-08/hosted-python312-final.log",
+      "log_sha256": "5b95cbd73dac755555165a868abb55de7cf065142dbf24ff7a36e1ca1b953797",
+      "pytest": {
+        "passed": 4431,
+        "skipped": 488,
+        "warnings": 26,
+        "duration_seconds": 777.23
+      }
+    }
+  ],
+  "wheel_install_smoke": {
+    "source_commit": "832ceeee075330931a494215c68c350867e93600",
+    "wheel_sha256": "3f07b62994c0f619673cbd4eb1726b2a702ca88069be851419c35c8d8a5882da",
+    "isolated_target": "output/baseline-2026-10-08/wheel-install-smoke-832ceeee",
+    "reused_locked_dependencies": true,
+    "status": "passed",
+    "exit_code": 0,
+    "duration_seconds": 3.171,
+    "command": [
+      "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+      "-c",
+      "import pathlib,reconforge,sys; target=sys.argv.pop(1); assert str(pathlib.Path(reconforge.__file__).resolve()).startswith(target); print(reconforge.__file__); from reconforge.cli import app; app()",
+      "F:\\reconforge-erp\\output\\baseline-2026-10-08\\wheel-install-smoke-832ceeee",
+      "doctor"
+    ],
+    "log": "output/baseline-2026-10-08/wheel-install-smoke.log",
+    "log_sha256": "69f918ddaa7d53443d20d577097d0c610d1d80fce4c2727fafd4caac4fd280f5"
+  },
+  "web_source_binding": "219 component/19 browser passes, nine prerequisites retained at earlier exact source; no web changes in ADR0833.",
+  "dependency_source_binding": "128-package zero-finding hash-locked Python audit and zero-finding npm audit retained with unchanged locks after ADR0833.",
+  "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+  "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e",
+  "runtime_sha256": {
+    "reconforge/utils/money.py": "ba23d471a91e0c3d432af3c88fc32009762c80a0d60e9c0955bdfacd52f14017",
+    "reconforge/infrastructure/sqlite_finance_core.py": "def6703d9e18524bd3fb2b92345667470bdc92dc5f87a1fbe9cf57fcc267c5a8",
+    "reconforge/infrastructure/postgres_finance_core.py": "037b524d1c8d813df44c0df4495028392169eb779a2f98601caadaba36cd9bec",
+    "reconforge/infrastructure/postgres_backup.py": "de4b3447c8741ea37adb907dcda190b12067200f5ab0c413a840e67a6e45b178",
+    ".github/scripts/verify_postgres_upgrade.py": "1e33a2e2ca0e9c7fea252be2f2fd477d408fb55b9fee6cd49c79df9b5abca1f8",
+    ".github/scripts/verify_postgres_writeback_identity_migration.py": "257b8cb182b31045c0282c8b327dc6fc286c2df5257b82271baa86b6adea9d0b",
+    "tests/test_money_minor_context.py": "918db82614f6afe8dbdc45a99dee5d2e312e167a7687bbf6a9f89932a9177e4f",
+    "tests/test_postgres_docker_tool_runner.py": "a37067dee0d7636a40c509b71617b8f7bb1e6c2b88f8b9a69439e9da19dec14e",
+    "tests/test_postgres_invoice_recovery_restore.py": "0de3174957e47163946519d2387cef9a08da50c2eac84208100a0f655596fb3e"
+  },
+  "commands": [
+    {
+      "name": "pytest-final",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-ra",
+        "--tb=short",
+        "--junitxml=F:\\reconforge-erp\\output\\baseline-2026-10-08\\pytest-final.xml"
+      ],
+      "started_at": "2026-10-08T00:47:40.676927+00:00",
+      "duration_seconds": 955.613,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/pytest-final.log",
+      "log_sha256": "22c7e1f80ccebb5b387e1af94b59472fba78aea6cccaf54a6c0f26f3cc77240f",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "ruff-after",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "started_at": "2026-10-08T00:48:20.189996+00:00",
+      "duration_seconds": 0.186,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/ruff-after.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "mypy-after",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge"
+      ],
+      "started_at": "2026-10-08T00:48:20.482730+00:00",
+      "duration_seconds": 0.772,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/mypy-after.log",
+      "log_sha256": "2bac5de57e028e88b2a934665739983a4d02d9b3939b0981658628541718da4f",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "bandit-after",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "-r",
+        "reconforge"
+      ],
+      "started_at": "2026-10-08T00:48:21.358428+00:00",
+      "duration_seconds": 14.773,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/bandit-after.log",
+      "log_sha256": "808442f258dcbdc890c066780dc543c8c5a3c9bc2eba07d3d1a75c5e410e5993",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "build-after",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "build",
+        "--no-isolation",
+        "--outdir",
+        "F:\\reconforge-erp\\output\\baseline-2026-10-08\\packages-after"
+      ],
+      "started_at": "2026-10-08T00:48:36.235149+00:00",
+      "duration_seconds": 25.077,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/build-after.log",
+      "log_sha256": "c6d5c4238c4cb524a5a8b641e5fdd463b413f1708298718c49b101efa59239b6",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "doctor-after",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\reconforge.exe",
+        "doctor"
+      ],
+      "started_at": "2026-10-08T00:49:01.428413+00:00",
+      "duration_seconds": 3.569,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/doctor-after.log",
+      "log_sha256": "d9783d649de930d00d282cd2f5e55bae86b84a0a6c77065c961b096ba568b628",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "validate-after",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\reconforge.exe",
+        "validate",
+        "examples/sample_data"
+      ],
+      "started_at": "2026-10-08T00:49:05.104822+00:00",
+      "duration_seconds": 3.339,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/validate-after.log",
+      "log_sha256": "761baec488afa32f64865dc5f64015fa5674dc7f4a23d87c683595cf9ed38711",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "demo-after",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\reconforge.exe",
+        "demo",
+        "run",
+        "--output",
+        "F:\\reconforge-erp\\output\\baseline-2026-10-08\\demo-after"
+      ],
+      "started_at": "2026-10-08T00:49:08.545239+00:00",
+      "duration_seconds": 6.046,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/demo-after.log",
+      "log_sha256": "3cdf1014c7045c27002a4fe2f94668db1affc5123d87dd14da39316d23e0b22a",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "supply-chain-policy-after",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        ".github/scripts/validate_supply_chain_policy.py",
+        "--project-root",
+        "."
+      ],
+      "started_at": "2026-10-08T00:49:14.699466+00:00",
+      "duration_seconds": 0.243,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/supply-chain-policy-after.log",
+      "log_sha256": "d7ad1a7c8098e9e6dab2e07e33ae1fb6c8cdcf9e5c6855d16a8de8f86e0aa3d3",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "diff-check-after",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "started_at": "2026-10-08T00:49:15.047043+00:00",
+      "duration_seconds": 0.07,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/diff-check-after.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "gitleaks-history-final",
+      "command": [
+        "F:\\reconforge-erp\\output\\baseline-2026-10-08\\tools\\gitleaks.exe",
+        "git",
+        "F:\\reconforge-erp\\output\\baseline-2026-10-08\\published-history-scan",
+        "--config",
+        "F:\\reconforge-erp\\output\\baseline-2026-10-08\\published-history-scan\\.gitleaks.toml",
+        "--gitleaks-ignore-path",
+        "F:\\reconforge-erp\\output\\baseline-2026-10-08\\published-history-scan\\.gitleaksignore",
+        "--redact",
+        "--log-opts=--all",
+        "--report-path",
+        "F:\\reconforge-erp\\output\\baseline-2026-10-08\\gitleaks-history-final-report.json"
+      ],
+      "started_at": "2026-10-08T00:50:54.969677+00:00",
+      "duration_seconds": 4.757,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/gitleaks-history-final.log",
+      "log_sha256": "bb42c10a1c31c56b964518f4f92041757d801f6bbc277a316439cf764ca5241a",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "gitleaks-tree-final",
+      "command": [
+        "F:\\reconforge-erp\\output\\baseline-2026-10-08\\tools\\gitleaks.exe",
+        "dir",
+        "F:\\reconforge-erp\\output\\baseline-2026-10-08\\published-history-scan",
+        "--config",
+        "F:\\reconforge-erp\\output\\baseline-2026-10-08\\published-history-scan\\.gitleaks.toml",
+        "--gitleaks-ignore-path",
+        "F:\\reconforge-erp\\output\\baseline-2026-10-08\\published-history-scan\\.gitleaksignore",
+        "--redact",
+        "--report-path",
+        "F:\\reconforge-erp\\output\\baseline-2026-10-08\\gitleaks-tree-final-report.json"
+      ],
+      "started_at": "2026-10-08T00:50:59.838421+00:00",
+      "duration_seconds": 0.427,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/gitleaks-tree-final.log",
+      "log_sha256": "cfaf37bfbc2d56c62f8dc25fb33885a0aa94442a7882766c87b792ec7419b629",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "docker-build",
+      "command": [
+        "docker",
+        "build",
+        "-t",
+        "reconforge:baseline-20261008",
+        "."
+      ],
+      "started_at": "2026-10-08T00:51:30.720271+00:00",
+      "duration_seconds": 293.682,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/docker-build.log",
+      "log_sha256": "4d312be9f7f65b942ee2c997eb156f44a5c9be097f57f5d93a9ce7d97b61a61a",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "docker-doctor",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "reconforge:baseline-20261008",
+        "reconforge",
+        "doctor"
+      ],
+      "started_at": "2026-10-08T00:56:24.520738+00:00",
+      "duration_seconds": 9.015,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/docker-doctor.log",
+      "log_sha256": "011c4651aee4407ec9aced841e5bb39ac2770c016405627628712a6720ab108f",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "docker-inspect",
+      "command": [
+        "docker",
+        "image",
+        "inspect",
+        "reconforge:baseline-20261008",
+        "--format",
+        "{{.Id}}"
+      ],
+      "started_at": "2026-10-08T00:56:33.646743+00:00",
+      "duration_seconds": 0.241,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/docker-inspect.log",
+      "log_sha256": "25ff810a83005b180ed0ce77db2dcde40d6af41e669605ae860c4805300e07c1",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "hosted-precommit-focused",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "tests/test_postgres_backup.py",
+        "tests/test_postgres_docker_tool_runner.py",
+        "tests/test_postgres_writeback_identity_migration_drill.py",
+        "tests/test_postgres_writeback_identity_migration_matrix.py",
+        "tests/test_supply_chain_policy.py",
+        "tests/test_phase4_execution_contract.py",
+        "tests/test_phase_1_3_execution_contract.py",
+        "-ra",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-08T00:46:53.862883+00:00",
+      "duration_seconds": 11.54,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/hosted-precommit-focused.log",
+      "log_sha256": "624431cb2e835772bff1b13016b7cf149e639da0f0f554085308310e2d5d2d5c",
+      "source_commit": "486a7552579f476b447e63c4dcbe898efe1e6541",
+      "worktree_diff_sha256": "f38e56ad424a5403a738b6fcfb182c812d997523c77de8f0b2cd12727a199e4f",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "native-analogous-upgrade",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "alembic",
+        "upgrade",
+        "head"
+      ],
+      "started_at": "2026-10-08T00:42:02.786860+00:00",
+      "duration_seconds": 4.277,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/native-analogous-upgrade.log",
+      "log_sha256": "146679e8020d89c8909598aab396e1ae689e820095df7b72f102697d35af389d",
+      "source_commit": "486a7552579f476b447e63c4dcbe898efe1e6541",
+      "worktree_diff_sha256": "027449cce1d1da10fc4f378e09d0aa5a9529775e73931549fb9ba7a614a6d2cf",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "native-analogous-regressions",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "tests/test_api_operations.py",
+        "tests/test_postgres_consolidation_ppa_runtime.py",
+        "tests/test_postgres_consolidation_deferred_tax_runtime.py",
+        "tests/test_postgres_consolidation_impairment_runtime.py",
+        "tests/test_postgres_intercompany_elimination_runtime.py",
+        "tests/test_api_server_receivables.py",
+        "tests/test_receivables_monetary_policy.py",
+        "tests/test_receivables_policy_schema.py",
+        "tests/test_receivables_policy_capture.py",
+        "tests/test_receivables_policy_raw_guards.py",
+        "tests/test_postgres_receivables_policy_restore.py",
+        "tests/test_postgres_invoice_recovery_restore.py",
+        "-ra",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-08T00:42:07.202384+00:00",
+      "duration_seconds": 59.847,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/native-analogous-regressions.log",
+      "log_sha256": "0985d1d5f9e1215f8581718b91a57b487849a694971a60ba78e62752c0518a8e",
+      "source_commit": "486a7552579f476b447e63c4dcbe898efe1e6541",
+      "worktree_diff_sha256": "027449cce1d1da10fc4f378e09d0aa5a9529775e73931549fb9ba7a614a6d2cf",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "writeback-drill-after",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        ".github/scripts/verify_postgres_writeback_identity_migration.py",
+        "--output",
+        "F:\\reconforge-erp\\docs\\execution\\POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-10-08.json"
+      ],
+      "started_at": "2026-10-08T00:15:25.000371+00:00",
+      "duration_seconds": 13.353,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/writeback-drill-after.log",
+      "log_sha256": "3be6b95c410acf609d15c954f64027c80e7d9709995aa070e19d606e6355fb28",
+      "source_commit": "486a7552579f476b447e63c4dcbe898efe1e6541",
+      "worktree_diff_sha256": "877600826c5a110c83ff98faf57191ecbcda9262d826d7bc780dd97856d068ce",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "writeback-matrix-after",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py",
+        "--output",
+        "F:\\reconforge-erp\\docs\\execution\\POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-08.json"
+      ],
+      "started_at": "2026-10-08T00:13:26.396433+00:00",
+      "duration_seconds": 28.07,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/writeback-matrix-after.log",
+      "log_sha256": "ed8e0d97bbceaa2c042f5095652d3a636b4a22134d08e3be81ceef2fb996b257",
+      "source_commit": "486a7552579f476b447e63c4dcbe898efe1e6541",
+      "worktree_diff_sha256": "877600826c5a110c83ff98faf57191ecbcda9262d826d7bc780dd97856d068ce",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "ha-dr-after",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        ".github/scripts/verify_postgres_ha_dr_repeated.py",
+        "--executed-at",
+        "2026-10-08",
+        "--output",
+        "F:\\reconforge-erp\\output\\baseline-2026-10-08\\ha-dr-after-report.json"
+      ],
+      "started_at": "2026-10-07T23:55:29.119270+00:00",
+      "duration_seconds": 474.306,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/ha-dr-after.log",
+      "log_sha256": "5e1afc8001577dfcfeb517d4e497f0eb438caae8fa8b723556e3523be8bd5d0f",
+      "source_commit": "486a7552579f476b447e63c4dcbe898efe1e6541",
+      "worktree_diff_sha256": "d415ec3c935f92264cf43961b3d04961d8bb758bdbdcc9e19cca2ad76f40498a",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "native-http-cleanup-upgrade",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "alembic",
+        "upgrade",
+        "head"
+      ],
+      "started_at": "2026-10-08T01:16:21.346164+00:00",
+      "duration_seconds": 4.364,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/native-http-cleanup-upgrade.log",
+      "log_sha256": "146679e8020d89c8909598aab396e1ae689e820095df7b72f102697d35af389d",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "32f573f4870da41d5b1c78bd12f7db233a0551d3b5d6783cccf35b1d9c6f997b",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "native-http-cleanup-regressions",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "tests/test_postgres_close_scope_bootstrap.py",
+        "tests/test_api_operations.py",
+        "tests/test_api_metrics.py",
+        "tests/test_api_server_bank_statement.py",
+        "tests/test_postgres_consolidation_close.py::test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable",
+        "tests/test_api_server_consolidation_close.py",
+        "tests/test_api_server_manufacturing_cost_control.py",
+        "tests/test_api_server_professional_invoice_payment.py",
+        "tests/test_api_server_retail_settlement.py",
+        "tests/test_api_server_reconciliation_live.py",
+        "tests/test_api_server_scoped_exports.py",
+        "tests/test_api_consolidation_tax_impairment_live.py",
+        "tests/test_api_consolidation_ownership_change.py",
+        "tests/test_postgres_policy_provenance.py",
+        "-ra",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-08T01:16:25.825332+00:00",
+      "duration_seconds": 37.852,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/native-http-cleanup-regressions.log",
+      "log_sha256": "26e4c1d073658ea6c115682ebe147e279354a19dc7b45acd761d3bad7ef69716",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "32f573f4870da41d5b1c78bd12f7db233a0551d3b5d6783cccf35b1d9c6f997b",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    }
+  ],
+  "initial_acceptance": "docs/execution/ACCEPTANCE_2026-10-08.json",
+  "hosted_gate_repairs": "docs/execution/HOSTED_GATES_REPAIR_2026-10-08.json",
+  "hosted_snapshot": {
+    "source_commit": "832ceeee075330931a494215c68c350867e93600",
+    "captured_at": "2026-10-08T01:17:53.577495+00:00",
+    "workflows": {
+      "ci": {
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598"
+      },
+      "security": {
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671684"
+      },
+      "codeql": {
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671645"
+      },
+      "docker": {
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671720"
+      }
+    },
+    "jobs": [
+      {
+        "id": 113092365189,
+        "name": "test (3.11)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113092365189"
+      },
+      {
+        "id": 113092365465,
+        "name": "test (3.12)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113092365465"
+      },
+      {
+        "id": 113092365470,
+        "name": "engine-parity (3.12, lower-bounds, 1.26.4, 2.2.0, 1.0.0)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113092365470"
+      },
+      {
+        "id": 113092365528,
+        "name": "engine-parity (3.11, current-compatible-2026-07-25, 2.4.3, 3.0.5, 1.5.5)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113092365528"
+      },
+      {
+        "id": 113092365539,
+        "name": "engine-parity (3.11, lower-bounds, 1.26.4, 2.2.0, 1.0.0)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113092365539"
+      },
+      {
+        "id": 113092365548,
+        "name": "web",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113092365548"
+      },
+      {
+        "id": 113092365572,
+        "name": "engine-parity (3.12, current-compatible-2026-07-25, 2.4.3, 3.0.5, 1.5.5)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113092365572"
+      },
+      {
+        "id": 113092365601,
+        "name": "postgres-ha-dr",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113092365601"
+      },
+      {
+        "id": 113092365664,
+        "name": "object-storage",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113092365664"
+      },
+      {
+        "id": 113096760863,
+        "name": "docker-parity",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113096760863"
+      },
+      {
+        "id": 113096760938,
+        "name": "server-boundaries (matching-runtime)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113096760938"
+      },
+      {
+        "id": 113096760939,
+        "name": "server-boundaries (parity)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113096760939"
+      },
+      {
+        "id": 113096760942,
+        "name": "server-boundaries (native)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113096760942"
+      },
+      {
+        "id": 113096760961,
+        "name": "server-boundaries (durable-scale)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113096760961"
+      },
+      {
+        "id": 113096760966,
+        "name": "server-boundaries (inventory-payables)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113096760966"
+      },
+      {
+        "id": 113096760967,
+        "name": "server-boundaries (finance-posting)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113096760967"
+      },
+      {
+        "id": 113096761003,
+        "name": "server-boundaries (receivables)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113096761003"
+      },
+      {
+        "id": 113096761005,
+        "name": "server-boundaries (writeback)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113096761005"
+      },
+      {
+        "id": 113096761044,
+        "name": "server-boundaries (industry-close)",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113096761044"
+      },
+      {
+        "id": 113100277926,
+        "name": "server-boundaries",
+        "status": "completed",
+        "conclusion": "failure",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671598/job/113100277926"
+      },
+      {
+        "id": 113092366870,
+        "name": "Locked Python audit (3.11)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671684/job/113092366870"
+      },
+      {
+        "id": 113092367012,
+        "name": "Secret and npm policy gates",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671684/job/113092367012"
+      },
+      {
+        "id": 113092367121,
+        "name": "Locked Python audit (3.12)",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671684/job/113092367121"
+      },
+      {
+        "id": 113092368162,
+        "name": "Exact-image SBOM, vulnerability, and license gate",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671684/job/113092368162"
+      },
+      {
+        "id": 113092575552,
+        "name": "python-security",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37709671684/job/113092575552"
+      }
+    ],
+    "raw_snapshot": {
+      "path": "output/baseline-2026-10-08/hosted-ci-current.json",
+      "sha256": "c760a72793273663b77bd29c07130ea3916dc73bc11c63c9e78cf8c875d0b65a"
+    }
+  },
+  "boundaries": [
+    "AMR-GFO-005 remains in progress; full hosted CI not accepted",
+    "shared downgrade fixture guards, identity projection expectations and paused Inventory receipt failures remain",
+    "no main merge or stable release",
+    "cancellation0107 unmerged",
+    "synthetic data only, configured HTTPS prerequisites remain",
+    "single-host manual HA drill, no production SLO/capacity/compliance claim",
+    "no automatic repair of previously rounded financial amounts",
+    "default-branch dependency alerts remain separate from audited sprint locks"
+  ],
+  "final_documentation_contract": {
+    "name": "docs-latest",
+    "command": [
+      "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "tests/test_phase_1_3_execution_contract.py",
+      "tests/test_phase4_execution_contract.py",
+      "tests/test_maturity_policy.py",
+      "tests/test_supply_chain_policy.py",
+      "-ra",
+      "--tb=short"
+    ],
+    "started_at": "2026-10-08T01:20:40.484426+00:00",
+    "duration_seconds": 13.714,
+    "exit_code": 0,
+    "status": "passed",
+    "error": null,
+    "log": "output/baseline-2026-10-08/docs-latest.log",
+    "log_sha256": "5239c97f750a431a9b71a5e8ae8ab397a189ba8f0d24a05f66635345552e1cae",
+    "source_commit": "98e3b0a34ed3f7339392263acef6af61e9408ede",
+    "worktree_diff_sha256": "b204c00ece9772553365c347ff6b87a1bcf87e2bc7e664d68e2324f887a3f49a",
+    "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+    "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+  },
+  "final_quality_contracts": [
+    {
+      "name": "ruff-final",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "started_at": "2026-10-08T01:20:54.373329+00:00",
+      "duration_seconds": 0.162,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/ruff-final.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "source_commit": "98e3b0a34ed3f7339392263acef6af61e9408ede",
+      "worktree_diff_sha256": "b204c00ece9772553365c347ff6b87a1bcf87e2bc7e664d68e2324f887a3f49a",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "diff-check-final",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "started_at": "2026-10-08T01:20:54.684082+00:00",
+      "duration_seconds": 0.108,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/diff-check-final.log",
+      "log_sha256": "c0307a6dc7006d57de7c754bf130542b95f3fdb1942164915c23f2c3bc6772e0",
+      "source_commit": "98e3b0a34ed3f7339392263acef6af61e9408ede",
+      "worktree_diff_sha256": "b204c00ece9772553365c347ff6b87a1bcf87e2bc7e664d68e2324f887a3f49a",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    }
+  ]
+}

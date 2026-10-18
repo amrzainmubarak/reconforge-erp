@@ -904,7 +904,26 @@ class PostgresDurableJobRepository:
                 for row in rows
             ]
 
-    def list_transitions(self, *, tenant_id: str, job_id: str) -> list[dict[str, Any]]:
+    def list_jobs(self, *, tenant_id: str, workspace_id: str, organization_id: str, entity_id: str,
+                  status: JobStatus | None, after_id: str, limit: int) -> list[DurableJob]:
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 51:
+            raise ValueError("Job page limit is invalid.")
+        with self._transaction(tenant_id, workspace_id=workspace_id,
+                               organization_id=organization_id, entity_id=entity_id):
+            columns = ", ".join(_JOB_COLUMNS)
+            rows = self.connection.execute(
+                "SELECT " + columns + " FROM reconforge.durable_jobs "  # nosec B608
+                "WHERE tenant_id=%s AND workspace_id=%s AND COALESCE(organization_id,'')=%s AND entity_id=%s "
+                'AND id COLLATE "C" > %s AND (%s::text IS NULL OR status=%s) ORDER BY id COLLATE "C" LIMIT %s',
+                (tenant_id, workspace_id, organization_id, entity_id, after_id,
+                 None if status is None else status.value, None if status is None else status.value, limit),
+            ).fetchall()
+            return [_decode_job(row) for row in rows]
+
+    def list_transitions(self, *, tenant_id: str, job_id: str,
+                         limit: int | None = None) -> list[dict[str, Any]]:
+        if limit is not None and (isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 201):
+            raise ValueError("Transition history limit is invalid.")
         with self._transaction(tenant_id):
             scope_row = self.connection.execute(
                 "SELECT organization_id, workspace_id, entity_id FROM reconforge.durable_jobs WHERE tenant_id=%s AND id=%s",
@@ -919,16 +938,20 @@ class PostgresDurableJobRepository:
                 workspace_id=str(scope_row[1]),
             )
             self.connection.execute("SELECT set_config('app.entity_id', %s, true)", (str(scope_row[2]),))
-            cursor = self.connection.execute(
-                """
+            query = """
                 SELECT job_version, from_status, to_status, actor_id, occurred_at, reason_code
                 FROM reconforge.durable_job_transitions
                 WHERE tenant_id=%s AND job_id=%s ORDER BY job_version
-                """,
-                (tenant_id, job_id),
-            )
+                """
+            parameters: tuple[object, ...] = (tenant_id, job_id)
+            if limit is not None:
+                query += " DESC LIMIT %s"
+                parameters = (tenant_id, job_id, limit)
+            rows = self.connection.execute(query, parameters).fetchall()
+            if limit is not None:
+                rows.reverse()
             names = ("job_version", "from_status", "to_status", "actor_id", "occurred_at", "reason_code")
-            return [dict(zip(names, row, strict=True)) for row in cursor.fetchall()]
+            return [dict(zip(names, row, strict=True)) for row in rows]
 
     def list_lease_events(self, *, tenant_id: str, job_id: str) -> list[dict[str, Any]]:
         with self._transaction(tenant_id):

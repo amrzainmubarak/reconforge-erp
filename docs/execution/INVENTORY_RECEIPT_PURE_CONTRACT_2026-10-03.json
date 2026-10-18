@@ -1,0 +1,97 @@
+{
+  "schema_version": "reviewed-inventory-receipt-pure-contract-v1",
+  "status": "passed",
+  "scope": "Frozen pure plan/review/effect/inverse and bounded-codec contract only.",
+  "counts": {
+    "tests": 31,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 31
+  },
+  "junit_duration_seconds": 0.265,
+  "owned_sources": [
+    {
+      "path": "reconforge/domain/inventory_receipt_posting.py",
+      "sha256": "357464ffe44c3881e12b15fa5d9438f9a5fe8d46868995f3953b19d107821964"
+    },
+    {
+      "path": "reconforge/application/inventory_receipt_posting.py",
+      "sha256": "0eb230c4ce88b97691fa4adf1625fe9727f911b295ea5eff70a27644fc3e15d2"
+    },
+    {
+      "path": "reconforge/io/inventory_receipt_posting.py",
+      "sha256": "2466094e3c052c9175db3316638c425928b59de18a830a194f9366e06c14dc1b"
+    },
+    {
+      "path": "tests/test_inventory_receipt_posting_domain.py",
+      "sha256": "93154096295fb50aa5c068e42c428a736c7dc6cfc6ace51b000a3d286100e1bc"
+    }
+  ],
+  "sources_unchanged_before_after_each_command": true,
+  "commands": [
+    {
+      "name": "pytest",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "tests/test_inventory_receipt_posting_domain.py",
+        "-q",
+        "-o",
+        "addopts=",
+        "--junitxml",
+        "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod038-shared-contract\\pytest.xml"
+      ],
+      "duration_seconds": 1.891,
+      "exit_code": 0,
+      "log_sha256": "9e9ea1071ac164f3da7798c174666addefa431afdf73975e3c11faccc2ecd0fa"
+    },
+    {
+      "name": "ruff",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "reconforge/domain/inventory_receipt_posting.py",
+        "reconforge/application/inventory_receipt_posting.py",
+        "reconforge/io/inventory_receipt_posting.py",
+        "tests/test_inventory_receipt_posting_domain.py"
+      ],
+      "duration_seconds": 0.14,
+      "exit_code": 0,
+      "log_sha256": "a4443afdcfb6d7363adb285762515ccf7cf50473b1a05c20c1a50f6bed4d26b0"
+    },
+    {
+      "name": "mypy",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge/domain/inventory_receipt_posting.py",
+        "reconforge/application/inventory_receipt_posting.py",
+        "reconforge/io/inventory_receipt_posting.py"
+      ],
+      "duration_seconds": 0.61,
+      "exit_code": 0,
+      "log_sha256": "281a094c39385b4d7b53e5db635f52158036861433c2a4975b9039e77a627a24"
+    }
+  ],
+  "raw_evidence_directory": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod038-shared-contract",
+  "junit_sha256": "558dc257a924b2764bf64d3d7eae6ff64b4ba5af7403a69f5dad3633a8277462",
+  "verified_cases": [
+    "0/2/3-place retained currency without reinterpretation",
+    "exact scaled quantity and minor integer bounds",
+    "reserved source/output identity and namespace laundering refusal",
+    "independent stable-id review",
+    "closed nested Finance effect and snapshot/policy/effect tamper refusal",
+    "complete original-preserving inverse and partial inverse refusal",
+    "duplicate-key/fractional/nonfinite/oversized exact JSON refusal"
+  ],
+  "limits": [
+    "This does not accept either database adapter, migration, backup, HTTP/CLI/UI or the full receipt workflow.",
+    "Active adapter work in the primary checkout is outside this four-file freeze.",
+    "No customer, large-workload, full trade-cycle or production-readiness conclusion follows."
+  ]
+}

@@ -25,6 +25,7 @@ from reconforge.ai.summaries import explain_exception_file
 from reconforge.anonymizer.engine import anonymize_directory
 from reconforge.api import create_api_app
 from reconforge.application.consolidation_close import ConsolidationCloseApplicationService
+from reconforge.application.evidence import EvidenceObjectStore
 from reconforge.application.intercompany_elimination import IntercompanyEliminationApplicationService
 from reconforge.application.jobs import DurableJobApplicationService
 from reconforge.application.matching_strategies import MatchingStrategyContractError, MatchingStrategyResult
@@ -40,6 +41,7 @@ from reconforge.benchmark.reconciliation_execution import (
 )
 from reconforge.benchmark.runner import run_benchmark
 from reconforge.cli_bank_statement_control import bank_statement_app
+from reconforge.cli_finance_posting import posting_app
 from reconforge.cli_individual_cashflow_control import individual_cashflow_app
 from reconforge.cli_inventory_planning import inventory_planning_app
 from reconforge.cli_inventory_valuation import inventory_valuation_app
@@ -136,6 +138,8 @@ from reconforge.enterprise_demo import EnterpriseDemoError, generate_enterprise_
 from reconforge.evidence.binder import generate_evidence_binder
 from reconforge.generator.synthetic import generate_synthetic_dataset
 from reconforge.infrastructure.object_storage import (
+    LocalObjectStorageSettings,
+    LocalObjectStore,
     ObjectStorageConnectionFactory,
     ObjectStorageSettings,
     S3ObjectStore,
@@ -170,6 +174,12 @@ from reconforge.modules import (
     list_modules,
     registry_payload,
     validate_registry,
+)
+from reconforge.modules.postgres_registry import (
+    get_postgres_module,
+    list_postgres_modules,
+    postgres_registry_payload,
+    validate_postgres_registry,
 )
 from reconforge.observability import (
     ObservabilityConfigurationError,
@@ -313,6 +323,7 @@ app.add_typer(modules_app, name="modules")
 app.add_typer(connectors_app, name="connectors")
 app.add_typer(master_data_app, name="master-data")
 app.add_typer(finance_core_app, name="finance-core")
+finance_core_app.add_typer(posting_app, name="posting")
 app.add_typer(inventory_app, name="inventory")
 app.add_typer(receivables_app, name="receivables")
 app.add_typer(outbox_app, name="outbox")
@@ -533,21 +544,31 @@ def _module_output_format(value: str) -> str:
     return normalized
 
 
+def _module_backend(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized not in {"sqlite", "postgresql"}:
+        raise ModuleRegistryError("Metadata backend must be 'sqlite' or 'postgresql'.")
+    return normalized
+
+
 @modules_app.command("list")
 def modules_list(
     output_format: Annotated[str, typer.Option("--format", help="Output format: table or json.")] = "table",
     maturity: Annotated[str | None, typer.Option(help="Filter by stable, beta, or experimental maturity.")] = None,
+    backend: Annotated[str, typer.Option(help="Metadata backend: sqlite or postgresql; does not activate a database.")] = "sqlite",
 ) -> None:
     """List runtime-visible modules without activating them."""
 
     try:
         selected_format = _module_output_format(output_format)
         selected_maturity = _module_maturity(maturity)
-        descriptors = list_modules(maturity=selected_maturity)
+        selected_backend = _module_backend(backend)
+        descriptors = (list_modules if selected_backend == "sqlite" else list_postgres_modules)(maturity=selected_maturity)
     except ModuleRegistryError as exc:
         _safe_cli_error(exc)
     if selected_format == "json":
-        typer.echo(json.dumps(registry_payload(maturity=selected_maturity), indent=2, sort_keys=True))
+        payload = (registry_payload if selected_backend == "sqlite" else postgres_registry_payload)(maturity=selected_maturity)
+        typer.echo(json.dumps(payload, indent=2, sort_keys=True))
         return
     table = Table(title="ReconForge Runtime Modules", show_lines=False)
     for column in ("Module", "Maturity", "Capability", "Default", "Interfaces", "Name"):
@@ -569,12 +590,14 @@ def modules_list(
 def modules_show(
     module_id: Annotated[str, typer.Argument(help="Exact registered module ID.")],
     output_format: Annotated[str, typer.Option("--format", help="Output format: table or json.")] = "table",
+    backend: Annotated[str, typer.Option(help="Metadata backend: sqlite or postgresql.")] = "sqlite",
 ) -> None:
     """Show one module's contracts, dependencies, permissions, and evidence."""
 
     try:
         selected_format = _module_output_format(output_format)
-        descriptor = get_module(module_id)
+        selected_backend = _module_backend(backend)
+        descriptor = (get_module if selected_backend == "sqlite" else get_postgres_module)(module_id)
     except ModuleRegistryError as exc:
         _safe_cli_error(exc)
     payload = descriptor.model_dump(mode="json")
@@ -591,15 +614,24 @@ def modules_show(
 
 
 @modules_app.command("validate")
-def modules_validate() -> None:
+def modules_validate(
+    backend: Annotated[str, typer.Option(help="Metadata backend: sqlite or postgresql.")] = "sqlite",
+) -> None:
     """Validate registry identity, dependency graph, and migration references."""
 
-    issues = validate_registry()
+    try:
+        selected_backend = _module_backend(backend)
+    except ModuleRegistryError as exc:
+        _safe_cli_error(exc)
+    issues = (validate_registry if selected_backend == "sqlite" else validate_postgres_registry)()
     if issues:
         for issue in issues:
             console.print(f"[red]{issue.code}[/red] {issue.module_id}: {issue.message}")
         raise typer.Exit(code=1)
-    console.print(f"[green]Module registry is valid.[/green] {len(list_modules())} runtime modules, schema v1.")
+    if selected_backend == "sqlite":
+        console.print(f"[green]Module registry is valid.[/green] {len(list_modules())} runtime modules, schema v1.")
+    else:
+        console.print(f"[green]PostgreSQL metadata registry is valid.[/green] {len(list_postgres_modules())} contracts, schema v2; deployment not inspected.")
 
 
 @connectors_app.command("verify-package")
@@ -2789,6 +2821,14 @@ def api_serve_command(
             help="Optional PostgreSQL server-auth DSN; prefer RECONFORGE_POSTGRES_DSN in the environment.",
         ),
     ] = None,
+    postgres_personnel_dsn: Annotated[
+        str | None,
+        typer.Option(
+            "--postgres-personnel-dsn",
+            envvar="RECONFORGE_PERSONNEL_POSTGRES_DSN",
+            help="Optional separate personnel database login; prefer RECONFORGE_PERSONNEL_POSTGRES_DSN.",
+        ),
+    ] = None,
     postgres_require_tls: Annotated[
         bool,
         typer.Option("--postgres-require-tls/--postgres-no-tls", help="Require PostgreSQL TLS verification."),
@@ -2912,6 +2952,7 @@ def api_serve_command(
             db_path,
             tenant_db_root=tenant_db_root,
             postgres_dsn=postgres_dsn,
+            postgres_personnel_dsn=postgres_personnel_dsn,
             postgres_require_tls=postgres_require_tls,
             redis_url=redis_url,
             redis_require_tls=redis_require_tls,
@@ -4635,7 +4676,7 @@ def consolidation_intercompany_eliminations_command(
             if not isinstance(amount, dict):
                 raise PlatformError(f"Intercompany elimination line {index} amount must be canonical Money.")
             values = dict(raw_line)
-            values["amount"] = Money.from_canonical_dict(cast(dict[str, object], amount))
+            values["amount"] = Money.from_strict_canonical_dict(cast(dict[str, object], amount))
             lines.append(IntercompanyEliminationInputLine(**values))
         result = IntercompanyEliminationApplicationService.prepare(
             tuple(lines),
@@ -4878,7 +4919,17 @@ def evidence_register_command(
     object_type: Annotated[str, typer.Option("--object-type", help="Optional linked object type.")] = "",
     object_id: Annotated[str, typer.Option("--object-id", help="Optional linked object id.")] = "",
     redaction_status: Annotated[str, typer.Option("--redaction-status", help="Redaction status.")] = "unknown",
-    storage_backend: Annotated[str, typer.Option("--storage-backend", help="Storage backend: local or s3.")] = "local",
+    storage_backend: Annotated[
+        str,
+        typer.Option("--storage-backend", help="Storage backend: local, local-object-store, or s3."),
+    ] = "local",
+    storage_root: Annotated[
+        Path,
+        typer.Option(
+            "--storage-root",
+            help="Absolute root for the offline local-object-store backend.",
+        ),
+    ] = Path("output/evidence-objects"),
     storage_tenant_id: Annotated[
         str, typer.Option("--storage-tenant-id", help="Tenant scope for object storage.")
     ] = "",
@@ -4903,18 +4954,21 @@ def evidence_register_command(
     ] = False,
     retention_until: Annotated[
         str,
-        typer.Option("--retention-until", help="Optional ISO-8601 retention timestamp; requires provider object lock."),
+        typer.Option(
+            "--retention-until",
+            help="Optional ISO-8601 retention timestamp; enforced by the selected object store.",
+        ),
     ] = "",
     actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
 ) -> None:
     """Register evidence with checksum/provenance metadata."""
 
-    object_store = None
+    object_store: EvidenceObjectStore | None = None
     storage_factory = None
     try:
         backend = storage_backend.strip().casefold()
-        if backend not in {"local", "s3"}:
-            raise PlatformError("Evidence storage backend must be local or s3.")
+        if backend not in {"local", "local-object-store", "s3"}:
+            raise PlatformError("Evidence storage backend must be local, local-object-store, or s3.")
         parsed_retention: datetime | None = None
         if retention_until:
             try:
@@ -4924,7 +4978,11 @@ def evidence_register_command(
             if parsed_retention.tzinfo is None:
                 raise PlatformError("Retention timestamp must include a timezone offset.")
             parsed_retention = parsed_retention.astimezone(UTC)
-        if backend == "s3":
+        if backend == "local-object-store":
+            object_store = LocalObjectStore(
+                LocalObjectStorageSettings(root=storage_root.resolve())
+            )
+        elif backend == "s3":
             if not s3_bucket.strip():
                 raise PlatformError("--s3-bucket or RECONFORGE_S3_BUCKET is required for s3 evidence storage.")
             storage_factory = ObjectStorageConnectionFactory(
@@ -4964,6 +5022,20 @@ def evidence_register_command(
 def evidence_verify_command(
     evidence_id: Annotated[str, typer.Option("--id", help="Evidence id.")],
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    storage_backend: Annotated[
+        str,
+        typer.Option(
+            "--storage-backend",
+            help="Object backend: s3 or local-object-store; s3 preserves the historical default.",
+        ),
+    ] = "s3",
+    storage_root: Annotated[
+        Path,
+        typer.Option(
+            "--storage-root",
+            help="Absolute root for local-object-store verification.",
+        ),
+    ] = Path("output/evidence-objects"),
     s3_bucket: Annotated[
         str,
         typer.Option(
@@ -4991,27 +5063,35 @@ def evidence_verify_command(
     """Verify local or configured object-backed evidence checksum."""
 
     storage_factory = None
-    object_store = None
+    object_store: EvidenceObjectStore | None = None
     try:
         connection = _db_connection(db_path)
         try:
             service = EvidenceRegistryService(connection)
             evidence = service.get(evidence_id)
             if str(evidence.get("storage_backend") or "") == OBJECT_STORAGE_BACKEND:
-                if not s3_bucket.strip():
-                    raise PlatformError(
-                        "--s3-bucket or RECONFORGE_S3_BUCKET is required for object-backed evidence verification."
+                backend = storage_backend.strip().casefold()
+                if backend not in {"local-object-store", "s3"}:
+                    raise PlatformError("Object-backed evidence verification requires s3 or local-object-store.")
+                if backend == "local-object-store":
+                    object_store = LocalObjectStore(
+                        LocalObjectStorageSettings(root=storage_root.resolve())
                     )
-                storage_factory = ObjectStorageConnectionFactory(
-                    ObjectStorageSettings(
-                        bucket=s3_bucket,
-                        endpoint_url=s3_endpoint_url or None,
-                        region=s3_region,
-                        key_prefix=s3_key_prefix,
-                        require_tls=not s3_no_tls,
+                else:
+                    if not s3_bucket.strip():
+                        raise PlatformError(
+                            "--s3-bucket or RECONFORGE_S3_BUCKET is required for object-backed evidence verification."
+                        )
+                    storage_factory = ObjectStorageConnectionFactory(
+                        ObjectStorageSettings(
+                            bucket=s3_bucket,
+                            endpoint_url=s3_endpoint_url or None,
+                            region=s3_region,
+                            key_prefix=s3_key_prefix,
+                            require_tls=not s3_no_tls,
+                        )
                     )
-                )
-                object_store = S3ObjectStore(storage_factory)
+                    object_store = S3ObjectStore(storage_factory)
             result = service.verify(evidence_id, actor_label=actor, object_store=object_store)
         finally:
             connection.close()

@@ -66,9 +66,22 @@ class DockerPostgresRunner:
                 database = str(argv[argv.index("--dbname") + 1]).split("dbname=", 1)[1]
                 self._exec(("pg_restore", "--exit-on-error", "--no-owner", "--no-privileges", "-U", "postgres", "-d", database, self._dump_in_container))
             elif operation == "psql":
-                database = str(argv[argv.index("--dbname") + 1]).split("dbname=", 1)[1]
-                sql = argv[argv.index("--command") + 1]
-                self._exec(("psql", "-U", "postgres", "-d", database, "-v", "ON_ERROR_STOP=1", "-c", sql))
+                # Source/maintenance services use the fixed postgres database;
+                # isolated restore commands add an explicit dbname override.
+                specification = str(argv[argv.index("--dbname") + 1])
+                database = specification.split("dbname=", 1)[1] if "dbname=" in specification else "postgres"
+                if "--file" in argv:
+                    script = Path(argv[argv.index("--file") + 1])
+                    container_script = "/tmp/reconforge-verify-profile.sql"
+                    _command(("docker", "cp", str(script), f"{self.container}:{container_script}"))
+                    bindings = tuple(
+                        part for index, value in enumerate(argv) if value == "--set"
+                        for part in (value, argv[index + 1])
+                    )
+                    self._exec(("psql", "-U", "postgres", "-d", database, *bindings, "--file", container_script))
+                else:
+                    sql = argv[argv.index("--command") + 1]
+                    self._exec(("psql", "-U", "postgres", "-d", database, "-v", "ON_ERROR_STOP=1", "-c", sql))
             elif operation == "dropdb":
                 self._exec(("dropdb", "-U", "postgres", "--if-exists", argv[-1]))
             else:

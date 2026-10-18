@@ -162,6 +162,7 @@ class PostgresScopedExportPublisher:
             surface=surface,
             request_id=request_id,
             principal_type=policy_context.principal_type,
+            context=policy_context,
         )
         if not decision.allowed:
             raise ScopedExportError("Scoped export authorization was denied.")

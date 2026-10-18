@@ -1,0 +1,106 @@
+{
+  "artifact_count": 0,
+  "corrected_control": "62c41c42d66924039c4fbdae6b260cc0d33996e7",
+  "failed_control": "f04debf94bedc8c563a91bcc6c2de00342a4a4a5",
+  "failed_run": 38251695820,
+  "failure": "unresolved artifact action object during setup",
+  "file_count": 13,
+  "full_job_log_alias": "Safe-spans file is byte-identical to original complete1910B log; original conservative provenance unchanged and additive clarification retained",
+  "native_operations_executed": 0,
+  "performance_comparison_accepted": false,
+  "records": [
+    {
+      "bytes": 1261,
+      "entry_name": "originals/invalid-action-pin-followup-classification.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native-10k-f04-38251695820\\invalid-action-pin-followup-classification.json",
+      "sha256": "4afc26b985844a1b5b6c21e37047204b2842670bf4c6c17ef5e33c50b3aab394",
+      "source_scope": "f04 failed job setup or separately labelled corrected62 onepin evidence"
+    },
+    {
+      "bytes": 2688,
+      "entry_name": "originals/official-upload-artifact-approved-commit-api.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native-10k-f04-38251695820\\official-upload-artifact-approved-commit-api.json",
+      "sha256": "109202fcc476e130aa3e31914293eb202acd61caddd76b61c623fa8e2abe06be",
+      "source_scope": "f04 failed job setup or separately labelled corrected62 onepin evidence"
+    },
+    {
+      "bytes": 1367,
+      "entry_name": "originals/onepin-repair-and-original-log-clarification.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native-10k-f04-38251695820\\onepin-repair-and-original-log-clarification.json",
+      "sha256": "b9670eb4122fde97b9bf59fde16e261c899f64e20b99b3253a9915e268095f0c",
+      "source_scope": "f04 failed job setup or separately labelled corrected62 onepin evidence"
+    },
+    {
+      "bytes": 32,
+      "entry_name": "originals/original-artifacts-api.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native-10k-f04-38251695820\\original-artifacts-api.json",
+      "sha256": "244563f989470892c537c9a4622920af0d228ee4528f7d00c64a06d6cd95856c",
+      "source_scope": "f04 failed job setup or separately labelled corrected62 onepin evidence"
+    },
+    {
+      "bytes": 433,
+      "entry_name": "originals/original-check-114819371898-annotations-api.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native-10k-f04-38251695820\\original-check-114819371898-annotations-api.json",
+      "sha256": "1db2d7a1eb80132dbc71c2454d4c42fed8473a335ee061115f40ca3421d91e8b",
+      "source_scope": "f04 failed job setup or separately labelled corrected62 onepin evidence"
+    },
+    {
+      "bytes": 3138,
+      "entry_name": "originals/original-check-runs-api.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native-10k-f04-38251695820\\original-check-runs-api.json",
+      "sha256": "545b3be55bfa7ef1e702ff72a9867e2b915ff19b86910e40b662506ffad60921",
+      "source_scope": "f04 failed job setup or separately labelled corrected62 onepin evidence"
+    },
+    {
+      "bytes": 556,
+      "entry_name": "originals/original-full-job-log-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native-10k-f04-38251695820\\original-full-job-log-provenance.json",
+      "sha256": "5d6773de4dc98a07dc7e06b9d093a7962a50549d44804e45a1742df288441f55",
+      "source_scope": "f04 failed job setup or separately labelled corrected62 onepin evidence"
+    },
+    {
+      "bytes": 74667,
+      "entry_name": "originals/original-git-.github__scripts__benchmark_wave5_profile_diagnostics.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native-10k-f04-38251695820\\original-git-.github__scripts__benchmark_wave5_profile_diagnostics.py",
+      "sha256": "d005e84654b412393c36c4fc2b7f81f25789a3bb8c6ce354e449bb6ef28cca76",
+      "source_scope": "f04 failed job setup or separately labelled corrected62 onepin evidence"
+    },
+    {
+      "bytes": 3126,
+      "entry_name": "originals/original-git-.github__workflows__wave5-native-10k-capacity.yml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native-10k-f04-38251695820\\original-git-.github__workflows__wave5-native-10k-capacity.yml",
+      "sha256": "846cf244a98b76f9265a19105997aac53b5af9066e0edf0ef57aa70e58a620ef",
+      "source_scope": "f04 failed job setup or separately labelled corrected62 onepin evidence"
+    },
+    {
+      "bytes": 1910,
+      "entry_name": "originals/original-job-safe-spans.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native-10k-f04-38251695820\\original-job-safe-spans.log",
+      "sha256": "fde8e46474a56c7e7d28637c1954bb2ab5230ec1759260aa687706cf455dbce2",
+      "source_scope": "f04 failed job setup or separately labelled corrected62 onepin evidence"
+    },
+    {
+      "bytes": 1178,
+      "entry_name": "originals/original-jobs-api.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native-10k-f04-38251695820\\original-jobs-api.json",
+      "sha256": "2e354d712b4c57f34c7d609c0bf8d15cda739b93b5f710bca8c51ee9db557293",
+      "source_scope": "f04 failed job setup or separately labelled corrected62 onepin evidence"
+    },
+    {
+      "bytes": 13588,
+      "entry_name": "originals/original-run-api.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native-10k-f04-38251695820\\original-run-api.json",
+      "sha256": "72216f1fd0793544fec40ed23aa53aa91b7a686a5932e98d5920a7373fa42d37",
+      "source_scope": "f04 failed job setup or separately labelled corrected62 onepin evidence"
+    },
+    {
+      "bytes": 2676,
+      "entry_name": "originals/original-setup-failure-summary.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-native-10k-f04-38251695820\\original-setup-failure-summary.json",
+      "sha256": "b9e0ea9d2c01afea95125c4545fa40a78d1c4c08722f7524500083867c8ef337",
+      "source_scope": "f04 failed job setup or separately labelled corrected62 onepin evidence"
+    }
+  ],
+  "runtime_subject": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1"
+}

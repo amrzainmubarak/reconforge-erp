@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
 from reconforge.api.server_identity import RequestExecutionScope, request_tenant_id
+from reconforge.auth.field_access import EVIDENCE_DRILL_DOWN_FIELDS, EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS
 from reconforge.auth.models import LocalUser
 from reconforge.db import run_migrations
 from reconforge.infrastructure.postgres_evidence import PostgresEvidenceVerification
@@ -37,7 +38,16 @@ class _FakeEvidenceRepository:
             "requirement_count": len(self.requirements),
             "covered_object_count": len(self.links),
             "coverage_pct": 100.0 if self.requirements and self.links else 0.0,
-            "objects": [],
+            "objects": [
+                {
+                    "object_type": "close_task",
+                    "object_id": "task-a",
+                    "requirement_count": len(self.requirements),
+                    "linked_evidence_count": len(self.links),
+                    "unknown_future_object_field": "must-not-escape",
+                }
+            ],
+            "unknown_future_coverage_field": "must-not-escape",
         }
 
     def register(self, **values: object) -> dict[str, object]:
@@ -47,6 +57,7 @@ class _FakeEvidenceRepository:
             "id": values["evidence_id"],
             "evidence_code": values["evidence_code"],
             "source_name": values["source_name"],
+            "source_path": "/synthetic/close.pdf",
             "checksum_sha256": values["checksum_sha256"],
             "storage_backend": values["storage_backend"],
             "links": [],
@@ -63,6 +74,7 @@ class _FakeEvidenceRepository:
             "object_type": values["object_type"],
             "object_id": values["object_id"],
             "link_type": values["link_type"],
+            "unknown_future_column": "must-not-leak",
         }
         self.links.append(link)
         return link
@@ -90,6 +102,28 @@ class _FakeEvidenceRepository:
             actual_sha256=actual,
         )
 
+    def drill_down(self, **values: object) -> dict[str, object]:
+        assert values["tenant_id"] == "tenant-a"
+        evidence_id = str(values["evidence_id"])
+        return {
+            "evidence_id": evidence_id,
+            "direction": values["direction"],
+            "max_depth": values["max_depth"],
+            "include_sensitive": values["include_sensitive"],
+            "nodes": [
+                {
+                    "node_type": "evidence",
+                    "id": evidence_id,
+                    "record": {**self.records[evidence_id], "unknown_future_column": "must-not-escape"},
+                    "depth": 0,
+                }
+            ],
+            "edges": [],
+            "nodes_count": 1,
+            "edges_count": 0,
+            "pagination": {"limit": values["limit"], "offset": values["offset"]},
+        }
+
 
 def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, monkeypatch: Any) -> None:
     import reconforge.api.app as app_module
@@ -111,6 +145,7 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     monkeypatch.setattr(
         evidence_routes,
         "request_execution_scope",
@@ -175,6 +210,14 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
         headers=headers,
         json={"actual_sha256": digest},
     )
+    drill_down = client.get(
+        "/api/v1/evidence/records/evidence-a/drill-down",
+        headers=headers,
+    )
+    sensitive_drill_down = client.get(
+        "/api/v1/evidence/records/evidence-a/drill-down?include_sensitive=true",
+        headers=headers,
+    )
     coverage = client.get("/api/v1/evidence/coverage", headers=headers)
 
     assert created.status_code == 200, created.text
@@ -182,10 +225,27 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
     assert listed.status_code == 200
     assert fetched.json()["evidence"]["id"] == "evidence-a"
     assert linked.status_code == 200
+    assert linked.json()["link"]["id"] == "link-a"
+    assert "unknown_future_column" not in linked.json()["link"]
     assert requirement.status_code == 200
+    assert requirement.json()["requirement"]["field_access"]["denied_fields"] == []
     assert verified.status_code == 200
     assert verified.json()["verification"]["ok"] is True
+    assert verified.json()["verification"]["field_access"]["denied_fields"] == []
+    assert drill_down.status_code == 200
+    drill_node = drill_down.json()["drill_down"]["nodes"][0]
+    assert drill_node["record"]["source_path"] == "***redacted***"
+    assert drill_node["field_access"]["denied_fields"] == ["unknown_future_column"]
+    assert drill_down.json()["drill_down"]["field_access"]["version"] == "field-projection-v1"
+    assert sensitive_drill_down.status_code == 200
+    sensitive_node = sensitive_drill_down.json()["drill_down"]["nodes"][0]
+    assert sensitive_node["record"]["source_path"] == "/synthetic/close.pdf"
+    assert sensitive_node["field_access"]["masked_fields"] == []
+    assert sensitive_node["field_access"]["denied_fields"] == ["unknown_future_column"]
     assert coverage.status_code == 200
+    assert coverage.json()["coverage"]["objects"][0]["object_type"] == "close_task"
+    assert "unknown_future_coverage_field" not in coverage.text
+    assert "unknown_future_object_field" not in coverage.text
     expected_hierarchy = {
         "tenant_id": "tenant-a",
         "workspace_id": "workspace-a",
@@ -194,10 +254,32 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
     }
     assert scoped_permissions == [
         {"permission": "evidence.manage", **expected_hierarchy},
-        {"permissions": frozenset({"evidence.read", "evidence.manage"}), **expected_hierarchy},
-        {"permissions": frozenset({"evidence.read", "evidence.manage"}), **expected_hierarchy},
+        {
+            "permissions": frozenset({"evidence.read", "evidence.manage"}),
+            **expected_hierarchy,
+            "requested_field_names": EVIDENCE_DRILL_DOWN_FIELDS - EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+            "authorized_field_names": EVIDENCE_DRILL_DOWN_FIELDS - EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+        },
+        {
+            "permissions": frozenset({"evidence.read", "evidence.manage"}),
+            **expected_hierarchy,
+            "requested_field_names": EVIDENCE_DRILL_DOWN_FIELDS - EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+            "authorized_field_names": EVIDENCE_DRILL_DOWN_FIELDS - EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+        },
         {"permission": "evidence.manage", **expected_hierarchy},
         {"permission": "evidence.manage", **expected_hierarchy},
         {"permission": "evidence.verify", **expected_hierarchy},
+        {
+            "permissions": frozenset({"evidence.read", "evidence.manage"}),
+            **expected_hierarchy,
+            "requested_field_names": EVIDENCE_DRILL_DOWN_FIELDS - EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+            "authorized_field_names": EVIDENCE_DRILL_DOWN_FIELDS - EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+        },
+        {
+            "permission": "evidence.manage",
+            **expected_hierarchy,
+            "requested_field_names": EVIDENCE_DRILL_DOWN_FIELDS,
+            "authorized_field_names": EVIDENCE_DRILL_DOWN_FIELDS,
+        },
         {"permissions": frozenset({"evidence.read", "evidence.manage"}), **expected_hierarchy},
     ]

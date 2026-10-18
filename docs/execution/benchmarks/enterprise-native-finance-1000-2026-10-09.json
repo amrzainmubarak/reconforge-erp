@@ -1,0 +1,363 @@
+{
+  "schema_version": 1,
+  "profile_id": "native-enterprise-finance/1000-three-human-v1",
+  "source_sha256": "f9e26f1865b3f776df0006459773771f817c96de4f46e15cbf512e4975f59bea",
+  "financial_effects_digest": "90927ba8077bd23e585469bfffef5e603fceb494a6566a950f5eb89070a345c9",
+  "original_report_sha256": "373a9e87acfd75e2c613edb1ddc1d773cd6b569ff7446483456e5863c84e2909",
+  "claim_boundary": "One local single-entity USD profile with 1000 real three-human postings and four workers; warmed alternating same-history native read comparison, not HTTP TPS, all-ERP capacity, million-effect reporting, SLO, or competitor comparison.",
+  "measurement": {
+    "schema_version": 1,
+    "started_at": "2026-10-09T18:39:58.230199+00:00",
+    "status": "passed",
+    "source_commit": "347d3714637253be2bfc8b310d99846401c67c18",
+    "source_sha256": "f9e26f1865b3f776df0006459773771f817c96de4f46e15cbf512e4975f59bea",
+    "profile": "native-three-human-cash-equity-v1",
+    "seed": "enterprise-native-v1",
+    "counts": [
+      100,
+      1000
+    ],
+    "workers": 4,
+    "repetitions": 3,
+    "max_seconds": 1800,
+    "image": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+    "python": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "logical_cpus": 16,
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "architecture": "AMD64",
+    "docker_version": "29.8.2",
+    "limits": [
+      "single entity and USD",
+      "native repository latency includes synthetic identity authentication",
+      "not HTTP latency",
+      "no comparable competitor measurement",
+      "no cost per transaction without a supplied resource cost model"
+    ],
+    "cost_per_transaction": null,
+    "docker_engine_resources": {
+      "OperatingSystem": "Docker Desktop (containerized)",
+      "OSType": "linux",
+      "Architecture": "x86_64",
+      "KernelVersion": "6.18.40.1-microsoft-standard-WSL2",
+      "NCPU": 16,
+      "MemTotal": 10266177536,
+      "Driver": "overlayfs"
+    },
+    "postgres_version": "17.10",
+    "revision": "0119_pg_receipt_fifo_chronology",
+    "postgres_configuration": {
+      "fsync": "on",
+      "full_page_writes": "on",
+      "max_connections": "100",
+      "shared_buffers": "16384",
+      "synchronous_commit": "on",
+      "wal_level": "replica",
+      "work_mem": "4096"
+    },
+    "runtime_role_flags": [
+      false,
+      false
+    ],
+    "posting": {
+      "completed_cycles": 1000,
+      "concurrency": 4,
+      "seconds": 677.6929104999945,
+      "native_postings_per_second": 1.4755946011921697,
+      "error_count": 0,
+      "cycle_latency_seconds": {
+        "p50": 2.6207425000029616,
+        "p95": 3.235856599996623,
+        "p99": 4.1858190999992075
+      },
+      "expected": {
+        "debit_minor": "493671004",
+        "credit_minor": "493671004",
+        "cash_minor": "493671004",
+        "equity_minor": "493671004"
+      }
+    },
+    "verified_reads": [
+      {
+        "count": 100,
+        "expected": {
+          "debit_minor": "46669102",
+          "credit_minor": "46669102",
+          "cash_minor": "46669102",
+          "equity_minor": "46669102"
+        },
+        "measurement_scope": "authenticated native verified effect reads; no HTTP or database-internal query count",
+        "dataset_effect_ids_sha256": "ac8ab901646e063c0f5bd64ea607239fbb26b68e7e7a004239982a35e5aed622",
+        "cache_policy": "both warmed; alternating modes",
+        "samples": {
+          "per_effect_baseline": [
+            {
+              "repetition": 0,
+              "effects": 100,
+              "seconds": 0.7648618000021088,
+              "verified_effects_per_second": 130.74257336387345,
+              "client_execute_calls": 300,
+              "request_unit": "one_effect",
+              "request_latency_seconds": {
+                "p50": 0.0067080999942845665,
+                "p95": 0.014287600002717227,
+                "p99": 0.016334400002961047
+              },
+              "peak_python_allocated_bytes": 27823,
+              "client_process_cpu_seconds": 0.15625,
+              "debit_minor": "46669102",
+              "credit_minor": "46669102",
+              "effects_digest": "d41594afe386aec07442189203dd677bd835cce20eec30b154d0331fdd8f175d",
+              "error_count": 0
+            },
+            {
+              "repetition": 1,
+              "effects": 100,
+              "seconds": 0.6959406000023591,
+              "verified_effects_per_second": 143.69042415352834,
+              "client_execute_calls": 300,
+              "request_unit": "one_effect",
+              "request_latency_seconds": {
+                "p50": 0.006691700000374112,
+                "p95": 0.008305699993798044,
+                "p99": 0.00931039999704808
+              },
+              "peak_python_allocated_bytes": 24374,
+              "client_process_cpu_seconds": 0.171875,
+              "debit_minor": "46669102",
+              "credit_minor": "46669102",
+              "effects_digest": "d41594afe386aec07442189203dd677bd835cce20eec30b154d0331fdd8f175d",
+              "error_count": 0
+            },
+            {
+              "repetition": 2,
+              "effects": 100,
+              "seconds": 0.6766942000031122,
+              "verified_effects_per_second": 147.77723822598168,
+              "client_execute_calls": 300,
+              "request_unit": "one_effect",
+              "request_latency_seconds": {
+                "p50": 0.006521099996461999,
+                "p95": 0.007822999999916647,
+                "p99": 0.008418499994149897
+              },
+              "peak_python_allocated_bytes": 23126,
+              "client_process_cpu_seconds": 0.1875,
+              "debit_minor": "46669102",
+              "credit_minor": "46669102",
+              "effects_digest": "d41594afe386aec07442189203dd677bd835cce20eec30b154d0331fdd8f175d",
+              "error_count": 0
+            }
+          ],
+          "bounded_batch": [
+            {
+              "repetition": 0,
+              "effects": 100,
+              "seconds": 0.04830470000160858,
+              "verified_effects_per_second": 2070.1919274246593,
+              "client_execute_calls": 2,
+              "request_unit": "up_to_100_effects",
+              "request_latency_seconds": {
+                "p50": 0.03836489999957848,
+                "p95": 0.03836489999957848,
+                "p99": 0.03836489999957848
+              },
+              "peak_python_allocated_bytes": 713251,
+              "client_process_cpu_seconds": 0.03125,
+              "debit_minor": "46669102",
+              "credit_minor": "46669102",
+              "effects_digest": "d41594afe386aec07442189203dd677bd835cce20eec30b154d0331fdd8f175d",
+              "error_count": 0
+            },
+            {
+              "repetition": 1,
+              "effects": 100,
+              "seconds": 0.04958809999516234,
+              "verified_effects_per_second": 2016.6128569103412,
+              "client_execute_calls": 2,
+              "request_unit": "up_to_100_effects",
+              "request_latency_seconds": {
+                "p50": 0.04006919999665115,
+                "p95": 0.04006919999665115,
+                "p99": 0.04006919999665115
+              },
+              "peak_python_allocated_bytes": 726315,
+              "client_process_cpu_seconds": 0.03125,
+              "debit_minor": "46669102",
+              "credit_minor": "46669102",
+              "effects_digest": "d41594afe386aec07442189203dd677bd835cce20eec30b154d0331fdd8f175d",
+              "error_count": 0
+            },
+            {
+              "repetition": 2,
+              "effects": 100,
+              "seconds": 0.05506239999522222,
+              "verified_effects_per_second": 1816.1213461214372,
+              "client_execute_calls": 2,
+              "request_unit": "up_to_100_effects",
+              "request_latency_seconds": {
+                "p50": 0.04502009999850998,
+                "p95": 0.04502009999850998,
+                "p99": 0.04502009999850998
+              },
+              "peak_python_allocated_bytes": 713379,
+              "client_process_cpu_seconds": 0.03125,
+              "debit_minor": "46669102",
+              "credit_minor": "46669102",
+              "effects_digest": "d41594afe386aec07442189203dd677bd835cce20eec30b154d0331fdd8f175d",
+              "error_count": 0
+            }
+          ]
+        },
+        "median_seconds_baseline": 0.6959406000023591,
+        "median_seconds_optimized": 0.04958809999516234,
+        "measured_speedup": 14.034427616106544,
+        "financial_effects_digest": "d41594afe386aec07442189203dd677bd835cce20eec30b154d0331fdd8f175d"
+      },
+      {
+        "count": 1000,
+        "expected": {
+          "debit_minor": "493671004",
+          "credit_minor": "493671004",
+          "cash_minor": "493671004",
+          "equity_minor": "493671004"
+        },
+        "measurement_scope": "authenticated native verified effect reads; no HTTP or database-internal query count",
+        "dataset_effect_ids_sha256": "57492ef9cb282df098a22900ec4942ab4452471a34d3b29d6818e07cdce6474f",
+        "cache_policy": "both warmed; alternating modes",
+        "samples": {
+          "per_effect_baseline": [
+            {
+              "repetition": 0,
+              "effects": 1000,
+              "seconds": 6.867102000003797,
+              "verified_effects_per_second": 145.62183581945442,
+              "client_execute_calls": 3000,
+              "request_unit": "one_effect",
+              "request_latency_seconds": {
+                "p50": 0.006504999997559935,
+                "p95": 0.007881599995016586,
+                "p99": 0.009414899999683257
+              },
+              "peak_python_allocated_bytes": 55551,
+              "client_process_cpu_seconds": 1.921875,
+              "debit_minor": "493671004",
+              "credit_minor": "493671004",
+              "effects_digest": "90927ba8077bd23e585469bfffef5e603fceb494a6566a950f5eb89070a345c9",
+              "error_count": 0
+            },
+            {
+              "repetition": 1,
+              "effects": 1000,
+              "seconds": 6.91814219999651,
+              "verified_effects_per_second": 144.5474769224178,
+              "client_execute_calls": 3000,
+              "request_unit": "one_effect",
+              "request_latency_seconds": {
+                "p50": 0.006643699998676311,
+                "p95": 0.00792150000052061,
+                "p99": 0.00856779999594437
+              },
+              "peak_python_allocated_bytes": 53694,
+              "client_process_cpu_seconds": 2.109375,
+              "debit_minor": "493671004",
+              "credit_minor": "493671004",
+              "effects_digest": "90927ba8077bd23e585469bfffef5e603fceb494a6566a950f5eb89070a345c9",
+              "error_count": 0
+            },
+            {
+              "repetition": 2,
+              "effects": 1000,
+              "seconds": 6.782314700001734,
+              "verified_effects_per_second": 147.44228839746177,
+              "client_execute_calls": 3000,
+              "request_unit": "one_effect",
+              "request_latency_seconds": {
+                "p50": 0.006516900000860915,
+                "p95": 0.00770139999804087,
+                "p99": 0.008474700000078883
+              },
+              "peak_python_allocated_bytes": 52614,
+              "client_process_cpu_seconds": 1.5625,
+              "debit_minor": "493671004",
+              "credit_minor": "493671004",
+              "effects_digest": "90927ba8077bd23e585469bfffef5e603fceb494a6566a950f5eb89070a345c9",
+              "error_count": 0
+            }
+          ],
+          "bounded_batch": [
+            {
+              "repetition": 0,
+              "effects": 1000,
+              "seconds": 0.5238294000009773,
+              "verified_effects_per_second": 1909.0184705137478,
+              "client_execute_calls": 20,
+              "request_unit": "up_to_100_effects",
+              "request_latency_seconds": {
+                "p50": 0.04224560000147903,
+                "p95": 0.043945900004473515,
+                "p99": 0.043945900004473515
+              },
+              "peak_python_allocated_bytes": 1356880,
+              "client_process_cpu_seconds": 0.328125,
+              "debit_minor": "493671004",
+              "credit_minor": "493671004",
+              "effects_digest": "90927ba8077bd23e585469bfffef5e603fceb494a6566a950f5eb89070a345c9",
+              "error_count": 0
+            },
+            {
+              "repetition": 1,
+              "effects": 1000,
+              "seconds": 0.4551514000049792,
+              "verified_effects_per_second": 2197.0711283960904,
+              "client_execute_calls": 20,
+              "request_unit": "up_to_100_effects",
+              "request_latency_seconds": {
+                "p50": 0.03522550000343472,
+                "p95": 0.03690970000025118,
+                "p99": 0.03690970000025118
+              },
+              "peak_python_allocated_bytes": 1343553,
+              "client_process_cpu_seconds": 0.328125,
+              "debit_minor": "493671004",
+              "credit_minor": "493671004",
+              "effects_digest": "90927ba8077bd23e585469bfffef5e603fceb494a6566a950f5eb89070a345c9",
+              "error_count": 0
+            },
+            {
+              "repetition": 2,
+              "effects": 1000,
+              "seconds": 0.46494820000225445,
+              "verified_effects_per_second": 2150.777226355863,
+              "client_execute_calls": 20,
+              "request_unit": "up_to_100_effects",
+              "request_latency_seconds": {
+                "p50": 0.03613309999491321,
+                "p95": 0.03852850000112085,
+                "p99": 0.03852850000112085
+              },
+              "peak_python_allocated_bytes": 1348385,
+              "client_process_cpu_seconds": 0.375,
+              "debit_minor": "493671004",
+              "credit_minor": "493671004",
+              "effects_digest": "90927ba8077bd23e585469bfffef5e603fceb494a6566a950f5eb89070a345c9",
+              "error_count": 0
+            }
+          ]
+        },
+        "median_seconds_baseline": 6.867102000003797,
+        "median_seconds_optimized": 0.46494820000225445,
+        "measured_speedup": 14.769606592670968,
+        "financial_effects_digest": "90927ba8077bd23e585469bfffef5e603fceb494a6566a950f5eb89070a345c9"
+      }
+    ],
+    "database_bytes": 34281139,
+    "container_resources_final_sample": "{\"BlockIO\":\"0B / 210MB\",\"CPUPerc\":\"0.00%\",\"Container\":\"27f22cd3bff984b26fcd0b18eeaaa3a5ab39b1a282bcb26d0cea57b5b95e0afe\",\"ID\":\"27f22cd3bff9\",\"MemPerc\":\"0.67%\",\"MemUsage\":\"65.54MiB / 9.561GiB\",\"Name\":\"reconforge-enterprise-finance-6312ff21ad79\",\"NetIO\":\"108MB / 277MB\",\"PIDs\":\"6\"}",
+    "source_commit_after": "347d3714637253be2bfc8b310d99846401c67c18",
+    "source_sha256_after": "f9e26f1865b3f776df0006459773771f817c96de4f46e15cbf512e4975f59bea",
+    "source_unchanged": true,
+    "owned_container_removed": true,
+    "finished_at": "2026-10-09T18:51:55.878574+00:00",
+    "wall_seconds": 716.2030000000013
+  }
+}

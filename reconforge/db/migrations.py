@@ -8,12 +8,24 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from reconforge.db.connection import DatabaseError, connect, resolve_db_path
+from reconforge.db.migration_52_budget_control import SQLITE_BUDGET_CONTROL_UPGRADE_SQL
+from reconforge.db.migration_53_outbox_fencing import (
+    SQLITE_OUTBOX_FENCING_UPGRADE_SQL,
+    atomic_outbox_fencing_upgrade,
+)
+from reconforge.db.migration_54_payables_payment_link import SQLITE_PAYABLES_PAYMENT_LINK_SQL
+from reconforge.db.migration_55_payables_payment_link_reversal import (
+    SQLITE_PAYABLES_PAYMENT_LINK_REVERSAL_SQL,
+)
+from reconforge.db.migration_56_job_operations import SQLITE_JOB_OPERATIONS_UPGRADE_SQL
 from reconforge.db.schema import (
     ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL,
     API_SESSIONS_SCHEMA_SQL,
     AUTH_RBAC_SCHEMA_SQL,
     BANK_STATEMENT_CONTROL_SCHEMA_SQL,
     CERTIFICATION_EVIDENCE_MIGRATION_SQL,
+    CLOSE_PERIOD_LOCK_EVIDENCE_MIGRATION_SQL,
+    CLOSE_PERIOD_SOD_MIGRATION_SQL,
     CONSOLIDATION_CLOSE_SCHEMA_SQL,
     CONSOLIDATION_OWNERSHIP_SCHEMA_SQL,
     CURRENCY_REGISTRY_BINDING_SCHEMA_SQL,
@@ -25,6 +37,7 @@ from reconforge.db.schema import (
     DURABLE_JOB_SCHEDULER_CURSOR_MIGRATION_SQL,
     DURABLE_JOBS_SCHEMA_SQL,
     EVIDENCE_OBJECT_STORAGE_MIGRATION_SQL,
+    EVIDENCE_RETENTION_GOVERNANCE_MIGRATION_SQL,
     FINANCE_CORE_SCHEMA_SQL,
     FINANCE_PLATFORM_SCHEMA_SQL,
     IDEMPOTENCY_RECORDS_SCHEMA_SQL,
@@ -52,6 +65,14 @@ from reconforge.db.schema import (
     WRITEBACK_PROPOSAL_IDENTITY_MIGRATION_SQL,
     WRITEBACK_RECONCILIATION_PERMISSION_SQL,
     WRITEBACK_RECOVERY_OBSERVATIONS_SCHEMA_SQL,
+)
+from reconforge.infrastructure.finance_policy_schema import SQLITE_FINANCE_POLICY_MIGRATION_SQL
+from reconforge.infrastructure.notification_inbox_schema import SQLITE_NOTIFICATION_INBOX_SQL
+from reconforge.infrastructure.receivables_policy_schema import SQLITE_RECEIVABLES_POLICY_MIGRATION_SQL
+from reconforge.infrastructure.sqlite_finance_posting_schema import SQLITE_FINANCE_POSTING_MIGRATION_SQL
+from reconforge.infrastructure.sqlite_inventory_receipt_posting_schema import (
+    SQLITE_INVENTORY_RECEIPT_MIGRATION_SQL,
+    atomic_receipt_upgrade,
 )
 
 
@@ -145,6 +166,23 @@ MIGRATIONS = [
         name="connector_writeback_recovery_observations",
         sql=WRITEBACK_RECOVERY_OBSERVATIONS_SCHEMA_SQL,
     ),
+    Migration(version=44, name="close_period_segregation_of_duties", sql=CLOSE_PERIOD_SOD_MIGRATION_SQL),
+    Migration(version=45, name="close_period_lock_evidence_immutability", sql=CLOSE_PERIOD_LOCK_EVIDENCE_MIGRATION_SQL),
+    Migration(version=46, name="evidence_retention_governance", sql=EVIDENCE_RETENTION_GOVERNANCE_MIGRATION_SQL),
+    Migration(version=47, name="finance_currency_policy", sql=SQLITE_FINANCE_POLICY_MIGRATION_SQL),
+    Migration(version=48, name="manual_finance_operational_posting", sql=SQLITE_FINANCE_POSTING_MIGRATION_SQL),
+    Migration(version=49, name="receivables_retained_monetary_policy", sql=SQLITE_RECEIVABLES_POLICY_MIGRATION_SQL),
+    Migration(version=50, name="reviewed_inventory_receipt_posting", sql=SQLITE_INVENTORY_RECEIPT_MIGRATION_SQL),
+    Migration(version=51, name="retained_notification_inbox", sql=SQLITE_NOTIFICATION_INBOX_SQL),
+    Migration(version=52, name="governed_budget_control", sql=SQLITE_BUDGET_CONTROL_UPGRADE_SQL),
+    Migration(version=53, name="outbox_lease_fencing_and_delivery_evidence", sql=SQLITE_OUTBOX_FENCING_UPGRADE_SQL),
+    Migration(version=54, name="payables_finance_payment_link", sql=SQLITE_PAYABLES_PAYMENT_LINK_SQL),
+    Migration(
+        version=55,
+        name="payables_finance_payment_link_reversal",
+        sql=SQLITE_PAYABLES_PAYMENT_LINK_REVERSAL_SQL,
+    ),
+    Migration(version=56, name="governed_durable_job_operations", sql=SQLITE_JOB_OPERATIONS_UPGRADE_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """
@@ -170,6 +208,37 @@ def _applied_versions(connection: sqlite3.Connection) -> list[int]:
     return [int(row["version"]) for row in rows]
 
 
+def _atomic_schema_upgrade(
+    connection: sqlite3.Connection,
+    *,
+    schema_sql: str,
+    version: int,
+    name: str,
+    applied_at: str,
+) -> None:
+    """Apply one additive schema slice and its migration record as one SQLite transaction."""
+
+    if not schema_sql.strip() or type(version) is not int or version < 1:
+        raise sqlite3.DatabaseError("Invalid atomic migration definition.")
+    # executescript opens the explicit transaction before any schema statement.
+    # A failed trigger, constraint, or permission insert therefore cannot leave a
+    # replay-hostile partial migration behind.
+    # The migration registry supplies only committed, closed SQL literals; this
+    # helper never receives application or user input. # nosec B608
+    script = (
+        "BEGIN IMMEDIATE;\n"
+        + schema_sql  # nosec B608
+        + "\nINSERT INTO schema_migrations (version, name, applied_at) VALUES ("  # nosec B608
+        + f"{version}, {name!r}, {applied_at!r});\n"
+        + f"PRAGMA user_version = {version};\nCOMMIT;"
+    )
+    try:
+        connection.executescript(script)
+    except sqlite3.DatabaseError:
+        connection.rollback()
+        raise
+
+
 def run_migrations(db_path: Path | str, *, target_version: int | None = None) -> MigrationStatus:
     """Create or migrate a local database, optionally stopping at a supported version."""
 
@@ -187,6 +256,31 @@ def run_migrations(db_path: Path | str, *, target_version: int | None = None) ->
             if migration.version > selected_target:
                 continue
             if migration.version in already_applied:
+                continue
+            if migration.version == 50:
+                atomic_receipt_upgrade(connection, schema_sql=migration.sql, version=migration.version,
+                                       name=migration.name, applied_at=_utc_now())
+                applied_now.append(migration.version)
+                continue
+            if migration.version in {51, 52, 54, 56}:
+                _atomic_schema_upgrade(
+                    connection,
+                    schema_sql=migration.sql,
+                    version=migration.version,
+                    name=migration.name,
+                    applied_at=_utc_now(),
+                )
+                applied_now.append(migration.version)
+                continue
+            if migration.version == 53:
+                atomic_outbox_fencing_upgrade(
+                    connection,
+                    schema_sql=migration.sql,
+                    version=migration.version,
+                    name=migration.name,
+                    applied_at=_utc_now(),
+                )
+                applied_now.append(migration.version)
                 continue
             connection.executescript(migration.sql)
             connection.execute(

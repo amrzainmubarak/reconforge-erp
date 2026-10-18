@@ -1,0 +1,289 @@
+{
+  "schema_version": "retained-projection-contract-repair-v1",
+  "original_source_commit": "e81bdbef0daada3da205bbb6a184decaea2424f3",
+  "status": "focused_repair_passed_whole_reverification_pending",
+  "retained_immutable_local": {
+    "status": "failed",
+    "tracked_file_count": 3056,
+    "all_tracked_source_manifest_sha256": "59b746d65fbe9d34d39d09b610cda5375d213db02f0bd3567cdf31b2f471a549",
+    "all_sources_head_and_import_unchanged": true
+  },
+  "retained_local_pytest": {
+    "counts": {
+      "tests": 4481,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 366,
+      "passed": 4114
+    },
+    "warning_count": 24,
+    "duration_seconds": 1198.158,
+    "pytest_duration_seconds": 1193.701,
+    "skip_reasons": {
+      "PROD-002 requires migrated live PostgreSQL app-role profile; review 2026-10-03": 14,
+      "PROD-007 requires migrated live PostgreSQL app-role profile; review 2026-10-03": 45,
+      "PROD031 live cash contract requires isolated PostgreSQL creation credentials; review 2026-10-10": 1,
+      "PROD033 API requires disposable live PostgreSQL app/admin profile; review 2026-10-03": 5,
+      "Windows symlink creation requires an external privilege": 1,
+      "live public network evidence is opt-in and may drift": 1,
+      "requires a disposable PostgreSQL administration service": 177,
+      "requires a live PostgreSQL application role": 2,
+      "requires a live PostgreSQL migration service": 1,
+      "requires a live PostgreSQL service": 21,
+      "requires a live Redis service": 3,
+      "requires a live S3-compatible service": 1,
+      "requires a live object-lock-enabled S3-compatible bucket": 1,
+      "requires disposable PostgreSQL source and maintenance services": 1,
+      "requires live PostgreSQL": 78,
+      "requires live PostgreSQL service": 12,
+      "symbolic links are not available in this environment": 1,
+      "symbolic-link creation is unavailable": 1
+    },
+    "failures": [
+      {
+        "test": "tests.test_receivables_monetary_policy.test_backend_metadata_does_not_silently_expand_existing_http_contract",
+        "kind": "failure",
+        "message": "AssertionError: assert {'currency_co...-10-03', ...}} == {'id': 'synth..._code': 'JPY'}\n  \n  Omitting 2 identical items, use -vv to show\n  Left contains 1 more item:\n  {'monetary_policy': {'currency_code': 'JPY',\n                       'policy_digest': '525ed89350cf907729c1090c6cca2c142e97ab528ed6d56ce67dac2c34a79225',\n                       'precision': 0,\n                       'published_at': '2026-10-03',...\n  \n  ...Full output truncated (8 lines hidden), use '-vv' to show",
+        "detail": "tests\\test_receivables_monetary_policy.py:141: in test_backend_metadata_does_not_silently_expand_existing_http_contract\n    assert visible == {\"id\": \"synthetic\", \"currency_code\": \"JPY\"}\nE   AssertionError: assert {'currency_co...-10-03', ...}} == {'id': 'synth..._code': 'JPY'}\nE     \nE     Omitting 2 identical items, use -vv to show\nE     Left contains 1 more item:\nE     {'monetary_policy': {'currency_code': 'JPY',\nE                          'policy_digest': '525ed89350cf907729c1090c6cca2c142e97ab528ed6d56ce67dac2c34a79225',\nE                          'precision': 0,\nE                          'published_at': '2026-10-03',...\nE     \nE     ...Full output truncated (8 lines hidden), use '-vv' to show"
+      }
+    ]
+  },
+  "retained_local_quality": [
+    {
+      "name": "ruff",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "started_at": "2026-10-03T13:04:09.711123+00:00",
+      "duration_seconds": 0.264,
+      "exit_code": 0,
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "name": "mypy",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge"
+      ],
+      "started_at": "2026-10-03T13:04:12.271760+00:00",
+      "duration_seconds": 3.785,
+      "exit_code": 0,
+      "log_sha256": "fbc2b5dfdc741a9a17afd9b8ecad20b0b4126c4c75b247521992f209ed3e3713"
+    },
+    {
+      "name": "bandit",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "-r",
+        "reconforge"
+      ],
+      "started_at": "2026-10-03T13:04:18.417101+00:00",
+      "duration_seconds": 32.669,
+      "exit_code": 0,
+      "log_sha256": "333497e37a41d213f0cbb24ee4451bf17bea751f0a656a0cea9493f11f9eee8f"
+    },
+    {
+      "name": "build",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "build",
+        "--no-isolation",
+        "--outdir",
+        "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\ar-policy-e81b-dist"
+      ],
+      "started_at": "2026-10-03T13:04:53.237125+00:00",
+      "duration_seconds": 31.831,
+      "exit_code": 0,
+      "log_sha256": "a9020013efe9971aae391862b64d8970ffcde44fbcfc84b8c7563f6d902bdcaf"
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "started_at": "2026-10-03T13:05:27.342170+00:00",
+      "duration_seconds": 0.065,
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "retained_hosted": {
+    "head_sha": "e81bdbef0daada3da205bbb6a184decaea2424f3",
+    "run_id": 37124969894,
+    "run_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37124969894",
+    "conclusion": "failure",
+    "python312": {
+      "job_id": 111208303530,
+      "passed": 4116,
+      "skipped": 364,
+      "failed": 1,
+      "warnings": 24,
+      "pytest_duration_seconds": 556.34,
+      "failed_test": "tests/test_receivables_monetary_policy.py::test_backend_metadata_does_not_silently_expand_existing_http_contract",
+      "assertion_location": "tests/test_receivables_monetary_policy.py:141",
+      "classification": "Pre-additive-API projection expectation still requires monetary_policy absent; new closed11-key field is intentionally exposed. No runtime repair inferred from this assertion."
+    },
+    "python311": {
+      "job_id": 111208303483,
+      "conclusion": "cancelled",
+      "passed_result": false
+    },
+    "server_boundary_matrix": {
+      "conclusion": "skipped",
+      "executed": false
+    },
+    "server_boundary_aggregate": {
+      "job_id": 111209968978,
+      "conclusion": "failure",
+      "reason": "Fail-closed aggregate rejected skipped matrix; no live9shard acceptance."
+    },
+    "other_ci_jobs": [
+      {
+        "name": "object-storage",
+        "conclusion": "success"
+      },
+      {
+        "name": "postgres-ha-dr",
+        "conclusion": "success"
+      },
+      {
+        "name": "engine-parity (3.12, current-compatible-2026-07-25, 2.4.3, 3.0.5, 1.5.5)",
+        "conclusion": "success"
+      },
+      {
+        "name": "engine-parity (3.11, lower-bounds, 1.26.4, 2.2.0, 1.0.0)",
+        "conclusion": "success"
+      },
+      {
+        "name": "web",
+        "conclusion": "success"
+      },
+      {
+        "name": "engine-parity (3.12, lower-bounds, 1.26.4, 2.2.0, 1.0.0)",
+        "conclusion": "success"
+      },
+      {
+        "name": "engine-parity (3.11, current-compatible-2026-07-25, 2.4.3, 3.0.5, 1.5.5)",
+        "conclusion": "success"
+      },
+      {
+        "name": "docker-parity",
+        "conclusion": "skipped"
+      }
+    ]
+  },
+  "repair": {
+    "file": "tests/test_receivables_monetary_policy.py",
+    "sha256": "f604627491bdd11702d70d85a1a5a94d0e3507bd94f81a7027dd88bf32e8fee8",
+    "scope": "Pure test expectation only; exact eleven public policy keys for customer/invoice/receipt, complete response equality and private metadata removal. No financial API, UI or persistence mutation.",
+    "independent_read_only_review": "No finding; complete response equality excludes raw storage policy columns and injected private policy/snapshot/path metadata.",
+    "before": {
+      "tests": 1,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 0,
+      "junit_seconds": 0.789
+    },
+    "after": {
+      "tests": 27,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 27,
+      "junit_seconds": 0.309
+    },
+    "broader_contracts": {
+      "tests": 138,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 138,
+      "junit_seconds": 2.598
+    },
+    "checks": [
+      {
+        "command": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "-m",
+          "ruff",
+          "check",
+          "tests/test_receivables_monetary_policy.py"
+        ],
+        "exit_code": 0,
+        "seconds": 0.172
+      },
+      {
+        "command": [
+          "git",
+          "diff",
+          "--check",
+          "--",
+          "tests/test_receivables_monetary_policy.py"
+        ],
+        "exit_code": 0,
+        "seconds": 0.063
+      }
+    ]
+  },
+  "evidence_files": [
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\ar-policy-e81b-summary.json",
+      "sha256": "0440cf456c87376ebd952ccfe04d43ca9bf6412db3ca9caa0a23abf5fe1104e6"
+    },
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\hosted-pr114-e81b-failure\\report.json",
+      "sha256": "dd8d6c19585d5a0a524cf5c20a054b5507f94c45f6b8f38af96a72cbae83cfeb"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod033-projection-red.xml",
+      "sha256": "3083e495f633486b0b4e894d2317dff8127fe65e31186766c6f0a80c92ce127c"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod033-projection-red.log",
+      "sha256": "9cf13eccd59273cb8d0f6dcc1eac53e1d18f73e5dbedd3523d242815350f1bab"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod033-projection-green.xml",
+      "sha256": "e7e0bb53ec833bc5b9856a55851b8f291ba9cdb3dae0b101ecbc779bdc61a11b"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod033-projection-green.log",
+      "sha256": "18395083f2cb1e70edeb9bfc9b39da059cb217359d0fe9eaea01cc89e8d751d4"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod033-projection-contracts.xml",
+      "sha256": "d93379b1a8d7a279dd5f4c4514128cfbd36b291f77b44721c03bd27f6c6166d1"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod033-projection-contracts.log",
+      "sha256": "30e27af7ad972ca05f2a2ca91616214f8077a2f13d2b7d6acb151ae502d1f72a"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod033-projection-ruff.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod033-projection-diff.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "limits": [
+    "The original e81b whole and hosted runs remain failed. A focused repair does not turn their results green.",
+    "Focused selections overlap and must not be summed.",
+    "Nine hosted server shards did not execute at e81b; aggregate correctly refused a skipped dependency.",
+    "The current uncommitted invoice-recovery work is separate and excluded from the parent repair publication."
+  ]
+}

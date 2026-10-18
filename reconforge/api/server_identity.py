@@ -84,6 +84,7 @@ class AuthenticatedServerRequest:
     user: LocalUser
     permissions: frozenset[str]
     principal_type: str
+    tenant_id: str | None = None
     credential_id: str | None = None
     session_id: str | None = None
     step_up_active: bool = False
@@ -127,6 +128,9 @@ def server_principal_from_authentication(
             ),
             emergency_permissions=authenticated.emergency_permissions,
             emergency_access_id_by_permission=authenticated.emergency_access_id_by_permission,
+            authorized_tenant_ids=(
+                frozenset({authenticated.tenant_id}) if authenticated.tenant_id is not None else frozenset()
+            ),
             authorized_workspace_ids=authenticated.scope_authority.workspace_ids,
             authorized_organization_ids=authenticated.scope_authority.organization_ids,
             authorized_legal_entity_ids=authenticated.scope_authority.legal_entity_ids,
@@ -191,13 +195,15 @@ def request_optional_hierarchy(request: Request) -> tuple[str | None, str | None
     return organization_id, legal_entity_id
 
 
-def request_execution_scope(request: Request) -> RequestExecutionScope:
-    """Resolve caller-selected hierarchy only from an authenticated grant snapshot."""
+def request_execution_scope(request: Request, *, permission: str | None = None) -> RequestExecutionScope:
+    """Resolve granted hierarchy, optionally requiring an audited policy decision."""
 
     tenant_id = request_tenant_id(request)
     principal = getattr(request.state, "server_principal", None)
     if not isinstance(principal, ServerPrincipal):
         raise APIError(status_code=401, code="auth_required", message="Authentication required.")
+    if principal.authorized_tenant_ids and tenant_id not in principal.authorized_tenant_ids:
+        raise APIError(status_code=403, code="tenant_scope_denied", message="Tenant scope is not authorized.")
     raw_workspace = request.headers.get("x-reconforge-workspace", "").strip()
     if not raw_workspace:
         raise APIError(
@@ -210,6 +216,16 @@ def request_execution_scope(request: Request) -> RequestExecutionScope:
         organization_id, legal_entity_id = request_optional_hierarchy(request)
     except PostgresConfigurationError as exc:
         raise APIError(status_code=400, code="invalid_execution_scope", message=str(exc)) from exc
+    if permission is not None:
+        # The policy sink owns a short independent transaction, before any
+        # financial owner or audit-chain lock is acquired. A hierarchy denial
+        # must retain its redacted evidence even though business work refuses.
+        from reconforge.api.dependencies import enforce_server_scoped_permission
+
+        enforce_server_scoped_permission(
+            request, permission=permission, tenant_id=tenant_id, workspace_id=workspace_id,
+            organization_id=organization_id, entity_id=legal_entity_id,
+        )
     if workspace_id not in principal.authorized_workspace_ids:
         raise APIError(status_code=403, code="workspace_scope_denied", message="Workspace scope is not authorized.")
     if organization_id is not None and organization_id not in principal.authorized_organization_ids:
@@ -518,6 +534,7 @@ def authenticate_server_request(
 ) -> AuthenticatedServerRequest | None:
     """Authenticate one bearer token and snapshot permissions for middleware."""
 
+    tenant_id = request_tenant_id(request)
     if token.startswith("rfa_"):
         principal, scope_authority = execute_postgres_service_account(
             request,
@@ -534,6 +551,7 @@ def authenticate_server_request(
             ),
             permissions=principal.permissions,
             principal_type="service_account",
+            tenant_id=tenant_id,
             credential_id=principal.credential_id,
             scope_authority=scope_authority,
         )
@@ -546,6 +564,7 @@ def authenticate_server_request(
         user=user,
         permissions=effective_permissions,
         principal_type="user",
+        tenant_id=tenant_id,
         session_id=assurance.session_id,
         step_up_active=assurance.step_up_active,
         step_up_expires_at=assurance.step_up_expires_at,

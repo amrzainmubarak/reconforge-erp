@@ -1,0 +1,140 @@
+{
+  "slice": "PROD015",
+  "status": "source_frozen_verified",
+  "synthetic_only": true,
+  "owned_files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "4027eaf855121698f157b13a4977136c7a2ebdd342470f1de7cee62f3a6bdf9e"
+    },
+    {
+      "path": "alembic/versions/0094_postgres_finance_policy.py",
+      "sha256": "09cf0721d51cc63904de689c15107dd6e41907897b8e3de57a72e4acf1bef644"
+    },
+    {
+      "path": "reconforge/domain/finance_policy.py",
+      "sha256": "644f8210d71525387005b354256baff59741d27d345165aeb699e3cade0c8949"
+    },
+    {
+      "path": "reconforge/infrastructure/finance_policy_schema.py",
+      "sha256": "7ac38815116a5c384824fd9f35606d63b2b274980ccf19e233a21132702d2bc3"
+    },
+    {
+      "path": "reconforge/infrastructure/finance_policy_store.py",
+      "sha256": "6f4590147974a4efca1f7a18cc749cf0591c52f33c33e38a5b2ea405f9f1f592"
+    },
+    {
+      "path": "reconforge/db/migrations.py",
+      "sha256": "18a27d0e67209644dd2a98d4fe7c5b567ab322e2c9b410d4d2246c12893cb4ed"
+    },
+    {
+      "path": "reconforge/db/backup.py",
+      "sha256": "73c7d1d0bb739f194af92a93f53765ff0240b206b6c993bfb0728f1f2301a6c3"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_operations.py",
+      "sha256": "ea6a6bf35346221031bdac827cce4e1a02ce505115d39d778a7670d670f7f8b5"
+    },
+    {
+      "path": "reconforge/infrastructure/sqlite_master_data.py",
+      "sha256": "27ef974bd07e12c125adf8e563f5bf648aafa1ad1820ec0b658297ba31ec4d8d"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_master_data.py",
+      "sha256": "d11a31293a810617bd6f0e30b9aa235b3344ab25fb9e932323d7ad3fa93e7062"
+    },
+    {
+      "path": "reconforge/infrastructure/sqlite_finance_core.py",
+      "sha256": "ad9c6025328ff7aff359167f602a8430e3f7ea6291dd05f6a4559d672d621fe7"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_finance_core.py",
+      "sha256": "818d13a189c294ad89d8a21c5e1a73d9019b3db73ac22dd15ecd80651a1f1f94"
+    },
+    {
+      "path": "reconforge/infrastructure/sqlite_inventory_valuation.py",
+      "sha256": "2e339331cbaa5ece79bacf720714debe7873b2fd4e7ef30be4c852b2629a621e"
+    },
+    {
+      "path": "reconforge/infrastructure/sqlite_inventory_valuation_repository.py",
+      "sha256": "2753ba18a5cd3355a9994d5cd5df0b8f1c8559b9eafdf1ad6e33fdf4fd94ddb7"
+    },
+    {
+      "path": "reconforge/infrastructure/sqlite_inventory_valuation_reversal.py",
+      "sha256": "d0b445490610a5c774302de2d668ff7ce043534564c5f98e884e4713994e5a81"
+    },
+    {
+      "path": "reconforge/infrastructure/sqlite_inventory_valuation_reversal_repository.py",
+      "sha256": "563bedf212ded8e45af77700c766cf1d99360c628e37454bdb3ed427626eb2f1"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_inventory_valuation.py",
+      "sha256": "764ab0debcb3a6150476d49193a43459f18925cdb724340f2851a900e7e0ea7c"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_inventory_valuation_reversal.py",
+      "sha256": "70b6fcf208cb628ddcb015b26599767f4e6cd8611935201ba6149de517aa2f1f"
+    },
+    {
+      "path": "tests/test_finance_currency_policy.py",
+      "sha256": "d022ad14578e8b9a8e412d284aa2375613acea17877f2ef6ddd3454bc83470d4"
+    },
+    {
+      "path": "tests/test_postgres_finance_currency_policy.py",
+      "sha256": "42226e036855b9a2137635efd5b281c41c1316bee1a9590458190a2cb32fb222"
+    },
+    {
+      "path": "tests/test_currency_registry_governance.py",
+      "sha256": "bdb2337e66e95226889d9a2f2622be8ffe7987daebadf1ee8c5e064a54e10ddf"
+    },
+    {
+      "path": "tests/test_inventory_valuation_reversal.py",
+      "sha256": "379563e17fb79a4829c3214cb39bbe1e2025b9e7224ce337dfad621a9964364e"
+    },
+    {
+      "path": "tests/test_postgres_inventory_valuation.py",
+      "sha256": "9b51caed4990aed083ea030ade77b52cdf3c9a9a8850f0e357eb7666ab2cafd9"
+    },
+    {
+      "path": "tests/test_api_foundation.py",
+      "sha256": "24ba6d209d4076d298b36acfdc06b7659f74f9abbc98ffabf1d75660dab91431"
+    },
+    {
+      "path": "tests/test_postgres_operations.py",
+      "sha256": "f4d0ade57b86d3df19aebaad8fdaaedfd295417a03f275c8a17d8e6e0cdd82c6"
+    }
+  ],
+  "ci": {
+    "report": "prod015-ci-general-final/report.json",
+    "selected": 449,
+    "passed": 448,
+    "failed": 0,
+    "skipped": 1,
+    "pytest_seconds": 105.954,
+    "harness_seconds": 114.63552110000455,
+    "database_cleaned": true,
+    "redis_cleaned": true,
+    "native_client_skip": "requires PostgreSQL native client tools on PATH"
+  },
+  "local": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "2",
+    "tests": "81",
+    "time": "43.196",
+    "timestamp": "2026-10-03T06:16:37.092883+03:00",
+    "hostname": "DESKTOP-FDO3RD5"
+  },
+  "quality": {
+    "mypy": "15 source files; exit 0",
+    "ruff": "all owned Python files; exit 0",
+    "bandit": "15 source files; exit 0; existing nosec annotation warnings retained"
+  },
+  "limitations": [
+    "No company pilot or external auditor acceptance proof.",
+    "Native PostgreSQL client backup path skipped in host CI run; parent owns Docker native restore drill.",
+    "Tenant policy tests are not end-to-end scoped UoW isolation proof; PROD024 owns nested scope reset.",
+    "Full repository regression and exact committed artifact proof belong to root acceptance after commit."
+  ]
+}

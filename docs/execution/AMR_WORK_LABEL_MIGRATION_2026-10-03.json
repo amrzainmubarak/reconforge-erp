@@ -1,0 +1,749 @@
+{
+  "schema_version": "amr-work-label-migration-v1",
+  "status": "completed_current_work_labels",
+  "scope": "User-requested labels in current unmerged work. Trees, identities, timestamps, main, tags and released history are preserved.",
+  "base_commit": "b61ea56bb9c135fda12546e173795af3c243e4fb",
+  "head_before": "e63859d7a3fa186f091db88ac9f011bdfe60910c",
+  "head_after": "4629a64baeb4c1e127dd13afdb5024ac3e2205d8",
+  "commits_inspected": 268,
+  "changed_commits": [
+    {
+      "old": "0eece27565c055414431edb541511ac016fe8f80",
+      "new": "029974e422296d11578af0e69ad86b70cb996f52",
+      "tree": "06f7574ebab86df86388e9ae6faa1a695b0dbee3",
+      "parents_before": [
+        "eb70fae61de03d781c818de99c57be622a3bb237",
+        "33b3fb5e8a0c7f219e8341d8537ea7b8d97392fb"
+      ],
+      "parents_after": [
+        "eb70fae61de03d781c818de99c57be622a3bb237",
+        "33b3fb5e8a0c7f219e8341d8537ea7b8d97392fb"
+      ],
+      "message_changed": true
+    },
+    {
+      "old": "e67b2e8995dd59f2566891d952972b1ef618ceb6",
+      "new": "59dd15a484c48ed419162d6f4fc1acdf7cdff39a",
+      "tree": "d0e220ea1f0317a4980a63874bd6b83279624eed",
+      "parents_before": [
+        "f615f8a8073237613d419abedf09eb0eda823564",
+        "0eece27565c055414431edb541511ac016fe8f80"
+      ],
+      "parents_after": [
+        "f615f8a8073237613d419abedf09eb0eda823564",
+        "029974e422296d11578af0e69ad86b70cb996f52"
+      ],
+      "message_changed": true
+    },
+    {
+      "old": "f3d6482f290477ac80b1c06b0e3f1fd783ad2340",
+      "new": "5a4acfd97a05dd294b76cf4968e7eeea9e942f64",
+      "tree": "c7f0418298314f217f724dfa0b8badcae31ea14c",
+      "parents_before": [
+        "e67b2e8995dd59f2566891d952972b1ef618ceb6"
+      ],
+      "parents_after": [
+        "59dd15a484c48ed419162d6f4fc1acdf7cdff39a"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35",
+      "new": "318f5e336bc8af035e3ccedb7eac48b7747e66b2",
+      "tree": "471cc2184abca3e7576212f472bbf862e914edea",
+      "parents_before": [
+        "f3d6482f290477ac80b1c06b0e3f1fd783ad2340"
+      ],
+      "parents_after": [
+        "5a4acfd97a05dd294b76cf4968e7eeea9e942f64"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "103fd2423aa312483400d7ec96237bea098d10c6",
+      "new": "33f67280f200be620a3246a2e052a425925d73e0",
+      "tree": "928df55733ded53ae300fcf26c39f21146a5d20f",
+      "parents_before": [
+        "d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35"
+      ],
+      "parents_after": [
+        "318f5e336bc8af035e3ccedb7eac48b7747e66b2"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "dbd5c87d9dfeefc559f9327892fba8a8d20675bb",
+      "new": "287d15d631faf3f562c2fe014eca8721ccd2e13c",
+      "tree": "d8d778cbc73e84abf4fa204d7dac92a582bcea8a",
+      "parents_before": [
+        "103fd2423aa312483400d7ec96237bea098d10c6"
+      ],
+      "parents_after": [
+        "33f67280f200be620a3246a2e052a425925d73e0"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "df071e4828ada29e109adc99ab8af53415ee58ef",
+      "new": "9c85cdf4c01b21eea1e9ed5bb3a6dd84b9e8bf21",
+      "tree": "a1802849466a0b6a6275ecebeb650dd367c2a4d3",
+      "parents_before": [
+        "dbd5c87d9dfeefc559f9327892fba8a8d20675bb"
+      ],
+      "parents_after": [
+        "287d15d631faf3f562c2fe014eca8721ccd2e13c"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "476d1d9b758416d3853a44b114995e62023c1806",
+      "new": "810446b624ac6b7f2b63ac0628abfc758ea14f99",
+      "tree": "baafa264b83c8a36d87c1e3b52d91dcd9f341948",
+      "parents_before": [
+        "df071e4828ada29e109adc99ab8af53415ee58ef"
+      ],
+      "parents_after": [
+        "9c85cdf4c01b21eea1e9ed5bb3a6dd84b9e8bf21"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "76d2a8b44c51e69da36dd82a4d8cd39b97ecb856",
+      "new": "1c5a3d0e7a4559bf465a0cb752a9d3f86ff4e842",
+      "tree": "e1f0018b8e0be474011b478621625638b2765662",
+      "parents_before": [
+        "476d1d9b758416d3853a44b114995e62023c1806"
+      ],
+      "parents_after": [
+        "810446b624ac6b7f2b63ac0628abfc758ea14f99"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "866d943a5715099843a70a85d697593e4d672653",
+      "new": "604216aabd7e296a407742a246b0e3d613f4a6ba",
+      "tree": "631c696cce7c3c339ea823fabbe5b463fb647f1f",
+      "parents_before": [
+        "76d2a8b44c51e69da36dd82a4d8cd39b97ecb856"
+      ],
+      "parents_after": [
+        "1c5a3d0e7a4559bf465a0cb752a9d3f86ff4e842"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "1942b7afc76c3c4356be3e28ae72db8f67c9f666",
+      "new": "49fbe2bede6fea9a166477f2facaf07255f4083b",
+      "tree": "441b55dee7221be5f50feab389bc04f731798604",
+      "parents_before": [
+        "866d943a5715099843a70a85d697593e4d672653"
+      ],
+      "parents_after": [
+        "604216aabd7e296a407742a246b0e3d613f4a6ba"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "43bafc9d1b99d8bf6ac50d34841b515484194f7b",
+      "new": "708e9c702fde411ee1bce8c671ff59a419961e91",
+      "tree": "d8d778cbc73e84abf4fa204d7dac92a582bcea8a",
+      "parents_before": [
+        "103fd2423aa312483400d7ec96237bea098d10c6"
+      ],
+      "parents_after": [
+        "33f67280f200be620a3246a2e052a425925d73e0"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "c56f805c6a89466459e7abee18c1e01b03208e81",
+      "new": "b26fff096d599528d0c1296c40eec5e9a1e2240f",
+      "tree": "1b4c18781b08520c9efa384e4029c1d686d26f5c",
+      "parents_before": [
+        "43bafc9d1b99d8bf6ac50d34841b515484194f7b"
+      ],
+      "parents_after": [
+        "708e9c702fde411ee1bce8c671ff59a419961e91"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "fafe886fb32e6fcb75e8f4d519db4905a692c079",
+      "new": "7ba27bd6886fc24317f2476f5e026f1dc37199f4",
+      "tree": "441b55dee7221be5f50feab389bc04f731798604",
+      "parents_before": [
+        "1942b7afc76c3c4356be3e28ae72db8f67c9f666",
+        "c56f805c6a89466459e7abee18c1e01b03208e81"
+      ],
+      "parents_after": [
+        "49fbe2bede6fea9a166477f2facaf07255f4083b",
+        "b26fff096d599528d0c1296c40eec5e9a1e2240f"
+      ],
+      "message_changed": true
+    },
+    {
+      "old": "92cd42a52c179904e192e08e65eaf30c6200cf19",
+      "new": "172250dffbec5b8cccbb988be373a64cf09d041a",
+      "tree": "8940b798845454c152a6ea5f8072b2167e8b7f23",
+      "parents_before": [
+        "fafe886fb32e6fcb75e8f4d519db4905a692c079"
+      ],
+      "parents_after": [
+        "7ba27bd6886fc24317f2476f5e026f1dc37199f4"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "b6a6e6f38dff7811e6e9dc104383a822bf56cb50",
+      "new": "0a10381dd4079e39d13dfe99c854db5b3ae9a95c",
+      "tree": "56dec3f857ecf0f775339993f20a6d9a428223ce",
+      "parents_before": [
+        "92cd42a52c179904e192e08e65eaf30c6200cf19"
+      ],
+      "parents_after": [
+        "172250dffbec5b8cccbb988be373a64cf09d041a"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "e426d0ec28cb8a083fb86e1eb60d85995dbedef6",
+      "new": "2955d69e7812d26a2c6eb17263d667e2a9313963",
+      "tree": "c8cebae94fc97182534a7473fe06d0385dedb0e2",
+      "parents_before": [
+        "b6a6e6f38dff7811e6e9dc104383a822bf56cb50"
+      ],
+      "parents_after": [
+        "0a10381dd4079e39d13dfe99c854db5b3ae9a95c"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "cd67fc67e8563a258e1e1d592e193840c1bc92e5",
+      "new": "e3365d3f01967ec20b1422e367d367ce4a583eef",
+      "tree": "801a4a5b2b04e2d27dc39b7bc1602e7fd7c32ce9",
+      "parents_before": [
+        "c56f805c6a89466459e7abee18c1e01b03208e81"
+      ],
+      "parents_after": [
+        "b26fff096d599528d0c1296c40eec5e9a1e2240f"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "68bfea5b0adc7def1526b015ef5a950d086b265b",
+      "new": "111a193c1eea0200d3086db615e7b5c1ffc4da83",
+      "tree": "297db703026b44350425c7aaee261bc51b6a828b",
+      "parents_before": [
+        "cd67fc67e8563a258e1e1d592e193840c1bc92e5"
+      ],
+      "parents_after": [
+        "e3365d3f01967ec20b1422e367d367ce4a583eef"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "852508968462ec9957e46e39bb2aab507960b572",
+      "new": "f572ff96f9850aa2adf015fee6f20e37ee544ab4",
+      "tree": "3f2014e2af5865edd5c195f7d5aa5fdf99b26444",
+      "parents_before": [
+        "68bfea5b0adc7def1526b015ef5a950d086b265b"
+      ],
+      "parents_after": [
+        "111a193c1eea0200d3086db615e7b5c1ffc4da83"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "8d76647c96c9a25c9b56bc061c619f70a28a7d13",
+      "new": "70f1daef670b7f37ee9711940a91b4cea8dcd54d",
+      "tree": "559164df91477e8c2c114e97e5f175d25ce77dd9",
+      "parents_before": [
+        "852508968462ec9957e46e39bb2aab507960b572"
+      ],
+      "parents_after": [
+        "f572ff96f9850aa2adf015fee6f20e37ee544ab4"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "8ba6772dabe4ba0ed8576ed123fbc4f5ba801ffd",
+      "new": "cce527aaa11da3c8fad8ec9dcaab1009aed63298",
+      "tree": "c4866c4c4f52704e7a3a65ac3534a0382ff601e6",
+      "parents_before": [
+        "fafe886fb32e6fcb75e8f4d519db4905a692c079",
+        "8d76647c96c9a25c9b56bc061c619f70a28a7d13"
+      ],
+      "parents_after": [
+        "7ba27bd6886fc24317f2476f5e026f1dc37199f4",
+        "70f1daef670b7f37ee9711940a91b4cea8dcd54d"
+      ],
+      "message_changed": true
+    },
+    {
+      "old": "701385417572d56bdc48096223aa99af0e612469",
+      "new": "dc15c9d1c76ea328b41329482bfa87cc3e420161",
+      "tree": "eaa17cd3026eba42f88d32a215fa29103fd50e22",
+      "parents_before": [
+        "e426d0ec28cb8a083fb86e1eb60d85995dbedef6",
+        "8ba6772dabe4ba0ed8576ed123fbc4f5ba801ffd"
+      ],
+      "parents_after": [
+        "2955d69e7812d26a2c6eb17263d667e2a9313963",
+        "cce527aaa11da3c8fad8ec9dcaab1009aed63298"
+      ],
+      "message_changed": true
+    },
+    {
+      "old": "75bdbe63caca75ede0803edca0026c58539abb4f",
+      "new": "854d874eb9c04dd753a57b24d33e769651bbf87a",
+      "tree": "f8ee254fb294871189d8786c78222beb3ebdfec5",
+      "parents_before": [
+        "701385417572d56bdc48096223aa99af0e612469"
+      ],
+      "parents_after": [
+        "dc15c9d1c76ea328b41329482bfa87cc3e420161"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "662aad3ff0c0f48cb0fcda33f3a178cdec7322d0",
+      "new": "93561288b6fd357f49c5d9fdea8554a80f33a107",
+      "tree": "193c252dc137c862ff0232c1da224a4fee4a6569",
+      "parents_before": [
+        "75bdbe63caca75ede0803edca0026c58539abb4f"
+      ],
+      "parents_after": [
+        "854d874eb9c04dd753a57b24d33e769651bbf87a"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "8054cd454e14f29a6d0316029aa88acafdaab0a1",
+      "new": "1f09f49789aa6fb3a173957a43eb82a2c6055b9d",
+      "tree": "40d005a807a1f330865399dd93ab87de1e4f5c87",
+      "parents_before": [
+        "662aad3ff0c0f48cb0fcda33f3a178cdec7322d0"
+      ],
+      "parents_after": [
+        "93561288b6fd357f49c5d9fdea8554a80f33a107"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "ed5fc7079b5342117133878e7c8fc35f8f8b7665",
+      "new": "d23d99489f8861479d7368b4e59b1673ade5af13",
+      "tree": "c3f8b5eee581271b0bde84339276ac339cbd02fd",
+      "parents_before": [
+        "8054cd454e14f29a6d0316029aa88acafdaab0a1"
+      ],
+      "parents_after": [
+        "1f09f49789aa6fb3a173957a43eb82a2c6055b9d"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "b915340043fdd6775d088813e27d8a27aba717d1",
+      "new": "53ef08aa36d053eadd0b9a9a7a9ffc8440152d4a",
+      "tree": "466c866b8df0d255028eb5a237eb957205942ddd",
+      "parents_before": [
+        "ed5fc7079b5342117133878e7c8fc35f8f8b7665"
+      ],
+      "parents_after": [
+        "d23d99489f8861479d7368b4e59b1673ade5af13"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "a8a6dd3672da176a708290bffd91d4131a3542e4",
+      "new": "5097073415f21d75025fffa020f2e2ea8d9a4d76",
+      "tree": "4c2039c15035cece274a3e458883f6c798c6bd9f",
+      "parents_before": [
+        "b915340043fdd6775d088813e27d8a27aba717d1"
+      ],
+      "parents_after": [
+        "53ef08aa36d053eadd0b9a9a7a9ffc8440152d4a"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "31220e06f9db714d67bc50f6b23fbbdc00404f78",
+      "new": "4d072f54cca32053a9436a12dbf14b5f89dcbc1b",
+      "tree": "7b62a35bc3d74bdb84a48977f4fcfb8ba0356f04",
+      "parents_before": [
+        "a8a6dd3672da176a708290bffd91d4131a3542e4"
+      ],
+      "parents_after": [
+        "5097073415f21d75025fffa020f2e2ea8d9a4d76"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "e0e02d2e104ce03be8d2bad88a0e51fed7c74231",
+      "new": "30096d6b0020472cbade9b53ea5f91c4c9f3c2ed",
+      "tree": "4a2c1bcbe7ba3073fb5bc31d13749a3acde0bebc",
+      "parents_before": [
+        "31220e06f9db714d67bc50f6b23fbbdc00404f78"
+      ],
+      "parents_after": [
+        "4d072f54cca32053a9436a12dbf14b5f89dcbc1b"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "e81bdbef0daada3da205bbb6a184decaea2424f3",
+      "new": "84abaee6c3f638c1cb34175e9604b23607bd0b33",
+      "tree": "d786afef3bf58334ef5a8b6ec4eb995f416a5d1b",
+      "parents_before": [
+        "e0e02d2e104ce03be8d2bad88a0e51fed7c74231"
+      ],
+      "parents_after": [
+        "30096d6b0020472cbade9b53ea5f91c4c9f3c2ed"
+      ],
+      "message_changed": false
+    },
+    {
+      "old": "e63859d7a3fa186f091db88ac9f011bdfe60910c",
+      "new": "4629a64baeb4c1e127dd13afdb5024ac3e2205d8",
+      "tree": "fd881191e0573492d6bf8f00de825ffc32da4ae4",
+      "parents_before": [
+        "e81bdbef0daada3da205bbb6a184decaea2424f3"
+      ],
+      "parents_after": [
+        "84abaee6c3f638c1cb34175e9604b23607bd0b33"
+      ],
+      "message_changed": false
+    }
+  ],
+  "changed_messages": [
+    {
+      "old": "0eece27565c055414431edb541511ac016fe8f80",
+      "new": "029974e422296d11578af0e69ad86b70cb996f52",
+      "before": "Merge branch 'codex/production-foundation-review' into codex/financial-policy-and-open-workloads\n\n# Conflicts:\n#\tMANIFEST.in\n",
+      "after": "Merge branch 'amr/production-foundation-review' into amr/financial-policy-and-open-workloads\n\n# Conflicts:\n#\tMANIFEST.in\n"
+    },
+    {
+      "old": "e67b2e8995dd59f2566891d952972b1ef618ceb6",
+      "new": "59dd15a484c48ed419162d6f4fc1acdf7cdff39a",
+      "before": "Merge branch 'codex/financial-policy-and-open-workloads' into codex/scoped-finance-and-atomic-jobs\n\n# Conflicts:\n#\t.gitleaksignore\n#\tMANIFEST.in\n",
+      "after": "Merge branch 'amr/financial-policy-and-open-workloads' into amr/scoped-finance-and-atomic-jobs\n\n# Conflicts:\n#\t.gitleaksignore\n#\tMANIFEST.in\n"
+    },
+    {
+      "old": "fafe886fb32e6fcb75e8f4d519db4905a692c079",
+      "new": "7ba27bd6886fc24317f2476f5e026f1dc37199f4",
+      "before": "Merge commit 'c56f805c' into codex/exact-trade-primitives\n\n# Conflicts:\n#\tdocs/security/threat-model-index.v1.yaml\n",
+      "after": "Merge commit 'c56f805c' into amr/exact-trade-primitives\n\n# Conflicts:\n#\tdocs/security/threat-model-index.v1.yaml\n"
+    },
+    {
+      "old": "8ba6772dabe4ba0ed8576ed123fbc4f5ba801ffd",
+      "new": "cce527aaa11da3c8fad8ec9dcaab1009aed63298",
+      "before": "Merge branch 'codex/reviewed-posting-and-cash' into codex/exact-trade-primitives\n",
+      "after": "Merge branch 'amr/reviewed-posting-and-cash' into amr/exact-trade-primitives\n"
+    },
+    {
+      "old": "701385417572d56bdc48096223aa99af0e612469",
+      "new": "dc15c9d1c76ea328b41329482bfa87cc3e420161",
+      "before": "Merge branch 'codex/exact-trade-primitives' into codex/receivables-policy-and-inventory-composition\n\n# Conflicts:\n#\tdocs/execution/EVIDENCE.md\n#\tdocs/execution/STATE.md\n",
+      "after": "Merge branch 'amr/exact-trade-primitives' into amr/receivables-policy-and-inventory-composition\n\n# Conflicts:\n#\tdocs/execution/EVIDENCE.md\n#\tdocs/execution/STATE.md\n"
+    }
+  ],
+  "all_current_work_commit_messages_free_of_previous_label": true,
+  "local_branches": [
+    {
+      "before": "codex/consolidation-close-lifecycle",
+      "after": "amr/consolidation-close-lifecycle",
+      "old": "d2dde7683071ec05898c70ec90a50dec72cba622",
+      "new": "d2dde7683071ec05898c70ec90a50dec72cba622"
+    },
+    {
+      "before": "codex/consolidation-translation-core",
+      "after": "amr/consolidation-translation-core",
+      "old": "836bdc5f75041a2967a51eecfd51dad6c94cb3e6",
+      "new": "836bdc5f75041a2967a51eecfd51dad6c94cb3e6"
+    },
+    {
+      "before": "codex/e828-writeback-receiver-idempotency",
+      "after": "amr/e828-writeback-receiver-idempotency",
+      "old": "7623c11886cafa3df844db9ed9ebcaa23accd2f6",
+      "new": "7623c11886cafa3df844db9ed9ebcaa23accd2f6"
+    },
+    {
+      "before": "codex/e829-postgres-receiver-idempotency",
+      "after": "amr/e829-postgres-receiver-idempotency",
+      "old": "27cd1945a8af3a76445cdadd52fe8c95229a68da",
+      "new": "27cd1945a8af3a76445cdadd52fe8c95229a68da"
+    },
+    {
+      "before": "codex/exact-trade-primitives",
+      "after": "amr/exact-trade-primitives",
+      "old": "8ba6772dabe4ba0ed8576ed123fbc4f5ba801ffd",
+      "new": "cce527aaa11da3c8fad8ec9dcaab1009aed63298"
+    },
+    {
+      "before": "codex/financial-policy-and-open-workloads",
+      "after": "amr/financial-policy-and-open-workloads",
+      "old": "0eece27565c055414431edb541511ac016fe8f80",
+      "new": "029974e422296d11578af0e69ad86b70cb996f52"
+    },
+    {
+      "before": "codex/p0-postgres-clean-boot",
+      "after": "amr/p0-postgres-clean-boot",
+      "old": "1551e8ae69a2982961a315c40be1c4ac2b8c8bc5",
+      "new": "1551e8ae69a2982961a315c40be1c4ac2b8c8bc5"
+    },
+    {
+      "before": "codex/postgres-current-bootstrap",
+      "after": "amr/postgres-current-bootstrap",
+      "old": "8d76647c96c9a25c9b56bc061c619f70a28a7d13",
+      "new": "70f1daef670b7f37ee9711940a91b4cea8dcd54d"
+    },
+    {
+      "before": "codex/production-foundation-audit",
+      "after": "amr/production-foundation-audit",
+      "old": "a055b87a82f1c87886c123d5fca4c99761e245e8",
+      "new": "a055b87a82f1c87886c123d5fca4c99761e245e8"
+    },
+    {
+      "before": "codex/production-foundation-review",
+      "after": "amr/production-foundation-review",
+      "old": "33b3fb5e8a0c7f219e8341d8537ea7b8d97392fb",
+      "new": "33b3fb5e8a0c7f219e8341d8537ea7b8d97392fb"
+    },
+    {
+      "before": "codex/receivables-policy-and-inventory-composition",
+      "after": "amr/receivables-policy-and-inventory-composition",
+      "old": "e63859d7a3fa186f091db88ac9f011bdfe60910c",
+      "new": "4629a64baeb4c1e127dd13afdb5024ac3e2205d8"
+    },
+    {
+      "before": "codex/reviewed-posting-and-cash",
+      "after": "amr/reviewed-posting-and-cash",
+      "old": "8d76647c96c9a25c9b56bc061c619f70a28a7d13",
+      "new": "70f1daef670b7f37ee9711940a91b4cea8dcd54d"
+    },
+    {
+      "before": "codex/scoped-finance-and-atomic-jobs",
+      "after": "amr/scoped-finance-and-atomic-jobs",
+      "old": "f3d6482f290477ac80b1c06b0e3f1fd783ad2340",
+      "new": "5a4acfd97a05dd294b76cf4968e7eeea9e942f64"
+    },
+    {
+      "before": "codex/v1-closure-container-baseline",
+      "after": "amr/v1-closure-container-baseline",
+      "old": "0374bf50aa143f3ef54a9905a7f7b33c5d59c3c1",
+      "new": "0374bf50aa143f3ef54a9905a7f7b33c5d59c3c1"
+    },
+    {
+      "before": "codex/v1-closure-dev-environment",
+      "after": "amr/v1-closure-dev-environment",
+      "old": "ae73e1ce9f0f6b1e66c4f30a35dc26c456f4448e",
+      "new": "ae73e1ce9f0f6b1e66c4f30a35dc26c456f4448e"
+    },
+    {
+      "before": "codex/v1-closure-supply-chain",
+      "after": "amr/v1-closure-supply-chain",
+      "old": "1ae1c792e90e84e28b65fa5381f4be76f8e8ed7f",
+      "new": "1ae1c792e90e84e28b65fa5381f4be76f8e8ed7f"
+    },
+    {
+      "before": "codex/verified-ar-invoice-recovery",
+      "after": "amr/verified-ar-invoice-recovery",
+      "old": "e63859d7a3fa186f091db88ac9f011bdfe60910c",
+      "new": "4629a64baeb4c1e127dd13afdb5024ac3e2205d8"
+    }
+  ],
+  "remote_branches": [
+    {
+      "before": "codex/exact-trade-primitives",
+      "after": "amr/exact-trade-primitives",
+      "old": "8ba6772dabe4ba0ed8576ed123fbc4f5ba801ffd",
+      "new": "cce527aaa11da3c8fad8ec9dcaab1009aed63298"
+    },
+    {
+      "before": "codex/financial-policy-and-open-workloads",
+      "after": "amr/financial-policy-and-open-workloads",
+      "old": "0eece27565c055414431edb541511ac016fe8f80",
+      "new": "029974e422296d11578af0e69ad86b70cb996f52"
+    },
+    {
+      "before": "codex/p0-postgres-clean-boot",
+      "after": "amr/p0-postgres-clean-boot",
+      "old": "1551e8ae69a2982961a315c40be1c4ac2b8c8bc5",
+      "new": "1551e8ae69a2982961a315c40be1c4ac2b8c8bc5"
+    },
+    {
+      "before": "codex/production-foundation-review",
+      "after": "amr/production-foundation-review",
+      "old": "33b3fb5e8a0c7f219e8341d8537ea7b8d97392fb",
+      "new": "33b3fb5e8a0c7f219e8341d8537ea7b8d97392fb"
+    },
+    {
+      "before": "codex/receivables-policy-and-inventory-composition",
+      "after": "amr/receivables-policy-and-inventory-composition",
+      "old": "e63859d7a3fa186f091db88ac9f011bdfe60910c",
+      "new": "4629a64baeb4c1e127dd13afdb5024ac3e2205d8"
+    },
+    {
+      "before": "codex/reviewed-posting-and-cash",
+      "after": "amr/reviewed-posting-and-cash",
+      "old": "8d76647c96c9a25c9b56bc061c619f70a28a7d13",
+      "new": "70f1daef670b7f37ee9711940a91b4cea8dcd54d"
+    },
+    {
+      "before": "codex/scoped-finance-and-atomic-jobs",
+      "after": "amr/scoped-finance-and-atomic-jobs",
+      "old": "f3d6482f290477ac80b1c06b0e3f1fd783ad2340",
+      "new": "5a4acfd97a05dd294b76cf4968e7eeea9e942f64"
+    }
+  ],
+  "original_prs": [
+    {
+      "number": 114,
+      "title": "Retain exact AR money across API/React and atomic inventory ownership",
+      "baseRefName": "codex/exact-trade-primitives",
+      "headRefName": "codex/receivables-policy-and-inventory-composition",
+      "headRefOid": "e63859d7a3fa186f091db88ac9f011bdfe60910c",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/pull/114"
+    },
+    {
+      "number": 113,
+      "title": "Add exact trade arithmetic, scoped AP recovery and posted opening balances",
+      "baseRefName": "codex/reviewed-posting-and-cash",
+      "headRefName": "codex/exact-trade-primitives",
+      "headRefOid": "8ba6772dabe4ba0ed8576ed123fbc4f5ba801ffd",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/pull/113"
+    },
+    {
+      "number": 112,
+      "title": "Add verified reviewed posting and scoped React cash recovery",
+      "baseRefName": "codex/scoped-finance-and-atomic-jobs",
+      "headRefName": "codex/reviewed-posting-and-cash",
+      "headRefOid": "8d76647c96c9a25c9b56bc061c619f70a28a7d13",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/pull/112"
+    },
+    {
+      "number": 111,
+      "title": "Seal scoped Finance and reconciliation effects with verified recovery",
+      "baseRefName": "codex/financial-policy-and-open-workloads",
+      "headRefName": "codex/scoped-finance-and-atomic-jobs",
+      "headRefOid": "f3d6482f290477ac80b1c06b0e3f1fd783ad2340",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/pull/111"
+    },
+    {
+      "number": 110,
+      "title": "Preserve financial policy and scoped writes with verified reconciliation",
+      "baseRefName": "codex/production-foundation-review",
+      "headRefName": "codex/financial-policy-and-open-workloads",
+      "headRefOid": "0eece27565c055414431edb541511ac016fe8f80",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/pull/110"
+    },
+    {
+      "number": 109,
+      "title": "Establish verified PostgreSQL foundation and live Studio integrity",
+      "baseRefName": "codex/p0-postgres-clean-boot",
+      "headRefName": "codex/production-foundation-review",
+      "headRefOid": "33b3fb5e8a0c7f219e8341d8537ea7b8d97392fb",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/pull/109"
+    }
+  ],
+  "backup": {
+    "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\amr-label-migration\\before-labels.bundle",
+    "sha256": "627d4853c4784c72d2cff2e3d0cfe3496bd030b227875aec3aba960b24687a7c",
+    "verified": true
+  },
+  "limitations": [
+    "Previously merged/released main history is outside this current-work rename.",
+    "Old immutable proofs keep their original source commit; equal trees do not assert new hosted checks.",
+    "Replacing PR head branch requires new Draft PRs; originals retain their review and run history."
+  ],
+  "primary_branch_after": "amr/verified-ar-invoice-recovery",
+  "primary_head_after": "4629a64baeb4c1e127dd13afdb5024ac3e2205d8",
+  "main_after": "b61ea56bb9c135fda12546e173795af3c243e4fb",
+  "replacement_drafts": [
+    {
+      "original_number": 109,
+      "original_url": "https://github.com/amrzainmubarak/reconforge-erp/pull/109",
+      "number": 115,
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/pull/115",
+      "head": "amr/production-foundation-review",
+      "base": "amr/p0-postgres-clean-boot",
+      "old_source_commit": "33b3fb5e8a0c7f219e8341d8537ea7b8d97392fb",
+      "source_commit": "33b3fb5e8a0c7f219e8341d8537ea7b8d97392fb",
+      "tree_unchanged": true
+    },
+    {
+      "original_number": 110,
+      "original_url": "https://github.com/amrzainmubarak/reconforge-erp/pull/110",
+      "number": 116,
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/pull/116",
+      "head": "amr/financial-policy-and-open-workloads",
+      "base": "amr/production-foundation-review",
+      "old_source_commit": "0eece27565c055414431edb541511ac016fe8f80",
+      "source_commit": "029974e422296d11578af0e69ad86b70cb996f52",
+      "tree_unchanged": true
+    },
+    {
+      "original_number": 111,
+      "original_url": "https://github.com/amrzainmubarak/reconforge-erp/pull/111",
+      "number": 117,
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/pull/117",
+      "head": "amr/scoped-finance-and-atomic-jobs",
+      "base": "amr/financial-policy-and-open-workloads",
+      "old_source_commit": "f3d6482f290477ac80b1c06b0e3f1fd783ad2340",
+      "source_commit": "5a4acfd97a05dd294b76cf4968e7eeea9e942f64",
+      "tree_unchanged": true
+    },
+    {
+      "original_number": 112,
+      "original_url": "https://github.com/amrzainmubarak/reconforge-erp/pull/112",
+      "number": 118,
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/pull/118",
+      "head": "amr/reviewed-posting-and-cash",
+      "base": "amr/scoped-finance-and-atomic-jobs",
+      "old_source_commit": "8d76647c96c9a25c9b56bc061c619f70a28a7d13",
+      "source_commit": "70f1daef670b7f37ee9711940a91b4cea8dcd54d",
+      "tree_unchanged": true
+    },
+    {
+      "original_number": 113,
+      "original_url": "https://github.com/amrzainmubarak/reconforge-erp/pull/113",
+      "number": 119,
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/pull/119",
+      "head": "amr/exact-trade-primitives",
+      "base": "amr/reviewed-posting-and-cash",
+      "old_source_commit": "8ba6772dabe4ba0ed8576ed123fbc4f5ba801ffd",
+      "source_commit": "cce527aaa11da3c8fad8ec9dcaab1009aed63298",
+      "tree_unchanged": true
+    },
+    {
+      "original_number": 114,
+      "original_url": "https://github.com/amrzainmubarak/reconforge-erp/pull/114",
+      "number": 120,
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/pull/120",
+      "head": "amr/receivables-policy-and-inventory-composition",
+      "base": "amr/exact-trade-primitives",
+      "old_source_commit": "e63859d7a3fa186f091db88ac9f011bdfe60910c",
+      "source_commit": "4629a64baeb4c1e127dd13afdb5024ac3e2205d8",
+      "tree_unchanged": true
+    }
+  ],
+  "historical_upstreams": [
+    {
+      "branch": "amr/consolidation-translation-core",
+      "upstream": null,
+      "reason": "Historical remote was already deleted; no new remote is published for an inactive slice."
+    },
+    {
+      "branch": "amr/consolidation-close-lifecycle",
+      "upstream": null,
+      "reason": "Historical remote was already deleted; no new remote is published for an inactive slice."
+    }
+  ],
+  "local_and_remote_previous_work_names_absent": true,
+  "independent_review": {
+    "raw_objects_reconstructed": 268,
+    "changed_oids": 33,
+    "unchanged_oids": 235,
+    "all_trees_and_identities_and_timestamps_equal": true,
+    "bundle_verified": true
+  }
+}

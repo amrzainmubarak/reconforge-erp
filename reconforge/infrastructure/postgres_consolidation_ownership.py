@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from decimal import Decimal
 from typing import Any
 
 from reconforge.domain.consolidation import ConsolidationError
@@ -11,6 +10,7 @@ from reconforge.domain.consolidation_lifecycle import ConsolidationOwnershipInte
 from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.platform.common import PlatformError, normalize_text, platform_id
+from reconforge.utils.money import parse_exact_amount
 
 POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL = r"""
 CREATE TABLE IF NOT EXISTS reconforge.consolidation_ownership_interests (
@@ -106,7 +106,7 @@ class PostgresConsolidationOwnershipRepository:
                 interest_id=str(row["interest_id"]),
                 parent_entity_code=str(row["parent_entity_code"]),
                 subsidiary_entity_code=str(row["subsidiary_entity_code"]),
-                direct_ownership_percentage=Decimal(str(row["direct_ownership_percentage"])),
+                direct_ownership_percentage=parse_exact_amount(row["direct_ownership_percentage"]),
                 effective_from=str(row["effective_from"]),
                 effective_to=str(row["effective_to"] or ""),
                 version=str(row["version"]),

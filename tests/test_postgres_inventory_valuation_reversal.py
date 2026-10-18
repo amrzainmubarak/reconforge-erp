@@ -27,12 +27,13 @@ from reconforge.infrastructure.postgres_inventory_core import (
     PostgresInventoryCoreRepository,
 )
 from reconforge.infrastructure.postgres_inventory_valuation import (
-    POSTGRES_INVENTORY_VALUATION_SCHEMA_SQL,
     PostgresInventoryValuationRepository,
+    install_postgres_inventory_valuation_schema,
 )
 from reconforge.infrastructure.postgres_inventory_valuation_reversal import (
     POSTGRES_INVENTORY_VALUATION_REVERSAL_SCHEMA_SQL,
     PostgresInventoryValuationReversalRepository,
+    install_postgres_inventory_valuation_reversal_schema,
 )
 from reconforge.infrastructure.postgres_master_data import POSTGRES_MASTER_DATA_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data_application import (
@@ -155,8 +156,8 @@ def test_live_postgres_receipt_reversal_exact_effect_finance_draft_and_rls() -> 
             install_postgres_master_data_application_schema(admin)
             install_postgres_finance_core_schema(admin)
             admin.execute(POSTGRES_INVENTORY_CORE_SCHEMA_SQL)
-            admin.execute(POSTGRES_INVENTORY_VALUATION_SCHEMA_SQL)
-            admin.execute(POSTGRES_INVENTORY_VALUATION_REVERSAL_SCHEMA_SQL)
+            install_postgres_inventory_valuation_schema(admin)
+            install_postgres_inventory_valuation_reversal_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             admin.execute(f"GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {app_user}")
             admin.execute(
@@ -175,8 +176,8 @@ def test_live_postgres_receipt_reversal_exact_effect_finance_draft_and_rls() -> 
                     (tenant,),
                 )
                 connection.execute(
-                    "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,active) VALUES (%s,%s,'ORG','Organization','USD',TRUE)",
-                    (tenant, organization_id),
+                    "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,active,application_workspace_id) VALUES (%s,%s,'ORG','Organization','USD',TRUE,%s)",
+                    (tenant, organization_id, workspace_id),
                 )
                 connection.execute(
                     "INSERT INTO reconforge.master_data_workspace_organizations(tenant_id,workspace_id,organization_id) VALUES (%s,%s,%s)",
@@ -187,8 +188,8 @@ def test_live_postgres_receipt_reversal_exact_effect_finance_draft_and_rls() -> 
                     (tenant, entity_id, organization_id),
                 )
                 connection.execute(
-                    "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number) VALUES (%s,%s,%s,'2026-07-01','2026-07-31',2026,7)",
-                    (tenant, f"period-{tenant}", f"2026-07-{tenant}"),
+                    "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number,application_workspace_id) VALUES (%s,%s,%s,'2026-07-01','2026-07-31',2026,7,%s)",
+                    (tenant, f"period-{tenant}", f"2026-07-{tenant}", workspace_id),
                 )
                 connection.execute(
                     "INSERT INTO reconforge.master_data_workspace_periods(tenant_id,workspace_id,period_id) VALUES (%s,%s,%s)",

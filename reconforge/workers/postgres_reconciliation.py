@@ -7,13 +7,14 @@ import json
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from threading import Event, Lock
 from typing import Any, Protocol, cast
 
 from reconforge.application.matching import LEGACY_RECORD_IDENTITY_POLICY
 from reconforge.auth.policy import PolicyEvaluationContext
-from reconforge.infrastructure.postgres import PostgresTenantBoundary
+from reconforge.deployment.worker_permissions import WorkerPermissionManifest
+from reconforge.infrastructure.postgres import PostgresRuntimeConnectionFactory, PostgresTenantBoundary
 from reconforge.infrastructure.postgres_reconciliation import (
     PostgresReconciliationBusyError,
     PostgresReconciliationRepository,
@@ -26,12 +27,17 @@ from reconforge.io.persisted import (
     decode_postgres_reconciliation_rule,
 )
 from reconforge.observability import ObservabilityRuntime
-from reconforge.reconciliation.deterministic_engine import DeterministicMatchingEngine
+from reconforge.reconciliation.deterministic_engine import (
+    LEGACY_CONSTRAINT_POLICY,
+    STRICT_ONE_TO_ONE_CONSTRAINT_POLICY,
+    DeterministicMatchingEngine,
+)
 from reconforge.utils.money import (
     LEGACY_FINANCIAL_INPUT_POLICY,
     CurrencyRegistry,
     FinancialInputPolicy,
     InvalidAmountError,
+    parse_exact_amount,
 )
 from reconforge.workers.policy import WorkerPolicyContextSupplier, require_service_worker_policy
 
@@ -56,6 +62,21 @@ def _persisted_financial_input_policy(rule: Mapping[str, Any]) -> FinancialInput
 
 class PostgresReconciliationWorkerError(RuntimeError):
     """Raised when a reconciliation worker cannot safely finish a cycle."""
+
+
+def _validated_partition_limit(rule: Mapping[str, Any]) -> int:
+    """Return the shared hard-partition memory ceiling from a persisted rule."""
+
+    value = rule.get("partition_max_records", 10_000)
+    if isinstance(value, bool):
+        raise PostgresReconciliationWorkerError("partition_max_records must be an integer.")
+    try:
+        limit = int(value)
+    except (TypeError, ValueError) as exc:
+        raise PostgresReconciliationWorkerError("partition_max_records must be an integer.") from exc
+    if not 1 <= limit <= 100_000:
+        raise PostgresReconciliationWorkerError("partition_max_records must be between 1 and 100000.")
+    return limit
 
 
 class PostgresReconciliationPolicyDenied(PostgresReconciliationWorkerError):
@@ -214,16 +235,7 @@ class LocalDeterministicMatcherAdapter:
 
     @staticmethod
     def _partition_limit(rule: Mapping[str, Any]) -> int:
-        value = rule.get("partition_max_records", 10_000)
-        if isinstance(value, bool):
-            raise PostgresReconciliationWorkerError("partition_max_records must be an integer.")
-        try:
-            limit = int(value)
-        except (TypeError, ValueError) as exc:
-            raise PostgresReconciliationWorkerError("partition_max_records must be an integer.") from exc
-        if not 1 <= limit <= 100_000:
-            raise PostgresReconciliationWorkerError("partition_max_records must be between 1 and 100000.")
-        return limit
+        return _validated_partition_limit(rule)
 
     @staticmethod
     def _partition_key(record: Mapping[str, Any], fields: Sequence[str]) -> str:
@@ -233,6 +245,27 @@ class LocalDeterministicMatcherAdapter:
     @staticmethod
     def _stable_record_key(record: Mapping[str, object]) -> str:
         return json.dumps(dict(record), ensure_ascii=True, sort_keys=True, separators=(",", ":"), default=str)
+
+    @staticmethod
+    def _constraint_policy(rule: Mapping[str, Any]) -> str:
+        """Validate strict persisted options before historical coercions or work.
+
+        Missing policy deliberately replays the historical scored contract.
+        Strict rules cannot coerce strings, floats, or bools into date windows
+        or silently convert non-boolean/grouped settings to one-to-one mode.
+        """
+
+        value = rule.get("constraint_policy", LEGACY_CONSTRAINT_POLICY)
+        if not isinstance(value, str) or value not in (LEGACY_CONSTRAINT_POLICY, STRICT_ONE_TO_ONE_CONSTRAINT_POLICY):
+            raise PostgresReconciliationWorkerError("Unsupported matching constraint policy.")
+        if value == STRICT_ONE_TO_ONE_CONSTRAINT_POLICY:
+            window = rule.get("date_window_days", 0)
+            if isinstance(window, bool) or not isinstance(window, int) or window < 0:
+                raise PostgresReconciliationWorkerError("Strict date window must be a non-negative integer number of days.")
+            for name in ("allow_many_to_one", "allow_one_to_many", "allow_many_to_many"):
+                if rule.get(name, False) is not False:
+                    raise PostgresReconciliationWorkerError("Strict one-to-one constraints require false boolean grouped matching flags.")
+        return value
 
     @classmethod
     def _partition_output(
@@ -289,6 +322,7 @@ class LocalDeterministicMatcherAdapter:
             record_identity_policy=str(
                 rule.get("record_identity_policy", LEGACY_RECORD_IDENTITY_POLICY),
             ),
+            constraint_policy=self._constraint_policy(rule),
         )
         return ReconciliationExecutionResult(results=output.results, exceptions=output.exceptions)
 
@@ -297,6 +331,7 @@ class LocalDeterministicMatcherAdapter:
         context: ReconciliationExecutionContext,
     ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], str, list[dict[str, Any]], list[dict[str, Any]]]:
         rule = self._json_object(context.run.get("rule_json", {}), "rule_json")
+        self._constraint_policy(rule)
         amount_field = str(rule.get("amount_field", "amount"))
         date_field = str(rule.get("date_field", "date"))
         reference_field = str(rule.get("reference_field", "reference"))
@@ -495,6 +530,8 @@ class PostgresReconciliationWorkerSettings:
     policy_context_scope_supplier: WorkerPolicyContextSupplier | None = None
     policy_permission: str = "match.run"
     discovery_policy_permission: str | None = None
+    permission_manifest: WorkerPermissionManifest | None = None
+    allow_unbound_hosted_policy: bool = False
 
     def __post_init__(self) -> None:
         if not self.worker_id.strip() or len(self.worker_id.strip()) > 160:
@@ -509,6 +546,23 @@ class PostgresReconciliationWorkerSettings:
             raise PostgresReconciliationWorkerError("policy_permission must be non-empty when configured.")
         if self.discovery_policy_permission is not None and not self.discovery_policy_permission.strip():
             raise PostgresReconciliationWorkerError("discovery_policy_permission must be non-empty when configured.")
+        if self.permission_manifest is not None:
+            if self.permission_manifest.worker_id.strip() != self.worker_id.strip():
+                raise PostgresReconciliationWorkerError(
+                    "permission_manifest worker_id must match the reconciliation worker_id."
+                )
+            if self.permission_manifest.principal_id.strip() != self.audit_actor_id:
+                raise PostgresReconciliationWorkerError(
+                    "permission_manifest principal_id must match the worker audit actor."
+                )
+            if self.permission_manifest.execution_permission.strip() != self.policy_permission.strip():
+                raise PostgresReconciliationWorkerError(
+                    "permission_manifest execution_permission must match policy_permission."
+                )
+            if self.permission_manifest.discovery_permission.strip() != self.discovery_authorization_permission.strip():
+                raise PostgresReconciliationWorkerError(
+                    "permission_manifest discovery_permission must match discovery_policy_permission."
+                )
 
     @property
     def audit_actor_id(self) -> str:
@@ -751,7 +805,7 @@ class PostgresReconciliationWorker:
         matcher: ReconciliationMatcher,
         settings: PostgresReconciliationWorkerSettings,
     ) -> None:
-        self.connection_factory = connection_factory
+        self.connection_factory = PostgresRuntimeConnectionFactory(connection_factory)
         self.tenant_supplier = tenant_supplier
         self.matcher = matcher
         self.settings = settings
@@ -780,6 +834,23 @@ class PostgresReconciliationWorker:
     ) -> None:
         """Require a central service-account decision for one exact lane."""
 
+        if (
+            self.settings.policy_context_supplier is None
+            and self.settings.policy_context_scope_supplier is None
+            and not self.settings.allow_unbound_hosted_policy
+        ):
+            raise error_factory(
+                "PostgreSQL reconciliation worker requires an explicit service-account policy supplier."
+            )
+        if (
+            self.settings.policy_context_supplier is not None
+            or self.settings.policy_context_scope_supplier is not None
+        ) and self.settings.permission_manifest is None:
+            raise error_factory(
+                "PostgreSQL reconciliation worker requires a verified worker permission manifest."
+            )
+        requested_permission = policy_permission or self.settings.policy_permission
+        self._validate_permission_manifest(requested_permission, error_factory=error_factory)
         require_service_worker_policy(
             tenant_id=tenant_id,
             worker_id=self.settings.worker_id,
@@ -788,12 +859,32 @@ class PostgresReconciliationWorker:
             policy_context_scope_supplier=self.settings.policy_context_scope_supplier,
             workspace_id=workspace_id,
             entity_id=entity_id,
-            policy_permission=policy_permission or self.settings.policy_permission,
+            policy_permission=requested_permission,
             surface="postgres-reconciliation.worker.claim",
             error_factory=error_factory,
             request_id=request_id,
             amount=amount,
         )
+
+    def _validate_permission_manifest(
+        self,
+        requested_permission: str,
+        *,
+        error_factory: Callable[[str], Exception],
+    ) -> None:
+        """Keep discovery and execution calls inside the reviewed grant set."""
+
+        manifest = self.settings.permission_manifest
+        if manifest is None:
+            return
+        permission = requested_permission.strip()
+        if permission not in {
+            manifest.discovery_permission.strip(),
+            manifest.execution_permission.strip(),
+        }:
+            raise error_factory(
+                "Worker policy permission does not match the verified permission manifest."
+            )
 
     def _authorize_tenant(
         self,
@@ -821,8 +912,8 @@ class PostgresReconciliationWorker:
         if raw is None or (isinstance(raw, str) and not raw.strip()):
             return None
         try:
-            amount = Decimal(str(raw))
-        except (InvalidOperation, ValueError) as exc:
+            amount = parse_exact_amount(raw)
+        except InvalidAmountError as exc:
             raise PostgresReconciliationWorkerError("Stored reconciliation policy amount is invalid.") from exc
         if not amount.is_finite() or amount < 0:
             raise PostgresReconciliationWorkerError("Stored reconciliation policy amount is invalid.")
@@ -1023,6 +1114,7 @@ class PostgresReconciliationWorker:
         amount_field = str(rule.get("amount_field", "amount"))
         date_field = str(rule.get("date_field", "date"))
         reference_field = str(rule.get("reference_field", "reference"))
+        partition_limit = _validated_partition_limit(rule)
 
         def supplier() -> Iterable[ReconciliationInputPartition]:
             with self._transaction().transaction(
@@ -1039,6 +1131,8 @@ class PostgresReconciliationWorker:
                     amount_field=amount_field,
                     date_field=date_field,
                     reference_field=reference_field,
+                    batch_size=min(10_000, partition_limit),
+                    max_partition_records=partition_limit,
                 ):
                     yield ReconciliationInputPartition(
                         partition_key=_stable_partition_key(values),

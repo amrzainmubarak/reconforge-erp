@@ -1,0 +1,138 @@
+{
+  "schema_version": "hosted-failure-triage-v1",
+  "accepted": false,
+  "pr_url": "https://github.com/amrzainmubarak/reconforge-erp/pull/130",
+  "head_sha": "07452da8742406d2223ce522c87aee0fcd223a90",
+  "run_id": 38056005386,
+  "checkout_merge_sha": "4dc30d9fff33fd920e744adf350bfc23c830cd36",
+  "jobs": [
+    {
+      "id": 114224574143,
+      "name": "test (3.12)",
+      "conclusion": "failure",
+      "root_cause": "Linux ctypes platform stubs do not define WinDLL or get_last_error",
+      "errors": [
+        {
+          "path": "reconforge/benchmark/host_processor_observation.py",
+          "line": 55,
+          "code": "attr-defined",
+          "attribute": "WinDLL"
+        },
+        {
+          "path": "reconforge/benchmark/host_processor_observation.py",
+          "line": 56,
+          "code": "attr-defined",
+          "attribute": "WinDLL"
+        },
+        {
+          "path": "reconforge/benchmark/host_processor_observation.py",
+          "line": 94,
+          "code": "attr-defined",
+          "attribute": "get_last_error"
+        }
+      ],
+      "checked_source_files": 709,
+      "raw_log": {
+        "file": "job-114224574143.log",
+        "bytes": 55025,
+        "sha256": "268ff268629322adc1f3e166296e7ace01a19abd8418110a2aa1d154d200adc0",
+        "api_path": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114224574143/logs"
+      }
+    },
+    {
+      "id": 114224574351,
+      "name": "test (3.11)",
+      "conclusion": "failure",
+      "failed_step_from_actual_api": "Mypy",
+      "root_cause": "Linux ctypes platform stubs do not define WinDLL or get_last_error",
+      "errors": [
+        {
+          "path": "reconforge/benchmark/host_processor_observation.py",
+          "line": 55,
+          "code": "attr-defined",
+          "attribute": "WinDLL"
+        },
+        {
+          "path": "reconforge/benchmark/host_processor_observation.py",
+          "line": 56,
+          "code": "attr-defined",
+          "attribute": "WinDLL"
+        },
+        {
+          "path": "reconforge/benchmark/host_processor_observation.py",
+          "line": 94,
+          "code": "attr-defined",
+          "attribute": "get_last_error"
+        }
+      ],
+      "checked_source_files": 709,
+      "raw_log": {
+        "file": "job-114224574351.log",
+        "bytes": 55031,
+        "sha256": "f2492a8619776572755fa6e83006f11a9dc877f9eeb4e156ce152ad102c7c929"
+      }
+    },
+    {
+      "id": 114225074201,
+      "name": "enterprise-browser-recovery (customer-returns)",
+      "conclusion": "failure",
+      "failed_stage": "Browser before native restore",
+      "browser_counts": {
+        "startTime": "2026-10-10T13:40:11.387Z",
+        "duration": 22564.681,
+        "expected": 0,
+        "skipped": 0,
+        "unexpected": 1,
+        "flaky": 0
+      },
+      "source_unchanged": true,
+      "tracked_clean_before": true,
+      "tracked_clean_after": true,
+      "owned_container_removed": true,
+      "actual_timeout": "enter() waits15s for GET /customer-returns/plans during first independent checker review",
+      "actual_snapshot": {
+        "workspace_id": "work",
+        "organization_id": "orgorg",
+        "legal_entity_id": "entity",
+        "alert": "Current authority or scope refused this action."
+      },
+      "source_inference": "Scope fields are editable before asynchronous identity prefill; late prefill can overlap browser fill",
+      "proposed_repair": "Disable scope edits until identity loaded, functional field updates, deterministic deferred-identity regression; no sleeps/retry/timeout increase",
+      "artifact_id": 11671322526,
+      "raw_evidence": [
+        {
+          "file": "job-114225074201.log",
+          "bytes": 66298,
+          "sha256": "62aa2021e5efb3be247ff587b7f78a42008d91a22091dbf80bc8f992764eb737"
+        },
+        {
+          "file": "customer-returns-artifact/report.json",
+          "bytes": 4419,
+          "sha256": "1441449ff876aa89b2c97149d3cea017292ca70cfd8c2b3e99f20442d4bc2165"
+        },
+        {
+          "file": "customer-returns-artifact/browser.log",
+          "bytes": 2795,
+          "sha256": "37432e12d1def000044490deb60b041d370eeb99706cb11ac609ba9dc489c9a0"
+        },
+        {
+          "file": "customer-returns-artifact/playwright-artifacts/customer-returns-cycles-ac-ef6de-d-bilingual-native-evidence-customer-returns-chromium/error-context.md",
+          "bytes": 17615,
+          "sha256": "08fd45ad374ce18146fd8fd3e462c141f472637e3e7a938379aaf18b51d9c9b6"
+        },
+        {
+          "file": "artifact-11671322526.zip",
+          "bytes": 190452,
+          "sha256": "079c0383674a5dc1a7ddc09e941c9c7996c699666a0e255637354f0d2939154f"
+        }
+      ]
+    }
+  ],
+  "package_archive": "Not executed because preceding Mypy step failed; missing artifact retention is a dependent failure",
+  "native_browser_gates": "At13:59UTC metadata:16native shards12passed/4running;11actualbrowsergates10passed/CRfailed; no final acceptance",
+  "local_workloads": "No local tests, builds, database, browser or Docker actions were launched during benchmark quiet window",
+  "previous_immutable_packet": {
+    "file": "first-failure-triage-07452da8.json",
+    "sha256": "00fca7ef857fe6e2af95ec7a0e76fcea05fd531aaa70c406c76ad6eb610b5b36"
+  }
+}

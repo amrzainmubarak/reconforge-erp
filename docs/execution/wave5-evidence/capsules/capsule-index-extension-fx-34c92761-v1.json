@@ -1,0 +1,48 @@
+{
+  "schema_version": "reconforge-flat-evidence-capsule-extension-v1",
+  "base_index_name": "capsule-index.json",
+  "base_index_sha256": "1cf25cf6817ce991d5a0b479332b7a128ccb90fdb794d03e14d457576a066795",
+  "capsules": [
+    {
+      "file_name": "wave5-fx-lifecycle-regression-34c92761-v1.zip",
+      "sha256": "13f1b533be762e845aa04cb5ffab1fd608770949f1f51551f9b4e7e0a777697e",
+      "bytes": 17961,
+      "file_count": 9,
+      "raw_bytes": 94227,
+      "index_name": "wave5-fx-lifecycle-regression-34c92761-v1.index.json",
+      "index_sha256": "998366b4b7bb00e1921d8985630fcfaaf1ad3a40b0ac4ff1b3edaba362eb2c69",
+      "coverage": {
+        "baseline_source_commit": "1a40bda0754664be88932c33b0afd7cb1c05b383",
+        "candidate_source_commit": "34c92761dd7f55044bf14d9387df602e07b4b24b",
+        "original_dom_boundary_counts": {
+          "tests": 6,
+          "passed": 4,
+          "failed": 2,
+          "pending": 0
+        },
+        "early_render_counts": {
+          "tests": 7,
+          "passed": 6,
+          "failed": 1,
+          "pending": 0
+        },
+        "epoch_trace_counts": {
+          "tests": 6,
+          "passed": 6,
+          "failed": 0,
+          "pending": 0,
+          "scope": "temporary instrumentation; not final acceptance"
+        },
+        "final_candidate_counts": {
+          "tests": 9,
+          "passed": 9,
+          "failed": 0,
+          "pending": 0,
+          "todo": 0
+        },
+        "controls_retained": "Pending proof has no success/download; corrupt evidence refuses export; changed plan/scope discards late verified result; equivalent refresh retains exact immutable proof."
+      }
+    }
+  ],
+  "five_original_capsules_unchanged": true
+}

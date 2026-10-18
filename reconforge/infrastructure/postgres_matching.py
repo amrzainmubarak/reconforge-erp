@@ -7,7 +7,7 @@ import json
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -32,7 +32,12 @@ from reconforge.reconciliation.matching import (
     SOURCE_ROW_BASIS_COLUMN,
     SOURCE_ROW_COLUMN,
 )
-from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY, FinancialInputPolicy
+from reconforge.utils.money import (
+    STRICT_FINANCIAL_INPUT_POLICY,
+    FinancialInputPolicy,
+    InvalidAmountError,
+    parse_amount,
+)
 
 POSTGRES_MATCHING_APPLICATION_SCHEMA_SQL = r"""
 CREATE TABLE IF NOT EXISTS reconforge.matching_run_workspaces (
@@ -391,6 +396,7 @@ class PostgresMatchingRepository:
                 date_field,
                 reference_field,
                 allow_one_to_many or allow_many_to_many,
+                financial_input_policy=financial_input_policy,
             )
             self._register_inputs(
                 actual_run_id,
@@ -401,6 +407,7 @@ class PostgresMatchingRepository:
                 date_field,
                 reference_field,
                 allow_many_to_one or allow_many_to_many,
+                financial_input_policy=financial_input_policy,
             )
             for result in output.results:
                 self.persistence.append_result(
@@ -456,6 +463,7 @@ class PostgresMatchingRepository:
         date_field: str,
         reference_field: str,
         allow_multiple: bool,
+        financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
     ) -> None:
         if len(identities) != len(records):
             raise PlatformError("Matching engine did not return complete source lineage.")
@@ -463,9 +471,12 @@ class PostgresMatchingRepository:
             source_id, fingerprint = identities[position]
             raw_amount = record.get(amount_field)
             try:
-                parsed_amount = Decimal(str(raw_amount).strip())
-                amount: object | None = parsed_amount if parsed_amount.is_finite() else None
-            except (InvalidOperation, ValueError, TypeError):
+                amount: object | None = parse_amount(
+                    raw_amount,
+                    input_policy=financial_input_policy,
+                    _warn_on_legacy_input=False,
+                )
+            except InvalidAmountError:
                 amount = None
             raw_date = str(record.get(date_field, "") or "")
             try:

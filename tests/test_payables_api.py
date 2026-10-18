@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -85,7 +86,15 @@ def test_payables_api_enforces_roles_and_runs_three_way_match(tmp_path: Path) ->
     invoice_id = invoice.json()["id"]
     submit_invoice = client.post(f"/api/v1/payables/invoices/{invoice_id}/submit", headers=prep_headers, json={"expected_version": 1})
     match = client.post(f"/api/v1/payables/invoices/{invoice_id}/match", headers=review_headers)
+    second_payload = json.loads(invoice.request.content)
+    second_payload["invoice_number"] = "INV-API-SECOND"
+    second = client.post("/api/v1/payables/invoices", headers=prep_headers, json=second_payload)
+    assert second.status_code == 200, second.text
+    second_id = second.json()["id"]
+    assert client.post(f"/api/v1/payables/invoices/{second_id}/submit", headers=prep_headers, json={"expected_version": 1}).status_code == 200
+    assert client.post(f"/api/v1/payables/invoices/{second_id}/match", headers=review_headers).json()["status"] == "Passed"
     approve = client.post(f"/api/v1/payables/invoices/{invoice_id}/approve", headers=review_headers, json={"expected_version": 3})
+    duplicate = client.post(f"/api/v1/payables/invoices/{second_id}/approve", headers=review_headers, json={"expected_version": 3})
     denied = client.post(f"/api/v1/payables/purchase-orders/{order_id}/approve", headers=prep_headers, json={"expected_version": 2})
 
     assert supplier.status_code == 200
@@ -97,5 +106,203 @@ def test_payables_api_enforces_roles_and_runs_three_way_match(tmp_path: Path) ->
     assert submit_invoice.json()["status"] == "Submitted"
     assert match.json()["status"] == "Passed"
     assert approve.json()["status"] == "Approved"
+    assert duplicate.status_code == 400
+    assert "quantity" in duplicate.text
+    connection = connect(tmp_path / "payables-api.db", require_exists=True)
+    try:
+        assert connection.execute("SELECT status FROM ap_supplier_invoices WHERE id=?", (second_id,)).fetchone()[0] == "Matched"
+        assert connection.execute("SELECT COUNT(*) FROM outbox_events WHERE event_type='ap.supplier_invoice.approved'").fetchone()[0] == 1
+    finally:
+        connection.close()
     assert denied.status_code == 403
     assert "Traceback" not in denied.text
+
+
+def test_payables_supplier_api_drops_future_storage_fields(tmp_path: Path) -> None:
+    db_path = tmp_path / "payables-supplier-projection.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        auth = LocalAuthService(connection)
+        auth.init_admin(username="admin", password="Secret-123")
+        connection.execute("ALTER TABLE ap_suppliers ADD COLUMN unknown_future_column TEXT")
+        connection.commit()
+    finally:
+        connection.close()
+
+    client = TestClient(create_api_app(db_path))
+    headers = {"Authorization": f"Bearer {_token(client, 'admin')}"}
+    saved = client.post(
+        "/api/v1/payables/suppliers",
+        headers=headers,
+        json={"supplier_code": "SUP-FUTURE", "name": "Future Supplier", "currency_code": "USD"},
+    )
+    listed = client.get("/api/v1/payables/suppliers", headers=headers)
+
+    assert saved.status_code == 200, saved.text
+    assert listed.status_code == 200, listed.text
+    assert "unknown_future_column" not in saved.text
+    assert "unknown_future_column" not in listed.text
+
+
+def test_payables_purchase_order_api_drops_future_storage_fields(tmp_path: Path) -> None:
+    db_path = tmp_path / "payables-order-projection.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        auth = LocalAuthService(connection)
+        auth.init_admin(username="admin", password="Secret-123")
+        connection.execute("ALTER TABLE ap_purchase_orders ADD COLUMN unknown_future_column TEXT")
+        connection.execute("ALTER TABLE ap_purchase_order_lines ADD COLUMN unknown_line_column TEXT")
+        connection.commit()
+    finally:
+        connection.close()
+
+    client = TestClient(create_api_app(db_path))
+    headers = {"Authorization": f"Bearer {_token(client, 'admin')}"}
+    saved_supplier = client.post(
+        "/api/v1/payables/suppliers",
+        headers=headers,
+        json={"supplier_code": "SUP-ORDER", "name": "Order Supplier", "currency_code": "USD"},
+    )
+    order = client.post(
+        "/api/v1/payables/purchase-orders",
+        headers=headers,
+        json={
+            "po_number": "PO-FUTURE",
+            "supplier_code": "SUP-ORDER",
+            "order_date": "2026-08-26",
+            "currency_code": "USD",
+            "lines": [{"item_code": "ITEM-1", "ordered_quantity": "1", "unit_price_minor": 100}],
+        },
+    )
+
+    assert saved_supplier.status_code == 200, saved_supplier.text
+    assert order.status_code == 200, order.text
+    assert "unknown_future_column" not in order.text
+    assert "unknown_line_column" not in order.text
+
+
+def test_payables_receipt_api_drops_future_storage_fields(tmp_path: Path) -> None:
+    db_path = tmp_path / "payables-receipt-projection.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        auth = LocalAuthService(connection)
+        auth.init_admin(username="admin", password="Secret-123")
+        auth.create_user(username="review", password="Secret-123", role="reviewer")
+        connection.execute("ALTER TABLE ap_goods_receipts ADD COLUMN unknown_future_column TEXT")
+        connection.execute("ALTER TABLE ap_goods_receipt_lines ADD COLUMN unknown_line_column TEXT")
+        connection.commit()
+    finally:
+        connection.close()
+
+    client = TestClient(create_api_app(db_path))
+    admin_headers = {"Authorization": f"Bearer {_token(client, 'admin')}"}
+    review_headers = {"Authorization": f"Bearer {_token(client, 'review')}"}
+    supplier = client.post(
+        "/api/v1/payables/suppliers",
+        headers=admin_headers,
+        json={"supplier_code": "SUP-RECEIPT", "name": "Receipt Supplier", "currency_code": "USD"},
+    )
+    order = client.post(
+        "/api/v1/payables/purchase-orders",
+        headers=admin_headers,
+        json={
+            "po_number": "PO-RECEIPT",
+            "supplier_code": "SUP-RECEIPT",
+            "order_date": "2026-08-26",
+            "currency_code": "USD",
+            "lines": [{"item_code": "ITEM-1", "ordered_quantity": "1", "unit_price_minor": 100}],
+        },
+    )
+    order_id = order.json()["id"]
+    line_id = order.json()["lines"][0]["id"]
+    submitted = client.post(
+        f"/api/v1/payables/purchase-orders/{order_id}/submit",
+        headers=admin_headers,
+        json={"expected_version": 1},
+    )
+    approved = client.post(
+        f"/api/v1/payables/purchase-orders/{order_id}/approve",
+        headers=review_headers,
+        json={"expected_version": 2},
+    )
+    receipt = client.post(
+        "/api/v1/payables/receipts",
+        headers=admin_headers,
+        json={
+            "receipt_number": "GR-FUTURE",
+            "purchase_order_id": order_id,
+            "receipt_date": "2026-08-26",
+            "quantities": {line_id: "1"},
+        },
+    )
+
+    assert supplier.status_code == 200, supplier.text
+    assert order.status_code == 200, order.text
+    assert submitted.status_code == 200, submitted.text
+    assert approved.status_code == 200, approved.text
+    assert receipt.status_code == 200, receipt.text
+    assert "unknown_future_column" not in receipt.text
+    assert "unknown_line_column" not in receipt.text
+
+
+def test_payables_supplier_invoice_api_drops_future_storage_fields(tmp_path: Path) -> None:
+    db_path = tmp_path / "payables-invoice-projection.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        auth = LocalAuthService(connection)
+        auth.init_admin(username="admin", password="Secret-123")
+        connection.execute("ALTER TABLE ap_supplier_invoices ADD COLUMN unknown_future_column TEXT")
+        connection.execute("ALTER TABLE ap_supplier_invoice_lines ADD COLUMN unknown_line_column TEXT")
+        connection.commit()
+    finally:
+        connection.close()
+
+    client = TestClient(create_api_app(db_path))
+    headers = {"Authorization": f"Bearer {_token(client, 'admin')}"}
+    supplier = client.post(
+        "/api/v1/payables/suppliers",
+        headers=headers,
+        json={"supplier_code": "SUP-INVOICE", "name": "Invoice Supplier", "currency_code": "USD"},
+    )
+    order = client.post(
+        "/api/v1/payables/purchase-orders",
+        headers=headers,
+        json={
+            "po_number": "PO-INVOICE",
+            "supplier_code": "SUP-INVOICE",
+            "order_date": "2026-08-26",
+            "currency_code": "USD",
+            "lines": [{"item_code": "ITEM-1", "ordered_quantity": "1", "unit_price_minor": 100}],
+        },
+    )
+    line_id = order.json()["lines"][0]["id"]
+    invoice = client.post(
+        "/api/v1/payables/invoices",
+        headers=headers,
+        json={
+            "invoice_number": "INV-FUTURE",
+            "supplier_code": "SUP-INVOICE",
+            "invoice_date": "2026-08-26",
+            "currency_code": "USD",
+            "total_minor": 100,
+            "purchase_order_id": order.json()["id"],
+            "lines": [
+                {
+                    "purchase_order_line_id": line_id,
+                    "invoiced_quantity": "1",
+                    "unit_price_minor": 100,
+                    "line_total_minor": 100,
+                }
+            ],
+        },
+    )
+
+    assert supplier.status_code == 200, supplier.text
+    assert order.status_code == 200, order.text
+    assert invoice.status_code == 200, invoice.text
+    assert "unknown_future_column" not in invoice.text
+    assert "unknown_line_column" not in invoice.text

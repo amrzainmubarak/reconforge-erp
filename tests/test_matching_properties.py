@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sqlite3
 import tempfile
 from decimal import Decimal
@@ -19,6 +20,7 @@ from reconforge.engines.base import EngineResult
 from reconforge.engines.duckdb_engine import DuckDBEngine
 from reconforge.engines.pandas_engine import PandasEngine
 from reconforge.engines.signature import build_reconciliation_signature
+from reconforge.generator.synthetic import generate_synthetic_dataset
 from reconforge.platform.matching import MatchingService
 from reconforge.reconciliation.matching import RECORD_IDENTITY_POLICY, MatchingStrategy
 from reconforge.reconciliation.stock_gl import reconcile_stock_gl
@@ -315,6 +317,35 @@ def test_pandas_duckdb_full_scan_and_partitioned_digests_are_property_equivalent
         RECORD_IDENTITY_POLICY,
         "stable-tie-break-v1",
     )
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("duckdb") is None,
+    reason="optional DuckDB dependency is not installed",
+)
+@pytest.mark.parametrize("currency, expected_minor_units", (("JPY", 0), ("KWD", 3)))
+def test_nonstandard_currency_precision_is_parity_stable_across_engine_execution_modes(
+    tmp_path: Path,
+    currency: str,
+    expected_minor_units: int,
+) -> None:
+    target = tmp_path / currency.lower()
+    generate_synthetic_dataset(80, target, currency=currency, seed=1701)
+    manifest = json.loads((target / "synthetic_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["policy"]["currency_policy"]["currency"] == currency
+    assert manifest["policy"]["currency_policy"]["minor_units"] == expected_minor_units
+
+    config = ReconForgeConfig()
+    results = [
+        PandasEngine().run(target, config),
+        DuckDBEngine().run(target, config),
+    ]
+    with patch.object(DuckDBEngine, "_FULL_SCAN_ROW_LIMIT", 1):
+        results.append(DuckDBEngine().run(target, config))
+
+    contracts = [_engine_result_contract(result) for result in results]
+    assert all(contract == contracts[0] for contract in contracts[1:])
+    assert contracts[0][0]
 
 
 def _platform_record(code: int, *, side: str) -> dict[str, object]:

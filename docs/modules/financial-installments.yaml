@@ -1,0 +1,41 @@
+id: financial-installments
+name: Reviewed partial supplier payments
+version: 0.1.0
+maturity: experimental
+owner: finance-operations
+dependencies: [procurement-partial, payables, finance-core, finance-posting, operational-finance]
+incompatible_versions: []
+data_classification: confidential-financial
+retention_policy: immutable plans, reviews, effects, allocations and actor-bound commands
+permissions: [finance_core.read, finance_core.manage, finance_core.validate, finance_core.post, payables.read, payables.settle]
+default_roles: []
+migrations: [0115_pg_financial_installments]
+domain_invariants:
+  - Positive exact minor-unit installment cannot exceed frozen invoice residual
+  - One pending installment per native supplier invoice
+  - Existing native AP link owns cumulative allocation and Approved or Paid state
+  - Financial preparation review and posting require independent current humans
+  - Financial effect native allocation command audit and outbox share one transaction
+  - Original full OPS1 source semantics remain unchanged
+domain_events: [financial_installment_prepared, financial_installment_reviewed, financial_installment_posted]
+api_routes: [/api/v1/financial-installments/plans, '/api/v1/financial-installments/plans/{id}', '/api/v1/financial-installments/plans/{id}/review', '/api/v1/financial-installments/plans/{id}/post']
+cli_commands: []
+ui_routes: [/procurement-partial]
+import_schemas: []
+export_schemas: []
+synthetic_fixtures: [tests/test_financial_installments.py]
+threat_model:
+  - Forced hierarchy RLS and current persisted scope and amount authorization
+  - Deferred OLD and NEW native source effect closure prevents detached phase changes
+  - Original actor command digest and response evidence protect lost acknowledgements
+benchmarks: []
+rollback_plan: refuse populated downgrade; retain additive schemas and evidence on application rollback
+test_matrix:
+  domain: tests/test_financial_installments.py
+  postgres: tests/test_postgres_financial_installments.py
+  browser: apps/web/live/erp-expansion-cycles.spec.ts
+runtime_acceptance: bounded native source SQL closure three-human API Studio and restore accepted on6ec9; see ERP_EXPANSION_ACCEPTANCE_2026-10-09.json and current-source PR126 checks
+limitations:
+  - Functional currency, exact zero-tax accrued partial Procurement invoices
+  - Native ledger settlement does not execute an external bank transfer
+  - No installment reversal or FX settlement in this initial contract

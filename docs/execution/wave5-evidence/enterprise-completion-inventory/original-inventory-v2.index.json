@@ -1,0 +1,19 @@
+{
+  "kind": "lossless original conditional inventory",
+  "source_subject": "accepted22 runtime /4c publication checkpoint",
+  "files": [
+    {
+      "name": "EnterpriseCompletionMatrix-evidence-inventory-wave5-v2.md",
+      "bytes": 9583,
+      "sha256": "51a11672bac057f79cbb9aeab963f7138d234bbf5d49d1a951e51a71f260a0d5"
+    },
+    {
+      "name": "EnterpriseCompletionMatrix-evidence-inventory-wave5-v2.json",
+      "bytes": 40238,
+      "sha256": "85b6173bd8755c3cd2af0fd2e8a0c601ed87b1d67df283a24631bb7c40bf442b"
+    }
+  ],
+  "transform": "rendered Markdown replaces CRCRLF and CRLF with LF only; original bytes retained here",
+  "activation": "conditional on corrected Wave5 quality gate",
+  "new_workload_executed": false
+}

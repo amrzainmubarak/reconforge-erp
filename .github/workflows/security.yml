@@ -107,12 +107,14 @@ jobs:
       - name: Scan full Git history with redacted output
         run: >-
           "$GITLEAKS_PATH" git --config .gitleaks.toml --log-opts="--all"
-          --redact=100 --no-banner --no-color --timeout 120 .
+          --redact=100 --no-banner --no-color --timeout 120
+          --report-format json --report-path "${RUNNER_TEMP}/gitleaks-history.json" .
 
       - name: Scan checked-out tree with redacted output
         run: >-
           "$GITLEAKS_PATH" dir --config .gitleaks.toml
-          --redact=100 --no-banner --no-color --timeout 120 .
+          --redact=100 --no-banner --no-color --timeout 120
+          --report-format json --report-path "${RUNNER_TEMP}/gitleaks-tree.json" .
 
       - name: Audit the npm lock
         shell: bash
@@ -127,6 +129,17 @@ jobs:
             --project-root . \
             --npm-audit-report "$report" \
             --npm-audit-exit-code "$audit_exit"
+
+      - name: Preserve redacted secret-scan findings
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: gitleaks-redacted-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/gitleaks-history.json
+            ${{ runner.temp }}/gitleaks-tree.json
+          if-no-files-found: error
+          retention-days: 14
 
   container-security:
     name: Exact-image SBOM, vulnerability, and license gate
@@ -209,13 +222,13 @@ jobs:
           version="$(python -c 'import pathlib,tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])')"
           local_image="reconforge-security:${GITHUB_SHA}"
           docker build --pull --no-cache --platform linux/amd64 --tag "$local_image" .
-          image_config_digest="$(docker image inspect --format '{{.Id}}' "$local_image")"
-          [[ "$image_config_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           "$SYFT_PATH" scan "$local_image" \
             --source-name "$IMAGE_NAME" \
             --source-version "$version" \
             --scope squashed \
             --output "syft-json=${RUNNER_TEMP}/image.syft.json"
+          image_config_digest="$(python .github/scripts/extract_syft_image_config_digest.py \
+            --syft-json "${RUNNER_TEMP}/image.syft.json")"
           "$GRYPE_PATH" db update
           "$GRYPE_PATH" "sbom:${RUNNER_TEMP}/image.syft.json" \
             --vex docs/security/container-runtime.openvex.json \
@@ -238,7 +251,10 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: recurring-container-security-${{ github.sha }}
-          path: ${{ runner.temp }}/container-security-evidence.json
+          path: |
+            ${{ runner.temp }}/container-security-evidence.json
+            ${{ runner.temp }}/image.syft.json
+            ${{ runner.temp }}/image.grype.json
           if-no-files-found: ignore
           retention-days: 14
 

@@ -1,0 +1,21 @@
+.sales-revenue { padding: 1.5rem; max-width: 90rem; margin-inline: auto; color: var(--text-primary, #172033); }
+.sales-revenue h1, .sales-revenue h2 { overflow-wrap: anywhere; }
+.sales-revenue form, .sales-revenue fieldset { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; margin-block: 1rem; }
+.sales-revenue form > fieldset { flex-basis: 100%; }
+.sales-revenue label { display: flex; flex-direction: column; gap: .4rem; flex: 1 1 12rem; min-width: 0; }
+.sales-revenue input, .sales-revenue select { min-height: 2.8rem; max-width: 100%; background: var(--surface, #fff); color: inherit; border: 1px solid #64748b; border-radius: .4rem; padding: .5rem; }
+.sales-revenue button { min-height: 2.8rem; border-radius: .4rem; padding: .5rem 1rem; border: 1px solid #4b5563; background: #183d71; color: #fff; cursor: pointer; }
+.sales-revenue button:disabled { background: #e2e8f0; color: #475569; cursor: default; }
+.sales-revenue :focus-visible { outline: 3px solid #c46b00; outline-offset: 3px; }
+.sales-revenue [role=alert] { border: 2px solid #b91c1c; padding: 1rem; margin-block: 1rem; background: #fff1f2; color: #881337; }
+.sales-revenue [role=status] { padding: 1rem; border: 1px solid #64748b; }
+.sales-toolbar { display: flex; flex-wrap: wrap; gap: .7rem; align-items: center; margin-block: 1rem; }
+.sales-list { padding: 0; list-style: none; display: grid; gap: .75rem; }
+.sales-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; border: 1px solid #94a3b8; padding: 1rem; border-radius: .5rem; }
+.sales-list li strong { flex: 1 1 10rem; }
+.sales-detail { margin-block: 1.5rem; border: 1px solid #64748b; padding: 1.25rem; border-radius: .5rem; }
+.sales-revenue code { display: block; max-width: 100%; overflow-wrap: anywhere; direction: ltr; unicode-bidi: isolate; }
+.sales-revenue details { margin-block: 1rem; padding: .75rem; border: 1px solid #94a3b8; }
+.sales-revenue summary { cursor: pointer; font-weight: 600; min-height: 2.2rem; }
+.sales-boundary { color: #475569; margin-block: 2rem; }
+@media(max-width: 600px) { .sales-revenue { padding: .75rem; } .sales-revenue fieldset { min-width: 0; padding: .7rem; } .sales-detail { padding: .75rem; } .sales-revenue form > button { width: 100%; } }

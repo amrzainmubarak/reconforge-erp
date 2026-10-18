@@ -30,14 +30,94 @@ _MAX_BACKUP_BYTES = 8 * 1024 * 1024 * 1024
 _CHUNK_BYTES = 1024 * 1024
 _NAME = re.compile(r"^[a-z][a-z0-9_]{0,62}$")
 _SERVICE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$")
+_RECOVERY_PROFILE = re.compile(r"^[a-z][a-z0-9_.-]{0,63}$")
+_ALEMBIC_REVISION = re.compile(r"^[0-9]{4}_[a-z][a-z0-9_]{0,75}$")
 _HEADER_POLICY = StructuredDocumentPolicy(
     max_file_bytes=_MAX_HEADER_BYTES,
-    max_nodes=16,
+    max_nodes=20,
     max_depth=2,
     max_collection_items=8,
     max_scalar_characters=256,
     max_yaml_aliases=1,
 )
+
+
+# ``pg_dump --no-privileges`` deliberately leaves role grants out of an
+# encrypted portable artifact.  PostgreSQL creates user-schema routines with
+# PUBLIC EXECUTE by default, though, so an isolated ``pg_restore`` can otherwise
+# recreate a SECURITY DEFINER function with a callable default ACL.  The
+# restore owner re-applies this invariant before the target passes its recovery
+# profile gate.  The query is static; catalog-derived identifiers are quoted by
+# PostgreSQL's ``format`` rather than interpolated by the application.
+_REVOKE_PUBLIC_SECURITY_DEFINER_EXECUTE_SQL = """
+DO $reconforge_security_definer$
+DECLARE
+    routine RECORD;
+BEGIN
+    FOR routine IN
+        SELECT namespace.nspname AS schema_name,
+               procedure.proname AS routine_name,
+               procedure.prokind AS routine_kind,
+               pg_catalog.pg_get_function_identity_arguments(procedure.oid) AS identity_arguments
+        FROM pg_catalog.pg_proc AS procedure
+        JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = procedure.pronamespace
+        WHERE procedure.prosecdef
+          AND procedure.prokind IN ('f', 'p')
+          AND namespace.nspname !~ '^pg_'
+          AND namespace.nspname <> 'information_schema'
+    LOOP
+        EXECUTE pg_catalog.format(
+            'REVOKE ALL ON %s %I.%I(%s) FROM PUBLIC',
+            CASE WHEN routine.routine_kind = 'p' THEN 'PROCEDURE' ELSE 'FUNCTION' END,
+            routine.schema_name,
+            routine.routine_name,
+            routine.identity_arguments
+        );
+    END LOOP;
+END $reconforge_security_definer$;
+"""
+
+
+def _target_database_identifier(database: str) -> str:
+    """Return a quoted target identifier after the closed restore-name check.
+
+    The restore target is deliberately restricted to lower-case ASCII names by
+    ``_database``. Quoting it here keeps the SQL construction visibly safe and
+    prevents a future relaxation of that validator from becoming a SQL
+    injection boundary.
+    """
+
+    return f'"{_database(database)}"'
+
+
+def _create_isolated_target_sql(database: str) -> str:
+    """Create a target that cannot accept any connection yet.
+
+    ``CREATE DATABASE`` cannot run inside a transaction. Creating it with
+    ``ALLOW_CONNECTIONS false`` avoids a PUBLIC CONNECT window before the
+    maintenance owner can atomically enable only its own access below.
+    """
+
+    return f"CREATE DATABASE {_target_database_identifier(database)} WITH ALLOW_CONNECTIONS false;"
+
+
+def _fence_isolated_target_access_sql(database: str) -> str:
+    """Atomically make the new target reachable only by its owner.
+
+    The role that creates a PostgreSQL database is its owner and retains the
+    implicit database privileges. At one maintenance-database transaction
+    commit, the target becomes connectable while PUBLIC CONNECT is removed.
+    A runtime role therefore never observes a connectable target with its
+    default PUBLIC database privilege.
+    """
+
+    target = _target_database_identifier(database)
+    return (
+        "BEGIN;\n"
+        f"ALTER DATABASE {target} ALLOW_CONNECTIONS true;\n"
+        f"REVOKE CONNECT ON DATABASE {target} FROM PUBLIC;\n"
+        "COMMIT;"
+    )
 
 
 class PostgresBackupError(RuntimeError):
@@ -121,6 +201,20 @@ def _database(value: str) -> str:
     return normalized
 
 
+def _recovery_profile(value: str, field: str = "Recovery profile") -> str:
+    normalized = str(value).strip()
+    if not _RECOVERY_PROFILE.fullmatch(normalized):
+        raise PostgresBackupError(f"{field} is invalid.")
+    return normalized
+
+
+def _alembic_revision(value: str, field: str = "Expected Alembic revision") -> str:
+    normalized = str(value).strip()
+    if not _ALEMBIC_REVISION.fullmatch(normalized):
+        raise PostgresBackupError(f"{field} is invalid.")
+    return normalized
+
+
 @dataclass(frozen=True)
 class PostgresNativeTools:
     pg_dump: Path
@@ -146,11 +240,18 @@ class PostgresBackupSettings:
     restore_database: str
     tools: PostgresNativeTools
     timeout_seconds: int = 1800
+    recovery_profile: str | None = None
+    expected_alembic_revision: str | None = None
 
     def __post_init__(self) -> None:
         _service(self.source_service, "Source PostgreSQL service")
         _service(self.maintenance_service, "Maintenance PostgreSQL service")
         _database(self.restore_database)
+        if (self.recovery_profile is None) != (self.expected_alembic_revision is None):
+            raise PostgresBackupError("PostgreSQL recovery profile and expected Alembic revision must be configured together.")
+        if self.recovery_profile is not None and self.expected_alembic_revision is not None:
+            _recovery_profile(self.recovery_profile)
+            _alembic_revision(self.expected_alembic_revision)
         if self.timeout_seconds < 1 or self.timeout_seconds > 86_400:
             raise PostgresBackupError("PostgreSQL backup timeout is outside the supported range.")
 
@@ -183,7 +284,17 @@ def _file_digest(path: Path) -> tuple[str, int]:
     return digest.hexdigest(), size
 
 
-def _header(*, nonce: bytes, key: bytes, plaintext_sha256: str, plaintext_bytes: int) -> bytes:
+def _header(
+    *,
+    nonce: bytes,
+    key: bytes,
+    plaintext_sha256: str,
+    plaintext_bytes: int,
+    recovery_profile: str | None = None,
+    alembic_revision: str | None = None,
+) -> bytes:
+    if (recovery_profile is None) != (alembic_revision is None):
+        raise PostgresBackupError("PostgreSQL backup profile binding is incomplete.")
     document = {
         "algorithm": "AES-256-GCM",
         "format": POSTGRES_BACKUP_FORMAT,
@@ -192,17 +303,34 @@ def _header(*, nonce: bytes, key: bytes, plaintext_sha256: str, plaintext_bytes:
         "plaintext_bytes": plaintext_bytes,
         "plaintext_sha256": plaintext_sha256,
     }
+    if recovery_profile is not None and alembic_revision is not None:
+        document["recovery_profile"] = _recovery_profile(recovery_profile)
+        document["alembic_revision"] = _alembic_revision(alembic_revision)
     encoded = json.dumps(document, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
     if len(encoded) > _MAX_HEADER_BYTES:
         raise PostgresBackupError("PostgreSQL backup header exceeds the supported size limit.")
     return encoded
 
 
-def _encrypt_dump(source: Path, target: Path, key: bytes) -> BackupArtifact:
+def _encrypt_dump(
+    source: Path,
+    target: Path,
+    key: bytes,
+    *,
+    recovery_profile: str | None = None,
+    alembic_revision: str | None = None,
+) -> BackupArtifact:
     _validate_key(key)
     plaintext_sha256, plaintext_bytes = _file_digest(source)
     nonce = os.urandom(12)
-    header = _header(nonce=nonce, key=key, plaintext_sha256=plaintext_sha256, plaintext_bytes=plaintext_bytes)
+    header = _header(
+        nonce=nonce,
+        key=key,
+        plaintext_sha256=plaintext_sha256,
+        plaintext_bytes=plaintext_bytes,
+        recovery_profile=recovery_profile,
+        alembic_revision=alembic_revision,
+    )
     prefix = _MAGIC + struct.pack(">I", len(header)) + header
     staging = target.with_name(f".{target.name}.staging-{os.getpid()}")
     digest = hashlib.sha256()
@@ -238,7 +366,17 @@ def _encrypt_dump(source: Path, target: Path, key: bytes) -> BackupArtifact:
     )
 
 
-def _read_prefix(source: Path, key: bytes) -> tuple[bytes, bytes, bytes, int, str]:
+@dataclass(frozen=True)
+class _PostgresBackupHeader:
+    prefix: bytes
+    nonce: bytes
+    plaintext_bytes: int
+    plaintext_sha256: str
+    recovery_profile: str | None
+    alembic_revision: str | None
+
+
+def _read_prefix(source: Path, key: bytes) -> _PostgresBackupHeader:
     _validate_key(key)
     try:
         metadata = source.lstat()
@@ -262,14 +400,19 @@ def _read_prefix(source: Path, key: bytes) -> tuple[bytes, bytes, bytes, int, st
 
     try:
         document = parse_json_document(encoded.decode("ascii"), policy=_HEADER_POLICY)
-        if not isinstance(document, dict) or set(document) != {
+        required_fields = {
             "algorithm",
             "format",
             "key_fingerprint",
             "nonce",
             "plaintext_bytes",
             "plaintext_sha256",
-        }:
+        }
+        profile_fields = {"recovery_profile", "alembic_revision"}
+        if not isinstance(document, dict):
+            raise ValueError
+        document_fields = set(document)
+        if document_fields != required_fields and document_fields != required_fields | profile_fields:
             raise ValueError
         if (
             not isinstance(document["nonce"], str)
@@ -278,10 +421,21 @@ def _read_prefix(source: Path, key: bytes) -> tuple[bytes, bytes, bytes, int, st
             or not isinstance(document["plaintext_sha256"], str)
         ):
             raise ValueError
+        has_profile = profile_fields <= document_fields
+        if has_profile and (
+            not isinstance(document["recovery_profile"], str) or not isinstance(document["alembic_revision"], str)
+        ):
+            raise ValueError
+        recovery_profile = (
+            _recovery_profile(document["recovery_profile"], "Backup recovery profile") if has_profile else None
+        )
+        alembic_revision = (
+            _alembic_revision(document["alembic_revision"], "Backup Alembic revision") if has_profile else None
+        )
         nonce = base64.b64decode(document["nonce"], validate=True)
         plaintext_bytes = document["plaintext_bytes"]
         plaintext_sha256 = document["plaintext_sha256"]
-    except (UnicodeDecodeError, StructuredDocumentError, ValueError, TypeError, KeyError) as exc:
+    except (PostgresBackupError, UnicodeDecodeError, StructuredDocumentError, ValueError, TypeError, KeyError) as exc:
         raise PostgresBackupError("Encrypted PostgreSQL backup header is invalid.") from exc
     if (
         document["format"] != POSTGRES_BACKUP_FORMAT
@@ -293,11 +447,22 @@ def _read_prefix(source: Path, key: bytes) -> tuple[bytes, bytes, bytes, int, st
         or not re.fullmatch(r"[0-9a-f]{64}", plaintext_sha256)
     ):
         raise PostgresBackupError("Encrypted PostgreSQL backup integrity verification failed.")
-    return magic + encoded_length + encoded, nonce, encoded, plaintext_bytes, plaintext_sha256
+    return _PostgresBackupHeader(
+        prefix=magic + encoded_length + encoded,
+        nonce=nonce,
+        plaintext_bytes=plaintext_bytes,
+        plaintext_sha256=plaintext_sha256,
+        recovery_profile=recovery_profile,
+        alembic_revision=alembic_revision,
+    )
 
 
-def _decrypt_dump(source: Path, target: Path, key: bytes) -> tuple[str, str]:
-    prefix, nonce, _header_bytes, expected_bytes, expected_sha256 = _read_prefix(source, key)
+def _decrypt_dump(source: Path, target: Path, key: bytes) -> tuple[str, str, str | None, str | None]:
+    header = _read_prefix(source, key)
+    prefix = header.prefix
+    nonce = header.nonce
+    expected_bytes = header.plaintext_bytes
+    expected_sha256 = header.plaintext_sha256
     metadata = source.stat()
     ciphertext_offset = len(prefix)
     ciphertext_bytes = metadata.st_size - ciphertext_offset - _TAG_BYTES
@@ -347,7 +512,7 @@ def _decrypt_dump(source: Path, target: Path, key: bytes) -> tuple[str, str]:
     if target.stat().st_size != expected_bytes or plaintext_digest.hexdigest() != expected_sha256:
         target.unlink()
         raise PostgresBackupError("Encrypted PostgreSQL backup integrity verification failed.")
-    return expected_sha256, artifact_digest.hexdigest()
+    return expected_sha256, artifact_digest.hexdigest(), header.recovery_profile, header.alembic_revision
 
 
 class PostgresNativeBackupAdapter:
@@ -362,12 +527,145 @@ class PostgresNativeBackupAdapter:
         if self._runner.run(argv, timeout_seconds=self._settings.timeout_seconds) != 0:
             raise PostgresBackupError(f"PostgreSQL {action} failed; review protected service and tool configuration.")
 
+    def _profile_verification_query(self) -> str:
+        """Build the configured exact profile query or legacy structural check.
+
+        ``psql`` receives the revision through its quoted variable substitution,
+        never through SQL construction. It discards output; division by zero
+        deliberately makes a missing schema, absent revision row, multiple
+        revision rows, or an unexpected revision a nonzero operational result.
+        """
+
+        expected_revision = self._settings.expected_alembic_revision
+        if expected_revision is None:
+            return (
+                "SELECT 1 / ((to_regclass('reconforge.tenants') IS NOT NULL "
+                "AND to_regclass('public.alembic_version') IS NOT NULL)::int);"
+            )
+        _alembic_revision(expected_revision)
+        return (
+            "SELECT 1 / (CASE WHEN "
+            "to_regclass('reconforge.tenants') IS NOT NULL "
+            "AND to_regclass('public.alembic_version') IS NOT NULL "
+            "AND (SELECT count(*) FROM public.alembic_version) = 1 "
+            "AND (SELECT version_num FROM public.alembic_version LIMIT 1) = :'reconforge_expected_revision' "
+            "THEN 1 ELSE 0 END);"
+        )
+
+    def _verify_recovery_profile(self, *, service: str, database: str | None = None, action: str) -> None:
+        verified_service = _service(service, "PostgreSQL recovery service")
+        connection_specification = f"service={verified_service}"
+        if database is not None:
+            connection_specification += f" dbname={_database(database)}"
+        command = [self._psql, "--no-psqlrc", "--set", "ON_ERROR_STOP=1"]
+        expected_revision = self._settings.expected_alembic_revision
+        if expected_revision is not None:
+            command.extend(("--set", f"reconforge_expected_revision={_alembic_revision(expected_revision)}"))
+        command.extend(("--dbname", connection_specification))
+        if expected_revision is None:
+            command.extend(("--command", self._profile_verification_query()))
+            self._run(tuple(command), action=action)
+            return
+        # psql does not interpolate variables in SQL passed with --command.
+        # Its script reader applies the quoted variable binding before sending
+        # SQL, without constructing a revision literal ourselves.
+        with tempfile.TemporaryDirectory(prefix="reconforge-profile-") as temporary:
+            script = Path(temporary) / "verify-profile.sql"
+            script.write_text(self._profile_verification_query() + "\n", encoding="ascii")
+            command.extend(("--file", str(script)))
+            self._run(tuple(command), action=action)
+
+    def _revoke_public_security_definer_execute(self, *, service: str, database: str) -> None:
+        """Restore the no-public-execute invariant before accepting a target.
+
+        A native artifact intentionally excludes ACLs so it can be restored by
+        a separately provisioned migration administrator.  This leaves a
+        PostgreSQL default ACL hazard for restored ``SECURITY DEFINER``
+        routines.  The target is still isolated at this point, so any failure
+        removes it through the ordinary restore rollback path.
+        """
+
+        verified_service = _service(service, "PostgreSQL recovery service")
+        target_database = _database(database)
+        self._run(
+            (
+                self._psql,
+                "--no-psqlrc",
+                "--set",
+                "ON_ERROR_STOP=1",
+                "--dbname",
+                f"service={verified_service} dbname={target_database}",
+                "--command",
+                _REVOKE_PUBLIC_SECURITY_DEFINER_EXECUTE_SQL,
+            ),
+            action="restore security-definer hardening",
+        )
+
+    def _create_isolated_restore_target(self, *, service: str, database: str) -> None:
+        """Create a non-connectable target from the maintenance database."""
+
+        verified_service = _service(service, "Maintenance PostgreSQL service")
+        target_database = _database(database)
+        self._run(
+            (
+                self._psql,
+                "--no-psqlrc",
+                "--set",
+                "ON_ERROR_STOP=1",
+                "--dbname",
+                f"service={verified_service}",
+                "--command",
+                _create_isolated_target_sql(target_database),
+            ),
+            action="restore database creation",
+        )
+
+    def _fence_isolated_restore_target_access(self, *, service: str, database: str) -> None:
+        """Enable only the restore owner's connection path for a new target."""
+
+        verified_service = _service(service, "Maintenance PostgreSQL service")
+        target_database = _database(database)
+        self._run(
+            (
+                self._psql,
+                "--no-psqlrc",
+                "--set",
+                "ON_ERROR_STOP=1",
+                "--dbname",
+                f"service={verified_service}",
+                "--command",
+                _fence_isolated_target_access_sql(target_database),
+            ),
+            action="restore target access fencing",
+        )
+
+    def _verify_artifact_profile(
+        self,
+        *,
+        recovery_profile: str | None,
+        alembic_revision: str | None,
+    ) -> None:
+        """Reject a bound artifact before validating or creating a target DB.
+
+        Historical v1 artifacts had no profile fields. They remain readable.
+        A named configuration applies exact target-side revision verification;
+        a legacy configuration retains its historical structural check.
+        """
+
+        if recovery_profile is None and alembic_revision is None:
+            return
+        if self._settings.recovery_profile is None or self._settings.expected_alembic_revision is None:
+            raise PostgresBackupError("Encrypted PostgreSQL backup requires a configured recovery profile.")
+        if recovery_profile != self._settings.recovery_profile or alembic_revision != self._settings.expected_alembic_revision:
+            raise PostgresBackupError("Encrypted PostgreSQL backup does not match the configured recovery profile.")
+
     def create_backup(self, output_path: Path, *, key: bytes) -> BackupArtifact:
         target = resolve_local_path(output_path)
         if target.exists():
             raise PostgresBackupError("PostgreSQL backup target already exists.")
         target.parent.mkdir(parents=True, exist_ok=True)
         source_service = _service(self._settings.source_service, "Source PostgreSQL service")
+        self._verify_recovery_profile(service=source_service, action="source profile verification")
 
         dump_attempts = (
             (
@@ -476,7 +774,13 @@ class PostgresNativeBackupAdapter:
                             )
                             continue
                         if result == 0 and dump_path.is_file() and dump_path.stat().st_size > 0:
-                            return _encrypt_dump(dump_path, target, key)
+                            return _encrypt_dump(
+                                dump_path,
+                                target,
+                                key,
+                                recovery_profile=self._settings.recovery_profile,
+                                alembic_revision=self._settings.expected_alembic_revision,
+                            )
                         if result == 0:
                             attempt_outcomes.append(
                                 f"attempt {fallback_index}: stdout fallback returned exit code 0 but produced no usable dump"
@@ -500,7 +804,13 @@ class PostgresNativeBackupAdapter:
                         + "; ".join(attempt_outcomes)
                     )
                 raise PostgresBackupError("PostgreSQL backup tool produced no usable dump after retry.")
-            return _encrypt_dump(dump_path, target, key)
+            return _encrypt_dump(
+                dump_path,
+                target,
+                key,
+                recovery_profile=self._settings.recovery_profile,
+                alembic_revision=self._settings.expected_alembic_revision,
+            )
 
     def restore_backup(self, input_path: Path, *, key: bytes) -> RestoreOutcome:
         source = resolve_input_file(input_path)
@@ -508,13 +818,15 @@ class PostgresNativeBackupAdapter:
         database = _database(self._settings.restore_database)
         with tempfile.TemporaryDirectory(prefix="reconforge-postgres-restore-") as directory:
             dump_path = Path(directory) / "database.dump"
-            _plaintext_sha256, artifact_sha256 = _decrypt_dump(source, dump_path, key)
-            self._run((self._pg_restore, "--list", str(dump_path)), action="restore validation")
-            self._run(
-                (self._createdb, f"--maintenance-db=service={maintenance}", database),
-                action="restore database creation",
+            _plaintext_sha256, artifact_sha256, recovery_profile, alembic_revision = _decrypt_dump(source, dump_path, key)
+            self._verify_artifact_profile(
+                recovery_profile=recovery_profile,
+                alembic_revision=alembic_revision,
             )
+            self._run((self._pg_restore, "--list", str(dump_path)), action="restore validation")
+            self._create_isolated_restore_target(service=maintenance, database=database)
             try:
+                self._fence_isolated_restore_target_access(service=maintenance, database=database)
                 self._run(
                     (
                         self._pg_restore,
@@ -527,19 +839,14 @@ class PostgresNativeBackupAdapter:
                     ),
                     action="restore",
                 )
-                self._run(
-                    (
-                        self._psql,
-                        "--no-psqlrc",
-                        "--set",
-                        "ON_ERROR_STOP=1",
-                        "--dbname",
-                        f"service={maintenance} dbname={database}",
-                        "--command",
-                        "SELECT 1 / ((to_regclass('reconforge.tenants') IS NOT NULL "
-                        "AND to_regclass('public.alembic_version') IS NOT NULL)::int);",
-                    ),
-                    action="restore verification",
+                self._revoke_public_security_definer_execute(
+                    service=maintenance,
+                    database=database,
+                )
+                self._verify_recovery_profile(
+                    service=maintenance,
+                    database=database,
+                    action="restore profile verification",
                 )
             except PostgresBackupError:
                 try:

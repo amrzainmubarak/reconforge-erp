@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="68.418" timestamp="2026-10-11T07:21:29.610718+03:00" hostname="DESKTOP-FDO3RD5"><testcase classname="tests.test_postgres_procurement_sourcing" name="test_actual_sourcing_award_native_partial_receipts_ap_payments_and_budget_release" time="66.965"><failure message="AssertionError: Independent sourcing oracle refused the raw evidence: {&quot;error&quot;:&quot;Native purchase differs from original reviewed award&quot;,&quot;schema_version&quot;:&quot;sourcing-oracle-result-v1&quot;,&quot;verified&quot;:false}">sourcing_runtime = (ReceiptRuntime(factory=&lt;reconforge.infrastructure.postgres.PostgresConnectionFactory object at 0x00000247D490DE80&gt;, a...bf6f1a9f64e94aada102238649c12588', 'workspace_id': 'work', 'organization_id': 'org', 'legal_entity_id': 'entity', ...})
+
+    def test_actual_sourcing_award_native_partial_receipts_ap_payments_and_budget_release(sourcing_runtime: tuple[Any, dict[str, Any]]) -&gt; None:
+        runtime, budget = sourcing_runtime
+        head = quoted(runtime, budget)
+        with runtime.actor(MAKER) as (connection, _, actor):
+            detail = PostgresProcurementSourcingRepository(connection, runtime.tenant).get(head["id"], actor=actor)
+            assert [quote["payload"]["total_minor"] for quote in detail["quotations"]] == ["17000", "18000"]
+            assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
+            assert connection.execute("SELECT count(*) n FROM reconforge.procurement_partial_orders WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
+        head = stage(runtime, head, "review-selection", CHECKER)
+        head = stage(runtime, head, "award", POSTER, expected_budget_version=budget["row_version"])
+        with runtime.actor(POSTER) as (connection, _, actor):
+            repository = PostgresProcurementSourcingRepository(connection, runtime.tenant)
+            purchase = repository.purchase.get(head["order_id"], actor=actor)
+            owner = repository.commitments.get(head["order_id"], actor=actor)
+            assert purchase["order"]["number"] == "BPC1-SRC5-1" and owner["original_minor"] == "17000"
+        purchase = action(runtime, action(runtime, purchase, "submit-order", POSTER), "approve-order", CHECKER)
+        purchase = receive_line(runtime, purchase, 0, "2")
+        purchase = receive_line(runtime, purchase, 1, "2.50")
+        purchase = invoice_lines(runtime, purchase, ((0, "2"), (1, "2.50")))
+        invoice = purchase["invoices"][-1]["id"]
+        for operation, name in (("approve-invoice", CHECKER), ("prepare-accrual", MAKER), ("review-accrual", CHECKER)):
+            purchase = action(runtime, purchase, operation, name, invoice)
+        with runtime.actor(POSTER) as (connection, _, actor):
+            repository = PostgresProcurementSourcingRepository(connection, runtime.tenant)
+            owner = repository.commitments.consume_invoice(head["order_id"], invoice, expected_order_version=purchase["order"]["row_version"],
+                expected_budget_version=owner["budget_version"], command_id="source-consume", reason="Same original AP and native budget effect", actor=actor)
+            purchase = repository.purchase.get(head["order_id"], actor=actor)
+        pay_invoice(runtime, purchase["invoices"][-1]["native_invoice_id"], 2400, "source-payment-one")
+        pay_invoice(runtime, purchase["invoices"][-1]["native_invoice_id"], 5000, "source-payment-two")
+        with runtime.actor(CHECKER) as (connection, _, actor):
+            repository = PostgresProcurementSourcingRepository(connection, runtime.tenant)
+            owner = repository.commitments.release(head["order_id"], expected_order_version=purchase["order"]["row_version"],
+                expected_budget_version=owner["budget_version"], posting_date="2026-10-04", command_id="source-release",
+                reason="Independent unreceived obligation release", actor=actor)
+            envelope = repository.budgets.get(BudgetScope("work", "org", "entity"), budget["id"])
+            assert (owner["consumed_minor"], owner["released_minor"], owner["remaining_minor"], envelope["available_minor"]) == ("7400", "9600", "0", "12600")
+            assert tuple(connection.execute("SELECT sum(debit_minor),sum(credit_minor) FROM reconforge.finance_entry_lines WHERE tenant_id=%s", (runtime.tenant,)).fetchone()) == (22200, 22200)
+            assert connection.execute("SELECT sum(remaining_value_minor) n FROM reconforge.inventory_cost_layers WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 7400
+            assert repository.get(head["id"], actor=actor)["head"]["status"] == "Awarded"
+            from tests.procurement_sourcing_oracle import independent_sourcing_oracle
+&gt;           oracle = independent_sourcing_oracle(connection, runtime.tenant, head["id"])
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_postgres_procurement_sourcing.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+connection = &lt;psycopg.Connection [BAD] at 0x247d490d790&gt;
+tenant = 'irp-dd4f965ebd99', source_id = 'PSREQ-b7a88a75dcaba661'
+
+    def independent_sourcing_oracle(connection: Any, tenant: str, source_id: str) -&gt; dict[str, Any]:
+        """Run the separate script under Python -I; persist synthetic evidence when explicitly configured."""
+        import hashlib
+        import json
+        import os
+        import subprocess
+        import sys
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+    
+        packet = raw_sourcing_evidence(connection, tenant, source_id)
+        script = Path(__file__).resolve().parents[1] / ".github/scripts/verify_procurement_sourcing_oracle.py"
+        with TemporaryDirectory(prefix="reconforge-sourcing-oracle-") as temporary:
+            configured = os.environ.get("RECONFORGE_SOURCING_ORACLE_EVIDENCE_DIR")
+            folder = Path(configured) if configured else Path(temporary)
+            folder.mkdir(parents=True, exist_ok=True)
+            evidence = folder / ("sourcing-oracle-" + source_id + ".json")
+            evidence.write_text(json.dumps(packet, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False), encoding="utf-8")
+            result = subprocess.run([sys.executable, "-I", str(script), "--input", str(evidence)], capture_output=True, text=True, timeout=30)
+            if configured:
+                evidence.with_suffix(".result.json").write_text(result.stdout, encoding="utf-8")
+            if result.returncode:
+&gt;               raise AssertionError("Independent sourcing oracle refused the raw evidence: " + result.stdout + result.stderr)
+E               AssertionError: Independent sourcing oracle refused the raw evidence: {"error":"Native purchase differs from original reviewed award","schema_version":"sourcing-oracle-result-v1","verified":false}
+
+tests\procurement_sourcing_oracle.py:74: AssertionError</failure></testcase></testsuite></testsuites>

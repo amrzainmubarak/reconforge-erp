@@ -1,0 +1,244 @@
+{
+  "schema_version": "operational-fx-native-evidence-v1",
+  "source": {
+    "id": "FX-a404bc98c4e24bc58d907920e8d3a8da",
+    "lines": [
+      {
+        "debit_minor": "14251",
+        "account_code": "AR",
+        "credit_minor": "0"
+      },
+      {
+        "debit_minor": "0",
+        "account_code": "REVENUE",
+        "credit_minor": "12501"
+      },
+      {
+        "debit_minor": "0",
+        "account_code": "TAX",
+        "credit_minor": "1750"
+      }
+    ],
+    "request": {
+      "taxes": [
+        {
+          "rate": "0.14",
+          "source": "Browser reviewed synthetic tax",
+          "version": "2026-v1",
+          "policy_id": "BROWSER-SYNTHETIC-TAX",
+          "account_code": "TAX",
+          "country_code": "EG",
+          "effective_to": "2026-12-31",
+          "policy_digest": "8a0852f00877c28f6223540b652b577cfe833363f5b183dd62bb04aacdc5ced1",
+          "effective_from": "2026-01-01",
+          "transaction_class": "synthetic-service"
+        }
+      ],
+      "reason": "Actual browser retained foreign invoice",
+      "due_date": "2026-10-31",
+      "net_minor": "10001",
+      "period_id": "period",
+      "entity_code": "ENTITY",
+      "country_code": "EG",
+      "journal_code": "STOCK",
+      "posting_date": "2026-10-01",
+      "workspace_id": "work",
+      "customer_code": "FOREIGN",
+      "original_rate": {
+        "rate": "1.25",
+        "source": "Browser original spot",
+        "effective_at": "2026-10-01T12:00:00Z"
+      },
+      "invoice_number": "BROWSER-FX",
+      "legal_entity_id": "entity",
+      "organization_id": "org",
+      "cash_account_code": "CASH",
+      "gain_account_code": "GAIN",
+      "loss_account_code": "LOSS",
+      "organization_code": "ORG",
+      "transaction_class": "synthetic-service",
+      "revenue_account_code": "REVENUE",
+      "foreign_currency_code": "EUR",
+      "receivable_account_code": "AR"
+    },
+    "invoice_id": "ARINV-d1b861c4a946b19c",
+    "workspace_id": "work",
+    "source_digest": "cd0549fca8e3e902a5da12f718d1220d306b418952ce16df0ebcc32754f1c380",
+    "foreign_policy": {
+      "currency_code": "EUR",
+      "currency_precision": 2,
+      "currency_registry_digest": "d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246",
+      "currency_rounding_policy": "ROUND_HALF_UP",
+      "currency_registry_version": "iso-4217-list-one-2026-01-01-rf1"
+    },
+    "schema_version": "operational-fx-source-v1",
+    "tax_components": [
+      {
+        "rate": "0.14",
+        "source": "Browser reviewed synthetic tax",
+        "version": "2026-v1",
+        "policy_id": "BROWSER-SYNTHETIC-TAX",
+        "account_code": "TAX",
+        "country_code": "EG",
+        "effective_to": "2026-12-31",
+        "policy_digest": "8a0852f00877c28f6223540b652b577cfe833363f5b183dd62bb04aacdc5ced1",
+        "effective_from": "2026-01-01",
+        "foreign_tax_minor": "1400",
+        "transaction_class": "synthetic-service",
+        "functional_tax_minor": "1750"
+      }
+    ],
+    "legal_entity_id": "entity",
+    "organization_id": "org",
+    "foreign_net_minor": "10001",
+    "foreign_tax_minor": "1400",
+    "functional_policy": {
+      "currency_code": "USD",
+      "currency_precision": 2,
+      "currency_registry_digest": "d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246",
+      "currency_rounding_policy": "ROUND_HALF_UP",
+      "currency_registry_version": "iso-4217-list-one-2026-01-01-rf1"
+    },
+    "preparer_actor_id": "erp-maker",
+    "foreign_gross_minor": "11401",
+    "functional_net_minor": "12501",
+    "functional_gross_minor": "14251",
+    "functional_allocation_policy": "converted-cumulative-prefix-v1"
+  },
+  "plan": {
+    "id": "FX1-afda3b0f669c469fa0ffbc9806d1accd",
+    "kind": "reverse_revaluation",
+    "reason": "Actual reviewed closing valuation and exact inverse",
+    "entry_id": "GLE-819f6c7defc0f776",
+    "equation": {
+      "lines": [
+        {
+          "debit_minor": "0",
+          "account_code": "AR",
+          "credit_minor": "740"
+        },
+        {
+          "debit_minor": "740",
+          "account_code": "UGAIN",
+          "credit_minor": "0"
+        }
+      ],
+      "amount_minor": "740",
+      "unrealized_fx_minor": "-740",
+      "original_plan_digest": "e9bbb019c63792767a46f4c7cf1323581b79c23bacb0306560aeef0bbd0ddd85",
+      "original_revaluation_id": "FX1-ff76cce8f1724d7a9e57e05e389b8734",
+      "original_equation_digest": "29fc8a7d801b64976b0a12c33960efea752eec56aaefaa41f0715ac02a4c68ac",
+      "original_posting_effect_id": "PST-2ea6a5f1a42846068bc360ac9ac10576"
+    },
+    "sequence": 3,
+    "snapshot": {
+      "entry": {
+        "id": "GLE-819f6c7defc0f776",
+        "period_id": "period",
+        "journal_id": "FJ-d291fc6e482bb366",
+        "description": "Actual reviewed closing valuation and exact inverse",
+        "source_type": "Generated",
+        "entry_number": "FX1-AFDA3B0F669C469FA0FFBC9806D1ACCD",
+        "posting_date": "2026-10-04",
+        "workspace_id": "work",
+        "currency_code": "USD",
+        "legal_entity_id": "entity",
+        "organization_id": "org",
+        "preparer_actor_id": "erp-maker",
+        "currency_precision": 2,
+        "external_reference": "PST-2ea6a5f1a42846068bc360ac9ac10576",
+        "reverses_posting_id": "PST-2ea6a5f1a42846068bc360ac9ac10576",
+        "currency_registry_digest": "d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246",
+        "currency_rounding_policy": "ROUND_HALF_UP",
+        "currency_registry_version": "iso-4217-list-one-2026-01-01-rf1"
+      },
+      "lines": [
+        {
+          "account_id": "ACC-1b58a4c1d1cda81a",
+          "dimensions": {},
+          "debit_minor": "0",
+          "description": "Actual reviewed closing valuation and exact inverse",
+          "line_number": 1,
+          "credit_minor": "740"
+        },
+        {
+          "account_id": "ACC-eda68ddc95041053",
+          "dimensions": {},
+          "debit_minor": "740",
+          "description": "Actual reviewed closing valuation and exact inverse",
+          "line_number": 2,
+          "credit_minor": "0"
+        }
+      ],
+      "schema_version": "finance-entry-review-v1"
+    },
+    "period_id": "period",
+    "source_id": "FX-a404bc98c4e24bc58d907920e8d3a8da",
+    "plan_digest": "141b6bd904a2014cad15d97ff9423c45c42b89dd9dc072d2e0226df92a5beb71",
+    "amount_minor": "740",
+    "posting_date": "2026-10-04",
+    "workspace_id": "work",
+    "currency_code": "USD",
+    "source_digest": "cd0549fca8e3e902a5da12f718d1220d306b418952ce16df0ebcc32754f1c380",
+    "schema_version": "operational-fx-plan-v2",
+    "command_request": {
+      "kind": "reverse_revaluation",
+      "reason": "Actual reviewed closing valuation and exact inverse",
+      "period_id": "period",
+      "source_id": "FX-a404bc98c4e24bc58d907920e8d3a8da",
+      "posting_date": "2026-10-04",
+      "original_revaluation_id": "FX1-ff76cce8f1724d7a9e57e05e389b8734"
+    },
+    "legal_entity_id": "entity",
+    "organization_id": "org",
+    "preparer_actor_id": "erp-maker",
+    "validation_digest": "7dd209effbe49734c9fe362918d9afa9af9e857c44ef78375a4b0e071513e74a",
+    "currency_precision": 2,
+    "phase": 2,
+    "status": "Posted",
+    "reviewer_actor_id": "erp-checker",
+    "posting_effect_id": "PST-4047b72c07c34e128bdd606e1e5c5207",
+    "receipt_id": null
+  },
+  "canonical_source_json": "{\"foreign_gross_minor\":11401,\"foreign_net_minor\":10001,\"foreign_policy\":{\"currency_code\":\"EUR\",\"currency_precision\":2,\"currency_registry_digest\":\"d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246\",\"currency_registry_version\":\"iso-4217-list-one-2026-01-01-rf1\",\"currency_rounding_policy\":\"ROUND_HALF_UP\"},\"foreign_tax_minor\":1400,\"functional_allocation_policy\":\"converted-cumulative-prefix-v1\",\"functional_gross_minor\":14251,\"functional_net_minor\":12501,\"functional_policy\":{\"currency_code\":\"USD\",\"currency_precision\":2,\"currency_registry_digest\":\"d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246\",\"currency_registry_version\":\"iso-4217-list-one-2026-01-01-rf1\",\"currency_rounding_policy\":\"ROUND_HALF_UP\"},\"id\":\"FX-a404bc98c4e24bc58d907920e8d3a8da\",\"invoice_id\":\"ARINV-d1b861c4a946b19c\",\"legal_entity_id\":\"entity\",\"lines\":[{\"account_code\":\"AR\",\"credit_minor\":0,\"debit_minor\":14251},{\"account_code\":\"REVENUE\",\"credit_minor\":12501,\"debit_minor\":0},{\"account_code\":\"TAX\",\"credit_minor\":1750,\"debit_minor\":0}],\"organization_id\":\"org\",\"preparer_actor_id\":\"erp-maker\",\"request\":{\"cash_account_code\":\"CASH\",\"country_code\":\"EG\",\"customer_code\":\"FOREIGN\",\"due_date\":\"2026-10-31\",\"entity_code\":\"ENTITY\",\"foreign_currency_code\":\"EUR\",\"gain_account_code\":\"GAIN\",\"invoice_number\":\"BROWSER-FX\",\"journal_code\":\"STOCK\",\"legal_entity_id\":\"entity\",\"loss_account_code\":\"LOSS\",\"net_minor\":10001,\"organization_code\":\"ORG\",\"organization_id\":\"org\",\"original_rate\":{\"effective_at\":\"2026-10-01T12:00:00Z\",\"rate\":\"1.25\",\"source\":\"Browser original spot\"},\"period_id\":\"period\",\"posting_date\":\"2026-10-01\",\"reason\":\"Actual browser retained foreign invoice\",\"receivable_account_code\":\"AR\",\"revenue_account_code\":\"REVENUE\",\"taxes\":[{\"account_code\":\"TAX\",\"country_code\":\"EG\",\"effective_from\":\"2026-01-01\",\"effective_to\":\"2026-12-31\",\"policy_digest\":\"8a0852f00877c28f6223540b652b577cfe833363f5b183dd62bb04aacdc5ced1\",\"policy_id\":\"BROWSER-SYNTHETIC-TAX\",\"rate\":\"0.14\",\"source\":\"Browser reviewed synthetic tax\",\"transaction_class\":\"synthetic-service\",\"version\":\"2026-v1\"}],\"transaction_class\":\"synthetic-service\",\"workspace_id\":\"work\"},\"schema_version\":\"operational-fx-source-v1\",\"tax_components\":[{\"account_code\":\"TAX\",\"country_code\":\"EG\",\"effective_from\":\"2026-01-01\",\"effective_to\":\"2026-12-31\",\"foreign_tax_minor\":1400,\"functional_tax_minor\":1750,\"policy_digest\":\"8a0852f00877c28f6223540b652b577cfe833363f5b183dd62bb04aacdc5ced1\",\"policy_id\":\"BROWSER-SYNTHETIC-TAX\",\"rate\":\"0.14\",\"source\":\"Browser reviewed synthetic tax\",\"transaction_class\":\"synthetic-service\",\"version\":\"2026-v1\"}],\"workspace_id\":\"work\"}",
+  "canonical_plan_json": "{\"amount_minor\":740,\"command_request\":{\"kind\":\"reverse_revaluation\",\"original_revaluation_id\":\"FX1-ff76cce8f1724d7a9e57e05e389b8734\",\"period_id\":\"period\",\"posting_date\":\"2026-10-04\",\"reason\":\"Actual reviewed closing valuation and exact inverse\",\"source_id\":\"FX-a404bc98c4e24bc58d907920e8d3a8da\"},\"currency_code\":\"USD\",\"currency_precision\":2,\"entry_id\":\"GLE-819f6c7defc0f776\",\"equation\":{\"amount_minor\":740,\"lines\":[{\"account_code\":\"AR\",\"credit_minor\":740,\"debit_minor\":0},{\"account_code\":\"UGAIN\",\"credit_minor\":0,\"debit_minor\":740}],\"original_equation_digest\":\"29fc8a7d801b64976b0a12c33960efea752eec56aaefaa41f0715ac02a4c68ac\",\"original_plan_digest\":\"e9bbb019c63792767a46f4c7cf1323581b79c23bacb0306560aeef0bbd0ddd85\",\"original_posting_effect_id\":\"PST-2ea6a5f1a42846068bc360ac9ac10576\",\"original_revaluation_id\":\"FX1-ff76cce8f1724d7a9e57e05e389b8734\",\"unrealized_fx_minor\":-740},\"id\":\"FX1-afda3b0f669c469fa0ffbc9806d1accd\",\"kind\":\"reverse_revaluation\",\"legal_entity_id\":\"entity\",\"organization_id\":\"org\",\"period_id\":\"period\",\"posting_date\":\"2026-10-04\",\"preparer_actor_id\":\"erp-maker\",\"reason\":\"Actual reviewed closing valuation and exact inverse\",\"schema_version\":\"operational-fx-plan-v2\",\"sequence\":3,\"snapshot\":{\"entry\":{\"currency_code\":\"USD\",\"currency_precision\":2,\"currency_registry_digest\":\"d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246\",\"currency_registry_version\":\"iso-4217-list-one-2026-01-01-rf1\",\"currency_rounding_policy\":\"ROUND_HALF_UP\",\"description\":\"Actual reviewed closing valuation and exact inverse\",\"entry_number\":\"FX1-AFDA3B0F669C469FA0FFBC9806D1ACCD\",\"external_reference\":\"PST-2ea6a5f1a42846068bc360ac9ac10576\",\"id\":\"GLE-819f6c7defc0f776\",\"journal_id\":\"FJ-d291fc6e482bb366\",\"legal_entity_id\":\"entity\",\"organization_id\":\"org\",\"period_id\":\"period\",\"posting_date\":\"2026-10-04\",\"preparer_actor_id\":\"erp-maker\",\"reverses_posting_id\":\"PST-2ea6a5f1a42846068bc360ac9ac10576\",\"source_type\":\"Generated\",\"workspace_id\":\"work\"},\"lines\":[{\"account_id\":\"ACC-1b58a4c1d1cda81a\",\"credit_minor\":740,\"debit_minor\":0,\"description\":\"Actual reviewed closing valuation and exact inverse\",\"dimensions\":{},\"line_number\":1},{\"account_id\":\"ACC-eda68ddc95041053\",\"credit_minor\":0,\"debit_minor\":740,\"description\":\"Actual reviewed closing valuation and exact inverse\",\"dimensions\":{},\"line_number\":2}],\"schema_version\":\"finance-entry-review-v1\"},\"source_digest\":\"cd0549fca8e3e902a5da12f718d1220d306b418952ce16df0ebcc32754f1c380\",\"source_id\":\"FX-a404bc98c4e24bc58d907920e8d3a8da\",\"workspace_id\":\"work\"}",
+  "canonical_snapshot_json": "{\"entry\":{\"currency_code\":\"USD\",\"currency_precision\":2,\"currency_registry_digest\":\"d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246\",\"currency_registry_version\":\"iso-4217-list-one-2026-01-01-rf1\",\"currency_rounding_policy\":\"ROUND_HALF_UP\",\"description\":\"Actual reviewed closing valuation and exact inverse\",\"entry_number\":\"FX1-AFDA3B0F669C469FA0FFBC9806D1ACCD\",\"external_reference\":\"PST-2ea6a5f1a42846068bc360ac9ac10576\",\"id\":\"GLE-819f6c7defc0f776\",\"journal_id\":\"FJ-d291fc6e482bb366\",\"legal_entity_id\":\"entity\",\"organization_id\":\"org\",\"period_id\":\"period\",\"posting_date\":\"2026-10-04\",\"preparer_actor_id\":\"erp-maker\",\"reverses_posting_id\":\"PST-2ea6a5f1a42846068bc360ac9ac10576\",\"source_type\":\"Generated\",\"workspace_id\":\"work\"},\"lines\":[{\"account_id\":\"ACC-1b58a4c1d1cda81a\",\"credit_minor\":740,\"debit_minor\":0,\"description\":\"Actual reviewed closing valuation and exact inverse\",\"dimensions\":{},\"line_number\":1},{\"account_id\":\"ACC-eda68ddc95041053\",\"credit_minor\":0,\"debit_minor\":740,\"description\":\"Actual reviewed closing valuation and exact inverse\",\"dimensions\":{},\"line_number\":2}],\"schema_version\":\"finance-entry-review-v1\"}",
+  "native_effect": {
+    "id": "PST-4047b72c07c34e128bdd606e1e5c5207",
+    "entry_id": "GLE-819f6c7defc0f776",
+    "validation_digest": "7dd209effbe49734c9fe362918d9afa9af9e857c44ef78375a4b0e071513e74a",
+    "posted_actor_id": "erp-poster",
+    "audit_event_id": "AE-6717c12549bf4e43a97e1377461bf747",
+    "outbox_event_id": "OBX-18522521adc54761a44e672105a9c357"
+  },
+  "phases": [
+    {
+      "action": "operational_fx_prepared",
+      "actor_id": "erp-maker",
+      "audit_event_id": "AE-844e8b67cff240698b144160ca6a5ee4",
+      "outbox_event_id": "OBX-40516e41b871496db89d3f617034ddf5"
+    },
+    {
+      "action": "operational_fx_reviewed",
+      "actor_id": "erp-checker",
+      "audit_event_id": "AE-4785dedd390a4cd289402c354d44ce31",
+      "outbox_event_id": "OBX-1d79b1d4162948acb5cb5d7cf073431b"
+    },
+    {
+      "action": "operational_fx_posted",
+      "actor_id": "erp-poster",
+      "audit_event_id": "AE-8b2e16aa077a443098b34dbce452699e",
+      "outbox_event_id": "OBX-aa51deb16f1c4acbadc7a14810c2eb1a"
+    },
+    {
+      "action": "finance_entry_posted",
+      "actor_id": "erp-poster",
+      "audit_event_id": "AE-6717c12549bf4e43a97e1377461bf747",
+      "outbox_event_id": "OBX-18522521adc54761a44e672105a9c357"
+    }
+  ],
+  "totals": {
+    "debit_minor": "740",
+    "credit_minor": "740"
+  }
+}

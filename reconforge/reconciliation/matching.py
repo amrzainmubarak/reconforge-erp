@@ -39,6 +39,7 @@ MatchingStrategy = Literal["standard", "strict", "aggressive", "audit-safe"]
 MatchingAmbiguityPolicy = Literal["stable-tie-break-v1", "unresolved-equal-cost-v1"]
 DEFAULT_MATCHING_AMBIGUITY_POLICY: MatchingAmbiguityPolicy = "stable-tie-break-v1"
 CURRENT_MATCHING_AMBIGUITY_POLICY: MatchingAmbiguityPolicy = "unresolved-equal-cost-v1"
+MAX_CANDIDATE_GENERATION_PAIRS = 100_000
 AMBIGUITY_MAX_CANDIDATES = 64
 AMBIGUITY_MAX_ASSIGNMENT_CHECKS = 32
 RECORD_IDENTITY_POLICY = "canonical-multiset-occurrence-v1"
@@ -100,12 +101,16 @@ class MatchAmbiguity:
     """One connected candidate component that cannot be selected safely."""
 
     ambiguity_group_id: str
-    reason: Literal["equal_cost_alternative", "search_budget_exceeded"]
+    reason: Literal[
+        "equal_cost_alternative",
+        "search_budget_exceeded",
+        "candidate_generation_budget_exceeded",
+    ]
     stock_indices: frozenset[int]
     gl_indices: frozenset[int]
     candidate_count: int
-    optimal_cardinality: int
-    optimal_cost: int
+    optimal_cardinality: int | None
+    optimal_cost: int | None
 
 
 @dataclass(frozen=True)
@@ -818,6 +823,50 @@ def _ambiguity_group(
     )
 
 
+def _candidate_generation_ambiguity(
+    partition: tuple[str, str],
+    stock_rows: list[tuple[int, pd.Series]],
+    gl_rows: list[tuple[int, pd.Series]],
+    *,
+    candidate_count: int,
+) -> MatchAmbiguity:
+    """Describe a partition refused before an unbounded candidate scan."""
+
+    work_order, currency = partition
+    stock_indices = frozenset(index for index, _ in stock_rows)
+    gl_indices = frozenset(index for index, _ in gl_rows)
+    stock_record_ids = sorted(
+        str(row.get(RECORD_INSTANCE_ID_COLUMN) or _stable_row_key(row, identifier="move_id", kind="stock"))
+        for _, row in stock_rows
+    )
+    gl_record_ids = sorted(
+        str(row.get(RECORD_INSTANCE_ID_COLUMN) or _stable_row_key(row, identifier="entry_id", kind="gl"))
+        for _, row in gl_rows
+    )
+    payload = {
+        "candidate_count": candidate_count,
+        "currency": currency,
+        "gl_record_instance_ids": gl_record_ids,
+        "reason": "candidate_generation_budget_exceeded",
+        "stock_record_instance_ids": stock_record_ids,
+        "work_order": work_order,
+    }
+    digest = (
+        hashlib.sha256(json.dumps(payload, ensure_ascii=True, separators=(",", ":"), sort_keys=True).encode("utf-8"))
+        .hexdigest()[:20]
+        .upper()
+    )
+    return MatchAmbiguity(
+        ambiguity_group_id=f"AMB-{digest}",
+        reason="candidate_generation_budget_exceeded",
+        stock_indices=stock_indices,
+        gl_indices=gl_indices,
+        candidate_count=candidate_count,
+        optimal_cardinality=None,
+        optimal_cost=None,
+    )
+
+
 def _has_equal_cost_alternative(
     component: list[MatchCandidate],
     selected: list[MatchCandidate],
@@ -883,32 +932,57 @@ def assign_stock_to_gl(
         kind="gl",
         preserve_source_positions=lineage_prepared,
     )
-    gl_by_work_order: dict[str, list[tuple[int, pd.Series]]] = {}
+    stock_by_partition: dict[tuple[str, str], list[tuple[int, pd.Series]]] = {}
+    gl_by_partition: dict[tuple[str, str], list[tuple[int, pd.Series]]] = {}
+    for raw_stock_index, raw_stock_row in stock_moves.iterrows():
+        stock_index = int(cast(int, raw_stock_index))
+        stock_row = cast("pd.Series[Any]", raw_stock_row)
+        partition = (
+            _string(stock_row.get("work_order")),
+            (_string(stock_row.get("currency")) or "USD").upper(),
+        )
+        stock_by_partition.setdefault(partition, []).append((stock_index, stock_row))
     for raw_gl_index, raw_gl_row in gl_entries.iterrows():
         gl_index = int(cast(int, raw_gl_index))
         gl_row = cast("pd.Series[Any]", raw_gl_row)
-        gl_by_work_order.setdefault(_string(gl_row.get("work_order")), []).append((gl_index, gl_row))
+        partition = (
+            _string(gl_row.get("work_order")),
+            (_string(gl_row.get("currency")) or "USD").upper(),
+        )
+        gl_by_partition.setdefault(partition, []).append((gl_index, gl_row))
 
     candidates_by_work_order: dict[str, list[MatchCandidate]] = {}
-    for raw_stock_index, stock_row in stock_moves.iterrows():
-        stock_index = int(cast(int, raw_stock_index))
-        typed_stock_row = cast("pd.Series[Any]", stock_row)
-        work_order = _string(typed_stock_row.get("work_order"))
-        for gl_index, gl_row in gl_by_work_order.get(work_order, []):
-            candidate = _pair_candidate(
-                stock_index,
-                typed_stock_row,
-                gl_index,
-                gl_row,
-                config,
-                strategy,
-                input_policy,
+    ambiguities: list[MatchAmbiguity] = []
+    for partition in sorted(set(stock_by_partition) & set(gl_by_partition)):
+        stock_rows = stock_by_partition[partition]
+        gl_rows = gl_by_partition[partition]
+        candidate_count = len(stock_rows) * len(gl_rows)
+        if candidate_count > MAX_CANDIDATE_GENERATION_PAIRS:
+            ambiguities.append(
+                _candidate_generation_ambiguity(
+                    partition,
+                    stock_rows,
+                    gl_rows,
+                    candidate_count=candidate_count,
+                )
             )
-            if candidate is not None:
-                candidates_by_work_order.setdefault(work_order, []).append(candidate)
+            continue
+        work_order = partition[0]
+        for stock_index, stock_row in stock_rows:
+            for gl_index, gl_row in gl_rows:
+                candidate = _pair_candidate(
+                    stock_index,
+                    stock_row,
+                    gl_index,
+                    gl_row,
+                    config,
+                    strategy,
+                    input_policy,
+                )
+                if candidate is not None:
+                    candidates_by_work_order.setdefault(work_order, []).append(candidate)
 
     matches: list[MatchCandidate] = []
-    ambiguities: list[MatchAmbiguity] = []
     for work_order in sorted(candidates_by_work_order):
         work_order_candidates = candidates_by_work_order[work_order]
         if ambiguity_policy == "stable-tie-break-v1":

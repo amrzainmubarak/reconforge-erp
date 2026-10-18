@@ -38,6 +38,11 @@ policy; persistent deployments should use an approved snapshot.
 policy digest, and registry provenance. Existing `Money` values retain their
 resolved policy if the process installs a later registry; arithmetic between
 the same code under different policies fails rather than silently re-scaling.
+`Money.from_canonical_dict()` is the compatibility restoration reader. Replay
+verifiers that must prove exact producer serialization use the additive
+`Money.from_strict_canonical_dict()`, which restores the value and then
+requires the complete mapping to equal `to_canonical_dict()`; it rejects
+normalized amount text, currency codes, or provenance fields.
 
 For a multi-step operation that must remain stable while an explicit registry
 update is possible, capture `CurrencyRegistry.context()` once and pass it to

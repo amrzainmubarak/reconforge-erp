@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12"]
     steps:
@@ -50,6 +51,9 @@ jobs:
       - name: Verify checked-in benchmark evidence index
         run: uv run --no-sync python .github/scripts/verify_benchmark_index.py --root .
 
+      - name: Verify current PostgreSQL pins and retained historical policy
+        run: uv run --no-sync python .github/scripts/validate_current_postgres_images.py --root .
+
       - name: Ruff
         run: uv run --no-sync ruff check .
 
@@ -57,7 +61,104 @@ jobs:
         run: uv run --no-sync mypy reconforge
 
       - name: Pytest
-        run: uv run --no-sync pytest
+        # These fixture-only modules have no optional skip. Their complete
+        # execution is mandatory in the configured native shards below.
+        run: >-
+          uv run --no-sync pytest
+          --ignore=tests/test_postgres_manufacturing_execution.py
+          --ignore=tests/test_postgres_manufacturing_execution_v2.py
+          --ignore=tests/test_postgres_intercompany_fx.py
+          --ignore=tests/test_postgres_intercompany_fx_api.py
+          --ignore=tests/test_postgres_intercompany_cashflow.py
+          --ignore=tests/test_postgres_intercompany_cashflow_api.py
+          --ignore=tests/test_postgres_intercompany_cashflow_authority.py
+          --ignore=tests/test_postgres_intercompany_cashflow_restore.py
+          --ignore=tests/test_intercompany_cashflow_browser_fixture.py
+          --ignore=tests/test_postgres_intercompany_fx_reporting_authority.py
+          --ignore=tests/test_postgres_intercompany_fx_native_evidence_bundle.py
+          --ignore=tests/test_postgres_intercompany_reporting_currency_precision.py
+          --ignore=tests/test_postgres_intercompany_group_diagnostic.py
+          --ignore=tests/test_postgres_intercompany_group_diagnostic_api.py
+          --ignore=tests/test_intercompany_group_diagnostic_browser_fixture.py
+          --ignore=tests/test_postgres_project_source_reconciliation.py
+          --ignore=tests/test_postgres_project_source_close.py
+          --ignore=tests/test_postgres_project_source_reconciliation_api.py
+          --ignore=tests/test_postgres_project_source_reconciliation_browser_fixture.py
+          --ignore=tests/test_postgres_people_project_payroll.py
+          --ignore=tests/test_postgres_people_project_payroll_api.py
+          --ignore=tests/test_postgres_people_project_payroll_restore.py --ignore=tests/test_postgres_people_project_dimension_pins.py --ignore=tests/test_postgres_people_project_read_authority.py --ignore=tests/test_postgres_financial_source_roles.py
+          --ignore=tests/test_postgres_enterprise_migrations.py
+          --ignore=tests/test_postgres_accrual_deferral.py
+          --ignore=tests/test_postgres_accrual_deferral_api.py
+          --ignore=tests/test_postgres_accrual_deferral_guards.py
+          --ignore=tests/test_postgres_accrual_deferral_ownership.py
+          --ignore=tests/test_postgres_accrual_deferral_restore.py
+          --ignore=tests/test_postgres_manufacturing_supply_plan.py
+          --ignore=tests/test_postgres_manufacturing_supply_closure.py
+          --ignore=tests/test_postgres_manufacturing_supply_closure_authority.py
+          --ignore=tests/test_postgres_manufacturing_supply_browser_seed.py
+          --ignore=tests/test_postgres_manufacturing_supply_read_authority.py
+          --ignore=tests/test_postgres_inventory_transfer.py
+          --ignore=tests/test_postgres_inventory_transfer_integration.py
+          --ignore=tests/test_postgres_inventory_transfer_read_authority.py
+          --ignore=tests/test_postgres_inventory_transfer_browser.py
+          --ignore=tests/test_postgres_inventory_transfer_concurrency.py
+          --ignore=tests/test_postgres_project_time_billing.py
+          --ignore=tests/test_postgres_project_time_billing_api.py
+          --ignore=tests/test_postgres_project_time_billing_restore.py
+          --ignore=tests/test_postgres_project_time_billing_read_authority.py
+          --ignore=tests/test_postgres_inventory_scope.py
+          --ignore=tests/test_postgres_inventory_quantity_contracts.py
+          --ignore=tests/test_postgres_intercompany_operations.py
+          --ignore=tests/test_postgres_intercompany_operations_api.py
+          --ignore=tests/test_postgres_wave5_migrations.py
+          --ignore=tests/test_postgres_manufacturing_sourcing.py
+          --ignore=tests/test_postgres_procurement_sourcing.py
+          --ignore=tests/test_postgres_procurement_sourcing_api.py
+          --ignore=tests/test_postgres_commercial_collections.py
+          --ignore=tests/test_postgres_commercial_collection_cancellation.py
+          --ignore=tests/test_postgres_customer_returns.py
+          --ignore=tests/test_postgres_customer_return_read_authority.py
+          --ignore=tests/test_postgres_customer_partial_return_source.py
+          --ignore=tests/test_postgres_customer_partial_returns.py
+          --ignore=tests/test_postgres_customer_partial_return_posted_security.py
+          --ignore=tests/test_postgres_customer_partial_return_transfer.py
+          --ignore=tests/test_postgres_customer_partial_return_rounding.py
+          --ignore=tests/test_postgres_customer_partial_return_rounding_migration.py
+          --ignore=tests/test_postgres_customer_partial_return_rounding_security.py
+          --ignore=tests/test_postgres_customer_partial_return_zero_stock.py
+          --ignore=tests/test_postgres_customer_partial_return_zero_stock_security.py
+          --ignore=tests/test_postgres_monetary_customer_partial_returns.py
+          --ignore=tests/test_postgres_monetary_customer_return_migration.py
+          --ignore=tests/test_postgres_monetary_customer_return_security.py
+          --ignore=tests/test_postgres_stock_sales_reversal_dispatch.py
+          --ignore=tests/test_postgres_supplier_returns.py
+          --ignore=tests/test_postgres_supplier_returns_api.py
+          --ignore=tests/test_postgres_procurement_commitments.py
+          --ignore=tests/test_postgres_procurement_commitments_api.py
+          --ignore=tests/test_postgres_operational_fx_tax.py
+          --ignore=tests/test_postgres_operational_fx_tax_api.py
+          --ignore=tests/test_postgres_operational_fx_tax_migration.py
+          --ignore=tests/test_postgres_operational_fx_revaluation.py
+          --ignore=tests/test_postgres_operational_fx_revaluation_migration.py
+          --ignore=tests/test_postgres_financial_read_plans.py
+          --ignore=tests/test_postgres_financial_reporting_snapshots.py
+          --ignore=tests/test_postgres_financial_snapshot_migration.py
+          --ignore=tests/test_postgres_financial_snapshot_recovery.py
+          --ignore=tests/test_postgres_fixed_assets.py
+          --ignore=tests/test_postgres_fixed_assets_evidence.py
+          --ignore=tests/test_postgres_global_operating_cycles.py
+          --ignore=tests/test_postgres_landed_cost.py
+          --ignore=tests/test_postgres_landed_cost_api.py
+          --ignore=tests/test_postgres_landed_cost_cancellation.py
+          --ignore=tests/test_postgres_posting_snapshot_profile.py
+          --ignore=tests/test_postgres_native_event_dispatch_migration.py
+          --ignore=tests/test_postgres_stock_commerce.py
+          --ignore=tests/test_postgres_stock_commerce_api.py
+          --ignore=tests/test_postgres_stock_commerce_migrations.py
+          --ignore=tests/test_postgres_stock_sales.py
+          --ignore=tests/test_postgres_stock_sales_read_authority.py
+          --ignore=tests/test_postgres_stock_sales_api.py
 
       - name: CLI smoke
         run: |
@@ -70,6 +171,22 @@ jobs:
 
       - name: Build package
         run: uv run --no-sync python -m build --no-isolation
+
+      - name: Verify final source archive and wheel closure
+        run: >-
+          uv run --no-sync python .github/scripts/verify_global_integrity_archive.py
+          --root .
+          --sdist dist/reconforge_erp-0.7.1.tar.gz
+          --wheel dist/reconforge_erp-0.7.1-py3-none-any.whl
+          --report "${RUNNER_TEMP}/publication-source-closure-${{ matrix.python-version }}.json"
+
+      - name: Retain final source archive inspection
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: publication-source-closure-${{ matrix.python-version }}
+          path: ${{ runner.temp }}/publication-source-closure-${{ matrix.python-version }}.json
+          if-no-files-found: error
 
   web:
     runs-on: ubuntu-latest
@@ -106,6 +223,100 @@ jobs:
         env:
           RECONFORGE_WEB_PORT: "4173"
         run: npm --prefix apps/web run e2e
+
+  erp-browser-recovery:
+    runs-on: ubuntu-latest
+    needs: [web]
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install locked server dependencies
+        run: uv sync --locked --all-extras --no-editable --python 3.12
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Build integrated Studio
+        run: |
+          npm --prefix apps/web ci
+          npm --prefix apps/web run build
+          npx --prefix apps/web playwright install --with-deps chromium
+      - name: Execute real HTTPS ERP cycles and populated PostgreSQL recovery
+        run: uv run --no-sync python .github/scripts/verify_erp_browser.py --verify-native-restore --output "${{ runner.temp }}/erp-browser"
+      - name: Execute real HTTPS ERP expansion cycles and populated recovery
+        run: uv run --no-sync python .github/scripts/verify_erp_expansion_browser.py --verify-native-restore --output "${{ runner.temp }}/erp-expansion-browser"
+      - name: Retain source-bound ERP recovery evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: erp-browser-recovery
+          path: |
+            ${{ runner.temp }}/erp-browser
+            ${{ runner.temp }}/erp-expansion-browser
+          if-no-files-found: error
+
+  enterprise-browser-recovery:
+    runs-on: ubuntu-latest
+    needs: [web]
+    name: enterprise-browser-recovery (${{ matrix.scenario }})
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets, procurement-commitments, customer-returns, customer-partial-returns, customer-partial-return-remainder-ordinary, customer-partial-return-remainder-zero, customer-partial-return-remainder-refund, customer-partial-return-restituted, customer-partial-return-monetary-identity, customer-partial-return-monetary-foreign, supplier-returns, operational-fx-tax, manufacturing-execution, manufacturing-execution-v2, intercompany-operations, intercompany-fx, intercompany-source-cashflow, intercompany-group-diagnostic, people-project-payroll, procurement-sourcing, accrual-deferral, project-time-billing, project-source-reconciliation, manufacturing-supply-plan, inventory-transfer]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install locked server dependencies
+        run: uv sync --locked --all-extras --no-editable --python 3.12
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Build integrated Studio
+        run: |
+          npm --prefix apps/web ci
+          npm --prefix apps/web run build
+          npx --prefix apps/web playwright install --with-deps chromium
+      - name: Execute enterprise HTTPS cycle and populated native recovery
+        run: uv run --no-sync python .github/scripts/verify_erp_expansion_browser.py --scenario "${{ matrix.scenario }}" --verify-native-restore --output "${{ runner.temp }}/enterprise-browser"
+      - name: Retain source-bound enterprise recovery evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: enterprise-browser-recovery-${{ matrix.scenario }}
+          path: ${{ runner.temp }}/enterprise-browser
+          if-no-files-found: error
 
   engine-parity:
     runs-on: ubuntu-latest
@@ -216,14 +427,57 @@ jobs:
 
   server-boundaries:
     runs-on: ubuntu-latest
-    needs: [test, web]
-    # The live matrix normally completes in under 20 minutes.  A bounded job
-    # lifetime prevents a hung database/pytest process from consuming a runner
-    # indefinitely while preserving enough headroom for the declared matrix.
+    name: server-boundaries (${{ matrix.shard }})
+    # Independent services per shard bound cumulative live verification time.
+    # No shared test/web artifact is consumed; retain native evidence on their failure.
+    # Keep every shard observable after a sibling fails; the aggregate fails closed.
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard:
+          # Exercise changed-owner invariants before the legacy partition.
+          - commercial-integrity
+          - customer-partial-cycle
+          - customer-partial-security
+          - customer-partial-rounding
+          - customer-partial-rounding-migration
+          - customer-partial-rounding-security
+          - customer-partial-monetary
+          - customer-partial-monetary-migration
+          - customer-partial-monetary-security
+          - supply-integrity
+          - finance-integrity
+          - accrual-deferral
+          - manufacturing-supply-plan
+          - inventory-transfer
+          - project-time-billing
+          - project-source-reconciliation
+          - supplier-returns
+          - manufacturing-execution
+          - intercompany-operations
+          - intercompany-cashflow
+          - intercompany-group-reporting
+          - people-project-payroll
+          - procurement-sourcing
+          - procurement-sourcing-api
+          - manufacturing-sourcing
+          - fx-revaluation
+          - writeback
+          - native
+          - parity
+          - durable-scale
+          - matching-runtime
+          - industry-close
+          - receivables
+          - finance-posting
+          - inventory-payables
+          - erp-expansion
+          - finance-reporting
     services:
       postgres:
-        image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
+        image: postgres:16.15-alpine@sha256:1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551
         env:
           POSTGRES_PASSWORD: postgres
         ports:
@@ -295,6 +549,7 @@ jobs:
           uv run --no-sync alembic -c alembic.ini upgrade head
 
       - name: Run PostgreSQL write-back migration version matrix
+        if: matrix.shard == 'writeback'
         env:
           RECONFORGE_WRITEBACK_MATRIX_REPORT: ${{ runner.temp }}/reconforge-writeback-migration-matrix.json
         run: |
@@ -309,6 +564,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Run write-back receiver idempotency drill
+        if: matrix.shard == 'writeback'
         env:
           RECONFORGE_WRITEBACK_RECEIVER_REPORT: ${{ runner.temp }}/reconforge-writeback-receiver-idempotency.json
         run: |
@@ -323,6 +579,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Run PostgreSQL write-back receiver idempotency matrix
+        if: matrix.shard == 'writeback'
         env:
           RECONFORGE_POSTGRES_RECEIVER_REPORT: ${{ runner.temp }}/reconforge-postgres-writeback-receiver-idempotency.json
         run: |
@@ -337,6 +594,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Run PostgreSQL write-back receiver failover matrix
+        if: matrix.shard == 'writeback'
         env:
           RECONFORGE_RECEIVER_FAILOVER_REPORT: ${{ runner.temp }}/reconforge-writeback-receiver-failover.json
         run: |
@@ -351,6 +609,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Run PostgreSQL write-back recovery compensation matrix
+        if: matrix.shard == 'writeback'
         env:
           RECONFORGE_WRITEBACK_RECOVERY_COMPENSATION_REPORT: ${{ runner.temp }}/reconforge-writeback-recovery-compensation.json
         run: |
@@ -364,14 +623,37 @@ jobs:
           path: ${{ runner.temp }}/reconforge-writeback-recovery-compensation.json
           if-no-files-found: ignore
 
+      - name: Verify pinned AMLSim through the durable PostgreSQL worker
+        if: matrix.shard == 'native'
+        env:
+          RECONFORGE_TEST_POSTGRES_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
+          RECONFORGE_TEST_POSTGRES_DSN: postgresql://reconforge_app:reconforge_app@localhost:5432/postgres
+        run: uv run --no-sync python .github/scripts/verify_postgres_amlsim_reconciliation.py --migration-target head --output "${RUNNER_TEMP}/reconforge-amlsim-postgres.json"
+
+      - name: Upload PostgreSQL AMLSim worker evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reconforge-amlsim-postgres-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/reconforge-amlsim-postgres.json
+            ${{ runner.temp }}/reconforge-amlsim-postgres.migration.log
+          if-no-files-found: ignore
+
       - name: Run live server-boundary tests
         env:
+          PYTHONPATH: ${{ github.workspace }}
+          PYTEST_ADDOPTS: -p tests.mandatory_native_gate
+          RECONFORGE_SERVER_BOUNDARY_SHARD: ${{ matrix.shard }}
           RECONFORGE_POSTGRES_DSN: postgresql://postgres:postgres@localhost:5432/postgres
           RECONFORGE_TEST_POSTGRES_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
           RECONFORGE_TEST_POSTGRES_DSN: postgresql://reconforge_app:reconforge_app@localhost:5432/postgres
           RECONFORGE_TEST_POSTGRES_APP_USER: reconforge_app
+          RECONFORGE_TEST_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
           RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE: reconforge_ci_source
           RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE: reconforge_ci_admin
+          RECONFORGE_AR_INVOICE_REPLAY_NATIVE_REPORT: ${{ runner.temp }}/reconforge-ar-invoice-recovery-native.json
+          RECONFORGE_CASHFLOW_PROOF_DIR: ${{ runner.temp }}/reconforge-cashflow-native-private
           RECONFORGE_TEST_REDIS_URL: redis://localhost:6379/0
           RECONFORGE_REDIS_IMAGE_DIGEST: sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
           RECONFORGE_REDIS_LIVE_REPORT: ${{ runner.temp }}/reconforge-redis-live-report.json
@@ -392,36 +674,173 @@ jobs:
             'user=postgres' \
             'password=postgres' > "$PGSERVICEFILE"
           chmod 600 "$PGSERVICEFILE"
-          mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(item['test'] for item in document['boundaries'] if item.get('test')), sep='\\n')")
-          native_smoke_dump="${RUNNER_TEMP}/reconforge-native-backup-smoke.dump"
-          rm -f "$native_smoke_dump"
-          pg_dump --format=custom --no-owner --no-privileges --file "$native_smoke_dump" --dbname service=reconforge_ci_source
-          test -s "$native_smoke_dump"
-          pg_restore --list "$native_smoke_dump" >/dev/null
-          rm -f "$native_smoke_dump"
-          uv run --no-sync pytest tests/test_postgres_backup.py -k 'test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup' -q
-          uv run --no-sync pytest tests/test_application_metrics.py -k 'test_live_postgres_metrics_and_sqlite_parity' -q
-          uv run --no-sync pytest tests/test_scoped_exports.py -k 'test_live_scoped_export_excludes_sibling_workspace_and_entity' -q
-          uv run --no-sync pytest tests/test_api_server_scoped_exports.py -k 'test_live_server_scoped_export_http_is_service_scoped_and_tenant_isolated' -q
-          uv run --no-sync pytest "${parity_tests[@]}" tests/test_postgres_delegations_runtime.py tests/test_postgres_policy_analysis_runtime.py tests/test_alembic_postgres.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_postgres_writeback.py tests/test_postgres_database_reference.py tests/test_api_server_identity.py tests/test_redis_foundation.py tests/test_postgres_durable_jobs.py -k 'test_live_postgres_durable_job_10k_multi_worker_scale_profile or test_live_postgres_durable_job_100k_multi_worker_scale_profile or test_live_postgres_durable_job_backpressure_profile or test_live_postgres_durable_job_soak_profile' -q
-          uv run --no-sync pytest tests/test_postgres_grouped_matching_scale.py -k 'test_live_postgres_grouped_matching_500_partition_scale_profile or test_live_postgres_grouped_matching_10k_partition_scale_profile or test_live_postgres_grouped_matching_10k_domain_diverse_profile' -q
-          uv run --no-sync pytest tests/test_postgres_grouped_matching_runtime.py -k 'test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_tenant_scoped' -q
-          uv run --no-sync pytest tests/test_postgres_durable_jobs.py -k 'test_live_postgres_job_application_contract_and_rls or test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic or test_live_postgres_persistent_scheduler_coordinates_spawned_processes or test_live_postgres_worker_crash_after_checkpoint_resumes_without_duplicate_effect or test_live_postgres_worker_database_fault_after_checkpoint_resumes_without_duplicate_effect' -q
-          uv run --no-sync pytest tests/test_api_operations.py -q
-          uv run --no-sync pytest tests/test_api_metrics.py -q
-          uv run --no-sync pytest tests/test_postgres_manufacturing_cost_control.py -q
-          uv run --no-sync pytest tests/test_api_server_manufacturing_cost_control.py -q
-          uv run --no-sync pytest tests/test_postgres_retail_settlement.py -q
-          uv run --no-sync pytest tests/test_api_server_retail_settlement.py -q
-          uv run --no-sync pytest tests/test_postgres_professional_invoice_payment.py -q
-          uv run --no-sync pytest tests/test_api_server_professional_invoice_payment.py -q
-          uv run --no-sync pytest tests/test_postgres_consolidation_close.py -k 'test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable' -q
-          uv run --no-sync pytest tests/test_postgres_federation.py -k 'test_live_postgres_federation_replay_link_session_and_rls' -q
-          uv run --no-sync pytest tests/test_api_server_consolidation_close.py -q
-          uv run --no-sync pytest tests/test_api_server_reconciliation_live.py -q
-          uv run --no-sync pytest tests/test_postgres_bank_statement.py -q
-          uv run --no-sync pytest tests/test_api_server_bank_statement.py -q
-          uv run --no-sync python .github/scripts/verify_redis_live.py --output "${RECONFORGE_REDIS_LIVE_REPORT}"
+          # The native populated cashflow restore retains its exact dump and
+          # original proof in private runner custody; it never skips for an
+          # absent output directory or uploads a credential-bearing database.
+          mkdir -p "$RECONFORGE_CASHFLOW_PROOF_DIR"
+          chmod 700 "$RECONFORGE_CASHFLOW_PROOF_DIR"
+          mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(path for item in document['boundaries'] if item.get('ci_shard', 'parity') == 'parity' for path in [item.get('test'), *item.get('additional_tests', [])] if path and path != 'tests/test_postgres_durable_jobs.py'), sep='\\n')")
+          case "$RECONFORGE_SERVER_BOUNDARY_SHARD" in
+            writeback) ;; # Dedicated evidence runners above own this shard.
+            native)
+              uv run --no-sync pytest tests/test_api_federation.py::test_live_http_oidc_session_logout_replay_and_tenant_isolation tests/test_api_scim.py::test_live_scim_http_auth_lifecycle_etag_filter_and_tenant_isolation tests/test_api_service_accounts.py::test_live_service_credential_http_auth_policy_tenant_and_logout -q
+              uv run --no-sync pytest tests/test_postgres_master_data_application.py::test_live_postgres_master_data_application_workspace_and_tenant_isolation -q
+              uv run --no-sync pytest tests/test_postgres_notifications.py::test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_audited tests/test_postgres_scheduler.py::test_live_postgres_scheduler_is_atomic_idempotent_coordinated_and_scoped tests/test_postgres_scim.py::test_live_postgres_scim_idempotency_deactivation_sessions_and_rls tests/test_postgres_scim_auth.py::test_live_scim_credential_rotation_revocation_expiry_and_rls -q
+              native_smoke_dump="${RUNNER_TEMP}/reconforge-native-backup-smoke.dump"
+              rm -f "$native_smoke_dump"
+              pg_dump --format=custom --no-owner --no-privileges --file "$native_smoke_dump" --dbname service=reconforge_ci_source
+              test -s "$native_smoke_dump"
+              pg_restore --list "$native_smoke_dump" >/dev/null
+              rm -f "$native_smoke_dump"
+              uv run --no-sync pytest tests/test_postgres_backup.py -k 'test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup' -q
+              uv run --no-sync pytest tests/test_application_metrics.py -k 'test_live_postgres_metrics_and_sqlite_parity' -q
+              uv run --no-sync pytest tests/test_scoped_exports.py -k 'test_live_scoped_export_excludes_sibling_workspace_and_entity' -q
+              uv run --no-sync pytest tests/test_api_server_scoped_exports.py -k 'test_live_server_scoped_export_http_is_service_scoped_and_tenant_isolated' -q
+              uv run --no-sync python .github/scripts/verify_redis_live.py --output "${RECONFORGE_REDIS_LIVE_REPORT}"
+              ;;
+            parity)
+              uv run --no-sync pytest "${parity_tests[@]}" tests/test_postgres_delegations_runtime.py tests/test_postgres_policy_analysis_runtime.py tests/test_alembic_postgres.py tests/test_postgres_metrics_migration.py tests/test_postgres_finance_currency_policy.py tests/test_postgres_repository_scope.py tests/test_postgres_finance_scope.py tests/test_postgres_finance_scope_restore.py tests/test_postgres_master_data_authority.py tests/test_postgres_runtime_role.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_postgres_reconciliation_input_seal.py tests/test_postgres_reconciliation_seal_restore.py tests/test_postgres_writeback.py tests/test_postgres_database_reference.py tests/test_api_server_identity.py tests/test_redis_foundation.py -q
+              ;;
+            durable-scale)
+              uv run --no-sync pytest tests/test_postgres_durable_jobs.py -k 'test_live_postgres_durable_job_10k_multi_worker_scale_profile or test_live_postgres_durable_job_100k_multi_worker_scale_profile or test_live_postgres_durable_job_backpressure_profile or test_live_postgres_durable_job_soak_profile' -q
+              ;;
+            matching-runtime)
+              uv run --no-sync pytest tests/test_postgres_grouped_matching_scale.py -k 'test_live_postgres_grouped_matching_500_partition_scale_profile or test_live_postgres_grouped_matching_10k_partition_scale_profile or test_live_postgres_grouped_matching_10k_domain_diverse_profile' -q
+              uv run --no-sync pytest tests/test_postgres_grouped_matching_runtime.py -k 'test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_tenant_scoped' -q
+              uv run --no-sync pytest tests/test_postgres_durable_jobs.py -k 'test_live_postgres_job_application_contract_and_rls or test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic or test_live_postgres_persistent_scheduler_coordinates_spawned_processes or test_live_postgres_worker_crash_after_checkpoint_resumes_without_duplicate_effect or test_live_postgres_worker_database_fault_after_checkpoint_resumes_without_duplicate_effect' -q
+              ;;
+            industry-close)
+              uv run --no-sync pytest tests/test_postgres_close_scope_bootstrap.py -q
+              uv run --no-sync pytest tests/test_api_operations.py -q
+              uv run --no-sync pytest tests/test_api_metrics.py -q
+              uv run --no-sync pytest tests/test_postgres_manufacturing_cost_control.py -q
+              uv run --no-sync pytest tests/test_api_server_manufacturing_cost_control.py -q
+              uv run --no-sync pytest tests/test_postgres_retail_settlement.py -q
+              uv run --no-sync pytest tests/test_api_server_retail_settlement.py -q
+              uv run --no-sync pytest tests/test_postgres_professional_invoice_payment.py -q
+              uv run --no-sync pytest tests/test_api_server_professional_invoice_payment.py -q
+              uv run --no-sync pytest tests/test_postgres_consolidation_close.py -k 'test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable' -q
+              uv run --no-sync pytest tests/test_postgres_federation.py -k 'test_live_postgres_federation_replay_link_session_and_rls' -q
+              uv run --no-sync pytest tests/test_api_server_consolidation_close.py -q
+              uv run --no-sync pytest tests/test_api_server_reconciliation_live.py -q
+              uv run --no-sync pytest tests/test_postgres_bank_statement.py -q
+              uv run --no-sync pytest tests/test_api_server_bank_statement.py -q
+              ;;
+            receivables)
+              uv run --no-sync pytest tests/test_receivables_credit_integrity.py tests/test_receivables_aging_integrity.py -q
+              uv run --no-sync pytest tests/test_api_server_receivables.py -q
+              uv run --no-sync pytest tests/test_receivables_monetary_policy.py tests/test_receivables_policy_schema.py tests/test_receivables_policy_capture.py tests/test_receivables_policy_raw_guards.py tests/test_postgres_receivables_policy_restore.py -q
+              uv run --no-sync pytest tests/test_receivables_money_api_contract.py tests/test_receivables_policy_api.py -q
+              uv run --no-sync pytest tests/test_receivables_invoice_replay_domain.py tests/test_receivables_invoice_replay.py tests/test_receivables_invoice_recovery.py tests/test_receivables_invoice_replay_api.py tests/test_postgres_invoice_recovery_restore.py -q
+              ;;
+            finance-posting)
+              uv run --no-sync pytest tests/test_postgres_finance_posting.py tests/test_postgres_finance_posting_batches.py tests/test_postgres_finance_posting_concurrency.py tests/test_postgres_finance_posting_api.py tests/test_postgres_finance_posting_restore.py tests/test_postgres_financial_source_roles.py tests/test_postgres_finance_balances.py tests/test_postgres_operational_finance.py tests/test_postgres_operational_finance_api.py tests/test_receivables_cash_contract.py tests/test_receivables_cash_policy.py -q
+              ;;
+            inventory-payables)
+              uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py tests/test_postgres_sales_revenue.py tests/test_postgres_sales_owner_closure.py tests/test_postgres_procurement_operations.py -q
+              uv run --no-sync pytest tests/test_api_server_inventory_core.py -q
+              uv run --no-sync pytest tests/test_api_server_payables.py tests/test_postgres_payables_replay.py tests/test_postgres_exact_trade_primitives.py -q
+              uv run --no-sync pytest tests/test_api_server_local_boundaries.py -q
+              uv run --no-sync pytest tests/test_api_server_inventory_planning.py -q
+              uv run --no-sync pytest tests/test_api_server_inventory_valuation.py -q
+              ;;
+            erp-expansion)
+              uv run --no-sync pytest tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_read_authority.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q
+              uv run --no-sync pytest tests/test_postgres_stock_commerce.py tests/test_postgres_stock_commerce_api.py tests/test_postgres_stock_commerce_migrations.py tests/test_postgres_procurement_multiline.py tests/test_postgres_procurement_multiline_api.py tests/test_postgres_procurement_multiline_migrations.py -q
+              ;;
+            commercial-integrity)
+              uv run --no-sync pytest tests/test_postgres_commercial_collections.py tests/test_postgres_commercial_collection_cancellation.py -q
+              uv run --no-sync pytest tests/test_postgres_customer_returns.py tests/test_postgres_customer_return_read_authority.py -q
+              ;;
+            customer-partial-cycle)
+              uv run --no-sync pytest tests/test_postgres_customer_partial_return_source.py -q
+              uv run --no-sync pytest tests/test_postgres_customer_partial_returns.py -q
+              uv run --no-sync pytest tests/test_postgres_customer_partial_return_transfer.py -q
+              ;;
+            customer-partial-security)
+              uv run --no-sync pytest tests/test_postgres_customer_partial_return_posted_security.py -q
+              ;;
+            customer-partial-rounding)
+              uv run --no-sync pytest tests/test_postgres_customer_partial_return_rounding.py tests/test_postgres_customer_partial_return_zero_stock.py -q
+              ;;
+            customer-partial-rounding-migration)
+              uv run --no-sync pytest tests/test_postgres_customer_partial_return_rounding_migration.py -q
+              ;;
+            customer-partial-rounding-security)
+              uv run --no-sync pytest tests/test_postgres_customer_partial_return_rounding_security.py tests/test_postgres_customer_partial_return_zero_stock_security.py -q
+              ;;
+            customer-partial-monetary)
+              uv run --no-sync pytest tests/test_postgres_monetary_customer_partial_returns.py -q
+              ;;
+            customer-partial-monetary-migration)
+              uv run --no-sync pytest tests/test_postgres_monetary_customer_return_migration.py -q
+              ;;
+            customer-partial-monetary-security)
+              uv run --no-sync pytest tests/test_postgres_monetary_customer_return_security.py -q
+              ;;
+            supply-integrity)
+              uv run --no-sync pytest tests/test_postgres_landed_cost.py tests/test_postgres_landed_cost_api.py tests/test_postgres_landed_cost_cancellation.py -q
+              uv run --no-sync pytest tests/test_postgres_procurement_commitments.py tests/test_postgres_procurement_commitments_api.py -q
+              ;;
+            finance-integrity)
+              uv run --no-sync pytest tests/test_postgres_fixed_assets.py tests/test_postgres_fixed_assets_evidence.py -q
+              uv run --no-sync pytest tests/test_postgres_global_operating_cycles.py -q
+              uv run --no-sync pytest tests/test_postgres_native_event_dispatch_migration.py -q
+              uv run --no-sync pytest tests/test_postgres_posting_snapshot_profile.py -q
+              uv run --no-sync pytest tests/test_postgres_stock_sales_reversal_dispatch.py -q
+              uv run --no-sync pytest tests/test_postgres_operational_fx_tax.py tests/test_postgres_operational_fx_tax_api.py tests/test_postgres_operational_fx_tax_migration.py tests/test_postgres_financial_read_plans.py -q
+              ;;
+            manufacturing-execution)
+              uv run --no-sync pytest tests/test_postgres_inventory_quantity_contracts.py tests/test_postgres_inventory_scope.py tests/test_postgres_manufacturing_execution.py tests/test_postgres_wave5_migrations.py tests/test_postgres_manufacturing_execution_v2.py tests/test_postgres_enterprise_migrations.py -q
+              ;;
+            intercompany-operations)
+              uv run --no-sync pytest tests/test_postgres_intercompany_operations.py tests/test_postgres_intercompany_operations_api.py tests/test_postgres_intercompany_fx.py tests/test_postgres_intercompany_fx_api.py -q
+              ;;
+            intercompany-cashflow)
+              uv run --no-sync pytest tests/test_postgres_intercompany_cashflow.py tests/test_postgres_intercompany_cashflow_api.py tests/test_postgres_intercompany_cashflow_authority.py tests/test_postgres_intercompany_cashflow_restore.py tests/test_intercompany_cashflow_browser_fixture.py -q
+              ;;
+            intercompany-group-reporting)
+              uv run --no-sync pytest tests/test_postgres_intercompany_fx_native_evidence_bundle.py tests/test_postgres_intercompany_group_diagnostic.py tests/test_postgres_intercompany_group_diagnostic_api.py tests/test_intercompany_group_diagnostic_browser_fixture.py tests/test_postgres_intercompany_fx_reporting_authority.py tests/test_postgres_intercompany_reporting_currency_precision.py -q
+              ;;
+            people-project-payroll)
+              uv run --no-sync pytest tests/test_postgres_people_project_payroll.py tests/test_postgres_people_project_payroll_api.py tests/test_postgres_people_project_payroll_restore.py tests/test_postgres_people_project_dimension_pins.py tests/test_postgres_people_project_read_authority.py -q
+              ;;
+            procurement-sourcing)
+              uv run --no-sync pytest tests/test_postgres_procurement_sourcing.py -q
+              ;;
+            procurement-sourcing-api)
+              uv run --no-sync pytest tests/test_postgres_procurement_sourcing_api.py -q
+              ;;
+            manufacturing-sourcing)
+              uv run --no-sync pytest tests/test_postgres_manufacturing_sourcing.py -q
+              ;;
+            supplier-returns)
+              uv run --no-sync pytest tests/test_postgres_supplier_returns.py tests/test_postgres_supplier_returns_api.py -q
+              ;;
+            fx-revaluation)
+              uv run --no-sync pytest tests/test_postgres_operational_fx_revaluation.py tests/test_postgres_operational_fx_revaluation_migration.py -q
+              ;;
+            finance-reporting)
+              uv run --no-sync pytest tests/test_postgres_financial_installments.py tests/test_postgres_financial_reporting.py tests/test_postgres_financial_reporting_api.py -q
+              uv run --no-sync pytest tests/test_postgres_financial_reporting_snapshots.py tests/test_postgres_financial_snapshot_recovery.py tests/test_postgres_financial_snapshot_migration.py -q
+              ;;
+            accrual-deferral)
+              uv run --no-sync pytest tests/test_postgres_accrual_deferral.py tests/test_postgres_accrual_deferral_api.py tests/test_postgres_accrual_deferral_guards.py tests/test_postgres_accrual_deferral_ownership.py tests/test_postgres_accrual_deferral_restore.py -q
+              ;;
+            manufacturing-supply-plan)
+              uv run --no-sync pytest tests/test_postgres_manufacturing_supply_closure.py tests/test_postgres_manufacturing_supply_closure_authority.py tests/test_postgres_manufacturing_supply_plan.py tests/test_postgres_manufacturing_supply_browser_seed.py tests/test_postgres_manufacturing_supply_read_authority.py -q
+              ;;
+            inventory-transfer)
+              uv run --no-sync pytest tests/test_postgres_inventory_transfer.py tests/test_postgres_inventory_transfer_integration.py tests/test_postgres_inventory_transfer_read_authority.py tests/test_postgres_inventory_transfer_browser.py tests/test_postgres_inventory_transfer_concurrency.py -q
+              ;;
+            project-time-billing)
+              uv run --no-sync pytest tests/test_postgres_project_time_billing.py tests/test_postgres_project_time_billing_api.py tests/test_postgres_project_time_billing_restore.py tests/test_postgres_project_time_billing_read_authority.py -q
+              ;;
+            project-source-reconciliation)
+              uv run --no-sync pytest tests/test_postgres_project_source_close.py tests/test_postgres_project_source_reconciliation.py tests/test_postgres_project_source_reconciliation_api.py tests/test_postgres_project_source_reconciliation_browser_fixture.py -q
+              ;;
+            *) echo "Unknown server-boundary shard" >&2; exit 2 ;;
+          esac
 
       - name: Upload live Redis report
         if: always()
@@ -430,6 +849,29 @@ jobs:
           name: reconforge-redis-live-report
           path: ${{ runner.temp }}/reconforge-redis-live-report.json
           if-no-files-found: ignore
+
+      - name: Upload AR invoice recovery native report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reconforge-ar-invoice-recovery-native
+          path: ${{ runner.temp }}/reconforge-ar-invoice-recovery-native.json
+          if-no-files-found: ignore
+
+  server-boundaries-gate:
+    name: server-boundaries
+    runs-on: ubuntu-latest
+    needs: [server-boundaries]
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Require every server-boundary shard to succeed
+        env:
+          SHARDS_RESULT: ${{ needs.server-boundaries.result }}
+        run: |
+          set -euo pipefail
+          printf 'Server-boundary matrix result: %s\n' "$SHARDS_RESULT"
+          test "$SHARDS_RESULT" = success
 
   postgres-ha-dr:
     runs-on: ubuntu-latest
@@ -470,6 +912,7 @@ jobs:
 
   object-storage:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -491,20 +934,29 @@ jobs:
       - name: Install locked server dependencies
         run: uv sync --locked --extra dev --extra server --no-editable --python 3.12
 
-      - name: Start digest-pinned MinIO
+      - name: Build archived MinIO source fixture for synthetic CI
+        run: |
+          set -euo pipefail
+          uv run --no-sync python .github/scripts/build_minio_ci_fixture.py \
+            --output "${RUNNER_TEMP}/reconforge-minio-build-provenance.json" \
+            --iidfile "${RUNNER_TEMP}/reconforge-minio-ci.iid"
+          echo "MINIO_IMAGE_CONFIG_DIGEST=$(cat "${RUNNER_TEMP}/reconforge-minio-ci.iid")" >> "$GITHUB_ENV"
+
+      - name: Start source-verified MinIO fixture by config digest
         env:
-          MINIO_IMAGE: minio/minio@sha256:13582eff79c6605a2d315bdd0e70164142ea7e98fc8411e9e10d089502a6d883
           MINIO_ROOT_USER: reconforge_ci_access
         run: |
           set -euo pipefail
           MINIO_ROOT_PASSWORD="$(printf '%s' 'reconforge-ci-object-store' | sha256sum | cut -c1-32)"
           export MINIO_ROOT_PASSWORD
           docker run --detach --name reconforge-ci-minio \
-            --publish 19000:9000 \
-            --publish 19001:9001 \
+            --publish 127.0.0.1:19000:9000 \
+            --read-only --cap-drop ALL --security-opt no-new-privileges \
+            --tmpfs /data:rw,nosuid,nodev,size=128m,uid=65532,gid=65532,mode=0700 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=32m,uid=65532,gid=65532,mode=0700 \
             --env "MINIO_ROOT_USER=${MINIO_ROOT_USER}" \
             --env "MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}" \
-            "${MINIO_IMAGE}" server /data --console-address ':9001'
+            "${MINIO_IMAGE_CONFIG_DIGEST}" server /data
           for attempt in $(seq 1 60); do
             if curl --fail --silent http://127.0.0.1:19000/minio/health/ready >/dev/null; then
               exit 0
@@ -522,7 +974,8 @@ jobs:
           RECONFORGE_TEST_S3_ENDPOINT: http://127.0.0.1:19000
           RECONFORGE_TEST_S3_BUCKET: reconforge-ci-live
           RECONFORGE_TEST_S3_LOCK_BUCKET: reconforge-ci-lock
-          RECONFORGE_S3_IMAGE_DIGEST: sha256:13582eff79c6605a2d315bdd0e70164142ea7e98fc8411e9e10d089502a6d883
+          RECONFORGE_S3_IMAGE_DIGEST: ${{ env.MINIO_IMAGE_CONFIG_DIGEST }}
+          RECONFORGE_S3_IMAGE_DIGEST_KIND: oci-config
           RECONFORGE_S3_LIVE_REPORT: ${{ runner.temp }}/reconforge-s3-live-report.json
         run: |
           set -euo pipefail
@@ -536,7 +989,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: reconforge-s3-live-report
-          path: ${{ runner.temp }}/reconforge-s3-live-report.json
+          path: |
+            ${{ runner.temp }}/reconforge-s3-live-report.json
+            ${{ runner.temp }}/reconforge-minio-build-provenance.json
           if-no-files-found: ignore
 
       - name: Stop MinIO

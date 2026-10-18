@@ -1,0 +1,146 @@
+{
+  "schema_version": "posting-cash-whole-regression-v1",
+  "observed_at": "2026-10-03",
+  "status": "failed",
+  "source_commit": "d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35",
+  "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+  "head_unchanged": true,
+  "tracked_tree_clean": true,
+  "python_version": "Python 3.12.13",
+  "interpreter": "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+  "counts": {
+    "tests": 4140,
+    "failures": 2,
+    "errors": 0,
+    "skipped": 309,
+    "passed": 3829
+  },
+  "pytest_duration_seconds": 1786.892,
+  "harness_duration_seconds": 1797.126,
+  "command": [
+    "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+    "-m",
+    "pytest",
+    "-ra",
+    "--tb=short",
+    "-o",
+    "addopts=",
+    "--junitxml",
+    "F:\\reconforge-erp\\output\\verification-2026-10-03\\posting-cash-d4-pytest.xml"
+  ],
+  "failures": [
+    {
+      "test": "tests.test_file_ingestion_inventory.test_direct_json_parser_inventory_is_an_exact_ast_allowlist",
+      "detail": "AssertionError: assert Counter({('re...n.loads'): 1}) == Counter({('re...n.loads'): 1})\n  \n  Omitting 29 identical items, use -vv to show\n  Left contains 1 more item:\n  {('reconforge/infrastructure/postgres_finance_posting.py', 'json.loads'): 2}\n  Use -v to get more diff"
+    },
+    {
+      "test": "tests.test_threat_model_index.test_every_active_module_has_an_exact_threat_model_entry",
+      "detail": "AssertionError: assert {'tests/test_..._ppa.py', ...} >= {'tests/test_..._ppa.py', ...}\n  \n  Extra items in the right set:\n  'tests/test_postgres_finance_posting.py'\n  'tests/test_finance_posting_api_contract.py'\n  'tests/test_sqlite_finance_posting.py'\n  'tests/test_finance_posting_cli.py'\n  'tests/test_postgres_finance_posting_api.py'...\n  \n  ...Full output truncated (3 lines hidden), use '-vv' to show"
+    }
+  ],
+  "failure_classification": [
+    "missing exact AST inventory for PostgreSQL posting JSON parser",
+    "missing Finance posting test evidence in the threat-model index"
+  ],
+  "quality": [
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.868,
+      "head_unchanged": true,
+      "tracked_tree_clean": true,
+      "log": "posting-cash-d4-ruff.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 17.117,
+      "head_unchanged": true,
+      "tracked_tree_clean": true,
+      "log": "posting-cash-d4-mypy.log",
+      "log_sha256": "f0fdfa8c1281acf8e2d3281f5f560fa53db703eb9da2075ad6c3ec0d67139c4d"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "-r",
+        "reconforge"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 51.226,
+      "head_unchanged": true,
+      "tracked_tree_clean": true,
+      "log": "posting-cash-d4-bandit.log",
+      "log_sha256": "f388f7e286034b2c19684a9edf5478de1ab9e79606bfbbb71d1053f4adc67b99"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "build",
+        "--no-isolation",
+        "--outdir",
+        "F:\\reconforge-erp\\output\\verification-2026-10-03\\posting-cash-d4-dist"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 65.997,
+      "head_unchanged": true,
+      "tracked_tree_clean": true,
+      "log": "posting-cash-d4-build.log",
+      "log_sha256": "e91de6ffc39734a551e999ff8b8546f49e46ae0a8cf4e8f25fee3f493ea2cfd5"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.444,
+      "head_unchanged": true,
+      "tracked_tree_clean": true,
+      "log": "posting-cash-d4-diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "output/verification-2026-10-03/posting-cash-d4-pytest.log",
+      "sha256": "c395b59d22d62517e15b5ac163a44f9a318874a58215e9c46e57e3cd69555898"
+    },
+    {
+      "path": "output/verification-2026-10-03/posting-cash-d4-pytest.xml",
+      "sha256": "47f29d812ebbfdbd62cb4411a30633af98b7c2691012c113b4099f3dee479d1e"
+    },
+    {
+      "path": "output/verification-2026-10-03/posting-cash-d4-regression.json",
+      "sha256": "7e9ebd36085cf18e6552ef821117b45779e20806cd7035c46cc94374a2090c0a"
+    },
+    {
+      "path": "output/verification-2026-10-03/posting-cash-d4-quality.json",
+      "sha256": "70ac68ccedf078bdb2659f45ce3608b42c3e2f4811df869d5c6d9afbb22ee320"
+    }
+  ],
+  "boundaries": [
+    "This failed whole-snapshot run remains failed after subsequent document repair.",
+    "309 environment/capability skips do not count as successful runtime checks; separate PostgreSQL/browser/native proofs retain their own scopes.",
+    "Ruff/Mypy/Bandit/build/diff-check passed on this exact source; they do not replace whole-regression acceptance.",
+    "Later as-of, AP replay and exact-quantity development is outside this source commit."
+  ],
+  "report_digest": "aad5b372689177f2ff34ce570319b7ec608926d2b09f146a38d67407c056e0e2"
+}

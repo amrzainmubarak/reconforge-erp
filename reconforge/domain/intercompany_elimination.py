@@ -154,7 +154,7 @@ def intercompany_elimination_input_line_from_dict(
     if not isinstance(amount, Mapping):
         raise ConsolidationError("Intercompany source amount is invalid.")
     try:
-        money = Money.from_canonical_dict(dict(amount))
+        money = Money.from_strict_canonical_dict(dict(amount))
         return IntercompanyEliminationInputLine(
             transaction_id=payload["transaction_id"],  # type: ignore[arg-type]
             period_name=payload["period_name"],  # type: ignore[arg-type]

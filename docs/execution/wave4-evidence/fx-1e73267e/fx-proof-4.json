@@ -1,0 +1,270 @@
+{
+  "schema_version": "operational-fx-native-evidence-v1",
+  "source": {
+    "id": "FX-cca6656375434e608ec8eb73d7635892",
+    "lines": [
+      {
+        "debit_minor": "14251",
+        "account_code": "AR",
+        "credit_minor": "0"
+      },
+      {
+        "debit_minor": "0",
+        "account_code": "REVENUE",
+        "credit_minor": "12501"
+      },
+      {
+        "debit_minor": "0",
+        "account_code": "TAX",
+        "credit_minor": "1750"
+      }
+    ],
+    "request": {
+      "taxes": [
+        {
+          "rate": "0.14",
+          "source": "Browser reviewed synthetic tax",
+          "version": "2026-v1",
+          "policy_id": "BROWSER-SYNTHETIC-TAX",
+          "account_code": "TAX",
+          "country_code": "EG",
+          "effective_to": "2026-12-31",
+          "policy_digest": "8a0852f00877c28f6223540b652b577cfe833363f5b183dd62bb04aacdc5ced1",
+          "effective_from": "2026-01-01",
+          "transaction_class": "synthetic-service"
+        }
+      ],
+      "reason": "Actual browser retained foreign invoice",
+      "due_date": "2026-10-31",
+      "net_minor": "10001",
+      "period_id": "period",
+      "entity_code": "ENTITY",
+      "country_code": "EG",
+      "journal_code": "STOCK",
+      "posting_date": "2026-10-01",
+      "workspace_id": "work",
+      "customer_code": "FOREIGN",
+      "original_rate": {
+        "rate": "1.25",
+        "source": "Browser original spot",
+        "effective_at": "2026-10-01T12:00:00Z"
+      },
+      "invoice_number": "BROWSER-FX",
+      "legal_entity_id": "entity",
+      "organization_id": "org",
+      "cash_account_code": "CASH",
+      "gain_account_code": "GAIN",
+      "loss_account_code": "LOSS",
+      "organization_code": "ORG",
+      "transaction_class": "synthetic-service",
+      "revenue_account_code": "REVENUE",
+      "foreign_currency_code": "EUR",
+      "receivable_account_code": "AR"
+    },
+    "invoice_id": "ARINV-d1b861c4a946b19c",
+    "workspace_id": "work",
+    "source_digest": "dc33beae09d91d460a5ff836487923ce2155b8ebda679b265b976a936292dfae",
+    "foreign_policy": {
+      "currency_code": "EUR",
+      "currency_precision": 2,
+      "currency_registry_digest": "d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246",
+      "currency_rounding_policy": "ROUND_HALF_UP",
+      "currency_registry_version": "iso-4217-list-one-2026-01-01-rf1"
+    },
+    "schema_version": "operational-fx-source-v1",
+    "tax_components": [
+      {
+        "rate": "0.14",
+        "source": "Browser reviewed synthetic tax",
+        "version": "2026-v1",
+        "policy_id": "BROWSER-SYNTHETIC-TAX",
+        "account_code": "TAX",
+        "country_code": "EG",
+        "effective_to": "2026-12-31",
+        "policy_digest": "8a0852f00877c28f6223540b652b577cfe833363f5b183dd62bb04aacdc5ced1",
+        "effective_from": "2026-01-01",
+        "foreign_tax_minor": "1400",
+        "transaction_class": "synthetic-service",
+        "functional_tax_minor": "1750"
+      }
+    ],
+    "legal_entity_id": "entity",
+    "organization_id": "org",
+    "foreign_net_minor": "10001",
+    "foreign_tax_minor": "1400",
+    "functional_policy": {
+      "currency_code": "USD",
+      "currency_precision": 2,
+      "currency_registry_digest": "d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246",
+      "currency_rounding_policy": "ROUND_HALF_UP",
+      "currency_registry_version": "iso-4217-list-one-2026-01-01-rf1"
+    },
+    "preparer_actor_id": "erp-maker",
+    "foreign_gross_minor": "11401",
+    "functional_net_minor": "12501",
+    "functional_gross_minor": "14251",
+    "functional_allocation_policy": "converted-cumulative-prefix-v1"
+  },
+  "plan": {
+    "id": "FX1-61107d753f0547dda1570d69fd82b7a8",
+    "kind": "settle",
+    "reason": "Actual browser partial original foreign receipt",
+    "entry_id": "GLE-2cb672aef145141d",
+    "equation": {
+      "lines": [
+        {
+          "debit_minor": "8881",
+          "account_code": "CASH",
+          "credit_minor": "0"
+        },
+        {
+          "debit_minor": "0",
+          "account_code": "AR",
+          "credit_minor": "9251"
+        },
+        {
+          "debit_minor": "370",
+          "account_code": "LOSS",
+          "credit_minor": "0"
+        }
+      ],
+      "amount_minor": "9251",
+      "foreign_minor": "7401",
+      "settlement_rate": {
+        "rate": "1.2",
+        "source": "Browser settlement spot",
+        "effective_at": "2026-10-05T12:00:00Z"
+      },
+      "realized_fx_minor": "-370",
+      "foreign_after_minor": "11401",
+      "foreign_before_minor": "4000",
+      "functional_cash_minor": "8881",
+      "historical_after_minor": "14251",
+      "historical_before_minor": "5000",
+      "historical_release_minor": "9251"
+    },
+    "sequence": 4,
+    "snapshot": {
+      "entry": {
+        "id": "GLE-2cb672aef145141d",
+        "period_id": "period",
+        "journal_id": "FJ-d291fc6e482bb366",
+        "description": "Actual browser partial original foreign receipt",
+        "source_type": "Manual",
+        "entry_number": "FX1-61107D753F0547DDA1570D69FD82B7A8",
+        "posting_date": "2026-10-05",
+        "workspace_id": "work",
+        "currency_code": "USD",
+        "legal_entity_id": "entity",
+        "organization_id": "org",
+        "preparer_actor_id": "erp-maker",
+        "currency_precision": 2,
+        "external_reference": "FX:FX-cca6656375434e608ec8eb73d7635892:settle",
+        "reverses_posting_id": null,
+        "currency_registry_digest": "d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246",
+        "currency_rounding_policy": "ROUND_HALF_UP",
+        "currency_registry_version": "iso-4217-list-one-2026-01-01-rf1"
+      },
+      "lines": [
+        {
+          "account_id": "ACC-f07ac609fb8998a3",
+          "dimensions": {},
+          "debit_minor": "8881",
+          "description": "Actual browser partial original foreign receipt",
+          "line_number": 1,
+          "credit_minor": "0"
+        },
+        {
+          "account_id": "ACC-1b58a4c1d1cda81a",
+          "dimensions": {},
+          "debit_minor": "0",
+          "description": "Actual browser partial original foreign receipt",
+          "line_number": 2,
+          "credit_minor": "9251"
+        },
+        {
+          "account_id": "ACC-8561e748bfbf1710",
+          "dimensions": {},
+          "debit_minor": "370",
+          "description": "Actual browser partial original foreign receipt",
+          "line_number": 3,
+          "credit_minor": "0"
+        }
+      ],
+      "schema_version": "finance-entry-review-v1"
+    },
+    "period_id": "period",
+    "source_id": "FX-cca6656375434e608ec8eb73d7635892",
+    "plan_digest": "90b41fd3f6c1eb42745bbf04107442cdbac0d394de1ecd42deb16415c9e889ea",
+    "amount_minor": "9251",
+    "posting_date": "2026-10-05",
+    "workspace_id": "work",
+    "currency_code": "USD",
+    "source_digest": "dc33beae09d91d460a5ff836487923ce2155b8ebda679b265b976a936292dfae",
+    "schema_version": "operational-fx-plan-v1",
+    "command_request": {
+      "kind": "settle",
+      "reason": "Actual browser partial original foreign receipt",
+      "period_id": "period",
+      "source_id": "FX-cca6656375434e608ec8eb73d7635892",
+      "posting_date": "2026-10-05",
+      "foreign_minor": "7401",
+      "settlement_rate": {
+        "rate": "1.2",
+        "source": "Browser settlement spot",
+        "effective_at": "2026-10-05T12:00:00Z"
+      }
+    },
+    "legal_entity_id": "entity",
+    "organization_id": "org",
+    "preparer_actor_id": "erp-maker",
+    "validation_digest": "80577fdd42c518198ce16c75fafcd41a370f206aacd2f3faddcda400a9c181a8",
+    "currency_precision": 2,
+    "phase": 2,
+    "status": "Posted",
+    "reviewer_actor_id": "erp-checker",
+    "posting_effect_id": "PST-49d2edcaa38f40e6a63a12a8b01e27e6",
+    "receipt_id": "ARRCT-2cb672aef145141d"
+  },
+  "canonical_source_json": "{\"foreign_gross_minor\":11401,\"foreign_net_minor\":10001,\"foreign_policy\":{\"currency_code\":\"EUR\",\"currency_precision\":2,\"currency_registry_digest\":\"d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246\",\"currency_registry_version\":\"iso-4217-list-one-2026-01-01-rf1\",\"currency_rounding_policy\":\"ROUND_HALF_UP\"},\"foreign_tax_minor\":1400,\"functional_allocation_policy\":\"converted-cumulative-prefix-v1\",\"functional_gross_minor\":14251,\"functional_net_minor\":12501,\"functional_policy\":{\"currency_code\":\"USD\",\"currency_precision\":2,\"currency_registry_digest\":\"d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246\",\"currency_registry_version\":\"iso-4217-list-one-2026-01-01-rf1\",\"currency_rounding_policy\":\"ROUND_HALF_UP\"},\"id\":\"FX-cca6656375434e608ec8eb73d7635892\",\"invoice_id\":\"ARINV-d1b861c4a946b19c\",\"legal_entity_id\":\"entity\",\"lines\":[{\"account_code\":\"AR\",\"credit_minor\":0,\"debit_minor\":14251},{\"account_code\":\"REVENUE\",\"credit_minor\":12501,\"debit_minor\":0},{\"account_code\":\"TAX\",\"credit_minor\":1750,\"debit_minor\":0}],\"organization_id\":\"org\",\"preparer_actor_id\":\"erp-maker\",\"request\":{\"cash_account_code\":\"CASH\",\"country_code\":\"EG\",\"customer_code\":\"FOREIGN\",\"due_date\":\"2026-10-31\",\"entity_code\":\"ENTITY\",\"foreign_currency_code\":\"EUR\",\"gain_account_code\":\"GAIN\",\"invoice_number\":\"BROWSER-FX\",\"journal_code\":\"STOCK\",\"legal_entity_id\":\"entity\",\"loss_account_code\":\"LOSS\",\"net_minor\":10001,\"organization_code\":\"ORG\",\"organization_id\":\"org\",\"original_rate\":{\"effective_at\":\"2026-10-01T12:00:00Z\",\"rate\":\"1.25\",\"source\":\"Browser original spot\"},\"period_id\":\"period\",\"posting_date\":\"2026-10-01\",\"reason\":\"Actual browser retained foreign invoice\",\"receivable_account_code\":\"AR\",\"revenue_account_code\":\"REVENUE\",\"taxes\":[{\"account_code\":\"TAX\",\"country_code\":\"EG\",\"effective_from\":\"2026-01-01\",\"effective_to\":\"2026-12-31\",\"policy_digest\":\"8a0852f00877c28f6223540b652b577cfe833363f5b183dd62bb04aacdc5ced1\",\"policy_id\":\"BROWSER-SYNTHETIC-TAX\",\"rate\":\"0.14\",\"source\":\"Browser reviewed synthetic tax\",\"transaction_class\":\"synthetic-service\",\"version\":\"2026-v1\"}],\"transaction_class\":\"synthetic-service\",\"workspace_id\":\"work\"},\"schema_version\":\"operational-fx-source-v1\",\"tax_components\":[{\"account_code\":\"TAX\",\"country_code\":\"EG\",\"effective_from\":\"2026-01-01\",\"effective_to\":\"2026-12-31\",\"foreign_tax_minor\":1400,\"functional_tax_minor\":1750,\"policy_digest\":\"8a0852f00877c28f6223540b652b577cfe833363f5b183dd62bb04aacdc5ced1\",\"policy_id\":\"BROWSER-SYNTHETIC-TAX\",\"rate\":\"0.14\",\"source\":\"Browser reviewed synthetic tax\",\"transaction_class\":\"synthetic-service\",\"version\":\"2026-v1\"}],\"workspace_id\":\"work\"}",
+  "canonical_plan_json": "{\"amount_minor\":9251,\"command_request\":{\"foreign_minor\":7401,\"kind\":\"settle\",\"period_id\":\"period\",\"posting_date\":\"2026-10-05\",\"reason\":\"Actual browser partial original foreign receipt\",\"settlement_rate\":{\"effective_at\":\"2026-10-05T12:00:00Z\",\"rate\":\"1.2\",\"source\":\"Browser settlement spot\"},\"source_id\":\"FX-cca6656375434e608ec8eb73d7635892\"},\"currency_code\":\"USD\",\"currency_precision\":2,\"entry_id\":\"GLE-2cb672aef145141d\",\"equation\":{\"amount_minor\":9251,\"foreign_after_minor\":11401,\"foreign_before_minor\":4000,\"foreign_minor\":7401,\"functional_cash_minor\":8881,\"historical_after_minor\":14251,\"historical_before_minor\":5000,\"historical_release_minor\":9251,\"lines\":[{\"account_code\":\"CASH\",\"credit_minor\":0,\"debit_minor\":8881},{\"account_code\":\"AR\",\"credit_minor\":9251,\"debit_minor\":0},{\"account_code\":\"LOSS\",\"credit_minor\":0,\"debit_minor\":370}],\"realized_fx_minor\":-370,\"settlement_rate\":{\"effective_at\":\"2026-10-05T12:00:00Z\",\"rate\":\"1.2\",\"source\":\"Browser settlement spot\"}},\"id\":\"FX1-61107d753f0547dda1570d69fd82b7a8\",\"kind\":\"settle\",\"legal_entity_id\":\"entity\",\"organization_id\":\"org\",\"period_id\":\"period\",\"posting_date\":\"2026-10-05\",\"preparer_actor_id\":\"erp-maker\",\"reason\":\"Actual browser partial original foreign receipt\",\"schema_version\":\"operational-fx-plan-v1\",\"sequence\":4,\"snapshot\":{\"entry\":{\"currency_code\":\"USD\",\"currency_precision\":2,\"currency_registry_digest\":\"d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246\",\"currency_registry_version\":\"iso-4217-list-one-2026-01-01-rf1\",\"currency_rounding_policy\":\"ROUND_HALF_UP\",\"description\":\"Actual browser partial original foreign receipt\",\"entry_number\":\"FX1-61107D753F0547DDA1570D69FD82B7A8\",\"external_reference\":\"FX:FX-cca6656375434e608ec8eb73d7635892:settle\",\"id\":\"GLE-2cb672aef145141d\",\"journal_id\":\"FJ-d291fc6e482bb366\",\"legal_entity_id\":\"entity\",\"organization_id\":\"org\",\"period_id\":\"period\",\"posting_date\":\"2026-10-05\",\"preparer_actor_id\":\"erp-maker\",\"reverses_posting_id\":null,\"source_type\":\"Manual\",\"workspace_id\":\"work\"},\"lines\":[{\"account_id\":\"ACC-f07ac609fb8998a3\",\"credit_minor\":0,\"debit_minor\":8881,\"description\":\"Actual browser partial original foreign receipt\",\"dimensions\":{},\"line_number\":1},{\"account_id\":\"ACC-1b58a4c1d1cda81a\",\"credit_minor\":9251,\"debit_minor\":0,\"description\":\"Actual browser partial original foreign receipt\",\"dimensions\":{},\"line_number\":2},{\"account_id\":\"ACC-8561e748bfbf1710\",\"credit_minor\":0,\"debit_minor\":370,\"description\":\"Actual browser partial original foreign receipt\",\"dimensions\":{},\"line_number\":3}],\"schema_version\":\"finance-entry-review-v1\"},\"source_digest\":\"dc33beae09d91d460a5ff836487923ce2155b8ebda679b265b976a936292dfae\",\"source_id\":\"FX-cca6656375434e608ec8eb73d7635892\",\"workspace_id\":\"work\"}",
+  "canonical_snapshot_json": "{\"entry\":{\"currency_code\":\"USD\",\"currency_precision\":2,\"currency_registry_digest\":\"d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246\",\"currency_registry_version\":\"iso-4217-list-one-2026-01-01-rf1\",\"currency_rounding_policy\":\"ROUND_HALF_UP\",\"description\":\"Actual browser partial original foreign receipt\",\"entry_number\":\"FX1-61107D753F0547DDA1570D69FD82B7A8\",\"external_reference\":\"FX:FX-cca6656375434e608ec8eb73d7635892:settle\",\"id\":\"GLE-2cb672aef145141d\",\"journal_id\":\"FJ-d291fc6e482bb366\",\"legal_entity_id\":\"entity\",\"organization_id\":\"org\",\"period_id\":\"period\",\"posting_date\":\"2026-10-05\",\"preparer_actor_id\":\"erp-maker\",\"reverses_posting_id\":null,\"source_type\":\"Manual\",\"workspace_id\":\"work\"},\"lines\":[{\"account_id\":\"ACC-f07ac609fb8998a3\",\"credit_minor\":0,\"debit_minor\":8881,\"description\":\"Actual browser partial original foreign receipt\",\"dimensions\":{},\"line_number\":1},{\"account_id\":\"ACC-1b58a4c1d1cda81a\",\"credit_minor\":9251,\"debit_minor\":0,\"description\":\"Actual browser partial original foreign receipt\",\"dimensions\":{},\"line_number\":2},{\"account_id\":\"ACC-8561e748bfbf1710\",\"credit_minor\":0,\"debit_minor\":370,\"description\":\"Actual browser partial original foreign receipt\",\"dimensions\":{},\"line_number\":3}],\"schema_version\":\"finance-entry-review-v1\"}",
+  "native_effect": {
+    "id": "PST-49d2edcaa38f40e6a63a12a8b01e27e6",
+    "entry_id": "GLE-2cb672aef145141d",
+    "validation_digest": "80577fdd42c518198ce16c75fafcd41a370f206aacd2f3faddcda400a9c181a8",
+    "posted_actor_id": "erp-poster",
+    "audit_event_id": "AE-55681b7a45c743a8944487862d8f6cb4",
+    "outbox_event_id": "OBX-ca6c4b6cc1c14f88b2683625f6938acc"
+  },
+  "phases": [
+    {
+      "action": "operational_fx_prepared",
+      "actor_id": "erp-maker",
+      "audit_event_id": "AE-7c3f957d50cc4cd3a1e968e18569adbe",
+      "outbox_event_id": "OBX-3776078ab56149b68748b2f52dd83087"
+    },
+    {
+      "action": "operational_fx_reviewed",
+      "actor_id": "erp-checker",
+      "audit_event_id": "AE-a98284b351dd4d50b6d700dfe7aba872",
+      "outbox_event_id": "OBX-009e4717007f46c992bd56a1394d84eb"
+    },
+    {
+      "action": "operational_fx_posted",
+      "actor_id": "erp-poster",
+      "audit_event_id": "AE-09a798c49c354caa9918306a2b88a3e6",
+      "outbox_event_id": "OBX-f82497a3e41f4c608dfbf5bc9cd3d75c"
+    },
+    {
+      "action": "finance_entry_posted",
+      "actor_id": "erp-poster",
+      "audit_event_id": "AE-55681b7a45c743a8944487862d8f6cb4",
+      "outbox_event_id": "OBX-ca6c4b6cc1c14f88b2683625f6938acc"
+    }
+  ],
+  "totals": {
+    "debit_minor": "9251",
+    "credit_minor": "9251"
+  }
+}

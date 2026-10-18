@@ -3,6 +3,9 @@
 Migration 15 adds a bounded local Accounts Payable workflow for supplier master data,
 purchase orders, posted goods receipts, supplier invoices, and deterministic three-way
 matching. It is a finance-controls foundation, not a complete AP subledger.
+The same bounded lifecycle also has PostgreSQL persistence and authenticated
+tenant-scoped HTTP routes. Current live evidence covers both adapters, cumulative
+quantity conservation, concurrent approvals/receipts and atomic audit/outbox rollback.
 
 ## Supported lifecycle
 
@@ -29,6 +32,10 @@ reserved for explicitly local service operation.
   deterministic for the relevant business key.
 - Invoice totals must equal the sum of line totals plus invoice-level tax.
 - Receipts cannot exceed the ordered quantity for a purchase-order line.
+- Approved/Paid invoice quantities consume received capacity cumulatively. Repeated
+  references to one PO line are aggregated; partial invoices may pass within remaining
+  capacity. Approval rechecks under the receipt/matching lock, and approved invoices
+  cannot reenter matching. Existing over-approved history requires explicit review.
 - Supplier, purchase-order, invoice, and receipt currencies must be explicit; this
   slice requires the supplier currency and document currency to agree.
 
@@ -65,7 +72,7 @@ This release does not implement:
 - payment proposals, payment batches, bank execution, or settlement reconciliation;
 - credit/debit notes, prepayments, withholding, tax engines, or exchange-rate revaluation;
 - vendor remittance, procurement approvals beyond the local PO lifecycle, or ERP writeback;
-- PostgreSQL persistence, distributed workers, Redis coordination, or hosted tenant isolation.
+- a complete distributed purchase-to-payment deployment or end-to-end hosted tenant isolation.
 
 Those capabilities require separate bounded contexts, versioned migrations, accounting
 invariants, security/SoD tests, and source-system integration contracts.

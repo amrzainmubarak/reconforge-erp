@@ -59,6 +59,15 @@ const pageLabels: Record<StudioPage, MessageKey> = {
   budgetControl: "budgetControl",
   inventoryReceipt: "inventoryReceipt",
   durableJobs: "durableJobs",
+  treasuryLiquidity: "treasuryLiquidity",
+  manufacturingBom: "manufacturingBom",
+  hcmLeave: "hcmLeave",
+  crmContracts: "crmContracts",
+  intercompanyEliminations: "intercompanyEliminations",
+  shopFloorTraceability: "shopFloorTraceability",
+  projectMilestoneBilling: "projectMilestoneBilling",
+  consolidatedStatements: "consolidatedStatements",
+  masterProductionSchedule: "masterProductionSchedule",
 };
 
 interface TopbarProps {

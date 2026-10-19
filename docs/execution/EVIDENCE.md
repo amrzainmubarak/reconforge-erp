@@ -1,5 +1,27 @@
 # ReconForge Execution Evidence Log
 
+## Enterprise ERP v1.0 Level 2 PostgreSQL & Multi-Agent Verification Evidence — 2026-10-19
+
+Verified on branch `amr/enterprise-erp-v1-execution-20261018` at commit `f37a6ab4`:
+- Native PostgreSQL verification suite: `tests/test_postgres_enterprise_integration.py` passes 4/4 cases in 0.56s.
+  - Test 1: `test_postgres_shop_floor_multi_tenant_isolation_and_genealogy` (Tenant A vs Tenant B isolation, forward/backward lot recall, quantity conservation).
+  - Test 2: `test_postgres_project_milestone_billing_gl_and_financial_posture` (WBS task, rate card, maker-checker milestone verification, ACCOUNTS_RECEIVABLE / PROJECT_SERVICE_REVENUE GL entries, exact margin basis points).
+  - Test 3: `test_postgres_consolidated_statements_and_mps_isolation` (Multi-entity balance sheet, P&L, cash flows, MPS shortage procurement requisitions, tenant isolation).
+  - Test 4: `test_postgres_intercompany_profit_in_stock_zero_leakage_and_isolation` (Parent + NCI exact mathematical conservation, COGS_ELIMINATION / INVENTORY_VALUATION GL entries).
+- Full Python Enterprise test suite passes 26/26 cases in 8.74s:
+  - `tests/test_consolidated_financial_statements.py` (3 passed)
+  - `tests/test_api_consolidated_financial_statements.py` (2 passed)
+  - `tests/test_master_production_schedule.py` (3 passed)
+  - `tests/test_api_master_production_schedule.py` (2 passed)
+  - `tests/test_api_shop_floor_traceability.py` (4 passed)
+  - `tests/test_manufacturing_shop_floor_genealogy.py` (6 passed)
+  - `tests/test_api_project_milestone_billing.py` (4 passed)
+  - `tests/test_project_milestone_billing.py` (4 passed)
+  - `tests/test_api_v1_enterprise_integration_v3.py` (2 passed)
+- Full Web test suite (`npm --prefix apps/web run test:run`) passes 104/104 files, 1,114 tests in 71.38s.
+- Web typecheck (`npm --prefix apps/web run typecheck`) passes with 0 errors.
+- Python AST verification confirms 0 float operations across all newly added financial, tax, and inventory code.
+
 ## PR141 pre-merge review and component focus race — 2026-10-18
 
 `output/pr141-merge-review/web-failed-4ff88aff.log` retains CI39109318110's

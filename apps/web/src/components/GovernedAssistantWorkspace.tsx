@@ -350,7 +350,8 @@ export function GovernedAssistantWorkspace({ locale }: GovernedAssistantWorkspac
           {/* Security Alert Banners */}
           {responseView.security_refusal && (
             <div
-              role="alert"
+              role="status"
+              aria-live="polite"
               style={{
                 padding: "1rem",
                 borderRadius: "8px",
@@ -367,7 +368,8 @@ export function GovernedAssistantWorkspace({ locale }: GovernedAssistantWorkspac
 
           {responseView.autonomous_gl_refusal && (
             <div
-              role="alert"
+              role="status"
+              aria-live="polite"
               style={{
                 padding: "1rem",
                 borderRadius: "8px",

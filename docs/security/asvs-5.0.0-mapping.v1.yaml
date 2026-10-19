@@ -74,7 +74,7 @@ chapters:
         scope: SQLite and PostgreSQL repository queries reviewed in the current bounded paths.
         owner: platform-security
         evidence: [reconforge/db/backup.py, reconforge/infrastructure/postgres.py]
-        test_evidence: [tests/test_db_backup_restore.py, tests/test_db_backup_structured_ingress.py, tests/test_postgres_foundation.py]
+        test_evidence: [tests/test_db_backup_restore.py, tests/test_db_backup_structured_ingress.py, tests/test_postgres_foundation.py, tests/test_postgres_rls_hostile_context.py]
         assessment: Values use parameters and dynamic identifiers in the reviewed backup path pass a strict identifier allowlist.
         gap_or_limitation: No whole-repository query audit or live database injection assessment has been completed.
         next_action: Add a query-construction inventory and injection-focused contract tests for every persistence adapter.

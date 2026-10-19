@@ -162,9 +162,23 @@ export function HcmLeaveWorkspace({ locale }: HcmLeaveWorkspaceProps) {
   };
 
   const handleCancel = (reqId: string) => {
+    const target = requests.find((r) => r.id === reqId);
     setRequests(requests.map((r) => (r.id === reqId ? { ...r, status: "Cancelled" } : r)));
+    if (target && target.status === "Approved") {
+      setBalances((prev) =>
+        prev.map((b) =>
+          b.leave_type === target.leave_type
+            ? {
+                ...b,
+                used_days: Math.max(0, b.used_days - target.days_count),
+                remaining_days: b.remaining_days + target.days_count,
+              }
+            : b
+        )
+      );
+    }
     setFeedback({
-      message: isAr ? `تم إلغاء الطلب ${reqId}` : `Request ${reqId} cancelled`,
+      message: isAr ? `تم إلغاء الطلب ${reqId} واسترداد الرصيد` : `Request ${reqId} cancelled and balance restored`,
       type: "success",
     });
   };
@@ -199,7 +213,8 @@ export function HcmLeaveWorkspace({ locale }: HcmLeaveWorkspaceProps) {
 
       {feedback && (
         <div
-          role="alert"
+          role="status"
+          aria-live="polite"
           tabIndex={0}
           style={{
             padding: "1rem",

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { Locale } from "../types";
 import { translate } from "../i18n";
 import "./FinancialReportingPage.css";
@@ -245,7 +245,8 @@ export function ProjectMilestoneWorkspace({ locale }: ProjectMilestoneWorkspaceP
 
       {feedback && (
         <div
-          role="alert"
+          role="status"
+          aria-live="polite"
           tabIndex={0}
           style={{
             padding: "1rem",
@@ -428,7 +429,7 @@ export function ProjectMilestoneWorkspace({ locale }: ProjectMilestoneWorkspaceP
             </thead>
             <tbody>
               {tasks.map((task) => (
-                <>
+                <Fragment key={task.id}>
                   <tr key={task.id} style={{ background: "#f8faf9", fontWeight: 600 }}>
                     <td><code>{task.code}</code></td>
                     <td>{task.title}</td>
@@ -455,7 +456,7 @@ export function ProjectMilestoneWorkspace({ locale }: ProjectMilestoneWorkspaceP
                       </td>
                     </tr>
                   ))}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

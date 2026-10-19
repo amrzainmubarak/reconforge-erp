@@ -225,7 +225,8 @@ export function CrmSubscriptionWorkspace({ locale }: CrmSubscriptionWorkspacePro
 
       {feedback && (
         <div
-          role="alert"
+          role="status"
+          aria-live="polite"
           tabIndex={0}
           style={{
             padding: "1rem",

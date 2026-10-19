@@ -28,12 +28,14 @@ import type { MessageKey } from "../i18n";
 import type { StudioPage } from "../types";
 import { isLiveOperationalPage, operationalPageLabel } from "../studio-pages";
 
+export type NavStudioPage = StudioPage | "crmSubscriptions" | "governedAssistant" | "projectMilestones";
+
 export interface NavigationItem {
   key: string;
   label: MessageKey;
   icon: ComponentType<{ size?: number; "aria-hidden"?: boolean | "true" | "false" }>;
   href?: string;
-  page?: StudioPage;
+  page?: NavStudioPage;
   status?: "foundation" | "planned";
 }
 
@@ -69,6 +71,12 @@ export const navigationGroups: NavigationGroup[] = [
       { key: "procurement-partial", label: "procurementPartial", icon: Boxes, page: "procurementPartial" },
       { key: "sales-revenue", label: "salesRevenue", icon: FileChartColumn, page: "salesRevenue" },
       { key: "procurement-operations", label: "procurementOperations", icon: Boxes, page: "procurementOperations" },
+      { key: "crm-subscriptions", label: "crmSubscriptions", icon: CreditCard, page: "crmSubscriptions" },
+      { key: "hcm-leave", label: "hcmLeave", icon: ClipboardCheck, page: "hcmLeave" },
+      { key: "project-milestones", label: "projectMilestones", icon: FileChartColumn, page: "projectMilestones" },
+      { key: "master-production-schedule", label: "masterProductionSchedule", icon: Factory, page: "masterProductionSchedule" },
+      { key: "shop-floor-traceability", label: "shopFloorTraceability", icon: Boxes, page: "shopFloorTraceability" },
+      { key: "consolidated-statements", label: "consolidatedStatements", icon: Landmark, page: "consolidatedStatements" },
     ],
   },
   {
@@ -102,6 +110,7 @@ export const navigationGroups: NavigationGroup[] = [
   {
     label: "platform",
     items: [
+      { key: "governed-assistant", label: "governedAssistant", icon: Sparkles, page: "governedAssistant" },
       { key: "reports", label: "reports", icon: FileChartColumn, href: `${currentStudio}/downloads`, status: "foundation" },
       { key: "packs", label: "packs", icon: PackageSearch, href: `${currentStudio}/control-packs`, status: "foundation" },
       { key: "mapping", label: "mappingStudio", icon: FileInput, page: "mapping", status: "foundation" },
@@ -122,12 +131,12 @@ interface SidebarProps {
   mobileOpen: boolean;
   onCollapse: () => void;
   onMobileClose: () => void;
-  activePage: StudioPage;
-  onNavigate: (page: StudioPage) => void;
+  activePage: NavStudioPage;
+  onNavigate: (page: NavStudioPage) => void;
 }
 
 export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobileClose, activePage, onNavigate }: SidebarProps) {
-  const liveOperationalPage = isLiveOperationalPage(activePage);
+  const liveOperationalPage = isLiveOperationalPage(activePage as StudioPage);
   return (
     <aside className={`sidebar ${collapsed ? "sidebar--collapsed" : ""} ${mobileOpen ? "sidebar--mobile-open" : ""}`}>
       <div className="brand-row">
@@ -147,7 +156,7 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
         <summary className="workspace-switcher" aria-label={translate("workspaceDetails")}>
           <span className="workspace-avatar">FC</span>
           <span className="workspace-copy">
-            <strong>{translate(operationalPageLabel(activePage) ?? "local")}</strong>
+            <strong>{translate(operationalPageLabel(activePage as StudioPage) ?? (activePage === "crmSubscriptions" ? "crmSubscriptions" : activePage === "projectMilestones" ? "projectMilestones" : activePage === "governedAssistant" ? "governedAssistant" : "local"))}</strong>
             <small>{translate(liveOperationalPage ? "arLiveSession" : "preview")}</small>
           </span>
           <ChevronDown className="workspace-chevron" size={15} aria-hidden="true" />
@@ -216,7 +225,7 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
           <span className="status-dot" aria-hidden="true" />
           <span>
             <strong>{translate(liveOperationalPage ? "arLiveSession" : "readOnly")}</strong>
-            <small>{translate(operationalPageLabel(activePage) ?? "localNote")}</small>
+            <small>{translate(operationalPageLabel(activePage as StudioPage) ?? (activePage === "crmSubscriptions" ? "crmSubscriptions" : activePage === "projectMilestones" ? "projectMilestones" : activePage === "governedAssistant" ? "governedAssistant" : "localNote"))}</small>
           </span>
         </div>
         <button className="collapse-button" type="button" onClick={onCollapse} aria-label={translate(collapsed ? "expandSidebar" : "collapseSidebar")}>
@@ -232,12 +241,12 @@ interface MobileDockProps {
   translate: (key: MessageKey) => string;
   onMenu: () => void;
   onQuickAction: () => void;
-  activePage: StudioPage;
-  onNavigate: (page: StudioPage) => void;
+  activePage: NavStudioPage;
+  onNavigate: (page: NavStudioPage) => void;
 }
 
 export function MobileDock({ translate, onMenu, onQuickAction, activePage, onNavigate }: MobileDockProps) {
-  const live = isLiveOperationalPage(activePage);
+  const live = isLiveOperationalPage(activePage as StudioPage);
   return (
     <nav className="mobile-dock" aria-label={translate("mobileNav")}>
       <button type="button" className={`mobile-dock-item ${activePage === (live ? "enterpriseFinance" : "dashboard") ? "mobile-dock-item--active" : ""}`} onClick={() => onNavigate(live ? "enterpriseFinance" : "dashboard")}>

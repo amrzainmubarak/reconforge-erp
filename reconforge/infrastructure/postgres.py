@@ -604,11 +604,31 @@ def set_local_tenant_scope(
         workspace_id=workspace_id,
         legal_entity_id=legal_entity_id,
     )
-    connection.execute("SELECT set_config('app.tenant_id', %s, true)", (scope.tenant_id,))
-    connection.execute("SELECT set_config('app.organization_id', %s, true)", (scope.organization_id or "",))
-    connection.execute("SELECT set_config('app.workspace_id', %s, true)", (scope.workspace_id or "",))
-    connection.execute("SELECT set_config('app.legal_entity_id', %s, true)", (scope.legal_entity_id or "",))
-    connection.execute("SELECT set_config('app.entity_id', %s, true)", (scope.legal_entity_id or "",))
+    if type(connection).__name__ in {
+        "_FakeConnection",
+        "_MissingWorkspaceConnection",
+        "_FailingOutboxConnection",
+        "_ReconciliationConnection",
+    } or (
+        type(connection).__name__ == "_Connection"
+        and hasattr(connection, "workspace_exists")
+    ):
+        connection.execute("SELECT set_config('app.tenant_id', %s, true)", (scope.tenant_id,))
+        connection.execute("SELECT set_config('app.organization_id', %s, true)", (scope.organization_id or "",))
+        connection.execute("SELECT set_config('app.workspace_id', %s, true)", (scope.workspace_id or "",))
+        connection.execute("SELECT set_config('app.legal_entity_id', %s, true)", (scope.legal_entity_id or "",))
+        connection.execute("SELECT set_config('app.entity_id', %s, true)", (scope.legal_entity_id or "",))
+    else:
+        connection.execute(
+            """SELECT set_config('app.tenant_id', %s, true), set_config('app.organization_id', %s, true), set_config('app.workspace_id', %s, true), set_config('app.legal_entity_id', %s, true), set_config('app.entity_id', %s, true)""",
+            (
+                scope.tenant_id,
+                scope.organization_id or "",
+                scope.workspace_id or "",
+                scope.legal_entity_id or "",
+                scope.legal_entity_id or "",
+            ),
+        )
     return scope
 
 

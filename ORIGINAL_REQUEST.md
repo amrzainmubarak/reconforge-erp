@@ -145,3 +145,71 @@ Execute and qualify complete end-to-end operational cycles:
 - [ ] High-volume benchmarks executed and documented with reproducible environment specs, wall-clock time, memory, and throughput.
 - [ ] Country coverage register accurately reflects verified statutory capabilities for Egypt, KSA, UAE, UK, and US without unverified compliance claims.
 - [ ] Final release candidate and comprehensive completion report prepared.
+
+
+## 2026-10-19T16:37:49Z
+
+Transform ReconForge from a functionally complete Enterprise ERP release into an exceptionally reliable, secure, efficient, intuitive, innovative, and internationally competitive enterprise operating platform with independently verifiable engineering leadership against SAP S/4HANA, Oracle Fusion, Microsoft Dynamics 365, NetSuite, and Odoo.
+
+Working directory: F:\reconforge-erp
+Integrity mode: benchmark
+
+The team is requested as three specialized domain agents (Agent A: Independent QA, Security & Reliability, Agent B: Principal Software Architecture & PostgreSQL Performance, Agent C: Enterprise Product UX & Competitive Innovation) supervised by one Principal Engineering Authority in a single shared workspace.
+
+## Prerequisite Entry Gate
+- Verify the preceding Enterprise ERP Completion and Production Qualification program has met its mandatory acceptance criteria. Baseline commit 04b78c5a on branch amr/enterprise-erp-v1-execution-20261018 verified with 170 Python unit/adversarial tests and 1,114 Web component tests passing, 0 ruff errors, 0 mypy issues, zero float operations.
+- Single working directory policy strictly maintained in F:\reconforge-erp with zero additional Git worktrees.
+
+## Requirements
+
+### R1. Independent QA, Security & Reliability Assurance (Agent A)
+- Execute comprehensive adversarial testing of financial, operational, and database invariants: double-entry balancing (Debit == Credit), exact minor-unit money arithmetic (zero float instances), FIFO consumption and restitution, cross-tenant PostgreSQL FORCE RLS isolation, and deadlock/concurrency resilience.
+- Conduct security evaluations against OWASP ASVS 5.0, OWASP API Security Top 10, NIST SP 800-218 SSDF, and SLSA v1.2 software supply-chain integrity standards on authorized ReconForge endpoints and containers.
+- Perform fault injection, worker crash recovery, and transaction rollback verification; implement independent test oracles with zero self-certification.
+
+### R2. Principal Software Architecture & High-Performance PostgreSQL Engineering (Agent B)
+- Profile and optimize PostgreSQL query plans, connection efficiency, indexing, and durable background job execution without weakening FORCE RLS, authorization, or audit logging.
+- Improve transaction throughput, batching, and cache safety across high-volume ERP workflows (financial posting, inventory movements, bank reconciliations, and manufacturing runs).
+- Benchmark workloads progressively (1K -> 10K -> 100K transactions) with reproducible hardware/software telemetry, latency percentiles (p50, p95, p99), and resource consumption tracking.
+
+### R3. Enterprise Product Design, Accessible UX & Competitive Innovation (Agent C)
+- Refactor and optimize core enterprise user journeys (order-to-cash, procure-to-pay, plan-to-produce, record-to-report, hire-to-retire) for measurable task efficiency and reduced context switching.
+- Ensure strict compliance with WCAG 2.2 Level AA accessibility standards, responsive desktop/tablet layouts, and flawless Arabic (RTL) and English (LTR) bidirectional localization.
+- Conduct evidence-based competitive analysis of SAP, Oracle Fusion, Dynamics 365, NetSuite, and Odoo, engineering demonstrable differentiators: Evidence-Native ERP, explainable financial reconciliation, self-diagnosing operations, and human-governed enterprise AI.
+
+### R4. Architectural Governance, Git Serialization & Integration Authority (Principal Lead)
+- Maintain strict single-directory development in F:\reconforge-erp with zero worktree expansion and disjoint file allocations.
+- Control shared database migrations, API schemas, and Git commits under the authorized Amr identity.
+- Enforce the 3-tier CI gate hierarchy: Level 1 Fast Local Gate (< 30s), Level 2 Domain Integration Gate (< 3m), and Level 3 Release Acceptance Gate.
+
+## Acceptance Criteria
+
+### Gate Q: Quality Assurance & Financial Integrity
+- [ ] 0 unresolved P0/P1 functional defects across all core ERP domains.
+- [ ] 100% mathematical conservation verified: zero float instances in financial/tax/inventory paths; balanced journal vouchers (Debit == Credit).
+- [ ] Additive FIFO restitution and cost-layer integrity mathematically proven under concurrent returns.
+
+### Gate S: Security & Isolation Assurance
+- [ ] 0 unresolved exploitable Critical or High vulnerabilities across OWASP ASVS / API Top 10 checks.
+- [ ] PostgreSQL FORCE RLS tenant isolation verified under hostile context-switching and multi-tenant queries.
+- [ ] Tamper-evident cryptographic SHA-256 audit chaining intact across all state-mutating operations.
+
+### Gate U: User Experience & Accessibility
+- [ ] WCAG 2.2 Level AA compliance verified across all Studio workspaces with zero layout truncation in Arabic (RTL) or English (LTR).
+- [ ] Core Web Vitals targets satisfied for web experiences: LCP <= 2.5s, INP <= 200ms, CLS <= 0.1 at p75 under controlled conditions.
+- [ ] Usability improvements measured on critical paths (PO creation, invoice processing, bank reconciliation, period close).
+
+### Gate P: Performance & Reliability
+- [ ] Reproducible benchmark suite executed across 1K, 10K, and 100K transaction tiers with full latency (p50/p95/p99) and resource telemetry recorded.
+- [ ] Zero data loss or corruption during controlled worker crashes, queue delays, and transactional rollbacks.
+- [ ] Performance gains achieved without weakening financial invariants, security policies, or audit trails.
+
+### Gate I: Innovation & Competitive Proof
+- [ ] Sourced competitive limitation and capability matrix covering SAP, Oracle, Microsoft, NetSuite, and Odoo.
+- [ ] Verified technical differentiation delivered in Evidence-Native audit graphs, explainable reconciliation, and governed AI.
+- [ ] All competitive claims classified defensibly (Parity Verified, ReconForge Advantage Verified, Competitor Advantage Verified, or Inconclusive).
+
+### Gate R: Release Engineering & Supply-Chain Integrity
+- [ ] Reproducible build, pinned dependencies, clean SBOM generation, and SLSA supply-chain verification.
+- [ ] Versioned database migrations execute cleanly forward and backward with verified restore parity.
+- [ ] Final Engineering Quality Scorecard, Acceptance Report, Defect Resolution Register, and Release Candidate completed.

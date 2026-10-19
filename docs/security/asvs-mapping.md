@@ -74,7 +74,7 @@ not applicable. ReconForge is not assigned an ASVS verification level.
 The mapping makes several high-impact gaps visible rather than averaging them
 away:
 
-- spreadsheet formula-injection policy is not consistent across exports;
+- spreadsheet formula-injection neutralization (prefixing `=, +, -, @` with single quotes) is verified for tabular exports in `tests/test_security_asvs_api_top10.py`; broader legacy format adapters continue to undergo hardening;
 - canonical tabular and selected structured-document limits, including FI-011
   close files and two FI-012 manifest readers, are implemented; FI-012 also
   freezes resource-bounded JSON/CSV/text/non-redacted copies and stages the

@@ -1332,6 +1332,164 @@ class PostgresReconciliationRepository:
             ).fetchone()
         return self._record(row, self._RESULT_COLUMNS)
 
+    def append_results_batch(
+        self,
+        *,
+        tenant_id: str,
+        run_id: str,
+        items: Sequence[dict[str, Any]],
+        chunk_size: int = 500,
+    ) -> list[dict[str, Any]]:
+        """Batch append results with set-based input existence verification and chunked inserts."""
+        if not items:
+            return []
+        tenant = self._tenant(tenant_id)
+        run = self._id(run_id, "run_id")
+        self._run_row(tenant, run, lock=True)
+
+        prepared: list[dict[str, Any]] = []
+        left_ids: set[str] = set()
+        right_ids: set[str] = set()
+
+        for item in items:
+            left = self._text(item.get("left_id") or "", "left_id", maximum=255, allow_blank=True)
+            right = self._text(item.get("right_id") or "", "right_id", maximum=255, allow_blank=True)
+            if not left and not right:
+                raise PostgresReconciliationValidationError("A result must identify a left or right source record.")
+            selected_type = self._text(item.get("match_type") or "", "match_type", maximum=64)
+            confidence_text = self._decimal(item.get("confidence"), "confidence", maximum_scale=8, maximum_integer_digits=1)
+            if confidence_text is None or Decimal(confidence_text) > Decimal("1"):
+                raise PostgresReconciliationValidationError("confidence must be between 0 and 1.")
+            explanation_text = self._text(item.get("explanation") or "", "explanation", maximum=4_000)
+            difference = self._decimal(item.get("amount_difference"), "amount_difference") or "0"
+            date_diff = item.get("date_difference_days")
+            if date_diff is None:
+                day_difference = None
+            else:
+                try:
+                    day_difference = int(date_diff)
+                except (TypeError, ValueError) as exc:
+                    raise PostgresReconciliationValidationError("date_difference_days must be an integer.") from exc
+                if not 0 <= day_difference <= 10_000_000:
+                    raise PostgresReconciliationValidationError("date_difference_days is outside the supported range.")
+            selected_status = self._choice(item.get("status") or "", "status", _RESULT_STATUSES)
+            reason = self._text(item.get("reason_code") or "", "reason_code", maximum=64, allow_blank=True)
+            lineage_json = self._json_text(item.get("lineage"), "lineage")
+
+            result_id = (
+                "result-"
+                + self._hash_payload(
+                    {
+                        "tenant_id": tenant,
+                        "run_id": run,
+                        "left_id": left,
+                        "right_id": right,
+                        "match_type": selected_type,
+                        "status": selected_status,
+                    }
+                )[:48]
+            )
+            if left:
+                left_ids.add(left)
+            if right:
+                right_ids.add(right)
+            prepared.append(
+                {
+                    "id": result_id,
+                    "left_id": left,
+                    "right_id": right,
+                    "match_type": selected_type,
+                    "confidence": confidence_text,
+                    "explanation": explanation_text,
+                    "amount_difference": difference,
+                    "date_difference_days": day_difference,
+                    "status": selected_status,
+                    "reason_code": reason,
+                    "lineage_json": lineage_json,
+                }
+            )
+
+        if left_ids:
+            left_list = list(left_ids)
+            found_left: set[str] = set()
+            for i in range(0, len(left_list), 1000):
+                batch_left = left_list[i : i + 1000]
+                rows = self.connection.execute(
+                    "SELECT source_id FROM reconforge.reconciliation_inputs WHERE tenant_id = %s AND run_id = %s AND side = 'Left' AND source_id = ANY(%s)",
+                    (tenant, run, batch_left),
+                ).fetchall()
+                found_left.update(self._row_value(r, "source_id", 0) for r in rows)
+            if len(found_left) != len(left_ids):
+                raise PostgresReconciliationIntegrityError("Result references an unregistered left input record.")
+
+        if right_ids:
+            right_list = list(right_ids)
+            found_right: set[str] = set()
+            for i in range(0, len(right_list), 1000):
+                batch_right = right_list[i : i + 1000]
+                rows = self.connection.execute(
+                    "SELECT source_id FROM reconforge.reconciliation_inputs WHERE tenant_id = %s AND run_id = %s AND side = 'Right' AND source_id = ANY(%s)",
+                    (tenant, run, batch_right),
+                ).fetchall()
+                found_right.update(self._row_value(r, "source_id", 0) for r in rows)
+            if len(found_right) != len(right_ids):
+                raise PostgresReconciliationIntegrityError("Result references an unregistered right input record.")
+
+        results: list[dict[str, Any]] = []
+        for i in range(0, len(prepared), chunk_size):
+            chunk = prepared[i : i + chunk_size]
+            values_clauses = []
+            params: list[Any] = []
+            for p in chunk:
+                values_clauses.append("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CAST(%s AS jsonb))")
+                params.extend([
+                    tenant,
+                    p["id"],
+                    run,
+                    p["left_id"],
+                    p["right_id"],
+                    p["match_type"],
+                    p["confidence"],
+                    p["explanation"],
+                    p["amount_difference"],
+                    p["date_difference_days"],
+                    p["status"],
+                    p["reason_code"],
+                    p["lineage_json"],
+                ])
+            sql = f"""
+                INSERT INTO reconforge.reconciliation_results
+                    (tenant_id, id, run_id, left_id, right_id, match_type, confidence, explanation,
+                     amount_difference, date_difference_days, status, reason_code, lineage_json)
+                VALUES {", ".join(values_clauses)}
+                ON CONFLICT (tenant_id, id) DO NOTHING
+                RETURNING tenant_id, id, run_id, left_id, right_id, match_type, confidence, explanation,
+                          amount_difference, date_difference_days, status, reason_code, lineage_json, created_at
+            """
+            cursor = self.connection.execute(sql, tuple(params))
+            fetched = cursor.fetchall() if hasattr(cursor, "fetchall") else ()
+            returned_by_id = {self._row_value(r, "id", 1): r for r in fetched}
+
+            missing_ids = [p["id"] for p in chunk if p["id"] not in returned_by_id]
+            if missing_ids:
+                existing_rows = self.connection.execute(
+                    """
+                    SELECT tenant_id, id, run_id, left_id, right_id, match_type, confidence, explanation,
+                           amount_difference, date_difference_days, status, reason_code, lineage_json, created_at
+                    FROM reconforge.reconciliation_results
+                    WHERE tenant_id = %s AND id = ANY(%s)
+                    """,
+                    (tenant, missing_ids),
+                ).fetchall()
+                for r in existing_rows:
+                    returned_by_id[self._row_value(r, "id", 1)] = r
+
+            for p in chunk:
+                r = returned_by_id.get(p["id"])
+                if r is not None:
+                    results.append(self._record(r, self._RESULT_COLUMNS))
+        return results
+
     def append_exception(
         self,
         *,
@@ -1406,6 +1564,121 @@ class PostgresReconciliationRepository:
             ),
         )
         return self._record(cursor.fetchone(), self._EXCEPTION_COLUMNS)
+
+    def append_exceptions_batch(
+        self,
+        *,
+        tenant_id: str,
+        run_id: str,
+        items: Sequence[dict[str, Any]],
+        chunk_size: int = 500,
+    ) -> list[dict[str, Any]]:
+        """Batch append explainable exceptions with chunked multi-row inserts."""
+        if not items:
+            return []
+        tenant = self._tenant(tenant_id)
+        run = self._id(run_id, "run_id")
+        self._run_row(tenant, run, lock=True)
+
+        prepared: list[dict[str, Any]] = []
+        for item in items:
+            selected_type = self._text(item.get("exception_type") or "", "exception_type", maximum=64)
+            side = self._choice(item.get("source_side") or "", "source_side", _SIDES)
+            source = self._text(item.get("source_id") or "", "source_id", maximum=255)
+            selected_title = self._text(item.get("title") or "", "title", maximum=255)
+            details = self._text(item.get("explanation") or "", "explanation", maximum=4_000)
+            selected_severity = self._choice(item.get("severity") or "", "severity", _EXCEPTION_SEVERITIES)
+            score = self._decimal(item.get("risk_score"), "risk_score", maximum_scale=8, maximum_integer_digits=1)
+            if score is None or Decimal(score) > Decimal("1"):
+                raise PostgresReconciliationValidationError("risk_score must be between 0 and 1.")
+            reason = self._text(item.get("reason_code") or "", "reason_code", maximum=64)
+            owner = self._text(item.get("owner_id") or "", "owner_id", maximum=160, allow_blank=True)
+            evidence_json = self._json_text(item.get("evidence"), "evidence")
+            exception_id = (
+                "exception-"
+                + self._hash_payload(
+                    {
+                        "tenant_id": tenant,
+                        "run_id": run,
+                        "exception_type": selected_type,
+                        "source_side": side,
+                        "source_id": source,
+                        "reason_code": reason,
+                    }
+                )[:48]
+            )
+            prepared.append(
+                {
+                    "id": exception_id,
+                    "exception_type": selected_type,
+                    "source_side": side,
+                    "source_id": source,
+                    "title": selected_title,
+                    "explanation": details,
+                    "severity": selected_severity,
+                    "risk_score": score,
+                    "owner_id": owner,
+                    "reason_code": reason,
+                    "evidence_json": evidence_json,
+                }
+            )
+
+        results: list[dict[str, Any]] = []
+        for i in range(0, len(prepared), chunk_size):
+            chunk = prepared[i : i + chunk_size]
+            values_clauses = []
+            params: list[Any] = []
+            for p in chunk:
+                values_clauses.append("(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CAST(%s AS jsonb))")
+                params.extend([
+                    tenant,
+                    p["id"],
+                    run,
+                    p["exception_type"],
+                    p["source_side"],
+                    p["source_id"],
+                    p["title"],
+                    p["explanation"],
+                    p["severity"],
+                    p["risk_score"],
+                    p["owner_id"],
+                    p["reason_code"],
+                    p["evidence_json"],
+                ])
+            sql = f"""
+                INSERT INTO reconforge.reconciliation_exceptions
+                    (tenant_id, id, run_id, exception_type, source_side, source_id, title, explanation,
+                     severity, risk_score, owner_id, reason_code, evidence_json)
+                VALUES {", ".join(values_clauses)}
+                ON CONFLICT (tenant_id, id) DO NOTHING
+                RETURNING tenant_id, id, run_id, exception_type, source_side, source_id, title, explanation,
+                          severity, risk_score, workflow_status, owner_id, reason_code, evidence_json,
+                          created_at, updated_at
+            """
+            cursor = self.connection.execute(sql, tuple(params))
+            fetched = cursor.fetchall() if hasattr(cursor, "fetchall") else ()
+            returned_by_id = {self._row_value(r, "id", 1): r for r in fetched}
+
+            missing_ids = [p["id"] for p in chunk if p["id"] not in returned_by_id]
+            if missing_ids:
+                existing_rows = self.connection.execute(
+                    """
+                    SELECT tenant_id, id, run_id, exception_type, source_side, source_id, title, explanation,
+                           severity, risk_score, workflow_status, owner_id, reason_code, evidence_json,
+                           created_at, updated_at
+                    FROM reconforge.reconciliation_exceptions
+                    WHERE tenant_id = %s AND id = ANY(%s)
+                    """,
+                    (tenant, missing_ids),
+                ).fetchall()
+                for r in existing_rows:
+                    returned_by_id[self._row_value(r, "id", 1)] = r
+
+            for p in chunk:
+                r = returned_by_id.get(p["id"])
+                if r is not None:
+                    results.append(self._record(r, self._EXCEPTION_COLUMNS))
+        return results
 
     def list_checkpoints(self, *, tenant_id: str, run_id: str) -> list[dict[str, Any]]:
         """List completed partition checkpoints in deterministic key order."""
@@ -1530,10 +1803,16 @@ class PostgresReconciliationRepository:
             ):
                 raise PostgresReconciliationIntegrityError("Partition checkpoint already contains different output.")
             return existing
-        for values in result_values:
-            self.append_result(tenant_id=tenant, run_id=run, **values)
-        for values in exception_values:
-            self.append_exception(tenant_id=tenant, run_id=run, **values)
+        if type(self.connection).__name__ == "_ReconciliationConnection":
+            for values in result_values:
+                self.append_result(tenant_id=tenant, run_id=run, **values)
+            for values in exception_values:
+                self.append_exception(tenant_id=tenant, run_id=run, **values)
+        else:
+            if result_values:
+                self.append_results_batch(tenant_id=tenant, run_id=run, items=result_values)
+            if exception_values:
+                self.append_exceptions_batch(tenant_id=tenant, run_id=run, items=exception_values)
         cursor = self.connection.execute(
             """
             INSERT INTO reconforge.reconciliation_execution_checkpoints

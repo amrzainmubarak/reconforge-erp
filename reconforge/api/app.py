@@ -337,7 +337,33 @@ def create_api_app(
                 raise
             cache = getattr(request.app.state, "policy_decision_cache", None)
             if cache is not None and method not in {"GET", "HEAD", "OPTIONS", "TRACE"}:
-                cache.invalidate()
+                tenant_id: str | None = (
+                    getattr(request.state, "tenant_id", None)
+                    or request.headers.get("x-tenant-id")
+                    or request.query_params.get("tenant_id")
+                )
+                if not tenant_id:
+                    principal = getattr(request.state, "server_principal", None)
+                    if principal is not None and len(principal.authorized_tenant_ids) == 1:
+                        tenant_id = next(iter(principal.authorized_tenant_ids))
+                organization_id: str | None = (
+                    getattr(request.state, "organization_id", None)
+                    or request.headers.get("x-organization-id")
+                    or request.query_params.get("organization_id")
+                )
+                workspace_id: str | None = (
+                    getattr(request.state, "workspace_id", None)
+                    or request.headers.get("x-workspace-id")
+                    or request.query_params.get("workspace_id")
+                )
+                if tenant_id:
+                    cache.invalidate(
+                        tenant_id=tenant_id,
+                        organization_id=organization_id,
+                        workspace_id=workspace_id,
+                    )
+                else:
+                    cache.invalidate()
             route = request.scope.get("route")
             local_template = str(getattr(route, "path", ""))
             candidate = local_template if local_template.startswith("/scim/v2") else "/api/v1" + local_template

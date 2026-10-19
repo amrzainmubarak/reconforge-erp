@@ -56,8 +56,14 @@ const JobOperationsWorkspace = lazy(() => import("./components/JobOperationsWork
 const ConsolidatedStatementsPage = lazy(() => import("./components/ConsolidatedStatementsPage"));
 const MasterProductionSchedulePage = lazy(() => import("./components/MasterProductionSchedulePage"));
 const ShopFloorTraceabilityPage = lazy(() => import("./components/ShopFloorTraceabilityPage"));
+const CrmSubscriptionWorkspace = lazy(() => import("./components/CrmSubscriptionWorkspace").then((module) => ({ default: module.CrmSubscriptionWorkspace })));
+const HcmLeaveWorkspace = lazy(() => import("./components/HcmLeaveWorkspace").then((module) => ({ default: module.HcmLeaveWorkspace })));
+const GovernedAssistantWorkspace = lazy(() => import("./components/GovernedAssistantWorkspace").then((module) => ({ default: module.GovernedAssistantWorkspace })));
+const ProjectMilestoneWorkspace = lazy(() => import("./components/ProjectMilestoneWorkspace").then((module) => ({ default: module.ProjectMilestoneWorkspace })));
 
-function pageFromPath(pathname: string): StudioPage {
+export type AppStudioPage = StudioPage | "crmSubscriptions" | "governedAssistant" | "projectMilestones";
+
+function pageFromPath(pathname: string): AppStudioPage {
   const normalized = pathname.replace(/\/+$/, "");
   if (normalized.endsWith("/exceptions")) return "exceptions";
   if (normalized.endsWith("/evidence")) return "evidence";
@@ -101,12 +107,16 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/consolidated-statements")) return "consolidatedStatements";
   if (normalized.endsWith("/master-production-schedule")) return "masterProductionSchedule";
   if (normalized.endsWith("/shop-floor-traceability")) return "shopFloorTraceability";
+  if (normalized.endsWith("/crm-subscriptions") || normalized.endsWith("/crm-contracts")) return "crmSubscriptions";
+  if (normalized.endsWith("/hcm-leave")) return "hcmLeave";
+  if (normalized.endsWith("/governed-assistant")) return "governedAssistant";
+  if (normalized.endsWith("/project-milestones") || normalized.endsWith("/project-milestone-billing")) return "projectMilestones";
   return "dashboard";
 }
 
-function pathForPage(page: StudioPage): string {
+function pathForPage(page: AppStudioPage): string {
   const base = import.meta.env.BASE_URL.replace(/\/+$/, "");
-  const routeNames: Partial<Record<StudioPage, string>> = {
+  const routeNames: Partial<Record<AppStudioPage, string>> = {
     retailSettlement: "retail-settlement",
     bankStatement: "bank-statement",
     manufacturingCost: "manufacturing-cost",
@@ -141,6 +151,12 @@ function pathForPage(page: StudioPage): string {
     consolidatedStatements: "consolidated-statements",
     masterProductionSchedule: "master-production-schedule",
     shopFloorTraceability: "shop-floor-traceability",
+    crmSubscriptions: "crm-subscriptions",
+    crmContracts: "crm-subscriptions",
+    hcmLeave: "hcm-leave",
+    governedAssistant: "governed-assistant",
+    projectMilestones: "project-milestones",
+    projectMilestoneBilling: "project-milestones",
   };
   return page === "dashboard" ? `${base}/` || "/" : `${base}/${routeNames[page] ?? page}`;
 }
@@ -161,8 +177,8 @@ function StudioApp() {
   const [commandOpen, setCommandOpen] = useState(false);
   const commandReturnFocus = useRef<HTMLElement | null>(null);
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
-  const [activePage, setActivePage] = useState<StudioPage>(() => pageFromPath(window.location.pathname));
-  const liveOperationalPage = isLiveOperationalPage(activePage);
+  const [activePage, setActivePage] = useState<AppStudioPage>(() => pageFromPath(window.location.pathname));
+  const liveOperationalPage = isLiveOperationalPage(activePage as StudioPage) || activePage === "crmSubscriptions" || activePage === "projectMilestones";
 
   useEffect(() => {
     const controller = new AbortController();
@@ -203,7 +219,7 @@ function StudioApp() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  const navigate = (page: StudioPage) => {
+  const navigate = (page: AppStudioPage) => {
     if (page !== activePage) window.history.pushState({}, "", pathForPage(page));
     setActivePage(page);
     setOpenPanel(null);
@@ -251,7 +267,7 @@ function StudioApp() {
           onCommand={openCommandPalette}
           onMobileMenu={() => setMobileMenuOpen(true)}
           noticeCount={data?.notices.length ?? 0}
-          activePage={activePage}
+          activePage={activePage === "crmSubscriptions" ? "crmContracts" : activePage === "projectMilestones" ? "projectMilestoneBilling" : (activePage as StudioPage)}
           liveIdentity={liveOperationalPage ? auth.username || t("arSignedOut") : undefined}
         />
 
@@ -366,6 +382,18 @@ function StudioApp() {
         ) : null}
         {activePage === "shopFloorTraceability" ? (
           <Suspense fallback={<LoadingView translate={t} />}><ShopFloorTraceabilityPage locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "crmSubscriptions" || (activePage as string) === "crmContracts" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><CrmSubscriptionWorkspace locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "hcmLeave" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><HcmLeaveWorkspace locale={preferences.locale} /></Suspense>
+        ) : null}
+        {(activePage as string) === "governedAssistant" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><GovernedAssistantWorkspace locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "projectMilestones" || (activePage as string) === "projectMilestoneBilling" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><ProjectMilestoneWorkspace locale={preferences.locale} /></Suspense>
         ) : null}
         </WorkspaceErrorBoundary>
       </div>

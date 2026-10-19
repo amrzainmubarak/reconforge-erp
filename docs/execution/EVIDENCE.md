@@ -1,5 +1,48 @@
 # ReconForge Execution Evidence Log
 
+## Critical Enterprise Integration Acceptance Directive Evidence — 2026-10-19
+
+Verified on branch `amr/enterprise-erp-v1-execution-20261018`:
+- **Real PostgreSQL Security & FORCE RLS Proof**:
+  - Live PostgreSQL integration (`tests/test_postgres_enterprise_integration.py::test_live_postgres_enterprise_security_force_rls_and_canonical_gl`):
+    - Configured unprivileged application role (`rolsuper=False`, `rolbypassrls=False`).
+    - Multi-tenant boundary isolation between `tenant_alpha_...` and `tenant_beta_...`.
+    - Under Tenant Beta context:
+      - `SELECT * FROM reconforge.shop_floor_lots WHERE lot_id='LOT_LIVE_001'` -> 0 rows returned.
+      - `SELECT * FROM reconforge.project_milestone_invoices WHERE invoice_id='INV_LIVE_001'` -> 0 rows returned.
+      - `SELECT * FROM reconforge.intercompany_profit_in_stock_eliminations WHERE rule_id='RULE_LIVE_PIS_01'` -> 0 rows returned.
+      - `SELECT * FROM reconforge.shop_floor_lots WHERE tenant_id='tenant_alpha_...'` -> 0 rows returned (predicates filtered by FORCE RLS).
+      - `UPDATE reconforge.shop_floor_lots SET status='tampered' WHERE lot_id='LOT_LIVE_001'` -> rowcount == 0.
+      - `DELETE FROM reconforge.shop_floor_lots WHERE lot_id='LOT_LIVE_001'` -> rowcount == 0.
+      - `INSERT INTO reconforge.shop_floor_lots (tenant_id='tenant_alpha_...')` -> Exception raised: PostgreSQL RLS `WITH CHECK` policy violation (`psycopg.Error`).
+    - Cryptographic SHA-256 audit hash chaining (`domain_audit_events`): 8 sequential events verified with `previous_hash == audit_events[i-1][2]`.
+- **Migrations & Recovery Proof**:
+  - Alembic migration `0151_pg_enterprise_erp_v1_tables` verified in `tests/test_postgres_enterprise_migrations.py`:
+    - Clean downgrade down to `0136_pg_inventory_scope` drops all 15 enterprise tables cleanly (`to_regclass` returns `None`).
+    - Re-upgrade to head (`0151_pg_enterprise_erp_v1_tables`) applies without warnings, reinstating `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` across all 15 tables.
+    - Verified `reconforge_personnel_runtime` role has all 7 privilege flags set to `False` (`rolcanlogin`, `rolsuper`, `rolbypassrls`, `rolcreaterole`, `rolcreatedb`, `rolinherit`, `rolreplication`).
+    - 2/2 tests passed in 17.44s.
+  - SQLite migration 57 verified in `tests/test_enterprise_db.py`: 7/7 tests passed in 5.79s.
+- **Authoritative Canonical Financial Integration Proof**:
+  - `PostgresProjectMilestoneBillingRepository.post_milestone_invoice_to_finance_core`:
+    - Posted milestone invoice to Finance Core GL (`finance_entries` and `finance_entry_lines`).
+    - Debit `ACCOUNTS_RECEIVABLE`: 1,000,000 minor units ($10,000.00).
+    - Credit `PROJECT_SERVICE_REVENUE`: 1,000,000 minor units ($10,000.00).
+    - Balanced double-entry verified: `sum(debit_minor) == sum(credit_minor) == 1_000_000`.
+  - `PostgresIntercompanyEliminationRepository.post_profit_in_stock_to_finance_core`:
+    - Posted profit-in-stock elimination to Finance Core GL.
+    - Debit `COGS_ELIMINATION`: 100,000 minor units ($1,000.00, representing 20% margin on 500,000 inventory cost).
+    - Credit `INVENTORY_VALUATION`: 100,000 minor units ($1,000.00).
+    - Balanced double-entry verified: `sum(debit_minor) == sum(credit_minor) == 100_000`.
+- **Explicit Fail-Closed Database Modes Proof**:
+  - `test_enterprise_routes_fail_closed_mode`:
+    - `server_mode=True` with no PostgreSQL factory raises `APIError` with status code 503 and code `server_postgres_unavailable` across all 5 endpoints.
+    - `server_mode=False` allows local SQLite repository resolution cleanly.
+- **Test Matrix Summary**:
+  - 8 test files, 27 tests passed in 38.71s across Python enterprise test suite.
+  - 104 test files, 1,114 tests passed in 69.74s across Web test suite.
+  - Zero float operations confirmed across all financial modules.
+
 ## Enterprise ERP v1.0 Level 2 PostgreSQL & Multi-Agent Verification Evidence — 2026-10-19
 
 Verified on branch `amr/enterprise-erp-v1-execution-20261018` at commit `f37a6ab4`:

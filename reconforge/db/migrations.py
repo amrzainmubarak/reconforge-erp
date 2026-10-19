@@ -18,6 +18,7 @@ from reconforge.db.migration_55_payables_payment_link_reversal import (
     SQLITE_PAYABLES_PAYMENT_LINK_REVERSAL_SQL,
 )
 from reconforge.db.migration_56_job_operations import SQLITE_JOB_OPERATIONS_UPGRADE_SQL
+from reconforge.db.migration_57_enterprise_erp_v1 import SQLITE_ENTERPRISE_ERP_V1_SQL
 from reconforge.db.schema import (
     ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL,
     API_SESSIONS_SCHEMA_SQL,
@@ -183,6 +184,7 @@ MIGRATIONS = [
         sql=SQLITE_PAYABLES_PAYMENT_LINK_REVERSAL_SQL,
     ),
     Migration(version=56, name="governed_durable_job_operations", sql=SQLITE_JOB_OPERATIONS_UPGRADE_SQL),
+    Migration(version=57, name="enterprise_erp_v1_tables", sql=SQLITE_ENTERPRISE_ERP_V1_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """

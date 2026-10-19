@@ -105,16 +105,39 @@ class ProfitInStockRequest(BaseModel):
 
 
 def _get_repository(request: Request) -> tuple[Any, SQLiteIntercompanyEliminationRepository | PostgresIntercompanyEliminationRepository]:
+    server_mode = bool(getattr(request.app.state, "server_mode", False))
     factory = (
         getattr(request.app.state, "postgres_finance_core_factory", None)
         or getattr(request.app.state, "postgres_identity_factory", None)
         or getattr(request.app.state, "postgres_connection_factory", None)
     )
-    if factory is not None:
-        conn = factory.connect()
+    if server_mode:
+        if factory is None:
+            raise APIError(
+                status_code=503,
+                code="server_postgres_unavailable",
+                message="Enterprise production profile requires PostgreSQL.",
+            )
+        try:
+            conn = factory.connect()
+        except Exception as exc:
+            raise APIError(
+                status_code=503,
+                code="server_postgres_unavailable",
+                message=f"Enterprise production profile database connection failed: {exc}",
+            ) from exc
         raw_tenant = getattr(request.state, "tenant_id", None) or getattr(request.state, "workspace_id", "default")
         tenant_id = str(raw_tenant) if raw_tenant else "default"
         return conn, PostgresIntercompanyEliminationRepository(conn, tenant_id)
+
+    if factory is not None:
+        try:
+            conn = factory.connect()
+            raw_tenant = getattr(request.state, "tenant_id", None) or getattr(request.state, "workspace_id", "default")
+            tenant_id = str(raw_tenant) if raw_tenant else "default"
+            return conn, PostgresIntercompanyEliminationRepository(conn, tenant_id)
+        except Exception:
+            pass
 
     db_path = getattr(request.app.state, "db_path", None)
     if db_path is None:

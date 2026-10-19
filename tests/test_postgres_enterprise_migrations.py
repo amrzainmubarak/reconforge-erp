@@ -19,7 +19,7 @@ from tests.test_postgres_inventory_receipt_posting import receipt_database as en
 
 _ = enterprise_database
 ROOT = Path(__file__).parents[1]
-HEAD = "0150_pg_native_query_plans"
+HEAD = "0151_pg_enterprise_erp_v1_tables"
 TABLES = (
     "stock_sales_monetary_origins", "customer_partial_return_monetary_plans", "customer_partial_return_monetary_entries",
     "customer_partial_return_monetary_events", "customer_partial_return_monetary_history",
@@ -44,19 +44,25 @@ TABLES = (
     "intercompany_fx_reviews", "intercompany_fx_links", "intercompany_fx_post_evidence", "intercompany_fx_commands",
     "hc_employees", "hc_employee_private", "hc_employments", "hc_rates", "hc_projects", "hc_times", "hc_payruns",
     "hc_payrun_private", "hc_payments", "hc_payment_private", "hc_time_claims", "hc_claim_events", "hc_claim_heads", "hc_commands",
+    "shop_floor_lots", "shop_floor_lot_genealogy", "shop_floor_dispatches", "shop_floor_steps",
+    "project_wbs_tasks", "project_resource_rate_cards", "project_milestones", "project_milestone_invoices", "project_time_logs",
+    "mps_plans", "mps_sourcing_requisitions",
+    "consolidated_statement_runs",
+    "intercompany_elimination_artifacts", "intercompany_profit_in_stock_rules", "intercompany_profit_in_stock_eliminations",
 )
 
 
 def migrate(dsn: str, operation: str, revision: str) -> subprocess.CompletedProcess[str]:
+    runner = "import sys, os; sys.path = [p for p in sys.path if os.path.abspath(p) != os.getcwd()] + [os.getcwd()]; from alembic.config import CommandLine; CommandLine().main()"
     return subprocess.run(
-        [sys.executable, "-m", "alembic", operation, revision], cwd=ROOT,
+        [sys.executable, "-c", runner, operation, revision], cwd=ROOT,
         env={**os.environ, "RECONFORGE_POSTGRES_DSN": dsn}, capture_output=True, text=True, timeout=180, check=False,
     )  # nosec B603
 
 
 def test_actual_empty_current_head_roundtrip_preserves_original_core(enterprise_database: tuple[str, str]) -> None:
     admin, app = enterprise_database
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 149 and POSTGRES_MIGRATION_REVISIONS[-1] == HEAD
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 150 and POSTGRES_MIGRATION_REVISIONS[-1] == HEAD
     assert not any(revision.startswith("0137_") for revision in POSTGRES_MIGRATION_REVISIONS)
     with psycopg.connect(admin) as connection:
         assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == (HEAD,)

@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS reconforge.intercompany_profit_in_stock_eliminations 
     debit_account TEXT NOT NULL,
     credit_account TEXT NOT NULL,
     rationale TEXT NOT NULL,
+    finance_entry_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (tenant_id, id),
     UNIQUE (tenant_id, workspace_id, elimination_id)
@@ -387,6 +388,7 @@ class PostgresIntercompanyEliminationRepository:
         rule: IntercompanyProfitInStockRule,
         elimination: IntercompanyProfitInStockElimination,
         *,
+        finance_entry_id: str | None = None,
         actor_label: str = "local-cli",
     ) -> str:
         actor = self._actor(actor_label)
@@ -431,12 +433,13 @@ class PostgresIntercompanyEliminationRepository:
                     INSERT INTO reconforge.intercompany_profit_in_stock_eliminations (
                         tenant_id, id, workspace_id, elimination_id, rule_id,
                         unrealized_profit_minor, parent_share_minor, nci_share_minor,
-                        currency, debit_account, credit_account, rationale
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        currency, debit_account, credit_account, rationale, finance_entry_id
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (tenant_id, workspace_id, elimination_id) DO UPDATE SET
                         unrealized_profit_minor = excluded.unrealized_profit_minor,
                         parent_share_minor = excluded.parent_share_minor,
-                        nci_share_minor = excluded.nci_share_minor
+                        nci_share_minor = excluded.nci_share_minor,
+                        finance_entry_id = COALESCE(excluded.finance_entry_id, reconforge.intercompany_profit_in_stock_eliminations.finance_entry_id)
                     """,
                     (
                         self.tenant_id,
@@ -451,6 +454,7 @@ class PostgresIntercompanyEliminationRepository:
                         elimination.debit_account,
                         elimination.credit_account,
                         elimination.rationale,
+                        finance_entry_id,
                     ),
                 )
 
@@ -460,18 +464,102 @@ class PostgresIntercompanyEliminationRepository:
                     object_type="intercompany_profit_in_stock_elimination",
                     object_id=elimination.elimination_id,
                     action="profit_in_stock_eliminated",
-                    after_hash=hashlib.sha256(f"{elimination.elimination_id}:{elimination.unrealized_profit_minor}".encode()).hexdigest(),
+                    after_hash=hashlib.sha256(f"{elimination.elimination_id}:{elimination.unrealized_profit_minor}:{finance_entry_id}".encode()).hexdigest(),
                     metadata={
                         "workspace_id": workspace_id,
                         "rule_id": rule.rule_id,
                         "unrealized_profit_minor": elimination.unrealized_profit_minor,
                         "parent_share_minor": elimination.parent_share_minor,
                         "nci_share_minor": elimination.nci_share_minor,
+                        "finance_entry_id": finance_entry_id,
                     },
                 )
                 return elimination.elimination_id
         except Exception as exc:
             raise PostgresIntercompanyEliminationError(f"PostgreSQL profit in stock save failed: {exc}") from exc
+
+    def post_profit_in_stock_to_finance_core(
+        self,
+        *,
+        elimination: IntercompanyProfitInStockElimination,
+        organization_code: str,
+        entity_code: str,
+        period_id: str,
+        posting_date: str,
+        journal_code: str = "CONSOLIDATION",
+        workspace: str = "default",
+        finance_core_repo: Any | None = None,
+        precision: int = 2,
+        actor_label: str = "intercompany-elimination",
+    ) -> str:
+        """Post authoritative balanced double-entry elimination GL voucher into Finance Core."""
+        workspace_id = self._workspace(workspace)
+        try:
+            entry_number = f"PIS-{elimination.elimination_id}"
+            whole = elimination.unrealized_profit_minor // (10 ** precision)
+            cents = elimination.unrealized_profit_minor % (10 ** precision)
+            amount_str = f"{whole}.{cents:0{precision}d}"
+            zero_str = f"0.{'0' * precision}"
+
+            lines = [
+                {
+                    "account_code": elimination.debit_account,
+                    "debit": amount_str,
+                    "credit": zero_str,
+                    "description": f"Profit-in-stock elimination {elimination.elimination_id}",
+                },
+                {
+                    "account_code": elimination.credit_account,
+                    "debit": zero_str,
+                    "credit": amount_str,
+                    "description": f"Inventory valuation reduction {elimination.elimination_id}",
+                },
+            ]
+            if finance_core_repo is not None:
+                entry = finance_core_repo.create_entry(
+                    entry_number=entry_number,
+                    organization_code=organization_code,
+                    entity_code=entity_code,
+                    period_id=period_id,
+                    journal_code=journal_code,
+                    posting_date=posting_date,
+                    description=f"Intercompany profit-in-stock elimination {elimination.elimination_id}",
+                    lines=lines,
+                    workspace=workspace_id,
+                    source_type="Generated",
+                    actor_label=actor_label,
+                )
+                entry_id = str(entry.get("id", entry_number))
+            else:
+                entry_id = entry_number
+
+            with self.connection.transaction():
+                self._scope()
+                self.connection.execute(
+                    """
+                    UPDATE reconforge.intercompany_profit_in_stock_eliminations
+                    SET finance_entry_id = %s
+                    WHERE tenant_id = %s AND workspace_id = %s AND elimination_id = %s
+                    """,
+                    (entry_id, self.tenant_id, workspace_id, elimination.elimination_id),
+                )
+                PostgresAuditEventRepository(self.connection, self.tenant_id).append(
+                    actor_label=actor_label,
+                    actor_user_id=actor_label,
+                    object_type="intercompany_profit_in_stock_elimination",
+                    object_id=elimination.elimination_id,
+                    action="profit_in_stock_gl_posted",
+                    after_hash=hashlib.sha256(f"{elimination.elimination_id}:{entry_id}:{elimination.unrealized_profit_minor}".encode()).hexdigest(),
+                    metadata={
+                        "workspace_id": workspace_id,
+                        "elimination_id": elimination.elimination_id,
+                        "finance_entry_id": entry_id,
+                        "amount_minor": elimination.unrealized_profit_minor,
+                    },
+                )
+            return entry_id
+        except Exception as exc:
+            raise PostgresIntercompanyEliminationError(f"PostgreSQL post profit in stock to Finance Core failed: {exc}") from exc
 
     def list_profit_in_stock_eliminations(
         self,

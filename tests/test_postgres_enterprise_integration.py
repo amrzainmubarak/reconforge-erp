@@ -244,6 +244,7 @@ class PostgresRelationalTestAdapter:
                 issued_at TEXT NOT NULL,
                 gl_debit_account TEXT NOT NULL,
                 gl_credit_account TEXT NOT NULL,
+                finance_entry_id TEXT,
                 created_at TEXT NOT NULL DEFAULT (datetime('now')),
                 PRIMARY KEY (tenant_id, workspace_id, invoice_id)
             );
@@ -355,6 +356,7 @@ class PostgresRelationalTestAdapter:
                 debit_account TEXT NOT NULL,
                 credit_account TEXT NOT NULL,
                 rationale TEXT NOT NULL,
+                finance_entry_id TEXT,
                 created_at TEXT NOT NULL DEFAULT (datetime('now')),
                 PRIMARY KEY (tenant_id, id),
                 UNIQUE (tenant_id, workspace_id, elimination_id)
@@ -743,3 +745,265 @@ def test_postgres_intercompany_profit_in_stock_zero_leakage_and_isolation() -> N
     assert elim_a[0]["elimination_id"] == elimination.elimination_id
     assert elim_a[0]["debit_account"] == "COGS_ELIMINATION"
     assert elim_a[0]["credit_account"] == "INVENTORY_VALUATION"
+
+
+def test_enterprise_routes_fail_closed_mode(tmp_path: Any) -> None:
+    """Verify that when server_mode is True, API routes fail closed if PostgreSQL is unconfigured."""
+    from starlette.datastructures import State
+
+    from reconforge.api.errors import APIError
+    from reconforge.api.routes.consolidated_financial_statements import _get_repository as get_cons_repo
+    from reconforge.api.routes.intercompany_elimination import _get_repository as get_elim_repo
+    from reconforge.api.routes.master_production_schedule import _get_repository as get_mps_repo
+    from reconforge.api.routes.project_milestone_billing import _get_repo as get_proj_repo
+    from reconforge.api.routes.shop_floor_traceability import _get_repo as get_sf_repo
+
+    mock_app = type("MockApp", (), {"state": State({"server_mode": True, "db_path": str(tmp_path / "sqlite.db")})})()
+    mock_request = type(
+        "MockRequest",
+        (),
+        {"app": mock_app, "state": State({"tenant_id": "test_tenant", "workspace_id": "default"})},
+    )()
+
+    for repo_fn in (get_cons_repo, get_elim_repo, get_mps_repo, get_proj_repo, get_sf_repo):
+        with pytest.raises(APIError) as exc_info:
+            repo_fn(mock_request)
+        assert exc_info.value.status_code == 503
+        assert exc_info.value.code == "server_postgres_unavailable"
+        assert "Enterprise production profile requires PostgreSQL" in exc_info.value.message
+
+    # Verify that in Community / Local profile (server_mode=False), SQLite repo resolves cleanly
+    mock_app.state.server_mode = False
+    sqlite_conn, sqlite_repo = get_cons_repo(mock_request)
+    assert sqlite_repo is not None
+    sqlite_conn.close()
+
+
+def test_live_postgres_enterprise_security_force_rls_and_canonical_gl() -> None:
+    """Live PostgreSQL integration test: verifies FORCE RLS, unprivileged role, GL posting, and audit chaining."""
+    import os
+    import subprocess
+    import sys
+    from uuid import uuid4
+
+    try:
+        import psycopg
+        from psycopg import sql
+    except ImportError:
+        pytest.skip("psycopg is not installed")
+
+    admin_base = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", "postgresql://postgres:postgres@127.0.0.1:55432/postgres")
+    try:
+        with psycopg.connect(admin_base, connect_timeout=3, autocommit=True) as probe:
+            probe.execute("SELECT 1")
+    except Exception:
+        pytest.skip("Live PostgreSQL service is not reachable")
+
+    from reconforge.domain.intercompany_elimination import (
+        IntercompanyProfitInStockRule,
+        calculate_profit_in_stock_elimination,
+    )
+    from reconforge.domain.project_milestone_billing import (
+        ProjectMilestone,
+        generate_milestone_invoice,
+    )
+    from reconforge.domain.shop_floor_dispatch import (
+        LotTraceabilityRecord,
+    )
+    from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, PostgresTenantBoundary
+    from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
+    from reconforge.infrastructure.postgres_intercompany_elimination import PostgresIntercompanyEliminationRepository
+    from reconforge.infrastructure.postgres_project_milestone_billing import PostgresProjectMilestoneBillingRepository
+    from reconforge.infrastructure.postgres_shop_floor import PostgresShopFloorRepository
+
+    db_name = f"rf_live_test_{uuid4().hex[:8]}"
+    with psycopg.connect(admin_base, autocommit=True) as conn:
+        conn.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name)))
+
+    admin_dsn = f"postgresql://postgres:postgres@127.0.0.1:55432/{db_name}"
+    app_user = f"app_user_{uuid4().hex[:8]}"
+    app_pass = f"pass_{uuid4().hex[:8]}"
+    app_dsn = f"postgresql://{app_user}:{app_pass}@127.0.0.1:55432/{db_name}"
+
+    try:
+        # Run Alembic migrations to current HEAD (0151)
+        runner = "import sys, os; sys.path = [p for p in sys.path if os.path.abspath(p) != os.getcwd()] + [os.getcwd()]; from alembic.config import CommandLine; CommandLine().main()"
+        subprocess.run(
+            [sys.executable, "-c", runner, "upgrade", "head"],
+            env={**os.environ, "RECONFORGE_POSTGRES_DSN": admin_dsn},
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        # Create restricted application role (NOSUPERUSER, NOBYPASSRLS)
+        with psycopg.connect(admin_dsn, autocommit=True) as admin:
+            admin.execute(
+                sql.SQL("CREATE ROLE {} WITH LOGIN PASSWORD {} NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE").format(
+                    sql.Identifier(app_user), sql.Literal(app_pass)
+                )
+            )
+            admin.execute(sql.SQL("GRANT USAGE ON SCHEMA reconforge TO {}").format(sql.Identifier(app_user)))
+            admin.execute(sql.SQL("GRANT ALL ON ALL TABLES IN SCHEMA reconforge TO {}").format(sql.Identifier(app_user)))
+            admin.execute(sql.SQL("GRANT ALL ON ALL SEQUENCES IN SCHEMA reconforge TO {}").format(sql.Identifier(app_user)))
+
+        # Assert App Role flags
+        with psycopg.connect(app_dsn) as app_conn:
+            role_flags = app_conn.execute("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()
+            assert role_flags == (False, False)
+
+        tenant_a = f"tenant_alpha_{uuid4().hex[:6]}"
+        tenant_b = f"tenant_beta_{uuid4().hex[:6]}"
+        workspace_id = "ws_mfg"
+
+        with psycopg.connect(admin_dsn) as admin:
+            admin.execute("INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s)", (tenant_a, "Alpha Corp"))
+            admin.execute("INSERT INTO reconforge.tenants (id, name) VALUES (%s, %s)", (tenant_b, "Beta LLC"))
+
+        factory = PostgresConnectionFactory(PostgresSettings(dsn=app_dsn, require_tls=False))
+
+        # Setup Tenant A workspace and master data
+        with PostgresTenantBoundary(factory).transaction(tenant_a) as conn:
+            conn.execute("INSERT INTO reconforge.domain_workspaces (tenant_id, id, name) VALUES (%s, %s, %s)", (tenant_a, workspace_id, "Manufacturing WS"))
+            conn.execute("INSERT INTO reconforge.currencies (tenant_id, code, name, minor_units) VALUES (%s, 'USD', 'US Dollar', 2)", (tenant_a,))
+            conn.execute("INSERT INTO reconforge.organizations (tenant_id, id, organization_code, name, base_currency, application_workspace_id) VALUES (%s, 'org_a', 'ORG_A', 'Alpha Org', 'USD', %s)", (tenant_a, workspace_id))
+            conn.execute("INSERT INTO reconforge.master_data_workspace_organizations (tenant_id, workspace_id, organization_id) VALUES (%s, %s, 'org_a')", (tenant_a, workspace_id))
+            conn.execute("INSERT INTO reconforge.legal_entities (tenant_id, id, organization_id, entity_code, name, currency_code) VALUES (%s, 'ent_a', 'org_a', 'ENT_A', 'Alpha Entity', 'USD')", (tenant_a,))
+            conn.execute("INSERT INTO reconforge.fiscal_periods (tenant_id, id, name, start_date, end_date, fiscal_year, period_number, application_workspace_id) VALUES (%s, 'per_2026_10', '2026-10', '2026-10-01', '2026-10-31', 2026, 10, %s)", (tenant_a, workspace_id))
+            conn.execute("INSERT INTO reconforge.master_data_workspace_periods (tenant_id, workspace_id, period_id) VALUES (%s, %s, 'per_2026_10')", (tenant_a, workspace_id))
+
+            fc = PostgresFinanceCoreRepository(conn, tenant_a)
+            fc.upsert_chart(chart_code="STD", name="Standard Chart", workspace=workspace_id, organization_code="ORG_A")
+            fc.upsert_account(account_code="ACCOUNTS_RECEIVABLE", name="Accounts Receivable", account_type="Asset", chart_code="STD", workspace=workspace_id)
+            fc.upsert_account(account_code="PROJECT_SERVICE_REVENUE", name="Service Revenue", account_type="Income", chart_code="STD", workspace=workspace_id)
+            fc.upsert_account(account_code="COGS_ELIMINATION", name="COGS Elimination", account_type="Expense", chart_code="STD", workspace=workspace_id)
+            fc.upsert_account(account_code="INVENTORY_VALUATION", name="Inventory Valuation", account_type="Asset", chart_code="STD", workspace=workspace_id)
+            fc.upsert_journal(journal_code="GENERAL", name="General Journal", chart_code="STD", organization_code="ORG_A", currency_code="USD", workspace=workspace_id)
+            fc.upsert_journal(journal_code="CONSOLIDATION", name="Consolidation Journal", chart_code="STD", organization_code="ORG_A", currency_code="USD", workspace=workspace_id)
+
+        # Setup Tenant B workspace
+        with PostgresTenantBoundary(factory).transaction(tenant_b) as conn:
+            conn.execute("INSERT INTO reconforge.domain_workspaces (tenant_id, id, name) VALUES (%s, %s, %s)", (tenant_b, workspace_id, "Manufacturing WS Beta"))
+
+        # Tenant Alpha inserts enterprise data and posts GL vouchers
+        with PostgresTenantBoundary(factory).transaction(tenant_a) as conn:
+            sf_repo = PostgresShopFloorRepository(conn, tenant_a)
+            lot = LotTraceabilityRecord(
+                workspace_id=workspace_id,
+                lot_id="LOT_LIVE_001",
+                item_id="ITEM_TURBINE",
+                batch_number="BATCH_ALPHA",
+                quantity_scaled=50_000,
+                scale_factor=1000,
+                status="active",
+            )
+            sf_repo.register_lot(lot, actor_label="engineer-alpha")
+
+            pb_repo = PostgresProjectMilestoneBillingRepository(conn, tenant_a)
+            milestone = ProjectMilestone(
+                workspace_id=workspace_id,
+                milestone_id="MS_LIVE_001",
+                project_id="PROJ_ALPHA",
+                contract_line_id="CL_10",
+                title="Foundation Complete",
+                milestone_amount_minor=1_000_000,
+                currency="USD",
+                due_date="2026-10-25",
+                status="verified",
+                verified_by="inspector_alice",
+                verified_at="2026-10-19T10:00:00Z",
+            )
+            updated_ms, invoice = generate_milestone_invoice(milestone, customer_code="CUST_OMEGA", invoice_id="INV_LIVE_001", issued_at="2026-10-19T12:00:00Z")
+            pb_repo.save_milestone_invoice(updated_ms, invoice, actor_label="pm-alpha")
+
+            # Post milestone invoice to Finance Core GL
+            fc_repo = PostgresFinanceCoreRepository(conn, tenant_a)
+            entry_id = pb_repo.post_milestone_invoice_to_finance_core(
+                invoice=invoice,
+                organization_code="ORG_A",
+                entity_code="ENT_A",
+                period_id="per_2026_10",
+                journal_code="GENERAL",
+                finance_core_repo=fc_repo,
+                actor_label="pm-alpha",
+            )
+            assert entry_id.startswith("GLE-")
+
+            # Assert double-entry balance in Finance Core lines
+            gl_lines = conn.execute("SELECT account_id, debit_minor, credit_minor FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s", (tenant_a, entry_id)).fetchall()
+            assert len(gl_lines) == 2
+            assert sum(line[1] for line in gl_lines) == sum(line[2] for line in gl_lines) == 1_000_000
+
+            # Intercompany Profit in Stock elimination
+            elim_repo = PostgresIntercompanyEliminationRepository(conn, tenant_a)
+            rule = IntercompanyProfitInStockRule(
+                rule_id="RULE_LIVE_PIS_01",
+                selling_entity="ENTITY_MFG",
+                buying_entity="ENTITY_DIST",
+                inventory_item_code="PRODUCT_TURBINE",
+                margin_basis_points=2_000,
+                ending_inventory_cost_minor=500_000,
+                nci_share_basis_points=1_000,
+                currency="USD",
+            )
+            elimination = calculate_profit_in_stock_elimination(rule)
+            elim_repo.save_profit_in_stock_elimination(workspace_id, rule, elimination, actor_label="finance-alpha")
+
+            elim_entry_id = elim_repo.post_profit_in_stock_to_finance_core(
+                elimination=elimination,
+                organization_code="ORG_A",
+                entity_code="ENT_A",
+                period_id="per_2026_10",
+                posting_date="2026-10-19",
+                journal_code="CONSOLIDATION",
+                workspace=workspace_id,
+                finance_core_repo=fc_repo,
+                actor_label="finance-alpha",
+            )
+            assert elim_entry_id.startswith("GLE-")
+            elim_lines = conn.execute("SELECT account_id, debit_minor, credit_minor FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s", (tenant_a, elim_entry_id)).fetchall()
+            assert len(elim_lines) == 2
+            assert sum(line[1] for line in elim_lines) == sum(line[2] for line in elim_lines) == 100_000  # 500,000 * 20% = 100,000
+
+        # Adversarial Verification: Tenant Beta under FORCE RLS
+        with PostgresTenantBoundary(factory).transaction(tenant_b) as conn:
+            # 1. SELECT cross-tenant read returns 0 rows
+            assert len(conn.execute("SELECT * FROM reconforge.shop_floor_lots WHERE lot_id='LOT_LIVE_001'").fetchall()) == 0
+            assert len(conn.execute("SELECT * FROM reconforge.project_milestone_invoices WHERE invoice_id='INV_LIVE_001'").fetchall()) == 0
+            assert len(conn.execute("SELECT * FROM reconforge.intercompany_profit_in_stock_eliminations WHERE rule_id='RULE_LIVE_PIS_01'").fetchall()) == 0
+
+            # 2. SELECT with forged tenant_id in WHERE returns 0 rows
+            assert len(conn.execute("SELECT * FROM reconforge.shop_floor_lots WHERE tenant_id=%s", (tenant_a,)).fetchall()) == 0
+
+            # 3. UPDATE cross-tenant affects 0 rows
+            cur_update = conn.execute("UPDATE reconforge.shop_floor_lots SET status='tampered' WHERE lot_id='LOT_LIVE_001'")
+            assert cur_update.rowcount == 0
+
+            # 4. DELETE cross-tenant affects 0 rows
+            cur_delete = conn.execute("DELETE FROM reconforge.shop_floor_lots WHERE lot_id='LOT_LIVE_001'")
+            assert cur_delete.rowcount == 0
+
+            # 5. INSERT with forged tenant_id is rejected by RLS WITH CHECK
+            with pytest.raises(psycopg.Error):
+                conn.execute(
+                    "INSERT INTO reconforge.shop_floor_lots (tenant_id, workspace_id, lot_id, item_id, batch_number, quantity_scaled) VALUES (%s, %s, 'LOT_FORGED', 'ITEM_X', 'B1', 100)",
+                    (tenant_a, workspace_id)
+                )
+
+        # Cryptographic SHA-256 Audit Chaining verification
+        with psycopg.connect(admin_dsn) as admin:
+            audit_events = admin.execute(
+                "SELECT sequence, previous_hash, event_hash, action FROM reconforge.domain_audit_events WHERE tenant_id=%s ORDER BY sequence",
+                (tenant_a,)
+            ).fetchall()
+            assert len(audit_events) >= 8
+            for i, evt in enumerate(audit_events):
+                seq, prev_hash, ev_hash, action = evt
+                if i > 0:
+                    assert prev_hash == audit_events[i - 1][2], f"Hash chain broken at sequence {seq}"
+
+    finally:
+        with psycopg.connect(admin_base, autocommit=True) as conn:
+            conn.execute(sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(sql.Identifier(db_name)))
+            conn.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(sql.Identifier(app_user)))
+

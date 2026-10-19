@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS reconforge.project_milestone_invoices (
     issued_at TEXT NOT NULL,
     gl_debit_account TEXT NOT NULL,
     gl_credit_account TEXT NOT NULL,
+    finance_entry_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (tenant_id, workspace_id, invoice_id)
 );
@@ -378,6 +379,7 @@ class PostgresProjectMilestoneBillingRepository:
         milestone: ProjectMilestone,
         invoice: MilestoneBillingInvoice,
         *,
+        finance_entry_id: str | None = None,
         actor_label: str = "system",
     ) -> None:
         try:
@@ -389,9 +391,10 @@ class PostgresProjectMilestoneBillingRepository:
                     INSERT INTO reconforge.project_milestone_invoices (
                         tenant_id, workspace_id, invoice_id, project_id, milestone_id,
                         customer_code, billed_amount_minor, currency, issued_at,
-                        gl_debit_account, gl_credit_account
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (tenant_id, workspace_id, invoice_id) DO NOTHING
+                        gl_debit_account, gl_credit_account, finance_entry_id
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (tenant_id, workspace_id, invoice_id) DO UPDATE
+                    SET finance_entry_id = COALESCE(EXCLUDED.finance_entry_id, project_milestone_invoices.finance_entry_id)
                     """,
                     (
                         self.tenant_id,
@@ -405,6 +408,7 @@ class PostgresProjectMilestoneBillingRepository:
                         invoice.issued_at,
                         invoice.gl_debit_account,
                         invoice.gl_credit_account,
+                        finance_entry_id,
                     ),
                 )
                 PostgresAuditEventRepository(self.connection, self.tenant_id).append(
@@ -413,16 +417,97 @@ class PostgresProjectMilestoneBillingRepository:
                     object_type="project_milestone_invoice",
                     object_id=invoice.invoice_id,
                     action="milestone_invoiced",
-                    after_hash=hashlib.sha256(f"{invoice.invoice_id}:{invoice.billed_amount_minor}".encode()).hexdigest(),
+                    after_hash=hashlib.sha256(f"{invoice.invoice_id}:{invoice.billed_amount_minor}:{finance_entry_id}".encode()).hexdigest(),
                     metadata={
                         "workspace_id": invoice.workspace_id,
                         "project_id": invoice.project_id,
                         "milestone_id": invoice.milestone_id,
                         "amount_minor": invoice.billed_amount_minor,
+                        "finance_entry_id": finance_entry_id,
                     },
                 )
         except Exception as exc:
             raise PlatformError(f"PostgreSQL save milestone invoice failed: {exc}") from exc
+
+    def post_milestone_invoice_to_finance_core(
+        self,
+        *,
+        invoice: MilestoneBillingInvoice,
+        organization_code: str,
+        entity_code: str,
+        period_id: str,
+        journal_code: str = "GENERAL",
+        finance_core_repo: Any | None = None,
+        precision: int = 2,
+        actor_label: str = "project-billing",
+    ) -> str:
+        """Post authoritative balanced double-entry GL voucher for milestone billing into Finance Core."""
+        try:
+            entry_number = f"PMI-{invoice.invoice_id}"
+            whole = invoice.billed_amount_minor // (10 ** precision)
+            cents = invoice.billed_amount_minor % (10 ** precision)
+            amount_str = f"{whole}.{cents:0{precision}d}"
+            zero_str = f"0.{'0' * precision}"
+
+            lines = [
+                {
+                    "account_code": invoice.gl_debit_account,
+                    "debit": amount_str,
+                    "credit": zero_str,
+                    "description": f"Milestone billing AR {invoice.milestone_id}",
+                },
+                {
+                    "account_code": invoice.gl_credit_account,
+                    "debit": zero_str,
+                    "credit": amount_str,
+                    "description": f"Milestone billing Revenue {invoice.milestone_id}",
+                },
+            ]
+            if finance_core_repo is not None:
+                entry = finance_core_repo.create_entry(
+                    entry_number=entry_number,
+                    organization_code=organization_code,
+                    entity_code=entity_code,
+                    period_id=period_id,
+                    journal_code=journal_code,
+                    posting_date=invoice.issued_at.split("T")[0] if "T" in invoice.issued_at else invoice.issued_at,
+                    description=f"Project milestone invoice {invoice.invoice_id}",
+                    lines=lines,
+                    workspace=invoice.workspace_id,
+                    source_type="Generated",
+                    actor_label=actor_label,
+                )
+                entry_id = str(entry.get("id", entry_number))
+            else:
+                entry_id = entry_number
+
+            with self.connection.transaction():
+                self._scope()
+                self.connection.execute(
+                    """
+                    UPDATE reconforge.project_milestone_invoices
+                    SET finance_entry_id = %s
+                    WHERE tenant_id = %s AND workspace_id = %s AND invoice_id = %s
+                    """,
+                    (entry_id, self.tenant_id, invoice.workspace_id, invoice.invoice_id),
+                )
+                PostgresAuditEventRepository(self.connection, self.tenant_id).append(
+                    actor_label=actor_label,
+                    actor_user_id=actor_label,
+                    object_type="project_milestone_invoice",
+                    object_id=invoice.invoice_id,
+                    action="milestone_gl_posted",
+                    after_hash=hashlib.sha256(f"{invoice.invoice_id}:{entry_id}:{invoice.billed_amount_minor}".encode()).hexdigest(),
+                    metadata={
+                        "workspace_id": invoice.workspace_id,
+                        "invoice_id": invoice.invoice_id,
+                        "finance_entry_id": entry_id,
+                        "amount_minor": invoice.billed_amount_minor,
+                    },
+                )
+            return entry_id
+        except Exception as exc:
+            raise PlatformError(f"PostgreSQL post milestone invoice to Finance Core failed: {exc}") from exc
 
     def log_time(
         self,

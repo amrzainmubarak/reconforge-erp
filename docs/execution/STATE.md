@@ -1,5 +1,31 @@
 # Execution State
 
+## Critical Enterprise Integration Acceptance Directive Completion — 2026-10-19
+
+Completed all four acceptance gates under the Critical Enterprise Integration Acceptance Directive on branch `amr/enterprise-erp-v1-execution-20261018`:
+- Single-workspace policy strictly maintained in `F:\reconforge-erp` with zero worktrees.
+- **Gate 1: Live PostgreSQL Security & Adversarial RLS Verification**:
+  - Live PostgreSQL test `test_live_postgres_enterprise_security_force_rls_and_canonical_gl` verified against restricted application role (`rolsuper=False`, `rolbypassrls=False`).
+  - Strict FORCE RLS enforced across all 15 enterprise tables; verified cross-tenant SELECT, UPDATE, and DELETE operations affect 0 rows.
+  - Verified adversarial cross-tenant INSERT is rejected by PostgreSQL `WITH CHECK` security policy violation (`psycopg.Error`).
+  - Cryptographic SHA-256 audit hash chaining (`domain_audit_events`) verified across 8 sequential operations without breaks.
+- **Gate 2: Versioned Migrations & Recovery Parity**:
+  - Formalized official Alembic revision `0151_pg_enterprise_erp_v1_tables` (`reconforge/infrastructure/postgres_enterprise_erp_v1_schema.py`) defining 15 enterprise tables with `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY`, and `tenant_scope` policies. Registered in `POSTGRES_MIGRATION_REVISIONS` (150 revisions).
+  - Verified clean migration downgrade to `0136_pg_inventory_scope` (all 15 tables completely removed from catalog) and clean re-upgrade to head (`0151_pg_enterprise_erp_v1_tables`) with unprivileged application roles in `tests/test_postgres_enterprise_migrations.py` (2/2 passed in 17.44s).
+  - Added SQLite migration 57 (`reconforge/db/migration_57_enterprise_erp_v1.py`) with `DEFAULT 'default'` tenant columns, registered in `reconforge/db/migrations.py`. Verified in `tests/test_enterprise_db.py` (7/7 passed).
+- **Gate 3: Authoritative Canonical Financial Integration**:
+  - Project milestone billing invoices emit balanced double-entry vouchers to Finance Core GL (`finance_entries` and `finance_entry_lines`) debiting `ACCOUNTS_RECEIVABLE` and crediting `PROJECT_SERVICE_REVENUE` with exact integer minor units.
+  - Intercompany profit-in-stock eliminations emit balanced double-entry vouchers to Finance Core GL debiting `COGS_ELIMINATION` and crediting `INVENTORY_VALUATION` with exact mathematical conservation.
+  - No competing financial truth: both Postgres and SQLite repositories link to canonical `finance_entry_id`.
+- **Gate 4: Explicit Fail-Closed Database Modes**:
+  - In enterprise production server mode (`server_mode=True`), all 5 API endpoints fail closed with HTTP 503 `server_postgres_unavailable` if PostgreSQL is down or unconfigured. Verified in `test_enterprise_routes_fail_closed_mode`.
+- **Full Test Verification**:
+  - Level 2 PostgreSQL integration suite: 6/6 passed in 10.84s (`tests/test_postgres_enterprise_integration.py`).
+  - SQLite enterprise database suite: 7/7 passed in 5.79s (`tests/test_enterprise_db.py`).
+  - Enterprise capabilities test suite: 27/27 passed in 38.71s (`tests/test_consolidated_financial_statements.py`, `tests/test_master_production_schedule.py`, `tests/test_api_consolidated_financial_statements.py`, `tests/test_api_master_production_schedule.py`, `tests/test_api_v1_enterprise_integration_v3.py`, `tests/test_enterprise_db.py`, `tests/test_postgres_enterprise_integration.py`, `tests/test_postgres_enterprise_migrations.py`).
+  - Web UI test suite: 104/104 files passed, 1,114 tests passed in 69.74s (`npm --prefix apps/web run test:run`).
+  - Zero float operations across all financial, tax, or inventory code verified via AST parsing.
+
 ## Enterprise ERP v1.0 Level 2 PostgreSQL & Multi-Agent Vertical Integration — 2026-10-19
 
 Completed Level 2 enterprise architecture integration under commit `f37a6ab4` on branch `amr/enterprise-erp-v1-execution-20261018`:

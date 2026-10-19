@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS project_milestone_invoices (
     issued_at TEXT NOT NULL,
     gl_debit_account TEXT NOT NULL,
     gl_credit_account TEXT NOT NULL,
+    finance_entry_id TEXT,
     PRIMARY KEY (workspace_id, invoice_id)
 );
 

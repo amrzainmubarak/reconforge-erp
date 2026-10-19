@@ -57,8 +57,11 @@ Under the mandatory single-workspace directive (ADR0863 / 2026-10-18):
   - `tests/test_*payables*.py`
   - `tests/test_*fixed_assets*.py`
   - `tests/test_*tax*.py`
+- **Completed Deliverables**:
+  - **Slice A1**: Financial Domain & Country Pack Governance: Formalize Country Coverage Registry (`reconforge/packs/country_registry.py`) and enhance Fixed Asset disposal/impairment accounting in `reconforge/domain/fixed_assets.py` without float arithmetic.
+  - **Slice A2**: Treasury Liquidity & Cash Forecasting: Deterministic liquidity timeline buckets, basis-point scenario modeling, and stress testing in `reconforge/domain/treasury_liquidity.py`.
 - **Current Active Workstream**:
-  - **Slice A1**: Financial Domain & Country Pack Governance: Formalize Country Coverage Registry (`reconforge/packs/country/registry.py`) and enhance Fixed Asset disposal/impairment accounting in `reconforge/domain/fixed_assets.py` without float arithmetic.
+  - **Slice A3**: Intercompany Multi-Entity Elimination and FX Translation Ledger Integration: Expand `reconforge/domain/intercompany_elimination.py` to reconcile paired cross-border trade and reciprocal ledger balances.
 
 ---
 
@@ -80,8 +83,11 @@ Under the mandatory single-workspace directive (ADR0863 / 2026-10-18):
   - `tests/test_*inventory*.py`
   - `tests/test_*procurement*.py`
   - `tests/test_*supplier_returns*.py`
+- **Completed Deliverables**:
+  - **Slice B1**: Work Center Finite Capacity Planning & Rescheduling: Atomic slot booking, conflict rejection, and calendar shift handling in `reconforge/domain/manufacturing_capacity_scheduling.py`.
+  - **Slice B2**: Advanced Multi-Level BOM Explosion & MRP Shortage Netting: Indented BOM traversal with cycle detection, basis-point scrap factors, and lot-size replenishment rules in `reconforge/domain/manufacturing_bom_explosion.py`.
 - **Current Active Workstream**:
-  - **Slice B1**: Advanced Routing, Work Center Scheduling & Material Reservations: Expand `reconforge/domain/manufacturing_supply_plan.py` and `reconforge/domain/manufacturing_execution_v2.py` to support capacity reservation, work center conflict prevention, and multi-level shortage replenishment contracts.
+  - **Slice B3**: Shop Floor Execution & Traceability Genealogy: Complete batch tracking, WIP stage movements, and routing variance accounting in `reconforge/domain/manufacturing_execution_v2.py`.
 
 ---
 
@@ -89,6 +95,7 @@ Under the mandatory single-workspace directive (ADR0863 / 2026-10-18):
 - **Role**: Staff Enterprise Applications Architect, UI/UX Lead & AI Security Specialist.
 - **Exclusive File Ownership**:
   - `reconforge/domain/people_project_payroll.py`
+  - `reconforge/domain/crm_*.py`
   - `reconforge/domain/project_*.py`
   - `reconforge/domain/sales_revenue.py`
   - `reconforge/domain/retail_settlement.py`
@@ -102,8 +109,11 @@ Under the mandatory single-workspace directive (ADR0863 / 2026-10-18):
   - `tests/test_*crm*.py`
   - `tests/test_*ai*.py`
   - `tests/test_*notifications*.py`
-- **Current Active Workstream**:
+- **Completed Deliverables**:
   - **Slice C1**: HCM Employee Leave & Self-Service Workflows and Explainable Business AI Guardrails: Build `reconforge/domain/hcm_leave.py` with entitlement/absence accounting and integrate permission-aware explainable AI auditing in `reconforge/ai/governed_assistant.py`.
+  - **Slice C2**: CRM Opportunity Pipeline, Tiered Quotation Approvals & Customer Contracts: Weighted pipeline value, maker-checker discount governance, and contract lifecycle conversion in `reconforge/domain/crm_contracts.py`.
+- **Current Active Workstream**:
+  - **Slice C3**: Professional Services Project Costing, Resource Allocation & Milestone Billing: Link contract line items to project work breakdown structures and verified billable timesheets.
 
 ---
 

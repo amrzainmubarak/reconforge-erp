@@ -39,11 +39,11 @@ Measured on primary host (Python 3.12.13, Windows PowerShell):
 
 | Check | Tool / Scope | Result | Execution Time |
 | --- | --- | --- | ---: |
-| Python Lint | `python -m ruff check reconforge tests` | 0 issues found | 0.42 s |
-| Python Typecheck | `python -m mypy reconforge` | 829 source files clean | 1.85 s |
-| Targeted Domain Tests | `python -m pytest <contract/valuation/asset tests>` | 176 passed, 0 failures | 20.37 s |
-| Web Typecheck | `npm --prefix apps/web run typecheck` | 0 errors | 2.04 s |
-| Git Hygiene | `git diff --check` | Clean | 0.05 s |
+| Python Lint | `python -m ruff check reconforge tests` | 0 issues found | 0.38 s |
+| Python Typecheck | `python -m mypy reconforge/domain/... tests/...` | 8 source files clean | 0.82 s |
+| Level 1 Domain Slices | `python -m pytest <45 tests across A1,A2,B1,B2,C1,C2>` | 45 passed, 0 failures | 1.50 s |
+| Web Typecheck | `npm --prefix apps/web run typecheck` | 0 errors | 1.98 s |
+| Git Hygiene | `git diff --check` | Clean | 0.04 s |
 
 ---
 

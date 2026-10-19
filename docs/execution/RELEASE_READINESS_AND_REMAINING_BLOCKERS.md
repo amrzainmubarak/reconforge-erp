@@ -16,9 +16,9 @@ In accordance with Section 13 of the Engineering Protocol:
 
 | Workstream | Domain Scope | Status | Key Completed Capabilities | Primary Remaining Deliverables |
 | --- | --- | --- | --- | --- |
-| **Agent A** | Global Finance & Accounting | **IN PROGRESS** | M7.1–6, M7.8 (Partial returns, FIFO restitution, AR settlement, refunds, reversals), Fixed asset depreciation | M7.7 Tax/FX return contracts; D2.10 Asset disposal/impairment; D2.13 Country Coverage Registry; D2.3 Intercompany elimination |
-| **Agent B** | Manufacturing & Supply Chain | **IN PROGRESS** | ME1/ME2 actual costing, BOM integer expansion, scrap disposition, multi-stage routing, basic shortage detection | D1.1-D1.2 BOM revisions and Work Center capacity calendar; D1.3-D1.4 MRP multi-level explosion and netting; D1.7 Material reservations |
-| **Agent C** | Enterprise Apps, UX & AI | **IN PROGRESS** | Wage and time contracts, basic project time billing, bilingual RTL web foundation, basic outbox/notification | D3.4 Leave & Absence management / ESS; D4.1-D4.2 CRM quotation and customer contracts; D6.1 Permission-aware explainable AI assistant |
+| **Agent A** | Global Finance & Accounting | **IN PROGRESS** | M7.1–6, M7.8 (Partial returns, FIFO restitution, AR settlement, refunds, reversals); D2.10 Fixed asset impairment/disposal; D2.13 Country Coverage Registry; D2.8 Treasury liquidity & stress-test forecasting | M7.7 Tax/FX return contracts; D2.3 Intercompany elimination & multi-entity consolidation |
+| **Agent B** | Manufacturing & Supply Chain | **IN PROGRESS** | ME1/ME2 actual costing, BOM integer expansion, scrap disposition; D1.5 Work Center finite capacity scheduling; D1.1 Multi-level BOM explosion; D1.4 MRP shortage netting & lot sizing | D1.6 Shop floor execution & batch movements; D1.7 Material reservations; D1.12 Traceability genealogy |
+| **Agent C** | Enterprise Apps, UX & AI | **IN PROGRESS** | Wage and time contracts, basic project time billing, bilingual RTL web foundation; D3.4 HCM Employee leave & absence lifecycle; D6.1 Permission-aware explainable AI assistant; D4.1 CRM opportunity pipeline; D4.2 Quotation discounting & contracts | D4.6-D4.7 Project costing & billable timesheets; D5.8 Comprehensive bilingual RTL E2E journeys |
 
 ---
 
@@ -29,20 +29,17 @@ In accordance with Section 13 of the Engineering Protocol:
 - **Owner**: Agent A (with Lead coordination).
 - **Resolution Plan**: Complete native transaction contract verifying tax reversal and realized FX gain/loss upon return credit issuance.
 
-### Blocker 2: Work Center Capacity Contention & Material Reservation
-- **Context**: Work orders currently assume infinite capacity for work centers; concurrent work orders can double-book routing operations.
-- **Owner**: Agent B.
-- **Resolution Plan**: Implement capacity slot reservation in `manufacturing_supply_plan.py` ensuring atomic booking/release with deterministic conflict rejection.
+### Blocker 2: Work Center Capacity Contention & Material Reservation (RESOLVED)
+- **Status**: **RESOLVED** via `reconforge/domain/manufacturing_capacity_scheduling.py` and `reconforge/domain/manufacturing_bom_explosion.py`.
+- **Verification**: Atomic slot booking, conflict rejection, cycle detection, and net shortage lot-sizing verified in `test_manufacturing_capacity_scheduling` and `test_manufacturing_bom_explosion`.
 
-### Blocker 3: Employee Leave Entitlement & Self-Service Approval Workflow
-- **Context**: Time tracking and wage calculation exist, but employee leave accruals, absence requests, and maker-checker manager approvals lack an integrated domain contract.
-- **Owner**: Agent C.
-- **Resolution Plan**: Create `reconforge/domain/hcm_leave.py` with exact accrual arithmetic, leave balance deductions, and cancellation restoration.
+### Blocker 3: Employee Leave Entitlement & Self-Service Approval Workflow (RESOLVED)
+- **Status**: **RESOLVED** via `reconforge/domain/hcm_leave.py`.
+- **Verification**: Accrual, submission, maker-checker approval, and cancellation balance restoration verified in `test_hcm_leave`.
 
-### Blocker 4: Permission-Aware AI Guardrails & Audit Verification
-- **Context**: AI models must never autonomously post GL transactions or bypass SoD controls.
-- **Owner**: Agent C.
-- **Resolution Plan**: Implement `reconforge/ai/governed_assistant.py` enforcing read-only boundary checks, confidence score thresholds, and explicit human confirmation envelopes for proposed transactions.
+### Blocker 4: Permission-Aware AI Guardrails & Audit Verification (RESOLVED)
+- **Status**: **RESOLVED** via `reconforge/ai/governed_assistant.py`.
+- **Verification**: Zero autonomous GL postings, confidence thresholding, prompt injection refusal, and maker-checker proposal envelopes verified in `test_governed_assistant`.
 
 ---
 

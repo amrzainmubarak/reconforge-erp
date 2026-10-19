@@ -63,10 +63,13 @@ class WorkCenterCalendar:
     daily_capacity_minutes: int = 0
     blackout_dates: frozenset[str] = frozenset()  # Dates (YYYY-MM-DD) unavailable for production
     shifts: tuple[WorkCenterShift, ...] = ()
+    fixed_asset_id: str | None = None
 
     def __post_init__(self) -> None:
         text(self.workcenter_id, "workcenter_id")
         text(self.name, "name", maximum=160)
+        if self.fixed_asset_id is not None:
+            text(self.fixed_asset_id, "fixed_asset_id", maximum=64)
         if self.shifts and self.daily_capacity_minutes == 0:
             total_shift_minutes = sum(s.net_working_minutes for s in self.shifts)
             object.__setattr__(self, "daily_capacity_minutes", min(total_shift_minutes, MAX_MINUTES_PER_DAY))

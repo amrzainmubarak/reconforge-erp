@@ -78,7 +78,7 @@ def test_citation_graph_generation() -> None:
         workspace_id="WS-ACME-01",
         granted_permissions=frozenset({"finance_core.read"}),
     )
-    records = [
+    records: list[dict[str, object]] = [
         {
             "id": "JE-2026-001",
             "workspace_id": "WS-ACME-01",

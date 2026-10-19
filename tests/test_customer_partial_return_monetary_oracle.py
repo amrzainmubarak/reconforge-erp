@@ -49,7 +49,9 @@ def test_literal_taxed_foreign_cycle_has_ten_effects_twenty_six_lines_and_60950(
 
 
 def test_each_tax_component_and_both_currencies_uses_its_actual_remaining_value() -> None:
-    components, fifo, af, al, observed = ((5, 7), (1, 2), (2, 1)), ((3, 5),), 8, 10, []
+    components: tuple[tuple[int, int], ...] = ((5, 7), (1, 2), (2, 1))
+    fifo: tuple[tuple[int, int], ...] = ((3, 5),)
+    af, al, observed = 8, 10, []
     for q in [3, 2, 1]:
         cut = reference_credit(remaining_quantity=q, selected_quantity=1,
             components=components, fifo=fifo, ar_foreign=af, ar_functional=al)
@@ -73,7 +75,9 @@ def test_finite_active_prefix_bounds_preserve_refundable_overcollection_of_credi
         gross_f, gross_l = sum(f for f, _ in originals), sum(v for _, v in originals)
         if initial_cash > gross_f:
             continue
-        remaining, components, fifo = 3, originals, ((3, 5),)
+        remaining = 3
+        components: tuple[tuple[int, int], ...] = originals
+        fifo: tuple[tuple[int, int], ...] = ((3, 5),)
         af, al, collected, credited, ef, el, refunded, released = gross_f, gross_l, 0, 0, 0, 0, 0, 0
 
         def cash(amount: int, selected_scales: tuple[int, int] = scales) -> int:
@@ -295,3 +299,66 @@ def test_domain_return_credit_memo_matches_monetary_oracle_witnesses() -> None:
     assert ref["historical_released_minor"] == 7125
     assert ref["realized_fx_minor"] == -855
 
+
+def test_postgres_monetary_customer_partial_returns_repository_wired_equations() -> None:
+    from reconforge.domain.operational_fx_tax import (
+        ForeignInvoicePreparation,
+        HistoricalRate,
+        ReturnCreditPreparation,
+        TaxComponent,
+        invoice_equation,
+    )
+    from reconforge.infrastructure.postgres_monetary_customer_partial_returns import (
+        PostgresMonetaryCustomerPartialReturnsRepository,
+    )
+    from reconforge.utils.money import CurrencyRegistryContext
+
+    context = CurrencyRegistryContext.from_installed()
+    inv = ForeignInvoicePreparation(
+        workspace_id="WS", organization_id="ORG", legal_entity_id="LE", organization_code="CORP",
+        entity_code="ENT", customer_code="CUST", invoice_number="INV-002", posting_date="2026-10-01",
+        due_date="2026-11-01", period_id="2026-10", journal_code="SALES", foreign_currency_code="EUR",
+        net_minor=10000, original_rate=HistoricalRate("1.25", "Spot", "2026-10-01T09:00:00Z"),
+        country_code="EG", transaction_class="Service",
+        taxes=(TaxComponent("vat", "EG", "Service", "2026-01-01", "2026-12-31", "0.14", "TAX", "VAT"),),
+        receivable_account_code="AR", revenue_account_code="REV", cash_account_code="CASH",
+        gain_account_code="GAIN", loss_account_code="LOSS", reason="Sale",
+    )
+    source = invoice_equation(inv, "USD", context)
+    prep = ReturnCreditPreparation(
+        invoice_source=source,
+        returned_quantity=5,
+        total_quantity=10,
+        fifo_layers=((10, 6000),),
+        ar_foreign_minor=7400,
+        ar_historical_functional_minor=9250,
+        posting_date="2026-10-10",
+        credit_memo_number="CM-01",
+        refund_liability_account_code="REFUND_LIAB",
+        inventory_account_code="INV_FG",
+        cogs_account_code="COGS",
+    )
+    cm = PostgresMonetaryCustomerPartialReturnsRepository.return_credit_memo_equation(prep, context)
+    assert cm["cut_foreign_net_minor"] == 5000
+    assert cm["cut_functional_net_minor"] == 6250
+    assert cm["foreign_ar_released_minor"] == 5700
+    assert cm["functional_ar_released_minor"] == 7125
+    assert sum(line["debit_minor"] for line in cm["credit_memo_lines"]) == sum(line["credit_minor"] for line in cm["credit_memo_lines"])
+
+    ref = PostgresMonetaryCustomerPartialReturnsRepository.customer_refund_equation(
+        foreign_refund_minor=5700,
+        historical_liability_functional_minor=7125,
+        total_foreign_liability_minor=5700,
+        refund_rate=HistoricalRate("1.10", "Spot", "2026-10-15T09:00:00Z"),
+        foreign_currency="EUR",
+        functional_currency="USD",
+        posting_date="2026-10-15",
+        refund_liability_account_code="REFUND_LIAB",
+        cash_account_code="CASH",
+        gain_account_code="GAIN",
+        loss_account_code="LOSS",
+        context=context,
+    )
+    assert ref["functional_cash_minor"] == 6270
+    assert ref["historical_released_minor"] == 7125
+    assert sum(line["debit_minor"] for line in ref["lines"]) == sum(line["credit_minor"] for line in ref["lines"])

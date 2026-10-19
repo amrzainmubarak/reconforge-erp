@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextvars
 import logging
 from html import escape
 from pathlib import Path
@@ -76,6 +77,8 @@ from reconforge.validators import issues_to_frame, validate_input_directory
 
 logger = logging.getLogger(__name__)
 
+_studio_locale_var: contextvars.ContextVar[str] = contextvars.ContextVar("studio_locale", default="en")
+
 
 def create_studio_app(
     input_dir: Path | str,
@@ -113,12 +116,14 @@ def create_studio_app(
         else ""
     )
 
-    def _render(title: str, body: str) -> str:
-        return _layout(title, body, auth_nav=auth_nav)
+    def _render(title: str, body: str, *, locale: str | None = None) -> str:
+        loc = locale or _studio_locale_var.get()
+        return _layout(title, body, auth_nav=auth_nav, locale=loc)
 
-    def _login_page(*, message: str = "", status_code: int = 200) -> HTMLResponse:
+    def _login_page(*, message: str = "", status_code: int = 200, locale: str | None = None) -> HTMLResponse:
+        loc = locale or _studio_locale_var.get()
         return HTMLResponse(
-            _layout("Studio Sign In", _login_form(login_csrf_token, message=message)), status_code=status_code
+            _layout("Studio Sign In", _login_form(login_csrf_token, message=message), locale=loc), status_code=status_code
         )
 
     def _auth_denial(title: str, message: str, *, status_code: int) -> HTMLResponse:
@@ -209,6 +214,23 @@ def create_studio_app(
 
         with trusted_local_mode(not require_auth):
             return await call_next(request)
+
+    @app.middleware("http")
+    async def set_studio_locale_context(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Resolve runtime locale from ?lang= query param or reconforge_locale cookie."""
+        lang_param = request.query_params.get("lang")
+        cookie_lang = request.cookies.get("reconforge_locale")
+        locale = (lang_param or cookie_lang or "en").strip().lower()
+        if not (locale.startswith("ar") or locale.startswith("en")):
+            locale = "en"
+        token = _studio_locale_var.set(locale)
+        try:
+            response = await call_next(request)
+            if lang_param:
+                response.set_cookie("reconforge_locale", locale, max_age=365 * 24 * 60 * 60, samesite="lax")
+            return response
+        finally:
+            _studio_locale_var.reset(token)
 
     def _render_exceptions_page(
         *,
@@ -304,7 +326,7 @@ def create_studio_app(
     def login_page() -> HTMLResponse:
         if not require_auth:
             return HTMLResponse(
-                _layout("Studio Sign In", "<h2>Studio Sign In</h2><p>Studio is running in trusted local mode.</p>")
+                _layout("Studio Sign In", "<h2>Studio Sign In</h2><p>Studio is running in trusted local mode.</p>", locale=_studio_locale_var.get())
             )
         return _login_page()
 

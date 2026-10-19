@@ -116,7 +116,13 @@ def _layout(title: str, body: str, *, auth_nav: str = "", locale: str = "en") ->
   </style>
 </head>
 <body>
-  <header><h1>ReconForge Studio</h1></header>
+  <header style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>ReconForge Studio</h1>
+    <div class="lang-switcher" style="font-size: 14px; font-weight: 500;">
+      <a href="?lang=en" style="color: #ffffff; text-decoration: none; margin-inline-end: 8px;">English</a> |
+      <a href="?lang=ar" style="color: #ffffff; text-decoration: none; margin-inline-start: 8px;">العربية</a>
+    </div>
+  </header>
   {nav}
   <main>{body}</main>
 </body>

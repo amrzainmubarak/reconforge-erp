@@ -39,3 +39,4 @@ r2.csv
 
 # Local workflow/dev scratch files
 ar_cli_debug.db
+.agents/

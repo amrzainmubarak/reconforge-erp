@@ -151,3 +151,178 @@ def test_sqlite_manufacturing_bom_lifecycle_and_explosion() -> None:
     assert n1.gross_required == 60
     assert n1.net_shortage == 30
     assert n1.planned_order_quantity == 50
+
+
+def test_bom_uom_scaling_and_eco_fields() -> None:
+    comp = BOMComponentLine(
+        line_number=1,
+        component_item_id="RAW-RESIN",
+        component_name="Polymer Resin",
+        component_type="raw_material",
+        quantity_per_parent=5,
+        scrap_factor_bps=0,
+        uom_id="KG",
+        uom_conversion_factor_bps=20000,  # 2.0x factor
+        eco_number="ECO-2026-99",
+        change_reason="Switch to metric container",
+    )
+    assert comp.uom_id == "KG"
+    assert comp.uom_conversion_factor_bps == 20000
+    assert comp.eco_number == "ECO-2026-99"
+
+    bom = BillOfMaterials(
+        bom_id="BOM-CASE-01",
+        item_id="FG-CASE",
+        revision="REV-C",
+        status="approved",
+        effective_from="2026-01-01",
+        effective_to=None,
+        base_quantity=1,
+        components=(comp,),
+        eco_number="ECO-2026-99",
+        change_reason="Metric conversion",
+    )
+    from reconforge.domain.manufacturing_bom_explosion import BOMExplosionEngine
+
+    engine = BOMExplosionEngine([bom])
+    exploded = engine.explode("FG-CASE", 10, "2026-05-01")
+    assert len(exploded) == 1
+    # 5 * 10 = 50 base * (20000 / 10000) = 100 total required!
+    assert exploded[0].total_required_quantity == 100
+
+
+def test_postgres_bom_repository_scoping_and_rls() -> None:
+    from unittest.mock import MagicMock
+
+    from reconforge.infrastructure.postgres_manufacturing_bom import PostgresManufacturingBOMRepository
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.execute.return_value = mock_cursor
+    mock_conn.transaction.return_value.__enter__ = MagicMock(return_value=None)
+    mock_conn.transaction.return_value.__exit__ = MagicMock(return_value=None)
+
+    repo = PostgresManufacturingBOMRepository(mock_conn, "tenant_bom_test")
+    assert repo.tenant_id == "tenant_bom_test"
+
+    repo._scope()
+    mock_conn.execute.assert_any_call(
+        "SELECT set_config('app.tenant_id', %s, true)",
+        ("tenant_bom_test",),
+    )
+
+    # Test save_bom SQL contains eco_number and change_reason
+    comp = BOMComponentLine(
+        line_number=1,
+        component_item_id="RAW-01",
+        component_name="Component 1",
+        component_type="raw_material",
+        quantity_per_parent=1,
+        eco_number="ECO-555",
+        change_reason="Material change",
+    )
+    bom = BillOfMaterials(
+        bom_id="BOM-PG-01",
+        item_id="ITEM-PG-01",
+        revision="REV-1",
+        status="approved",
+        effective_from="2026-01-01",
+        effective_to=None,
+        base_quantity=1,
+        components=(comp,),
+        eco_number="ECO-555",
+        change_reason="BOM ECO update",
+    )
+    repo.save_bom(workspace_id="ws_test", bom=bom, created_by="tester")
+    assert mock_conn.execute.call_count >= 3
+
+
+def test_manufacturing_bom_api_routes_and_server_mode_fail_closed(tmp_path: object) -> None:
+    from pathlib import Path
+    from typing import Any, cast
+
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from reconforge.api.errors import APIError, api_error_handler
+    from reconforge.api.routes.manufacturing_bom import (
+        require_bom_manage,
+        require_bom_read,
+        router,
+    )
+    from reconforge.auth.models import LocalUser
+
+    db_path = str(Path(str(tmp_path)) / "bom_api_test.db")
+    app = FastAPI()
+    app.add_exception_handler(APIError, cast(Any, api_error_handler))
+    app.include_router(router, prefix="/api/v1")
+    app.state.db_path = db_path
+    app.state.server_mode = False
+
+    user = LocalUser(id="usr_eng", username="eng_user", display_name="Engineer")
+    app.dependency_overrides[require_bom_read] = lambda: user
+    app.dependency_overrides[require_bom_manage] = lambda: user
+
+    client = TestClient(app)
+
+    # 1. Register BOM with UOM scaling and ECO
+    payload = {
+        "bom_id": "BOM-API-01",
+        "item_id": "ITEM-GEAR",
+        "revision": "REV-A",
+        "status": "approved",
+        "effective_from": "2026-01-01",
+        "effective_to": None,
+        "base_quantity": 1,
+        "eco_number": "ECO-100",
+        "change_reason": "Initial release",
+        "components": [
+            {
+                "line_number": 1,
+                "component_item_id": "STEEL-BAR",
+                "component_name": "Alloy Steel Bar",
+                "component_type": "raw_material",
+                "quantity_per_parent": 2,
+                "scrap_factor_bps": 500,
+                "substitute_item_id": None,
+                "substitute_ratio_bps": 10000,
+                "uom_id": "M",
+                "uom_conversion_factor_bps": 15000,  # 1.5x
+                "eco_number": "ECO-100",
+                "change_reason": "Design spec",
+            }
+        ],
+    }
+    resp = client.post("/api/v1/manufacturing/bom", json=payload)
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "success"
+
+    # 2. Get BOM
+    resp_get = client.get("/api/v1/manufacturing/bom/ITEM-GEAR")
+    assert resp_get.status_code == 200
+    assert resp_get.json()["bom_id"] == "BOM-API-01"
+    assert resp_get.json()["item_id"] == "ITEM-GEAR"
+    assert len(resp_get.json()["components"]) == 1
+
+    # 3. Explode BOM via API
+    resp_exp = client.post(
+        "/api/v1/manufacturing/bom/explode",
+        json={"item_id": "ITEM-GEAR", "required_quantity": 10, "as_of_date": "2026-06-01"},
+    )
+    assert resp_exp.status_code == 200
+    lines = resp_exp.json()["exploded_lines"]
+    assert len(lines) == 1
+    assert lines[0]["gross_quantity"] == 20
+    assert lines[0]["total_required_quantity"] == 21
+
+    # 4. Fail-closed test in enterprise mode
+    app_ent = FastAPI()
+    app_ent.add_exception_handler(APIError, cast(Any, api_error_handler))
+    app_ent.include_router(router, prefix="/api/v1")
+    app_ent.state.server_mode = True
+    app_ent.dependency_overrides[require_bom_read] = lambda: user
+
+    client_ent = TestClient(app_ent)
+    resp_fail = client_ent.get("/api/v1/manufacturing/bom/ITEM-GEAR")
+    assert resp_fail.status_code == 503
+    assert resp_fail.json()["error"]["code"] == "server_postgres_unavailable"

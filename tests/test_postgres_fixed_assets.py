@@ -185,7 +185,7 @@ def test_parallel_same_command_produces_one_asset_and_one_native_effect(asset_ru
     with runtime.actor("checker") as (connection, _, actor):
         PostgresFixedAssetsRepository(connection, runtime.tenant).review(first["id"], expected_plan_digest=first["plan_digest"], command_id="review", reason="Independent review", actor=actor)
     def post_once(_: int) -> dict[str, Any]:
-        with runtime.actor("poster") as (connection, _, actor):
+        with runtime.actor("poster") as (connection, _repo, actor):
             return PostgresFixedAssetsRepository(connection, runtime.tenant).post(first["id"], expected_plan_digest=first["plan_digest"], command_id="parallel-post", reason="Native publication", actor=actor)
     with ThreadPoolExecutor(max_workers=2) as executor:
         results = list(executor.map(post_once, range(2)))
@@ -319,19 +319,57 @@ def test_disposal_policy_uses_full_turnover_on_prepare_and_replay(asset_runtime:
     monkeypatch.setattr(authority, "evaluate_principal_access", governed_policy)
     with runtime.actor("maker") as (connection, _, actor):
         repository = PostgresFixedAssetsRepository(connection, runtime.tenant)
-        args = dict(kind="dispose", period_id="nov", posting_date="2026-11-02", reason="Governed high proceeds zero book disposal", command_id="amount-disposal", actor=actor, proceeds_minor=20000)
         with pytest.raises(FinancePostingError, match="authorization"):
-            repository.prepare(initial["asset_id"], **args)
+            repository.prepare(
+                initial["asset_id"],
+                kind="dispose",
+                period_id="nov",
+                posting_date="2026-11-02",
+                reason="Governed high proceeds zero book disposal",
+                command_id="amount-disposal",
+                actor=actor,
+                proceeds_minor=20000,
+            )
         assert connection.execute("SELECT count(*) n FROM reconforge.fixed_asset_plans WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 2
         assert connection.execute("SELECT count(*) n FROM reconforge.finance_entries WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 2
         ceiling = Decimal("300.00")
-        plan = repository.prepare(initial["asset_id"], **args)
+        plan = repository.prepare(
+            initial["asset_id"],
+            kind="dispose",
+            period_id="nov",
+            posting_date="2026-11-02",
+            reason="Governed high proceeds zero book disposal",
+            command_id="amount-disposal",
+            actor=actor,
+            proceeds_minor=20000,
+        )
         assert plan["amount_minor"] == 0
         ceiling = Decimal("100.00")
         with pytest.raises(FinancePostingError, match="authorization"):
-            repository.prepare(initial["asset_id"], **args)
+            repository.prepare(
+                initial["asset_id"],
+                kind="dispose",
+                period_id="nov",
+                posting_date="2026-11-02",
+                reason="Governed high proceeds zero book disposal",
+                command_id="amount-disposal",
+                actor=actor,
+                proceeds_minor=20000,
+            )
         ceiling = Decimal("300.00")
-        assert repository.prepare(initial["asset_id"], **args) == plan
+        assert (
+            repository.prepare(
+                initial["asset_id"],
+                kind="dispose",
+                period_id="nov",
+                posting_date="2026-11-02",
+                reason="Governed high proceeds zero book disposal",
+                command_id="amount-disposal",
+                actor=actor,
+                proceeds_minor=20000,
+            )
+            == plan
+        )
     assert observed and set(observed) == {Decimal("201.01")}
 
 
@@ -350,7 +388,7 @@ def test_unrelated_worker_audit_and_outbox_delivery_need_no_asset_table_privileg
 
     runtime = asset_runtime
     role = "fa_unrelated_worker_" + uuid4().hex[:12]
-    app_user = psycopg.conninfo.conninfo_to_dict(runtime.factory.settings.dsn)["user"]
+    app_user = str(psycopg.conninfo.conninfo_to_dict(runtime.factory.settings.dsn)["user"])
     event_id = "unrelated-" + uuid4().hex
     owned_event_id = "reserved-" + uuid4().hex
     missing_plan = "FA1-" + uuid4().hex

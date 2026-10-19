@@ -185,6 +185,88 @@ def test_zatca_phase1_and_phase2_tlv_qr_encoding() -> None:
     assert parsed_p2[9] == stamp
 
 
+def test_zatca_ubl_xml_envelope_builder() -> None:
+    from reconforge.packs.country.sa import (
+        ZatcaInvoiceLine,
+        ZatcaInvoiceMetadata,
+        build_zatca_ubl_xml,
+        parse_zatca_qr_tlv,
+        parse_zatca_ubl_xml,
+    )
+
+    metadata = ZatcaInvoiceMetadata(
+        uuid="c3053641-a123-4b67-8910-bcde12345678",
+        invoice_number="INV-2026-0001",
+        issue_date="2026-10-19",
+        issue_time="08:30:00",
+        invoice_type_code="388",
+        sub_type="0100000",
+        seller_name="ReconForge Enterprise Ltd",
+        seller_vat_number="300000000000003",
+        buyer_name="Client Trading Co",
+        buyer_vat_number="300000000000013",
+        currency_code="SAR",
+    )
+
+    lines = [
+        ZatcaInvoiceLine(
+            line_id="1",
+            item_name="Consulting Services",
+            quantity=1,
+            unit_price_minor=10000,
+            net_amount_minor=10000,
+            vat_rate_bps=1500,
+            vat_amount_minor=1500,
+            gross_amount_minor=11500,
+        ),
+        ZatcaInvoiceLine(
+            line_id="2",
+            item_name="Software License",
+            quantity=2,
+            unit_price_minor=5000,
+            net_amount_minor=10000,
+            vat_rate_bps=1500,
+            vat_amount_minor=1500,
+            gross_amount_minor=11500,
+        ),
+    ]
+
+    xml_str = build_zatca_ubl_xml(metadata, lines)
+    assert "<?xml" in xml_str
+    assert "<Invoice" in xml_str
+    assert "c3053641-a123-4b67-8910-bcde12345678" in xml_str
+    assert "INV-2026-0001" in xml_str
+
+    parsed = parse_zatca_ubl_xml(xml_str)
+    assert parsed["uuid"] == "c3053641-a123-4b67-8910-bcde12345678"
+    assert parsed["invoice_number"] == "INV-2026-0001"
+    assert parsed["seller_vat_number"] == "300000000000003"
+    assert parsed["buyer_vat_number"] == "300000000000013"
+    assert parsed["net_total_formatted"] == "200.00"
+    assert parsed["vat_total_formatted"] == "30.00"
+    assert parsed["gross_total_formatted"] == "230.00"
+    assert len(parsed["lines"]) == 2
+
+    qr_b64 = parsed["qr_tlv_base64"]
+    qr_tags = parse_zatca_qr_tlv(qr_b64)
+    assert qr_tags[1].decode("utf-8") == "ReconForge Enterprise Ltd"
+    assert qr_tags[2].decode("utf-8") == "300000000000003"
+    assert qr_tags[4].decode("utf-8") == "230.00"
+    assert qr_tags[5].decode("utf-8") == "30.00"
+
+    with pytest.raises(ValueError, match="Line math invariant violated"):
+        ZatcaInvoiceLine(
+            line_id="err",
+            item_name="Bad line",
+            quantity=1,
+            unit_price_minor=1000,
+            net_amount_minor=1000,
+            vat_rate_bps=1500,
+            vat_amount_minor=150,
+            gross_amount_minor=1200,
+        )
+
+
 def test_uae_fta_vat_and_designated_zones() -> None:
     from reconforge.packs.country.ae import (
         AETaxInvoiceSummary,
@@ -264,6 +346,91 @@ def test_egypt_eta_einvoicing_and_vat() -> None:
         internal_id="INV-2026-001",
     )
     assert header.document_type == "I"
+
+
+def test_eta_json_document_builder() -> None:
+    from reconforge.packs.country.eg import (
+        ETADocumentHeader,
+        ETALineItem,
+        build_eta_invoice_json,
+        validate_eta_invoice_payload,
+    )
+
+    header = ETADocumentHeader(
+        issuer_id="123456789",
+        issuer_name="Cairo Industrial Corp",
+        receiver_id="987654321",
+        receiver_name="Alexandria Trading Co",
+        document_type="I",
+        document_type_version="1.0",
+        date_time_issued="2026-10-19T08:00:00Z",
+        taxpayer_activity_code="4610",
+        internal_id="INV-2026-001",
+    )
+
+    lines = [
+        ETALineItem(
+            description="Industrial Valve V-100",
+            item_type="EGS",
+            item_code="EG-123456789-001",
+            unit_type="EA",
+            quantity=5,
+            unit_price_minor=20000,
+            sales_total_minor=100000,
+            net_total_minor=100000,
+            tax_rate_bps=1400,
+            tax_amount_minor=14000,
+            total_amount_minor=114000,
+        ),
+        ETALineItem(
+            description="Seal Ring Set",
+            item_type="GS1",
+            item_code="6221234567890",
+            unit_type="PCE",
+            quantity=10,
+            unit_price_minor=5000,
+            sales_total_minor=50000,
+            net_total_minor=45000,
+            discount_minor=5000,
+            tax_rate_bps=1400,
+            tax_amount_minor=6300,
+            total_amount_minor=51300,
+        ),
+    ]
+
+    payload = build_eta_invoice_json(header, lines)
+    assert validate_eta_invoice_payload(payload) is True
+
+    # Assertions on payload structure and amounts
+    assert payload["totalSalesAmount"] == "1500.00"
+    assert payload["totalDiscountAmount"] == "50.00"
+    assert payload["netAmount"] == "1450.00"
+    assert payload["taxTotals"][0]["amount"] == "203.00"
+    assert payload["totalAmount"] == "1653.00"
+    assert len(payload["invoiceLines"]) == 2
+
+    # Line item invariants
+    with pytest.raises(ValueError, match=r"ETA line math invariant violated.*sales"):
+        ETALineItem(
+            description="Bad item",
+            item_type="EGS",
+            item_code="CODE",
+            unit_type="EA",
+            quantity=1,
+            unit_price_minor=1000,
+            sales_total_minor=1000,
+            discount_minor=200,
+            net_total_minor=900,  # 1000 - 200 != 900
+            tax_rate_bps=1400,
+            tax_amount_minor=126,
+            total_amount_minor=1026,
+        )
+
+    # Float prohibition in payload validation
+    bad_payload = dict(payload)
+    bad_payload["totalAmount"] = 1653.0
+    with pytest.raises(TypeError, match="Floating-point value detected"):
+        validate_eta_invoice_payload(bad_payload)
 
 
 def test_us_sales_tax_and_economic_nexus() -> None:

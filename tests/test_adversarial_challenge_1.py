@@ -890,14 +890,9 @@ class TestHCMLeaveEntitlementsAdversarial:
         with pytest.raises(HCMLeaveError, match="Segregation of Duties violation"):
             reject_leave_request(req, hcm_balance_24, rejector_user_id=" USR-EMP-200 ", reason="Denied")
 
-        # 2. Empirical demonstration of the vulnerability in approve_leave_request:
-        # Padded string ' USR-EMP-200 ' is NOT equal to 'USR-EMP-200', bypassing the SoD check!
-        approved, updated_bal = approve_leave_request(req, hcm_balance_24, approver_user_id=" USR-EMP-200 ")
-
-        # Proving the vulnerability: The approval succeeded, and the recorded approver is the employee!
-        assert approved.status == "Approved"
-        assert approved.approved_by_user_id == "USR-EMP-200"
-        assert approved.approved_by_user_id == req.employee_user_id
+        # 2. Verification that whitespace padding in approve_leave_request is strictly rejected:
+        with pytest.raises(HCMLeaveError, match="Segregation of Duties violation"):
+            approve_leave_request(req, hcm_balance_24, approver_user_id=" USR-EMP-200 ")
 
     # ------------------------------------------------------------------------
     # 2.3 Fiscal Year-End Rollover Expiration Edges
@@ -1294,9 +1289,6 @@ class TestCRMSubscriptionProratedBillingAdversarial:
         with pytest.raises(FinancePostingError, match="Submitter cannot approve their own quotation"):
             quote.approve(approver_user_id="sales_rep_amr", approver_role="sales_rep")
 
-        # 2. Demonstration of whitespace padding bypass:
-        # ' sales_rep_amr ' != 'sales_rep_amr'
-        approved_quote = quote.approve(approver_user_id=" sales_rep_amr ", approver_role="sales_rep")
-        assert approved_quote.status == "approved"
-        assert approved_quote.approved_by_user_id is not None
-        assert approved_quote.approved_by_user_id.strip() == quote.submitter_user_id
+        # 2. Verification that whitespace padding in quote.approve is strictly rejected:
+        with pytest.raises(FinancePostingError, match="Submitter cannot approve their own quotation"):
+            quote.approve(approver_user_id=" sales_rep_amr ", approver_role="sales_rep")

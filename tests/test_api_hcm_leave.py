@@ -157,3 +157,101 @@ def test_sqlite_hcm_leave_repository_lifecycle() -> None:
     retrieved2 = repo.get_request(ws_id, "REQ-102")
     assert retrieved2 is not None
     assert retrieved2.status == "Rejected"
+
+
+def test_hcm_leave_extended_payload_schemas() -> None:
+    from reconforge.api.routes.hcm_leave import (
+        LeaveRolloverPayload,
+        ProratedAccrualPayload,
+        UnpaidDeductionPayload,
+    )
+
+    rollover = LeaveRolloverPayload.model_validate({"max_carryover_days": 10})
+    assert rollover.max_carryover_days == 10
+
+    with pytest.raises(ValidationError):
+        LeaveRolloverPayload.model_validate({"max_carryover_days": -1})
+
+    with pytest.raises(ValidationError):
+        LeaveRolloverPayload.model_validate({"max_carryover_days": 400})
+
+    prorated = ProratedAccrualPayload.model_validate({"service_days": 180, "total_year_days": 365})
+    assert prorated.service_days == 180
+    assert prorated.total_year_days == 365
+
+    with pytest.raises(ValidationError):
+        ProratedAccrualPayload.model_validate({"service_days": -5, "total_year_days": 365})
+
+    deduction = UnpaidDeductionPayload.model_validate({"daily_rate_minor": 50000})
+    assert deduction.daily_rate_minor == 50000
+
+    with pytest.raises(ValidationError):
+        UnpaidDeductionPayload.model_validate({"daily_rate_minor": -100})
+
+
+def test_hcm_leave_withdraw_and_rollover_workflow() -> None:
+    from reconforge.domain.hcm_leave import (
+        rollover_leave_entitlement,
+        withdraw_leave_request,
+    )
+
+    conn = sqlite3.connect(":memory:")
+    repo = SqliteHCMLeaveRepository(conn)
+    ws_id = "ws_test"
+
+    # Create balance with 15 available days
+    bal = LeaveEntitlementBalance("EMP-20", "Annual", 30, 20, 5)
+    repo.save_balance(ws_id, bal)
+
+    # 1. Rollover with 10 max carryover -> 10 carryover, 5 forfeited
+    new_bal, forfeited = rollover_leave_entitlement(bal, max_carryover_days=10)
+    assert new_bal.accrued_days == 10
+    assert new_bal.consumed_days == 0
+    assert forfeited == 5
+    repo.save_balance(ws_id, new_bal)
+
+    saved_bal = repo.get_balance(ws_id, "EMP-20", "Annual")
+    assert saved_bal is not None
+    assert saved_bal.available_days == 10
+
+    # 2. Self-service withdraw
+    req = LeaveRequest(
+        request_id="REQ-WD-01",
+        employee_id="EMP-20",
+        employee_user_id="alice20",
+        leave_type="Annual",
+        start_date="2026-12-01",
+        end_date="2026-12-05",
+        requested_days=4,
+        status="Submitted",
+        reason="Winter vacation",
+    )
+    repo.save_request(ws_id, req)
+
+    withdrawn = withdraw_leave_request(req)
+    assert withdrawn.status == "Cancelled"
+    repo.save_request(ws_id, withdrawn)
+
+    saved_req = repo.get_request(ws_id, "REQ-WD-01")
+    assert saved_req is not None
+    assert saved_req.status == "Cancelled"
+
+
+def test_hcm_leave_server_mode_fail_closed() -> None:
+    from unittest.mock import MagicMock
+
+    from reconforge.api.errors import APIError
+    from reconforge.api.routes.hcm_leave import _repo
+
+    # Mock request with server_mode=True and no postgres factory
+    mock_request = MagicMock()
+    mock_request.app.state.server_mode = True
+    mock_request.app.state.postgres_finance_core_factory = None
+    mock_request.app.state.postgres_identity_factory = None
+    mock_request.app.state.postgres_connection_factory = None
+
+    with pytest.raises(APIError) as exc_info:
+        _repo(mock_request)
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.code == "server_postgres_unavailable"

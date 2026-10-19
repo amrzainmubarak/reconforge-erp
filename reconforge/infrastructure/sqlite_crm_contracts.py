@@ -14,6 +14,9 @@ from reconforge.domain.crm_contracts import (
     OpportunityStage,
     QuotationLineItem,
     QuoteStatus,
+    Subscription,
+    SubscriptionPlan,
+    SubscriptionStatus,
 )
 
 CREATE_CRM_TABLES_SQL = """
@@ -69,6 +72,30 @@ CREATE TABLE IF NOT EXISTS crm_contracts (
     total_contract_value_minor INTEGER NOT NULL,
     status TEXT NOT NULL,
     PRIMARY KEY (workspace_id, contract_id)
+);
+
+CREATE TABLE IF NOT EXISTS crm_subscription_plans (
+    workspace_id TEXT NOT NULL,
+    plan_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    currency TEXT NOT NULL,
+    billing_interval TEXT NOT NULL,
+    unit_price_minor INTEGER NOT NULL,
+    PRIMARY KEY (workspace_id, plan_id)
+);
+
+CREATE TABLE IF NOT EXISTS crm_subscriptions (
+    workspace_id TEXT NOT NULL,
+    subscription_id TEXT NOT NULL,
+    customer_id TEXT NOT NULL,
+    contract_id TEXT NOT NULL,
+    plan_id TEXT NOT NULL,
+    currency TEXT NOT NULL,
+    status TEXT NOT NULL,
+    current_period_start TEXT NOT NULL,
+    current_period_end TEXT NOT NULL,
+    auto_renew INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (workspace_id, subscription_id)
 );
 """
 
@@ -299,3 +326,167 @@ class SqliteCRMContractsRepository:
             total_contract_value_minor=row[9],
             status=cast(ContractStatus, row[10]),
         )
+
+    # --- Subscription Plans ---
+
+    def save_plan(self, workspace_id: str, plan: SubscriptionPlan) -> None:
+        with self._conn:
+            self._conn.execute(
+                """
+                INSERT INTO crm_subscription_plans (
+                    workspace_id, plan_id, name, currency, billing_interval, unit_price_minor
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(workspace_id, plan_id) DO UPDATE SET
+                    name = excluded.name,
+                    currency = excluded.currency,
+                    billing_interval = excluded.billing_interval,
+                    unit_price_minor = excluded.unit_price_minor
+                """,
+                (
+                    workspace_id,
+                    plan.plan_id,
+                    plan.name,
+                    plan.currency,
+                    plan.billing_interval,
+                    plan.unit_price_minor,
+                ),
+            )
+
+    def get_plan(self, workspace_id: str, plan_id: str) -> SubscriptionPlan | None:
+        cursor = self._conn.execute(
+            """
+            SELECT plan_id, name, currency, billing_interval, unit_price_minor
+            FROM crm_subscription_plans
+            WHERE workspace_id = ? AND plan_id = ?
+            """,
+            (workspace_id, plan_id),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return SubscriptionPlan(
+            plan_id=row[0],
+            name=row[1],
+            currency=row[2],
+            billing_interval=cast(BillingFrequency, row[3]),
+            unit_price_minor=row[4],
+        )
+
+    def list_plans(self, workspace_id: str) -> list[SubscriptionPlan]:
+        cursor = self._conn.execute(
+            """
+            SELECT plan_id, name, currency, billing_interval, unit_price_minor
+            FROM crm_subscription_plans
+            WHERE workspace_id = ?
+            ORDER BY plan_id
+            """,
+            (workspace_id,),
+        )
+        return [
+            SubscriptionPlan(
+                plan_id=row[0],
+                name=row[1],
+                currency=row[2],
+                billing_interval=cast(BillingFrequency, row[3]),
+                unit_price_minor=row[4],
+            )
+            for row in cursor.fetchall()
+        ]
+
+    # --- Subscriptions ---
+
+    def save_subscription(self, workspace_id: str, subscription: Subscription) -> None:
+        with self._conn:
+            self._conn.execute(
+                """
+                INSERT INTO crm_subscriptions (
+                    workspace_id, subscription_id, customer_id, contract_id,
+                    plan_id, currency, status, current_period_start,
+                    current_period_end, auto_renew
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(workspace_id, subscription_id) DO UPDATE SET
+                    customer_id = excluded.customer_id,
+                    contract_id = excluded.contract_id,
+                    plan_id = excluded.plan_id,
+                    currency = excluded.currency,
+                    status = excluded.status,
+                    current_period_start = excluded.current_period_start,
+                    current_period_end = excluded.current_period_end,
+                    auto_renew = excluded.auto_renew
+                """,
+                (
+                    workspace_id,
+                    subscription.subscription_id,
+                    subscription.customer_id,
+                    subscription.contract_id,
+                    subscription.plan_id,
+                    subscription.currency,
+                    subscription.status,
+                    subscription.current_period_start,
+                    subscription.current_period_end,
+                    1 if subscription.auto_renew else 0,
+                ),
+            )
+
+    def get_subscription(self, workspace_id: str, subscription_id: str) -> Subscription | None:
+        cursor = self._conn.execute(
+            """
+            SELECT subscription_id, customer_id, contract_id, plan_id,
+                   currency, status, current_period_start, current_period_end, auto_renew
+            FROM crm_subscriptions
+            WHERE workspace_id = ? AND subscription_id = ?
+            """,
+            (workspace_id, subscription_id),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return Subscription(
+            subscription_id=row[0],
+            customer_id=row[1],
+            contract_id=row[2],
+            plan_id=row[3],
+            currency=row[4],
+            status=cast(SubscriptionStatus, row[5]),
+            current_period_start=row[6],
+            current_period_end=row[7],
+            auto_renew=bool(row[8]),
+        )
+
+    def list_subscriptions(self, workspace_id: str, customer_id: str | None = None) -> list[Subscription]:
+        if customer_id:
+            cursor = self._conn.execute(
+                """
+                SELECT subscription_id, customer_id, contract_id, plan_id,
+                       currency, status, current_period_start, current_period_end, auto_renew
+                FROM crm_subscriptions
+                WHERE workspace_id = ? AND customer_id = ?
+                ORDER BY subscription_id
+                """,
+                (workspace_id, customer_id),
+            )
+        else:
+            cursor = self._conn.execute(
+                """
+                SELECT subscription_id, customer_id, contract_id, plan_id,
+                       currency, status, current_period_start, current_period_end, auto_renew
+                FROM crm_subscriptions
+                WHERE workspace_id = ?
+                ORDER BY subscription_id
+                """,
+                (workspace_id,),
+            )
+        return [
+            Subscription(
+                subscription_id=row[0],
+                customer_id=row[1],
+                contract_id=row[2],
+                plan_id=row[3],
+                currency=row[4],
+                status=cast(SubscriptionStatus, row[5]),
+                current_period_start=row[6],
+                current_period_end=row[7],
+                auto_renew=bool(row[8]),
+            )
+            for row in cursor.fetchall()
+        ]

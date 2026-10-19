@@ -124,12 +124,12 @@ class CustomerQuotation:
     approval_role: str | None = None
 
     def __post_init__(self) -> None:
-        text(self.quote_id, "quote_id", maximum=64)
-        text(self.opportunity_id, "opportunity_id", maximum=64)
-        text(self.workspace_id, "workspace_id", maximum=64)
-        text(self.customer_id, "customer_id", maximum=64)
-        text(self.currency, "currency", maximum=3)
-        text(self.submitter_user_id, "submitter_user_id", maximum=64)
+        object.__setattr__(self, "quote_id", text(self.quote_id, "quote_id", maximum=64))
+        object.__setattr__(self, "opportunity_id", text(self.opportunity_id, "opportunity_id", maximum=64))
+        object.__setattr__(self, "workspace_id", text(self.workspace_id, "workspace_id", maximum=64))
+        object.__setattr__(self, "customer_id", text(self.customer_id, "customer_id", maximum=64))
+        object.__setattr__(self, "currency", text(self.currency, "currency", maximum=3))
+        object.__setattr__(self, "submitter_user_id", text(self.submitter_user_id, "submitter_user_id", maximum=64))
         date.fromisoformat(self.valid_until)
         if not self.lines:
             raise FinancePostingError("crm_quote_empty", "Quotation must contain at least one line.")
@@ -155,7 +155,8 @@ class CustomerQuotation:
 
     def approve(self, approver_user_id: str, approver_role: str) -> CustomerQuotation:
         """Approve a quote enforcing maker-checker and role thresholds."""
-        if approver_user_id == self.submitter_user_id:
+        clean_approver = text(approver_user_id, "approver_user_id")
+        if clean_approver == text(self.submitter_user_id, "submitter_user_id"):
             raise FinancePostingError("crm_sod_violation", "Submitter cannot approve their own quotation.")
 
         eff_bps = self.effective_discount_bps
@@ -188,7 +189,7 @@ class CustomerQuotation:
             submitter_user_id=self.submitter_user_id,
             status="approved",
             lines=self.lines,
-            approved_by_user_id=approver_user_id,
+            approved_by_user_id=clean_approver,
             approval_role=approver_role,
         )
 

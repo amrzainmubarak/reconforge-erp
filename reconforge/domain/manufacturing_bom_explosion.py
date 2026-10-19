@@ -36,6 +36,10 @@ class BOMComponentLine:
     scrap_factor_bps: int = 0  # Expected scrap in basis points (e.g. 500 = 5.00%)
     substitute_item_id: str | None = None
     substitute_ratio_bps: int = 10_000  # 1:1 substitution ratio default
+    uom_id: str = "EA"
+    uom_conversion_factor_bps: int = 10_000  # Scaling factor in basis points (10000 = 1.0)
+    eco_number: str | None = None
+    change_reason: str | None = None
 
     def __post_init__(self) -> None:
         if self.line_number < 1:
@@ -46,6 +50,14 @@ class BOMComponentLine:
             fail("Scrap factor must be 0..50,000 basis points.", "bom_scrap_invalid")
         if self.substitute_item_id:
             text(self.substitute_item_id, "substitute_item_id", maximum=64)
+        text(self.uom_id, "uom_id", maximum=32)
+        exact_integer(self.uom_conversion_factor_bps, positive=True)
+        if not (1 <= self.uom_conversion_factor_bps <= 1_000_000):
+            fail("uom_conversion_factor_bps must be between 1 and 1,000,000.", "bom_uom_factor_invalid")
+        if self.eco_number is not None:
+            text(self.eco_number, "eco_number", maximum=64)
+        if self.change_reason is not None:
+            text(self.change_reason, "change_reason", maximum=255)
 
 
 @dataclass(frozen=True)
@@ -60,6 +72,8 @@ class BillOfMaterials:
     effective_to: str | None  # Optional ISO date
     base_quantity: int  # Typically 1
     components: tuple[BOMComponentLine, ...]
+    eco_number: str | None = None
+    change_reason: str | None = None
 
     def __post_init__(self) -> None:
         text(self.bom_id, "bom_id", maximum=64)
@@ -71,6 +85,10 @@ class BillOfMaterials:
         exact_integer(self.base_quantity, positive=True)
         if not self.components:
             fail("BOM must contain at least one component.", "bom_components_empty")
+        if self.eco_number is not None:
+            text(self.eco_number, "eco_number", maximum=64)
+        if self.change_reason is not None:
+            text(self.change_reason, "change_reason", maximum=255)
 
 
 @dataclass(frozen=True)
@@ -211,6 +229,8 @@ class BOMExplosionEngine:
                         ratio_bps = BPS_DENOMINATOR
 
                     base_qty = (comp.quantity_per_parent * multiplier + (bom.base_quantity // 2)) // bom.base_quantity
+                    if comp.uom_conversion_factor_bps != BPS_DENOMINATOR:
+                        base_qty = (base_qty * comp.uom_conversion_factor_bps + (BPS_DENOMINATOR // 2)) // BPS_DENOMINATOR
                     if is_sub:
                         scaled_base_qty = (base_qty * ratio_bps + (BPS_DENOMINATOR // 2)) // BPS_DENOMINATOR
                     else:

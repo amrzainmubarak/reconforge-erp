@@ -1,4 +1,6 @@
-"""Tests for Work Center capacity scheduling, conflict detection, and atomic reallocation."""
+import concurrent.futures
+import sqlite3
+from pathlib import Path
 
 import pytest
 
@@ -10,6 +12,9 @@ from reconforge.domain.manufacturing_capacity_scheduling import (
     book_capacity_slot,
     release_capacity_slot,
     reschedule_capacity_slot,
+)
+from reconforge.infrastructure.sqlite_manufacturing_capacity import (
+    SqliteManufacturingCapacityRepository,
 )
 
 
@@ -411,4 +416,107 @@ def test_atomic_interval_rescheduling_within_same_day() -> None:
     r1_after = next(s for s in rescheduled if s.work_order_id == "WO-101")
     assert r1_after.start_minute == 720
     assert r1_after.end_minute == 840
+
+
+def test_sqlite_capacity_slot_booking_concurrency_serializes_and_rejects_overlap(tmp_path: Path) -> None:
+    db_path = tmp_path / "concurrent_mfg_capacity.db"
+    init_conn = sqlite3.connect(str(db_path))
+    init_repo = SqliteManufacturingCapacityRepository(init_conn)
+    cal = WorkCenterCalendar(
+        workcenter_id="WC-CONC-01",
+        name="Concurrent Test Machine",
+        daily_capacity_minutes=480,
+        shifts=(),
+    )
+    init_repo.save_calendar(workspace_id="ws_01", calendar=cal)
+    init_conn.close()
+
+    results: list[tuple[int, str]] = []
+
+    def worker(idx: int) -> None:
+        c = sqlite3.connect(str(db_path), timeout=10.0)
+        repo = SqliteManufacturingCapacityRepository(c)
+        slot = CapacitySlotReservation(
+            reservation_id=f"RES-CONC-{idx}",
+            workcenter_id="WC-CONC-01",
+            work_order_id=f"WO-CONC-{idx}",
+            operation_sequence=1,
+            scheduled_date="2026-11-23",
+            duration_minutes=120,
+            start_minute=480,
+            end_minute=600,
+        )
+        try:
+            repo.book_slot(workspace_id="ws_01", slot=slot)
+            results.append((idx, "success"))
+        except CapacitySchedulingError as e:
+            results.append((idx, e.code))
+        finally:
+            c.close()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+        futures = [pool.submit(worker, i) for i in range(5)]
+        for f in futures:
+            f.result()
+
+    successes = [r for r in results if r[1] == "success"]
+    conflicts = [r for r in results if r[1] == "capacity_conflict"]
+    assert len(successes) == 1
+    assert len(conflicts) == 4
+
+    verify_conn = sqlite3.connect(str(db_path))
+    verify_repo = SqliteManufacturingCapacityRepository(verify_conn)
+    booked = verify_repo.list_reservations(workspace_id="ws_01", workcenter_id="WC-CONC-01")
+    verify_conn.close()
+    assert len(booked) == 1
+    assert booked[0].start_minute == 480
+    assert booked[0].end_minute == 600
+
+
+def test_sqlite_capacity_slot_concurrent_adjacent_slots_succeed(tmp_path: Path) -> None:
+    db_path = tmp_path / "concurrent_adjacent.db"
+    init_conn = sqlite3.connect(str(db_path))
+    init_repo = SqliteManufacturingCapacityRepository(init_conn)
+    cal = WorkCenterCalendar(
+        workcenter_id="WC-ADJ-01",
+        name="Adjacent Test Machine",
+        daily_capacity_minutes=480,
+        shifts=(),
+    )
+    init_repo.save_calendar(workspace_id="ws_01", calendar=cal)
+    init_conn.close()
+
+    def worker(idx: int, start: int, end: int) -> str:
+        c = sqlite3.connect(str(db_path), timeout=10.0)
+        repo = SqliteManufacturingCapacityRepository(c)
+        slot = CapacitySlotReservation(
+            reservation_id=f"RES-ADJ-{idx}",
+            workcenter_id="WC-ADJ-01",
+            work_order_id=f"WO-ADJ-{idx}",
+            operation_sequence=1,
+            scheduled_date="2026-11-23",
+            duration_minutes=end - start,
+            start_minute=start,
+            end_minute=end,
+        )
+        try:
+            repo.book_slot(workspace_id="ws_01", slot=slot)
+            return "success"
+        finally:
+            c.close()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        f1 = pool.submit(worker, 1, 480, 600)
+        f2 = pool.submit(worker, 2, 600, 720)
+        res1 = f1.result()
+        res2 = f2.result()
+
+    assert res1 == "success"
+    assert res2 == "success"
+
+    verify_conn = sqlite3.connect(str(db_path))
+    verify_repo = SqliteManufacturingCapacityRepository(verify_conn)
+    booked = verify_repo.list_reservations(workspace_id="ws_01", workcenter_id="WC-ADJ-01")
+    verify_conn.close()
+    assert len(booked) == 2
 

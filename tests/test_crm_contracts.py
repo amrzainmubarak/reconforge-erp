@@ -363,3 +363,142 @@ def test_subscription_plan_change_and_cancellation_refund() -> None:
     # 600.00 * 10 / 30 = 200.00 SAR refund
     assert refund == 200_00
 
+
+def test_quote_approval_sod_whitespace_padding_blocked() -> None:
+    """Verify that leading or trailing whitespace cannot bypass maker-checker SoD in quotation approval."""
+    lines = (
+        QuotationLineItem(
+            line_number=1,
+            item_id="SRV-01",
+            description="Consulting",
+            quantity=10,
+            unit_price_minor=10_000,
+            discount_bps=500,  # 5% discount
+        ),
+    )
+    quote = CustomerQuotation(
+        quote_id="QT-SOD-WS-001",
+        opportunity_id="OPP-001",
+        workspace_id="ws_01",
+        customer_id="cust_1",
+        currency="SAR",
+        valid_until="2026-12-31",
+        submitter_user_id="sales_rep_amr",
+        status="submitted",
+        lines=lines,
+    )
+    # Padded with spaces -> trimmed by text(), matches submitter -> SoD violation
+    with pytest.raises(FinancePostingError, match="Submitter cannot approve their own quotation"):
+        quote.approve(approver_user_id="  sales_rep_amr  ", approver_role="sales_rep")
+
+    with pytest.raises(FinancePostingError, match="Submitter cannot approve their own quotation"):
+        quote.approve(approver_user_id="sales_rep_amr ", approver_role="sales_rep")
+
+    # Non-printable control characters are rejected directly by text() sanitization
+    with pytest.raises(FinancePostingError, match="must be nonempty printable text"):
+        quote.approve(approver_user_id="\tsales_rep_amr\n", approver_role="sales_rep")
+
+
+def test_customer_quotation_dataclass_whitespace_normalization() -> None:
+    """Verify that CustomerQuotation normalizes string attributes via object.__setattr__ in __post_init__."""
+    lines = (
+        QuotationLineItem(
+            line_number=1,
+            item_id="  SRV-01  ",
+            description="  Consulting  ",
+            quantity=10,
+            unit_price_minor=10_000,
+            discount_bps=500,
+        ),
+    )
+    quote = CustomerQuotation(
+        quote_id="  QT-NORM-001  ",
+        opportunity_id="  OPP-001  ",
+        workspace_id="  ws_01  ",
+        customer_id="  cust_1  ",
+        currency="SAR",
+        valid_until="2026-12-31",
+        submitter_user_id="  sales_rep_amr  ",
+        status="submitted",
+        lines=lines,
+    )
+    assert quote.quote_id == "QT-NORM-001"
+    assert quote.opportunity_id == "OPP-001"
+    assert quote.workspace_id == "ws_01"
+    assert quote.customer_id == "cust_1"
+    assert quote.submitter_user_id == "sales_rep_amr"
+
+
+def test_asymmetric_whitespace_quotation_self_approval_blocked() -> None:
+    """Verify that asymmetric whitespace cannot bypass SoD in CustomerQuotation.approve."""
+    lines = (
+        QuotationLineItem(
+            line_number=1,
+            item_id="SRV-01",
+            description="Consulting",
+            quantity=10,
+            unit_price_minor=10_000,
+            discount_bps=500,
+        ),
+    )
+    quote = CustomerQuotation(
+        quote_id="QT-ASYMM-001",
+        opportunity_id="OPP-001",
+        workspace_id="ws_01",
+        customer_id="cust_1",
+        currency="SAR",
+        valid_until="2026-12-31",
+        submitter_user_id="sales_rep_amr",
+        status="submitted",
+        lines=lines,
+    )
+    with pytest.raises(FinancePostingError, match="Submitter cannot approve their own quotation"):
+        quote.approve(approver_user_id="sales_rep_amr", approver_role="sales_rep")
+
+    with pytest.raises(FinancePostingError, match="Submitter cannot approve their own quotation"):
+        quote.approve(approver_user_id="  sales_rep_amr  ", approver_role="sales_rep")
+
+
+def test_zero_width_formatting_characters_rejected_in_crm() -> None:
+    """Verify that zero-width formatting characters (category 'Cf') are rejected in quotation operations."""
+    lines = (
+        QuotationLineItem(
+            line_number=1,
+            item_id="SRV-01",
+            description="Consulting",
+            quantity=10,
+            unit_price_minor=10_000,
+            discount_bps=500,
+        ),
+    )
+    quote = CustomerQuotation(
+        quote_id="QT-ZW-001",
+        opportunity_id="OPP-001",
+        workspace_id="ws_01",
+        customer_id="cust_1",
+        currency="SAR",
+        valid_until="2026-12-31",
+        submitter_user_id="sales_rep_amr",
+        status="submitted",
+        lines=lines,
+    )
+    zero_width_chars = ["\u200b", "\u200c", "\u200d", "\u2060", "\ufeff"]
+    for zw in zero_width_chars:
+        with pytest.raises(FinancePostingError, match="contains invalid formatting characters"):
+            quote.approve(approver_user_id=f"{zw}sales_rep_amr", approver_role="sales_rep")
+
+        with pytest.raises(FinancePostingError, match="contains invalid formatting characters"):
+            quote.approve(approver_user_id=f"sales_rep_amr{zw}", approver_role="sales_rep")
+
+        with pytest.raises(FinancePostingError, match="contains invalid formatting characters"):
+            CustomerQuotation(
+                quote_id=f"QT-{zw}001",
+                opportunity_id="OPP-001",
+                workspace_id="ws_01",
+                customer_id="cust_1",
+                currency="SAR",
+                valid_until="2026-12-31",
+                submitter_user_id="sales_rep_amr",
+                status="submitted",
+                lines=lines,
+            )

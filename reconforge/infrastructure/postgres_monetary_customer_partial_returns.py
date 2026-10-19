@@ -33,7 +33,12 @@ from reconforge.domain.monetary_customer_returns import (
     MonetaryHistory,
     prepare_monetary_event,
 )
-from reconforge.domain.operational_fx_tax import HistoricalRate
+from reconforge.domain.operational_fx_tax import (
+    HistoricalRate,
+    ReturnCreditPreparation,
+    customer_refund_equation,
+    return_credit_memo_equation,
+)
 from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.postgres_customer_returns import PERMISSIONS, READ, PostgresCustomerReturnsRepository
 from reconforge.infrastructure.postgres_finance_posting import posting_entry, posting_snapshot, records
@@ -46,6 +51,7 @@ from reconforge.infrastructure.postgres_monetary_stock_sales import (
 )
 from reconforge.platform.common import platform_id
 from reconforge.platform.inventory_values import scaled_to_text
+from reconforge.utils.money import CurrencyRegistryContext
 from reconforge.utils.time import utc_now_text
 
 PLAN_SCHEMA = "customer-partial-return-monetary-v3"
@@ -332,6 +338,76 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
             settlement_rate=(HistoricalRate(**args["settlement_rate"]) if args.get("settlement_rate") is not None else None),
             original_sequence=original["monetary_event"]["sequence"] if original and operation.startswith("Reverse") else None)
         self._actor(actor, "prepare", origin, event)
+
+        if operation == "Return":
+            before = event.before
+            roles = origin["payload"]["roles"]
+            tax_comps = []
+            for part in history.source.components[1:]:
+                tax_comps.append({
+                    "tax_id": f"comp_{part.position}",
+                    "foreign_tax_minor": before.component_transaction_minor[part.position],
+                    "functional_tax_minor": before.component_functional_minor[part.position],
+                    "account_code": origin["payload"]["source"]["components"][part.position]["account_id"],
+                })
+            inv_source = {
+                "foreign_net_minor": before.component_transaction_minor[0],
+                "functional_net_minor": before.component_functional_minor[0],
+                "tax_components": tax_comps,
+                "request": {
+                    "revenue_account_code": origin["payload"]["source"]["components"][0]["account_id"],
+                    "receivable_account_code": roles["receivable_account_id"],
+                    "loss_account_code": roles["loss_account_id"],
+                    "gain_account_code": roles["gain_account_id"],
+                },
+            }
+            fifo_layers = tuple(
+                (q, v)
+                for q, v in zip(before.consumption_quantity_scaled, before.consumption_value_minor, strict=True)
+                if q > 0
+            )
+            prep = ReturnCreditPreparation(
+                invoice_source=inv_source,
+                returned_quantity=args["quantity_scaled"],
+                total_quantity=before.remaining_quantity_scaled,
+                fifo_layers=fifo_layers,
+                ar_foreign_minor=before.transaction_outstanding_minor,
+                ar_historical_functional_minor=before.functional_outstanding_minor,
+                posting_date=args["posting_date"],
+                credit_memo_number="CM-" + str(origin["id"]),
+                refund_liability_account_code=roles["refund_liability_account_id"],
+                inventory_account_code=roles["inventory_account_id"],
+                cogs_account_code=roles["cogs_account_id"],
+            )
+            eq_res = return_credit_memo_equation(prep, history.source.registry_context)
+            if (eq_res["cut_foreign_net_minor"] != event.monetary.transaction_net_minor
+                or eq_res["cut_functional_net_minor"] != event.monetary.functional_net_minor
+                or eq_res["foreign_ar_released_minor"] != event.monetary.transaction_receivable_released_minor
+                or eq_res["functional_ar_released_minor"] != event.monetary.functional_receivable_released_minor
+                or eq_res["foreign_liability_minor"] != event.monetary.transaction_refund_delta_minor
+                or eq_res["functional_liability_minor"] != event.monetary.functional_refund_delta_minor):
+                _fail("evidence_invalid", "Return credit memo equation invariants do not match monetary event.")
+        elif operation == "Refund" and original is not None and args.get("settlement_rate") is not None:
+            roles = origin["payload"]["roles"]
+            settlement_rate = HistoricalRate(**args["settlement_rate"])
+            refund_res = customer_refund_equation(
+                foreign_refund_minor=args["amount_minor"],
+                historical_liability_functional_minor=event.before.functional_refund_due_minor,
+                total_foreign_liability_minor=event.before.transaction_refund_due_minor,
+                refund_rate=settlement_rate,
+                foreign_currency=history.source.transaction_policy.currency_code,
+                functional_currency=history.source.functional_policy.currency_code,
+                posting_date=args["posting_date"],
+                refund_liability_account_code=roles["refund_liability_account_id"],
+                cash_account_code=roles["cash_account_id"],
+                gain_account_code=roles["gain_account_id"],
+                loss_account_code=roles["loss_account_id"],
+                context=history.source.registry_context,
+            )
+            if (refund_res["functional_cash_minor"] != event.monetary.functional_cash_minor
+                or refund_res["historical_released_minor"] != event.monetary.functional_refund_released_minor):
+                _fail("evidence_invalid", "Customer refund equation invariants do not match monetary event.")
+
         stock = self._stock(origin)
         plan = {"schema_version": PLAN_SCHEMA, "id": _PREFIXES[operation] + uuid4().hex, **stock.scope,
             "source_id": origin["id"], "source_order_id": origin["stock_order_id"], "invoice_id": origin["invoice_id"],
@@ -570,3 +646,43 @@ class PostgresMonetaryCustomerPartialReturnsRepository:
             # live quantity gate owned by command and physical-write paths.
             self.connection.execute("SELECT reconforge.monetary_stock_source_close(%s,%s)", (self.tenant_id, source_order_id))
             return self._one("SELECT reconforge.monetary_partial_balance(%s,%s) value", (self.tenant_id, origin["id"]))["value"]
+
+    @staticmethod
+    def return_credit_memo_equation(
+        prep: ReturnCreditPreparation,
+        context: CurrencyRegistryContext,
+    ) -> dict[str, Any]:
+        """Expose authoritative operational_fx_tax return credit memo equation."""
+        return return_credit_memo_equation(prep, context)
+
+    @staticmethod
+    def customer_refund_equation(
+        *,
+        foreign_refund_minor: int,
+        historical_liability_functional_minor: int,
+        total_foreign_liability_minor: int,
+        refund_rate: HistoricalRate,
+        foreign_currency: str,
+        functional_currency: str,
+        posting_date: str,
+        refund_liability_account_code: str,
+        cash_account_code: str,
+        gain_account_code: str,
+        loss_account_code: str,
+        context: CurrencyRegistryContext,
+    ) -> dict[str, Any]:
+        """Expose authoritative operational_fx_tax customer refund equation."""
+        return customer_refund_equation(
+            foreign_refund_minor=foreign_refund_minor,
+            historical_liability_functional_minor=historical_liability_functional_minor,
+            total_foreign_liability_minor=total_foreign_liability_minor,
+            refund_rate=refund_rate,
+            foreign_currency=foreign_currency,
+            functional_currency=functional_currency,
+            posting_date=posting_date,
+            refund_liability_account_code=refund_liability_account_code,
+            cash_account_code=cash_account_code,
+            gain_account_code=gain_account_code,
+            loss_account_code=loss_account_code,
+            context=context,
+        )

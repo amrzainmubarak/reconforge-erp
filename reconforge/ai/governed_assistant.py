@@ -7,7 +7,7 @@ source-grounded evidence citations, and maker-checker human approval envelopes.
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from reconforge.domain.finance_posting import FinancePostingError, text
@@ -85,7 +85,7 @@ class GovernedAssistantEngine:
         self,
         query_id: str,
         query_text: str,
-        authorized_records: Sequence[dict[str, object]],
+        authorized_records: Sequence[Mapping[str, object]],
         *,
         confidence_override: float | None = None,
     ) -> AssistantResponse:

@@ -30,7 +30,7 @@ class LeaveEntitlementBalance:
     consumed_days: int
 
     def __post_init__(self) -> None:
-        text(self.employee_id, "employee_id")
+        object.__setattr__(self, "employee_id", text(self.employee_id, "employee_id"))
         if self.annual_entitlement_days < 0 or self.annual_entitlement_days > 365:
             raise HCMLeaveError("leave_entitlement_invalid", "Annual entitlement must be between 0 and 365 days.")
         if self.accrued_days < 0 or self.consumed_days < 0:
@@ -58,12 +58,12 @@ class LeaveRequest:
     rejection_reason: str | None = None
 
     def __post_init__(self) -> None:
-        text(self.request_id, "request_id")
-        text(self.employee_id, "employee_id")
-        text(self.employee_user_id, "employee_user_id")
-        text(self.reason, "reason", maximum=500)
+        object.__setattr__(self, "request_id", text(self.request_id, "request_id"))
+        object.__setattr__(self, "employee_id", text(self.employee_id, "employee_id"))
+        object.__setattr__(self, "employee_user_id", text(self.employee_user_id, "employee_user_id"))
+        object.__setattr__(self, "reason", text(self.reason, "reason", maximum=500))
         if self.rejection_reason is not None:
-            text(self.rejection_reason, "rejection_reason", maximum=500)
+            object.__setattr__(self, "rejection_reason", text(self.rejection_reason, "rejection_reason", maximum=500))
         if self.requested_days < 1 or self.requested_days > 365:
             raise HCMLeaveError("leave_days_invalid", "Requested days must be between 1 and 365.")
         try:
@@ -157,7 +157,8 @@ def approve_leave_request(
         raise HCMLeaveError("leave_not_submitted", f"Only submitted requests can be approved; current: {request.status}")
 
     # Strict Maker-Checker segregation
-    if approver_user_id == request.employee_user_id:
+    clean_approver = text(approver_user_id, "approver_user_id")
+    if clean_approver == text(request.employee_user_id, "employee_user_id"):
         raise HCMLeaveError(
             "leave_self_approval_prohibited",
             "Segregation of Duties violation: employees are prohibited from approving their own leave requests."
@@ -188,7 +189,7 @@ def approve_leave_request(
         requested_days=request.requested_days,
         status="Approved",
         reason=request.reason,
-        approved_by_user_id=text(approver_user_id, "approver_user_id"),
+        approved_by_user_id=clean_approver,
         rejection_reason=None,
     )
 
@@ -213,7 +214,7 @@ def reject_leave_request(
             f"Leave balance employee '{balance.employee_id}' does not match request '{request.employee_id}'.",
         )
     clean_rejector = text(rejector_user_id, "rejector_user_id")
-    if clean_rejector == request.employee_user_id:
+    if clean_rejector == text(request.employee_user_id, "employee_user_id"):
         raise HCMLeaveError(
             "leave_self_rejection_prohibited",
             "Segregation of Duties violation: employees cannot review or reject their own leave requests.",

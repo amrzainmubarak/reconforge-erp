@@ -2,6 +2,7 @@
 
 import pytest
 
+from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.hcm_leave import (
     HCMLeaveError,
     LeaveEntitlementBalance,
@@ -329,3 +330,118 @@ def test_unpaid_leave_payroll_deduction() -> None:
     )
     assert calculate_unpaid_leave_deduction(annual_req, daily_rate_minor=50_000) == 0
 
+
+def test_segregation_of_duties_whitespace_padding_blocked(annual_balance: LeaveEntitlementBalance) -> None:
+    """Verify that leading or trailing whitespace cannot bypass maker-checker SoD in approve_leave_request."""
+    req = LeaveRequest(
+        request_id="REQ-SOD-WS",
+        employee_id="EMP-100",
+        employee_user_id="USR-EMP-100",
+        leave_type="Annual",
+        start_date="2026-11-10",
+        end_date="2026-11-14",
+        requested_days=3,
+        status="Submitted",
+        reason="Vacation",
+    )
+    # Padded with spaces -> trimmed by text(), matches employee_user_id -> SoD violation
+    with pytest.raises(HCMLeaveError, match="Segregation of Duties violation"):
+        approve_leave_request(req, annual_balance, approver_user_id="  USR-EMP-100  ")
+
+    with pytest.raises(HCMLeaveError, match="Segregation of Duties violation"):
+        approve_leave_request(req, annual_balance, approver_user_id="USR-EMP-100 ")
+
+    # Non-printable control characters are rejected directly by text() sanitization
+    with pytest.raises(FinancePostingError, match="must be nonempty printable text"):
+        approve_leave_request(req, annual_balance, approver_user_id="\tUSR-EMP-100\n")
+
+
+def test_leave_request_dataclass_whitespace_normalization() -> None:
+    """Verify that LeaveRequest and LeaveEntitlementBalance normalize whitespace in __post_init__."""
+    req = LeaveRequest(
+        request_id="  REQ-001  ",
+        employee_id="  EMP-100  ",
+        employee_user_id="  USR-EMP-100  ",
+        leave_type="Annual",
+        start_date="2026-11-10",
+        end_date="2026-11-14",
+        requested_days=3,
+        status="Submitted",
+        reason="  Vacation with family  ",
+    )
+    assert req.request_id == "REQ-001"
+    assert req.employee_id == "EMP-100"
+    assert req.employee_user_id == "USR-EMP-100"
+    assert req.reason == "Vacation with family"
+
+    bal = LeaveEntitlementBalance(
+        employee_id="  EMP-100  ",
+        leave_type="Annual",
+        annual_entitlement_days=24,
+        accrued_days=12,
+        consumed_days=2,
+    )
+    assert bal.employee_id == "EMP-100"
+
+
+def test_asymmetric_whitespace_self_approval_and_rejection_blocked(annual_balance: LeaveEntitlementBalance) -> None:
+    """Verify that asymmetric whitespace cannot bypass SoD in approval or rejection."""
+    req = LeaveRequest(
+        request_id="REQ-ASYMM-01",
+        employee_id="EMP-100",
+        employee_user_id="USR-EMP-100",
+        leave_type="Annual",
+        start_date="2026-11-10",
+        end_date="2026-11-14",
+        requested_days=3,
+        status="Submitted",
+        reason="Vacation",
+    )
+    # Self-approval blocked even when approver provides clean ID
+    with pytest.raises(HCMLeaveError, match="Segregation of Duties violation"):
+        approve_leave_request(req, annual_balance, approver_user_id="USR-EMP-100")
+
+    # Self-rejection blocked even when rejector provides clean or padded ID
+    with pytest.raises(HCMLeaveError, match="employees cannot review or reject their own leave requests"):
+        reject_leave_request(req, annual_balance, rejector_user_id="USR-EMP-100", reason="Denied")
+
+    with pytest.raises(HCMLeaveError, match="employees cannot review or reject their own leave requests"):
+        reject_leave_request(req, annual_balance, rejector_user_id="  USR-EMP-100  ", reason="Denied")
+
+
+def test_zero_width_formatting_characters_rejected_in_hcm(annual_balance: LeaveEntitlementBalance) -> None:
+    """Verify that Unicode category 'Cf' (zero-width format characters) are strictly rejected."""
+    req = LeaveRequest(
+        request_id="REQ-ZW-01",
+        employee_id="EMP-100",
+        employee_user_id="USR-EMP-100",
+        leave_type="Annual",
+        start_date="2026-11-10",
+        end_date="2026-11-14",
+        requested_days=3,
+        status="Submitted",
+        reason="Vacation",
+    )
+    zero_width_chars = ["\u200b", "\u200c", "\u200d", "\u2060", "\ufeff"]
+    for zw in zero_width_chars:
+        with pytest.raises(FinancePostingError, match="contains invalid formatting characters"):
+            approve_leave_request(req, annual_balance, approver_user_id=f"{zw}USR-EMP-100")
+
+        with pytest.raises(FinancePostingError, match="contains invalid formatting characters"):
+            approve_leave_request(req, annual_balance, approver_user_id=f"USR-EMP-100{zw}")
+
+        with pytest.raises(FinancePostingError, match="contains invalid formatting characters"):
+            reject_leave_request(req, annual_balance, rejector_user_id=f"{zw}USR-EMP-100", reason="Denied")
+
+        with pytest.raises(FinancePostingError, match="contains invalid formatting characters"):
+            LeaveRequest(
+                request_id=f"REQ-{zw}01",
+                employee_id="EMP-100",
+                employee_user_id="USR-EMP-100",
+                leave_type="Annual",
+                start_date="2026-11-10",
+                end_date="2026-11-14",
+                requested_days=3,
+                status="Submitted",
+                reason="Vacation",
+            )

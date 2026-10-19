@@ -12,6 +12,10 @@ from typing import Literal
 
 from reconforge.domain.finance_posting import text
 from reconforge.domain.manufacturing_execution import exact_integer, fail
+from reconforge.domain.manufacturing_supply_plan import (
+    MRPShortageRequisition,
+    generate_mrp_shortage_requisitions,
+)
 
 BOMStatus = Literal["draft", "approved", "obsolete"]
 ItemType = Literal["raw_material", "subassembly", "finished_good"]
@@ -81,6 +85,8 @@ class ExplodedRequirement:
     gross_quantity: int
     scrap_quantity: int
     total_required_quantity: int
+    is_substituted: bool = False
+    original_item_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -97,17 +103,63 @@ class NetMRPRequirement:
 
 
 class BOMExplosionEngine:
-    """Traverses multi-level BOM hierarchies with cycle detection and netting."""
+    """Traverses multi-level BOM hierarchies with cycle detection, revision selection, and netting."""
 
     def __init__(self, boms: list[BillOfMaterials]) -> None:
-        # Index approved BOMs by item_id and revision
+        # Index approved BOMs by (item_id, revision) and item_id
         self._boms: dict[tuple[str, str], BillOfMaterials] = {}
-        self._latest_approved_bom: dict[str, BillOfMaterials] = {}
+        self._boms_by_item: dict[str, list[BillOfMaterials]] = {}
 
         for b in boms:
             self._boms[(b.item_id, b.revision)] = b
-            if b.status == "approved":
-                self._latest_approved_bom[b.item_id] = b
+            self._boms_by_item.setdefault(b.item_id, []).append(b)
+
+    def _find_effective_bom(
+        self,
+        item_id: str,
+        as_of_date: str,
+        specific_revision: str | None = None,
+    ) -> BillOfMaterials | None:
+        """Finds date-effective approved BOM for an item matching effective_from <= as_of_date <= effective_to."""
+        item_boms = self._boms_by_item.get(item_id, [])
+        if not item_boms:
+            return None
+
+        req_d = date.fromisoformat(as_of_date)
+
+        if specific_revision is not None:
+            target = self._boms.get((item_id, specific_revision))
+            if target is None:
+                return None
+            if target.status != "approved":
+                fail(f"BOM for {item_id} revision {specific_revision} is not approved (status={target.status}).", "bom_not_approved")
+            from_d = date.fromisoformat(target.effective_from)
+            to_d = date.fromisoformat(target.effective_to) if target.effective_to else None
+            if req_d < from_d:
+                fail(f"BOM for {item_id} (revision {specific_revision}) not effective on {as_of_date}.", "bom_effective_invalid")
+            if to_d and req_d > to_d:
+                fail(f"BOM for {item_id} (revision {specific_revision}) expired on {target.effective_to}.", "bom_effective_invalid")
+            return target
+
+        approved = [b for b in item_boms if b.status == "approved"]
+        if not approved:
+            return None
+
+        valid_candidates = []
+        for b in approved:
+            from_d = date.fromisoformat(b.effective_from)
+            to_d = date.fromisoformat(b.effective_to) if b.effective_to else None
+            if from_d <= req_d and (to_d is None or req_d <= to_d):
+                valid_candidates.append(b)
+
+        if not valid_candidates:
+            fail(f"No approved BOM for {item_id} effective on {as_of_date}.", "bom_effective_invalid")
+
+        valid_candidates.sort(
+            key=lambda b: (date.fromisoformat(b.effective_from), b.revision),
+            reverse=True,
+        )
+        return valid_candidates[0]
 
     def explode(
         self,
@@ -115,9 +167,10 @@ class BOMExplosionEngine:
         required_quantity: int,
         as_of_date: str,
         specific_revision: str | None = None,
+        preferred_substitutions: frozenset[str] | set[str] | dict[str, str] | None = None,
     ) -> list[ExplodedRequirement]:
         exact_integer(required_quantity, positive=True)
-        req_d = date.fromisoformat(as_of_date)
+        date.fromisoformat(as_of_date)
 
         results: list[ExplodedRequirement] = []
         visited_path: list[str] = []
@@ -131,39 +184,61 @@ class BOMExplosionEngine:
 
             visited_path.append(current_item)
 
-            bom = self._boms.get((current_item, specific_revision)) if specific_revision and depth == 0 else self._latest_approved_bom.get(current_item)
+            bom = self._find_effective_bom(current_item, as_of_date, specific_revision if depth == 0 else None)
 
             if bom is not None:
-                # Check date validity
-                from_d = date.fromisoformat(bom.effective_from)
-                if req_d < from_d:
-                    fail(f"BOM for {current_item} not effective on {as_of_date}.", "bom_effective_invalid")
-                if bom.effective_to and req_d > date.fromisoformat(bom.effective_to):
-                    fail(f"BOM for {current_item} expired on {bom.effective_to}.", "bom_effective_invalid")
-
                 for comp in bom.components:
-                    base_qty = (comp.quantity_per_parent * multiplier + (bom.base_quantity // 2)) // bom.base_quantity
-                    scrap_qty = (base_qty * comp.scrap_factor_bps + (BPS_DENOMINATOR // 2)) // BPS_DENOMINATOR
-                    total_qty = base_qty + scrap_qty
+                    # Check for substitution
+                    should_substitute = False
+                    if preferred_substitutions:
+                        if isinstance(preferred_substitutions, (set, frozenset, list, tuple)):
+                            should_substitute = comp.component_item_id in preferred_substitutions
+                        elif isinstance(preferred_substitutions, dict):
+                            sub_target = preferred_substitutions.get(comp.component_item_id)
+                            should_substitute = (sub_target == comp.substitute_item_id or sub_target is True or sub_target == "*")
 
-                    path_str = " -> ".join(visited_path + [comp.component_item_id])
+                    if should_substitute:
+                        if not comp.substitute_item_id:
+                            fail(f"No substitute item configured for component {comp.component_item_id}.", "bom_no_substitute")
+                        effective_item_id = comp.substitute_item_id
+                        is_sub = True
+                        orig_item_id = comp.component_item_id
+                        ratio_bps = comp.substitute_ratio_bps
+                    else:
+                        effective_item_id = comp.component_item_id
+                        is_sub = False
+                        orig_item_id = None
+                        ratio_bps = BPS_DENOMINATOR
+
+                    base_qty = (comp.quantity_per_parent * multiplier + (bom.base_quantity // 2)) // bom.base_quantity
+                    if is_sub:
+                        scaled_base_qty = (base_qty * ratio_bps + (BPS_DENOMINATOR // 2)) // BPS_DENOMINATOR
+                    else:
+                        scaled_base_qty = base_qty
+
+                    scrap_qty = (scaled_base_qty * comp.scrap_factor_bps + (BPS_DENOMINATOR // 2)) // BPS_DENOMINATOR
+                    total_qty = scaled_base_qty + scrap_qty
+
+                    path_str = " -> ".join(visited_path + [effective_item_id])
 
                     results.append(
                         ExplodedRequirement(
                             depth=depth + 1,
                             parent_item_id=current_item,
-                            item_id=comp.component_item_id,
+                            item_id=effective_item_id,
                             item_type=comp.component_type,
                             path=path_str,
-                            gross_quantity=base_qty,
+                            gross_quantity=scaled_base_qty,
                             scrap_quantity=scrap_qty,
                             total_required_quantity=total_qty,
+                            is_substituted=is_sub,
+                            original_item_id=orig_item_id,
                         )
                     )
 
                     # If component is a subassembly, recurse deeper
                     if comp.component_type == "subassembly":
-                        _traverse(comp.component_item_id, total_qty, depth + 1, current_item)
+                        _traverse(effective_item_id, total_qty, depth + 1, current_item)
 
             visited_path.pop()
 
@@ -176,9 +251,24 @@ class BOMExplosionEngine:
         inventory_on_hand: dict[str, int],
         scheduled_receipts: dict[str, int],
         lot_sizing: dict[str, tuple[int, int]] | None = None,  # item_id -> (min_lot, lot_multiple)
+        substitute_rules: dict[str, tuple[str, int]] | None = None,  # primary_item_id -> (substitute_item_id, substitute_ratio_bps)
     ) -> list[NetMRPRequirement]:
-        """Aggregate total gross demand per component and calculate net shortages."""
+        """Aggregate total gross demand per component and calculate net shortages with substitute netting."""
         lot_rules = lot_sizing or {}
+
+        # Build substitute mapping
+        effective_sub_rules: dict[str, tuple[str, int]] = {}
+        for boms in self._boms_by_item.values():
+            for bom in boms:
+                for comp in bom.components:
+                    if comp.substitute_item_id and comp.component_item_id not in effective_sub_rules:
+                        effective_sub_rules[comp.component_item_id] = (comp.substitute_item_id, comp.substitute_ratio_bps)
+        if substitute_rules:
+            effective_sub_rules.update(substitute_rules)
+
+        # Working inventory pool to prevent duplicate substitute consumption
+        on_hand_pool = dict(inventory_on_hand)
+        on_order_pool = dict(scheduled_receipts)
 
         # Sum demand by item_id
         gross_totals: dict[str, tuple[ItemType, int]] = {}
@@ -189,13 +279,29 @@ class BOMExplosionEngine:
         net_results: list[NetMRPRequirement] = []
 
         for item_id, (item_type, gross_qty) in sorted(gross_totals.items()):
-            on_hand = inventory_on_hand.get(item_id, 0)
-            on_order = scheduled_receipts.get(item_id, 0)
+            on_hand = on_hand_pool.get(item_id, 0)
+            on_order = on_order_pool.get(item_id, 0)
             exact_integer(on_hand, positive=False)
             exact_integer(on_order, positive=False)
 
             available = on_hand + on_order
-            shortage = max(0, gross_qty - available)
+            initial_shortage = max(0, gross_qty - available)
+
+            # Substitute inventory netting if primary item is in shortage
+            if initial_shortage > 0 and item_id in effective_sub_rules:
+                sub_item_id, sub_ratio_bps = effective_sub_rules[item_id]
+                sub_on_hand = on_hand_pool.get(sub_item_id, 0)
+                if sub_on_hand > 0 and sub_ratio_bps > 0:
+                    sub_needed = (initial_shortage * sub_ratio_bps + BPS_DENOMINATOR - 1) // BPS_DENOMINATOR
+                    sub_used = min(sub_on_hand, sub_needed)
+                    primary_covered = (sub_used * BPS_DENOMINATOR) // sub_ratio_bps
+                    primary_covered = min(primary_covered, initial_shortage)
+                    shortage = initial_shortage - primary_covered
+                    on_hand_pool[sub_item_id] = sub_on_hand - sub_used
+                else:
+                    shortage = initial_shortage
+            else:
+                shortage = initial_shortage
 
             # Apply lot sizing: min_lot and lot_multiple
             min_lot, lot_multiple = lot_rules.get(item_id, (1, 1))
@@ -214,7 +320,7 @@ class BOMExplosionEngine:
                     item_id=item_id,
                     item_type=item_type,
                     gross_required=gross_qty,
-                    on_hand=on_hand,
+                    on_hand=inventory_on_hand.get(item_id, 0),
                     scheduled_receipts=on_order,
                     net_shortage=shortage,
                     planned_order_quantity=planned_qty,
@@ -222,3 +328,18 @@ class BOMExplosionEngine:
             )
 
         return net_results
+ 
+ 
+__all__ = [
+    "BPS_DENOMINATOR",
+    "MAX_BOM_DEPTH",
+    "BOMComponentLine",
+    "BOMExplosionEngine",
+    "BOMStatus",
+    "BillOfMaterials",
+    "ExplodedRequirement",
+    "ItemType",
+    "MRPShortageRequisition",
+    "NetMRPRequirement",
+    "generate_mrp_shortage_requisitions",
+]

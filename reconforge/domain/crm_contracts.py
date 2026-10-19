@@ -252,3 +252,266 @@ def convert_quote_to_contract(
         total_contract_value_minor=quote.total_net_minor,
         status="active",
     )
+
+
+def suspend_contract(
+    contract: CustomerContract,
+    reason: str,
+    actor_id: str,
+) -> CustomerContract:
+    """Suspends an active customer contract."""
+    if contract.status != "active":
+        raise FinancePostingError("crm_contract_not_active", f"Cannot suspend contract in status '{contract.status}'.")
+    text(reason, "reason", maximum=500)
+    text(actor_id, "actor_id")
+
+    return CustomerContract(
+        contract_id=contract.contract_id,
+        quote_id=contract.quote_id,
+        workspace_id=contract.workspace_id,
+        organization_id=contract.organization_id,
+        customer_id=contract.customer_id,
+        currency=contract.currency,
+        start_date=contract.start_date,
+        end_date=contract.end_date,
+        billing_frequency=contract.billing_frequency,
+        total_contract_value_minor=contract.total_contract_value_minor,
+        status="suspended",
+    )
+
+
+def resume_contract(
+    contract: CustomerContract,
+    actor_id: str,
+) -> CustomerContract:
+    """Resumes a suspended customer contract."""
+    if contract.status != "suspended":
+        raise FinancePostingError("crm_contract_not_suspended", f"Cannot resume contract in status '{contract.status}'.")
+    text(actor_id, "actor_id")
+
+    return CustomerContract(
+        contract_id=contract.contract_id,
+        quote_id=contract.quote_id,
+        workspace_id=contract.workspace_id,
+        organization_id=contract.organization_id,
+        customer_id=contract.customer_id,
+        currency=contract.currency,
+        start_date=contract.start_date,
+        end_date=contract.end_date,
+        billing_frequency=contract.billing_frequency,
+        total_contract_value_minor=contract.total_contract_value_minor,
+        status="active",
+    )
+
+
+def terminate_contract(
+    contract: CustomerContract,
+    termination_date: str,
+    early_termination_fee_minor: int,
+    actor_id: str,
+    approver_id: str,
+) -> tuple[CustomerContract, int]:
+    """Terminates a contract with maker-checker approval and early exit settlement fee."""
+    if contract.status not in ("active", "suspended"):
+        raise FinancePostingError("crm_contract_invalid_status", f"Cannot terminate contract in status '{contract.status}'.")
+
+    # Strict Maker-Checker segregation
+    clean_actor = text(actor_id, "actor_id")
+    clean_approver = text(approver_id, "approver_id")
+    if clean_actor == clean_approver:
+        raise FinancePostingError("crm_sod_violation", "Contract termination requires independent maker-checker approval.")
+
+    term_d = date.fromisoformat(termination_date)
+    start_d = date.fromisoformat(contract.start_date)
+    end_d = date.fromisoformat(contract.end_date)
+    if term_d < start_d or term_d > end_d:
+        raise FinancePostingError(
+            "crm_contract_termination_date_invalid",
+            f"Termination date {termination_date} must be within [{contract.start_date}, {contract.end_date}].",
+        )
+
+    fee = exact_minor(early_termination_fee_minor, "early_termination_fee_minor", zero=True)
+
+    terminated = CustomerContract(
+        contract_id=contract.contract_id,
+        quote_id=contract.quote_id,
+        workspace_id=contract.workspace_id,
+        organization_id=contract.organization_id,
+        customer_id=contract.customer_id,
+        currency=contract.currency,
+        start_date=contract.start_date,
+        end_date=termination_date,
+        billing_frequency=contract.billing_frequency,
+        total_contract_value_minor=contract.total_contract_value_minor,
+        status="terminated",
+    )
+    return terminated, fee
+
+
+def renew_contract(
+    contract: CustomerContract,
+    new_end_date: str,
+    price_adjustment_bps: int,
+    approver_id: str,
+) -> CustomerContract:
+    """Renews a customer contract to a future end date with basis-point price adjustment."""
+    if contract.status == "terminated":
+        raise FinancePostingError("crm_contract_terminated", "Cannot renew a terminated contract.")
+
+    text(approver_id, "approver_id")
+    cur_end = date.fromisoformat(contract.end_date)
+    new_end = date.fromisoformat(new_end_date)
+    if new_end <= cur_end:
+        raise FinancePostingError("crm_contract_date_invalid", f"New end date {new_end_date} must succeed current {contract.end_date}.")
+
+    if not (-10_000 <= price_adjustment_bps <= 100_000):
+        raise FinancePostingError("crm_bps_invalid", "Price adjustment bps must be between -10,000 and 100,000.")
+
+    # Apply integer basis-point price adjustment with half-up rounding
+    new_value = (contract.total_contract_value_minor * (BPS_DENOMINATOR + price_adjustment_bps) + (BPS_DENOMINATOR // 2)) // BPS_DENOMINATOR
+
+    return CustomerContract(
+        contract_id=contract.contract_id,
+        quote_id=contract.quote_id,
+        workspace_id=contract.workspace_id,
+        organization_id=contract.organization_id,
+        customer_id=contract.customer_id,
+        currency=contract.currency,
+        start_date=contract.end_date,
+        end_date=new_end_date,
+        billing_frequency=contract.billing_frequency,
+        total_contract_value_minor=new_value,
+        status="active",
+    )
+
+
+SubscriptionStatus = Literal["active", "paused", "cancelled", "expired"]
+
+
+@dataclass(frozen=True)
+class SubscriptionPlan:
+    """SaaS or service recurring subscription plan definition."""
+
+    plan_id: str
+    name: str
+    currency: str
+    billing_interval: BillingFrequency
+    unit_price_minor: int
+
+    def __post_init__(self) -> None:
+        text(self.plan_id, "plan_id", maximum=64)
+        text(self.name, "name", maximum=128)
+        text(self.currency, "currency", maximum=3)
+        exact_minor(self.unit_price_minor, "unit_price_minor", zero=True)
+
+
+@dataclass(frozen=True)
+class Subscription:
+    """Active customer recurring subscription linked to a contract and plan."""
+
+    subscription_id: str
+    customer_id: str
+    contract_id: str
+    plan_id: str
+    currency: str
+    status: SubscriptionStatus
+    current_period_start: str  # ISO date
+    current_period_end: str    # ISO date
+    auto_renew: bool = True
+
+    def __post_init__(self) -> None:
+        text(self.subscription_id, "subscription_id", maximum=64)
+        text(self.customer_id, "customer_id", maximum=64)
+        text(self.contract_id, "contract_id", maximum=64)
+        text(self.plan_id, "plan_id", maximum=64)
+        text(self.currency, "currency", maximum=3)
+        sd = date.fromisoformat(self.current_period_start)
+        ed = date.fromisoformat(self.current_period_end)
+        if sd > ed:
+            raise FinancePostingError("crm_subscription_date_invalid", "current_period_start cannot exceed current_period_end.")
+
+
+def calculate_day_proration(amount_minor: int, total_period_days: int, active_days: int) -> int:
+    """Calculate day-prorated minor amount with zero float and deterministic half-up rounding."""
+    exact_minor(amount_minor, "amount_minor", zero=True)
+    if total_period_days <= 0:
+        raise FinancePostingError("crm_proration_invalid", "total_period_days must be positive.")
+    if not (0 <= active_days <= total_period_days):
+        raise FinancePostingError("crm_proration_invalid", f"active_days ({active_days}) must be between 0 and total_period_days ({total_period_days}).")
+    if active_days == 0:
+        return 0
+    if active_days == total_period_days:
+        return amount_minor
+    return (amount_minor * active_days + (total_period_days // 2)) // total_period_days
+
+
+def calculate_plan_change_proration(
+    old_plan: SubscriptionPlan,
+    new_plan: SubscriptionPlan,
+    period_start: str,
+    period_end: str,
+    change_date: str,
+) -> dict[str, int]:
+    """Computes unearned credit of old plan, prorated charge of new plan, and net payable amount."""
+    if old_plan.currency != new_plan.currency:
+        raise FinancePostingError("crm_currency_mismatch", "Cannot prorate between plans with different currencies.")
+    p_start = date.fromisoformat(period_start)
+    p_end = date.fromisoformat(period_end)
+    c_date = date.fromisoformat(change_date)
+    if p_start > p_end:
+        raise FinancePostingError("crm_date_invalid", "period_start cannot succeed period_end.")
+    if not (p_start <= c_date <= p_end):
+        raise FinancePostingError("crm_date_out_of_bounds", f"change_date {change_date} must be between {period_start} and {period_end}.")
+
+    total_period_days = (p_end - p_start).days + 1
+    # Remaining active days under the new plan (from change_date through period_end inclusive)
+    remaining_days = (p_end - c_date).days + 1
+
+    unearned_credit_minor = calculate_day_proration(old_plan.unit_price_minor, total_period_days, remaining_days)
+    new_charge_minor = calculate_day_proration(new_plan.unit_price_minor, total_period_days, remaining_days)
+    net_payable_minor = new_charge_minor - unearned_credit_minor
+
+    return {
+        "total_period_days": total_period_days,
+        "remaining_days": remaining_days,
+        "unearned_credit_minor": unearned_credit_minor,
+        "new_charge_minor": new_charge_minor,
+        "net_payable_minor": net_payable_minor,
+    }
+
+
+def cancel_subscription_with_refund(
+    subscription: Subscription,
+    plan: SubscriptionPlan,
+    cancellation_date: str,
+) -> tuple[Subscription, int]:
+    """Cancels an active subscription and calculates unearned refundable credit with half-up rounding."""
+    if subscription.status != "active":
+        raise FinancePostingError("crm_subscription_not_active", f"Only active subscriptions can be cancelled; current: {subscription.status}")
+    if subscription.plan_id != plan.plan_id:
+        raise FinancePostingError("crm_plan_mismatch", "Subscription plan does not match provided plan.")
+
+    p_start = date.fromisoformat(subscription.current_period_start)
+    p_end = date.fromisoformat(subscription.current_period_end)
+    c_date = date.fromisoformat(cancellation_date)
+    if not (p_start <= c_date <= p_end):
+        raise FinancePostingError("crm_date_out_of_bounds", f"cancellation_date {cancellation_date} must be within subscription period.")
+
+    total_period_days = (p_end - p_start).days + 1
+    # Remaining unused days from cancellation_date through period_end
+    remaining_days = (p_end - c_date).days + 1
+    refund_minor = calculate_day_proration(plan.unit_price_minor, total_period_days, remaining_days)
+
+    cancelled_sub = Subscription(
+        subscription_id=subscription.subscription_id,
+        customer_id=subscription.customer_id,
+        contract_id=subscription.contract_id,
+        plan_id=subscription.plan_id,
+        currency=subscription.currency,
+        status="cancelled",
+        current_period_start=subscription.current_period_start,
+        current_period_end=subscription.current_period_end,
+        auto_renew=False,
+    )
+    return cancelled_sub, refund_minor
+

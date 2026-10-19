@@ -11,6 +11,7 @@ from datetime import date
 from typing import Literal
 
 from reconforge.domain.finance_posting import FinancePostingError, text
+from reconforge.domain.fixed_assets import exact_minor
 
 LeaveCategory = Literal["Annual", "Sick", "Unpaid", "Parental", "Bereavement"]
 LeaveStatus = Literal["Draft", "Submitted", "Approved", "Rejected", "Cancelled"]
@@ -54,12 +55,15 @@ class LeaveRequest:
     status: LeaveStatus
     reason: str
     approved_by_user_id: str | None = None
+    rejection_reason: str | None = None
 
     def __post_init__(self) -> None:
         text(self.request_id, "request_id")
         text(self.employee_id, "employee_id")
         text(self.employee_user_id, "employee_user_id")
         text(self.reason, "reason", maximum=500)
+        if self.rejection_reason is not None:
+            text(self.rejection_reason, "rejection_reason", maximum=500)
         if self.requested_days < 1 or self.requested_days > 365:
             raise HCMLeaveError("leave_days_invalid", "Requested days must be between 1 and 365.")
         try:
@@ -89,6 +93,35 @@ def accrue_monthly_entitlement(
     )
 
 
+def accrue_prorated_entitlement(
+    balance: LeaveEntitlementBalance,
+    service_days: int,
+    total_year_days: int = 365,
+) -> LeaveEntitlementBalance:
+    """Computes exact integer day-prorated leave accrual with half-up rounding."""
+    if total_year_days <= 0:
+        raise HCMLeaveError("leave_year_days_invalid", "Total year days must be positive.")
+    if service_days < 0 or service_days > total_year_days:
+        raise HCMLeaveError(
+            "leave_service_days_invalid",
+            f"Service days must be between 0 and total year days ({total_year_days}).",
+        )
+    # Integer division with deterministic half-up rounding: (annual * service + total // 2) // total
+    prorated_accrued = (balance.annual_entitlement_days * service_days + (total_year_days // 2)) // total_year_days
+    if prorated_accrued < balance.consumed_days:
+        raise HCMLeaveError(
+            "leave_overdrawn",
+            f"Prorated accrual ({prorated_accrued} days) is less than already consumed leave ({balance.consumed_days} days).",
+        )
+    return LeaveEntitlementBalance(
+        employee_id=balance.employee_id,
+        leave_type=balance.leave_type,
+        annual_entitlement_days=balance.annual_entitlement_days,
+        accrued_days=prorated_accrued,
+        consumed_days=balance.consumed_days,
+    )
+
+
 def submit_leave_request(
     request: LeaveRequest,
     balance: LeaveEntitlementBalance,
@@ -110,6 +143,7 @@ def submit_leave_request(
         status="Submitted",
         reason=request.reason,
         approved_by_user_id=None,
+        rejection_reason=None,
     )
 
 
@@ -155,9 +189,73 @@ def approve_leave_request(
         status="Approved",
         reason=request.reason,
         approved_by_user_id=text(approver_user_id, "approver_user_id"),
+        rejection_reason=None,
     )
 
     return approved_request, updated_balance
+
+
+def reject_leave_request(
+    request: LeaveRequest,
+    balance: LeaveEntitlementBalance,
+    rejector_user_id: str,
+    reason: str,
+) -> LeaveRequest:
+    """Rejects a submitted leave request enforcing maker-checker SoD and preserving balance."""
+    if request.status != "Submitted":
+        raise HCMLeaveError(
+            "leave_not_submitted",
+            f"Only submitted requests can be rejected; current: {request.status}",
+        )
+    if balance.employee_id != request.employee_id:
+        raise HCMLeaveError(
+            "leave_balance_mismatch",
+            f"Leave balance employee '{balance.employee_id}' does not match request '{request.employee_id}'.",
+        )
+    clean_rejector = text(rejector_user_id, "rejector_user_id")
+    if clean_rejector == request.employee_user_id:
+        raise HCMLeaveError(
+            "leave_self_rejection_prohibited",
+            "Segregation of Duties violation: employees cannot review or reject their own leave requests.",
+        )
+    clean_reason = text(reason, "rejection_reason", maximum=500)
+
+    # Balance is strictly preserved (unconsumed)
+    return LeaveRequest(
+        request_id=request.request_id,
+        employee_id=request.employee_id,
+        employee_user_id=request.employee_user_id,
+        leave_type=request.leave_type,
+        start_date=request.start_date,
+        end_date=request.end_date,
+        requested_days=request.requested_days,
+        status="Rejected",
+        reason=request.reason,
+        approved_by_user_id=None,
+        rejection_reason=clean_reason,
+    )
+
+
+def withdraw_leave_request(request: LeaveRequest) -> LeaveRequest:
+    """Withdraws a draft or submitted leave request prior to managerial review."""
+    if request.status not in ("Draft", "Submitted"):
+        raise HCMLeaveError(
+            "leave_withdraw_invalid",
+            f"Only draft or submitted requests can be withdrawn; current status: {request.status}",
+        )
+    return LeaveRequest(
+        request_id=request.request_id,
+        employee_id=request.employee_id,
+        employee_user_id=request.employee_user_id,
+        leave_type=request.leave_type,
+        start_date=request.start_date,
+        end_date=request.end_date,
+        requested_days=request.requested_days,
+        status="Cancelled",
+        reason=request.reason,
+        approved_by_user_id=request.approved_by_user_id,
+        rejection_reason=request.rejection_reason,
+    )
 
 
 def cancel_leave_request(
@@ -197,6 +295,41 @@ def cancel_leave_request(
         status="Cancelled",
         reason=request.reason,
         approved_by_user_id=request.approved_by_user_id,
+        rejection_reason=request.rejection_reason,
     )
 
     return cancelled_request, updated_balance
+
+
+def rollover_leave_entitlement(
+    balance: LeaveEntitlementBalance,
+    max_carryover_days: int,
+) -> tuple[LeaveEntitlementBalance, int]:
+    """Rollovers unused leave balance to the next period with carryover cap and forfeiture calculation."""
+    if max_carryover_days < 0 or max_carryover_days > 365:
+        raise HCMLeaveError("leave_carryover_invalid", "Max carryover days must be between 0 and 365.")
+
+    available = balance.available_days
+    carried_over_days = min(available, max_carryover_days)
+    forfeited_days = max(0, available - max_carryover_days)
+
+    new_balance = LeaveEntitlementBalance(
+        employee_id=balance.employee_id,
+        leave_type=balance.leave_type,
+        annual_entitlement_days=balance.annual_entitlement_days,
+        accrued_days=carried_over_days,
+        consumed_days=0,
+    )
+    return new_balance, forfeited_days
+
+
+def calculate_unpaid_leave_deduction(
+    request: LeaveRequest,
+    daily_rate_minor: int,
+) -> int:
+    """Calculates integer minor-unit payroll deduction for approved unpaid absence."""
+    exact_minor(daily_rate_minor, "daily_rate_minor", zero=True)
+    if request.leave_type != "Unpaid":
+        return 0
+    return request.requested_days * daily_rate_minor
+

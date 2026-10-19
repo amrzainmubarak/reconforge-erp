@@ -205,3 +205,93 @@ def test_an_untrusted_policy_selector_cannot_alias_a_captured_rounding_rule(poli
         nearest(Fraction(5, 2), half_even=policy)  # type: ignore[arg-type]
     with pytest.raises(MonetaryOracleError):
         portion(5, 2, 1, fifo=policy)  # type: ignore[arg-type]
+
+
+def test_domain_return_credit_memo_matches_monetary_oracle_witnesses() -> None:
+    from reconforge.domain.operational_fx_tax import (
+        ForeignInvoicePreparation,
+        HistoricalRate,
+        ReturnCreditPreparation,
+        TaxComponent,
+        customer_refund_equation,
+        invoice_equation,
+        return_credit_memo_equation,
+    )
+    from reconforge.utils.money import CurrencyRegistryContext
+
+    context = CurrencyRegistryContext.from_installed()
+    inv = ForeignInvoicePreparation(
+        workspace_id="WS", organization_id="ORG", legal_entity_id="LE", organization_code="CORP",
+        entity_code="ENT", customer_code="CUST", invoice_number="INV-001", posting_date="2026-10-01",
+        due_date="2026-11-01", period_id="2026-10", journal_code="SALES", foreign_currency_code="EUR",
+        net_minor=10000, original_rate=HistoricalRate("1.25", "Spot", "2026-10-01T09:00:00Z"),
+        country_code="EG", transaction_class="Service",
+        taxes=(TaxComponent("vat", "EG", "Service", "2026-01-01", "2026-12-31", "0.14", "TAX", "VAT"),),
+        receivable_account_code="AR", revenue_account_code="REV", cash_account_code="CASH",
+        gain_account_code="GAIN", loss_account_code="LOSS", reason="Sale",
+    )
+    source = invoice_equation(inv, "USD", context)
+
+    # 1. First credit: 5 out of 10 items returned, AR remaining is 7400 EUR (9250 USD)
+    prep1 = ReturnCreditPreparation(
+        invoice_source=source,
+        returned_quantity=5,
+        total_quantity=10,
+        fifo_layers=((10, 6000),),
+        ar_foreign_minor=7400,
+        ar_historical_functional_minor=9250,
+        posting_date="2026-10-10",
+        credit_memo_number="CM-01",
+        refund_liability_account_code="REFUND_LIAB",
+        inventory_account_code="INV_FG",
+        cogs_account_code="COGS",
+    )
+    cm1 = return_credit_memo_equation(prep1, context)
+    assert cm1["cut_foreign_net_minor"] == 5000
+    assert cm1["cut_functional_net_minor"] == 6250
+    assert cm1["foreign_ar_released_minor"] == 5700
+    assert cm1["functional_ar_released_minor"] == 7125
+    assert cm1["foreign_liability_minor"] == 0
+    assert cm1["functional_liability_minor"] == 0
+    assert cm1["restored_cost_minor"] == 3000
+
+    # 2. Second credit: remaining 5 items returned after customer settled all remaining AR
+    prep2 = ReturnCreditPreparation(
+        invoice_source=source,
+        returned_quantity=5,
+        total_quantity=10,
+        fifo_layers=((5, 3000),),
+        ar_foreign_minor=0,
+        ar_historical_functional_minor=0,
+        posting_date="2026-10-12",
+        credit_memo_number="CM-02",
+        refund_liability_account_code="REFUND_LIAB",
+        inventory_account_code="INV_FG",
+        cogs_account_code="COGS",
+    )
+    cm2 = return_credit_memo_equation(prep2, context)
+    assert cm2["foreign_ar_released_minor"] == 0
+    assert cm2["functional_ar_released_minor"] == 0
+    assert cm2["foreign_liability_minor"] == 5700
+    assert cm2["functional_liability_minor"] == 7125
+    assert cm2["restored_cost_minor"] == 3000
+
+    # 3. Cash Refund of the 5700 EUR liability at spot rate 1.10
+    ref = customer_refund_equation(
+        foreign_refund_minor=5700,
+        historical_liability_functional_minor=7125,
+        total_foreign_liability_minor=5700,
+        refund_rate=HistoricalRate("1.10", "Spot", "2026-10-15T09:00:00Z"),
+        foreign_currency="EUR",
+        functional_currency="USD",
+        posting_date="2026-10-15",
+        refund_liability_account_code="REFUND_LIAB",
+        cash_account_code="CASH",
+        gain_account_code="GAIN",
+        loss_account_code="LOSS",
+        context=context,
+    )
+    assert ref["functional_cash_minor"] == 6270
+    assert ref["historical_released_minor"] == 7125
+    assert ref["realized_fx_minor"] == -855
+

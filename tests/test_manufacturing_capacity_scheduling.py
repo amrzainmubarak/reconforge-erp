@@ -6,6 +6,7 @@ from reconforge.domain.manufacturing_capacity_scheduling import (
     CapacitySchedulingError,
     CapacitySlotReservation,
     WorkCenterCalendar,
+    WorkCenterShift,
     book_capacity_slot,
     release_capacity_slot,
     reschedule_capacity_slot,
@@ -162,4 +163,252 @@ def test_release_capacity_slot(cnc_calendar: WorkCenterCalendar) -> None:
 
     with pytest.raises(CapacitySchedulingError, match="No active slot found"):
         release_capacity_slot(released, "WO-1001", 1)
+
+
+def test_shift_calendar_definition_and_capacity_derivation() -> None:
+    morning = WorkCenterShift(
+        shift_id="SHIFT-MORN",
+        name="Morning Shift",
+        start_minute=480,  # 08:00
+        end_minute=960,   # 16:00 (480m)
+        break_minutes=60,  # net 420m
+        days_of_week=frozenset({0, 1, 2, 3, 4}),  # Mon-Fri
+    )
+    assert morning.net_working_minutes == 420
+
+    cal = WorkCenterCalendar(
+        workcenter_id="WC-PAINT-01",
+        name="Automated Paint Booth",
+        shifts=(morning,),
+    )
+    assert cal.daily_capacity_minutes == 420
+
+
+def test_shift_validation_errors() -> None:
+    with pytest.raises(CapacitySchedulingError, match="Shift window must satisfy"):
+        WorkCenterShift("S1", "Invalid Window", start_minute=900, end_minute=800)
+
+    with pytest.raises(CapacitySchedulingError, match="Break minutes"):
+        WorkCenterShift("S2", "Invalid Break", start_minute=480, end_minute=600, break_minutes=150)
+
+    with pytest.raises(CapacitySchedulingError, match="Day of week"):
+        WorkCenterShift("S3", "Invalid Day", start_minute=480, end_minute=600, days_of_week=frozenset({7}))
+
+
+def test_interval_reservation_validation_errors() -> None:
+    # Missing end_minute when start_minute provided
+    with pytest.raises(CapacitySchedulingError, match="Both start_minute and end_minute"):
+        CapacitySlotReservation(
+            reservation_id="R-ERR-1",
+            workcenter_id="WC-CNC-01",
+            work_order_id="WO-101",
+            operation_sequence=1,
+            scheduled_date="2026-11-20",
+            duration_minutes=60,
+            start_minute=480,
+            end_minute=None,
+        )
+
+    # Duration mismatch: end - start = 120, but duration = 60
+    with pytest.raises(CapacitySchedulingError, match="Slot duration .* must equal end_minute - start_minute"):
+        CapacitySlotReservation(
+            reservation_id="R-ERR-2",
+            workcenter_id="WC-CNC-01",
+            work_order_id="WO-101",
+            operation_sequence=1,
+            scheduled_date="2026-11-20",
+            duration_minutes=60,
+            start_minute=480,
+            end_minute=600,
+        )
+
+
+def test_interval_overlap_conflict_rejection() -> None:
+    cal = WorkCenterCalendar(
+        workcenter_id="WC-CNC-01",
+        name="CNC",
+        daily_capacity_minutes=960,
+    )
+
+    # Book slot 1: 08:00 to 10:00 (minutes 480 to 600)
+    slot1 = CapacitySlotReservation(
+        reservation_id="RES-01",
+        workcenter_id="WC-CNC-01",
+        work_order_id="WO-101",
+        operation_sequence=1,
+        scheduled_date="2026-11-20",
+        duration_minutes=120,
+        start_minute=480,
+        end_minute=600,
+    )
+    booked = book_capacity_slot([], slot1, cal)
+    assert len(booked) == 1
+
+    # Overlapping slot 2: 09:30 to 11:30 (minutes 570 to 690) -> partial overlap
+    slot2_conflict = CapacitySlotReservation(
+        reservation_id="RES-02",
+        workcenter_id="WC-CNC-01",
+        work_order_id="WO-102",
+        operation_sequence=1,
+        scheduled_date="2026-11-20",
+        duration_minutes=120,
+        start_minute=570,
+        end_minute=690,
+    )
+    with pytest.raises(CapacitySchedulingError, match="conflicts with existing reservation 'RES-01'"):
+        book_capacity_slot(booked, slot2_conflict, cal)
+
+    # Enclosed slot 3: 08:30 to 09:30 (minutes 510 to 570) -> inside slot1
+    slot3_enclosed = CapacitySlotReservation(
+        reservation_id="RES-03",
+        workcenter_id="WC-CNC-01",
+        work_order_id="WO-103",
+        operation_sequence=1,
+        scheduled_date="2026-11-20",
+        duration_minutes=60,
+        start_minute=510,
+        end_minute=570,
+    )
+    with pytest.raises(CapacitySchedulingError, match="conflicts with existing reservation 'RES-01'"):
+        book_capacity_slot(booked, slot3_enclosed, cal)
+
+    # Non-overlapping adjacent slot 4: 10:00 to 12:00 (minutes 600 to 720) -> books cleanly!
+    slot4_adjacent = CapacitySlotReservation(
+        reservation_id="RES-04",
+        workcenter_id="WC-CNC-01",
+        work_order_id="WO-104",
+        operation_sequence=1,
+        scheduled_date="2026-11-20",
+        duration_minutes=120,
+        start_minute=600,
+        end_minute=720,
+    )
+    booked2 = book_capacity_slot(booked, slot4_adjacent, cal)
+    assert len(booked2) == 2
+
+
+def test_shift_boundary_enforcement() -> None:
+    # Shift is Monday through Friday, 08:00 (480) to 16:00 (960)
+    shift = WorkCenterShift(
+        shift_id="DAY-SHIFT",
+        name="Day Shift",
+        start_minute=480,
+        end_minute=960,
+        break_minutes=0,
+        days_of_week=frozenset({0, 1, 2, 3, 4}),  # Mon-Fri
+    )
+    cal = WorkCenterCalendar(
+        workcenter_id="WC-WELD-01",
+        name="Robotic Welding Cell",
+        daily_capacity_minutes=480,
+        shifts=(shift,),
+    )
+
+    # 2026-11-20 is a Friday (weekday = 4)
+    # Valid slot within shift
+    slot_ok = CapacitySlotReservation(
+        reservation_id="RES-W1",
+        workcenter_id="WC-WELD-01",
+        work_order_id="WO-201",
+        operation_sequence=1,
+        scheduled_date="2026-11-20",
+        duration_minutes=120,
+        start_minute=480,
+        end_minute=600,
+        shift_id="DAY-SHIFT",
+    )
+    booked = book_capacity_slot([], slot_ok, cal)
+    assert len(booked) == 1
+
+    # Slot outside shift hours (e.g. starting at 07:00 = 420)
+    slot_outside = CapacitySlotReservation(
+        reservation_id="RES-W2",
+        workcenter_id="WC-WELD-01",
+        work_order_id="WO-202",
+        operation_sequence=1,
+        scheduled_date="2026-11-20",
+        duration_minutes=120,
+        start_minute=420,
+        end_minute=540,
+    )
+    with pytest.raises(CapacitySchedulingError, match="does not fall within operating hours"):
+        book_capacity_slot(booked, slot_outside, cal)
+
+    # 2026-11-21 is Saturday (weekday = 5) -> no active shift
+    slot_saturday = CapacitySlotReservation(
+        reservation_id="RES-W3",
+        workcenter_id="WC-WELD-01",
+        work_order_id="WO-203",
+        operation_sequence=1,
+        scheduled_date="2026-11-21",
+        duration_minutes=120,
+        start_minute=480,
+        end_minute=600,
+    )
+    with pytest.raises(CapacitySchedulingError, match="no active shifts"):
+        book_capacity_slot([], slot_saturday, cal)
+
+
+def test_atomic_interval_rescheduling_within_same_day() -> None:
+    cal = WorkCenterCalendar(
+        workcenter_id="WC-CNC-01",
+        name="CNC",
+        daily_capacity_minutes=960,
+    )
+
+    # Book WO-101 at [480, 600) and WO-102 at [600, 720)
+    slot1 = CapacitySlotReservation(
+        reservation_id="R1",
+        workcenter_id="WC-CNC-01",
+        work_order_id="WO-101",
+        operation_sequence=1,
+        scheduled_date="2026-11-20",
+        duration_minutes=120,
+        start_minute=480,
+        end_minute=600,
+    )
+    slot2 = CapacitySlotReservation(
+        reservation_id="R2",
+        workcenter_id="WC-CNC-01",
+        work_order_id="WO-102",
+        operation_sequence=1,
+        scheduled_date="2026-11-20",
+        duration_minutes=120,
+        start_minute=600,
+        end_minute=720,
+    )
+    booked = book_capacity_slot([], slot1, cal)
+    booked = book_capacity_slot(booked, slot2, cal)
+    assert len(booked) == 2
+
+    # Attempt to reschedule WO-101 to [660, 780) -> conflicts with WO-102 [600, 720)!
+    conflicting_new_slot = CapacitySlotReservation(
+        reservation_id="R1-MOVE-ERR",
+        workcenter_id="WC-CNC-01",
+        work_order_id="WO-101",
+        operation_sequence=1,
+        scheduled_date="2026-11-20",
+        duration_minutes=120,
+        start_minute=660,
+        end_minute=780,
+    )
+    with pytest.raises(CapacitySchedulingError, match="conflicts with existing reservation 'R2'"):
+        reschedule_capacity_slot(booked, "WO-101", 1, conflicting_new_slot, cal)
+
+    # Reschedule WO-101 to a clear slot [720, 840) -> succeeds!
+    valid_new_slot = CapacitySlotReservation(
+        reservation_id="R1-MOVED",
+        workcenter_id="WC-CNC-01",
+        work_order_id="WO-101",
+        operation_sequence=1,
+        scheduled_date="2026-11-20",
+        duration_minutes=120,
+        start_minute=720,
+        end_minute=840,
+    )
+    rescheduled = reschedule_capacity_slot(booked, "WO-101", 1, valid_new_slot, cal)
+    assert len(rescheduled) == 2
+    r1_after = next(s for s in rescheduled if s.work_order_id == "WO-101")
+    assert r1_after.start_minute == 720
+    assert r1_after.end_minute == 840
 

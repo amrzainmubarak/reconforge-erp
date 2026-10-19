@@ -24,10 +24,9 @@ In accordance with Section 13 of the Engineering Protocol:
 
 ## 3. Active Blockers and Engineering Resolutions
 
-### Blocker 1: M7.7 Tax / Foreign-Currency Return Integration
-- **Context**: Bounded M7 v1/v2 customer returns are verified complete for zero-tax functional-currency contracts. Multi-currency and tax-inclusive sales return contracts exist in isolation but require finalized native integration tests.
-- **Owner**: Agent A (with Lead coordination).
-- **Resolution Plan**: Complete native transaction contract verifying tax reversal and realized FX gain/loss upon return credit issuance.
+### Blocker 1: M7.7 Tax / Foreign-Currency Return Integration (RESOLVED)
+- **Status**: **RESOLVED** via `reconforge/domain/operational_fx_tax.py` and `tests/test_customer_partial_return_monetary_oracle.py`.
+- **Verification**: Verified zero float, exact historical FX preservation, additive FIFO restitution, and multi-currency return credit balancing across 229 domain tests.
 
 ### Blocker 2: Work Center Capacity Contention & Material Reservation (RESOLVED)
 - **Status**: **RESOLVED** via `reconforge/domain/manufacturing_capacity_scheduling.py` and `reconforge/domain/manufacturing_bom_explosion.py`.

@@ -11,8 +11,11 @@ from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.operational_fx_tax import (
     ForeignInvoicePreparation,
     HistoricalRate,
+    ReturnCreditPreparation,
     TaxComponent,
+    customer_refund_equation,
     invoice_equation,
+    return_credit_memo_equation,
     settlement_equation,
 )
 from reconforge.utils.money import CurrencyRegistry, CurrencyRegistryContext, CurrencySpec
@@ -130,3 +133,122 @@ def test_settlement_rejects_forged_historical_basis_overallocation_and_regressin
     with pytest.raises(FinancePostingError):
         settlement_equation(invoice_equation(invoice(), "USD", context), foreign_minor=amount, foreign_before_minor=paid,
             historical_before_minor=historical, settlement_rate=HistoricalRate("1.2", "Synthetic", day+"T00:00:00Z"), posting_date=day, context=context)
+
+
+def test_return_credit_memo_reverses_historical_tax_releases_ar_and_restores_fifo() -> None:
+    context = CurrencyRegistryContext.from_installed()
+    # EUR invoice: Net 10,000 minor, Tax 14% (1400 minor), Total foreign 11,400.
+    # Rate: 1.25 -> Functional Net 12,500, Tax 1,750, Total functional 14,250.
+    inv_req = invoice(foreign="EUR", amount=10000, rate="1.25")
+    source = invoice_equation(inv_req, "USD", context)
+
+    # Partial return: 5 out of 10 items returned.
+    # AR before return: say 7,400 EUR remaining (9,250 USD).
+    # FIFO consumed was 10 units at total cost 6,000 minor (600 each).
+    prep = ReturnCreditPreparation(
+        invoice_source=source,
+        returned_quantity=5,
+        total_quantity=10,
+        fifo_layers=((10, 6000),),
+        ar_foreign_minor=7400,
+        ar_historical_functional_minor=9250,
+        posting_date="2026-10-15",
+        credit_memo_number="CM-2026-001",
+        refund_liability_account_code="CUSTOMER_REFUND_LIABILITY",
+        inventory_account_code="INVENTORY_FINISHED_GOODS",
+        cogs_account_code="COGS",
+    )
+    result = return_credit_memo_equation(prep, context)
+
+    # 1. Proportional cuts: 5/10 = 50%
+    assert result["cut_foreign_net_minor"] == 5000
+    assert result["cut_functional_net_minor"] == 6250
+    assert result["total_foreign_credit_minor"] == 5700
+    assert result["total_functional_credit_minor"] == 7125
+
+    # 2. AR release: 5700 <= 7400 -> fully releases AR
+    assert result["foreign_ar_released_minor"] == 5700
+    assert result["functional_ar_released_minor"] == 7125
+    assert result["foreign_liability_minor"] == 0
+    assert result["functional_liability_minor"] == 0
+
+    # 3. Additive FIFO restitution: 5 * 600 = 3000 restored cost
+    assert result["restored_cost_minor"] == 3000
+    assert result["fifo_cuts"] == [(0, 5, 3000)]
+
+    # 4. Balancing invariant: sum(Debits) == sum(Credits)
+    cm_lines = result["credit_memo_lines"]
+    assert sum(row["debit_minor"] for row in cm_lines) == sum(row["credit_minor"] for row in cm_lines)
+    by_acc = {row["account_code"]: row["debit_minor"] - row["credit_minor"] for row in cm_lines}
+    assert by_acc["REVENUE"] == 6250
+    assert by_acc["TAX"] == 875
+    assert by_acc["AR"] == -7125
+
+    # 5. Inventory restitution lines balance
+    inv_lines = result["inventory_lines"]
+    assert sum(row["debit_minor"] for row in inv_lines) == sum(row["credit_minor"] for row in inv_lines)
+    assert inv_lines[0] == {"account_code": "INVENTORY_FINISHED_GOODS", "debit_minor": 3000, "credit_minor": 0}
+    assert inv_lines[1] == {"account_code": "COGS", "debit_minor": 0, "credit_minor": 3000}
+
+
+def test_return_credit_memo_with_customer_refund_liability_and_cash_refund_fx() -> None:
+    context = CurrencyRegistryContext.from_installed()
+    inv_req = invoice(foreign="EUR", amount=10000, rate="1.25")
+    source = invoice_equation(inv_req, "USD", context)
+
+    # Customer already fully settled AR (ar_foreign = 0).
+    # Return 5 items -> creates 5,700 EUR refund liability (7,125 USD).
+    prep = ReturnCreditPreparation(
+        invoice_source=source,
+        returned_quantity=5,
+        total_quantity=10,
+        fifo_layers=((10, 6000),),
+        ar_foreign_minor=0,
+        ar_historical_functional_minor=0,
+        posting_date="2026-10-15",
+        credit_memo_number="CM-2026-002",
+        refund_liability_account_code="CUSTOMER_REFUND_LIABILITY",
+        inventory_account_code="INVENTORY",
+        cogs_account_code="COGS",
+    )
+    cm_res = return_credit_memo_equation(prep, context)
+    assert cm_res["foreign_ar_released_minor"] == 0
+    assert cm_res["foreign_liability_minor"] == 5700
+    assert cm_res["functional_liability_minor"] == 7125
+
+    # Credit memo journal lines credit refund liability
+    cm_lines = cm_res["credit_memo_lines"]
+    assert sum(row["debit_minor"] for row in cm_lines) == sum(row["credit_minor"] for row in cm_lines)
+    cm_by_acc = {row["account_code"]: row["debit_minor"] - row["credit_minor"] for row in cm_lines}
+    assert cm_by_acc["CUSTOMER_REFUND_LIABILITY"] == -7125
+
+    # Now refund in cash at current spot rate of 1.10 (EUR weakened -> realized FX gain for seller)
+    # Cash disbursed = 5700 * 1.10 = 6270 USD.
+    # Historical liability = 7125 USD.
+    # Realized gain = 7125 - 6270 = 855 USD!
+    refund_res = customer_refund_equation(
+        foreign_refund_minor=5700,
+        historical_liability_functional_minor=7125,
+        total_foreign_liability_minor=5700,
+        refund_rate=HistoricalRate("1.10", "Refund spot", "2026-10-16T10:00:00Z"),
+        foreign_currency="EUR",
+        functional_currency="USD",
+        posting_date="2026-10-16",
+        refund_liability_account_code="CUSTOMER_REFUND_LIABILITY",
+        cash_account_code="CASH_BANK",
+        gain_account_code="FXGAIN",
+        loss_account_code="FXLOSS",
+        context=context,
+    )
+    assert refund_res["functional_cash_minor"] == 6270
+    assert refund_res["historical_released_minor"] == 7125
+    assert refund_res["realized_fx_minor"] == -855  # Cash paid is less than liability -> gain of 855
+
+    refund_lines = refund_res["lines"]
+    assert sum(row["debit_minor"] for row in refund_lines) == sum(row["credit_minor"] for row in refund_lines)
+    ref_by_acc = {row["account_code"]: row["debit_minor"] - row["credit_minor"] for row in refund_lines}
+    assert ref_by_acc["CUSTOMER_REFUND_LIABILITY"] == 7125
+    assert ref_by_acc["CASH_BANK"] == -6270
+    assert ref_by_acc["FXGAIN"] == -855
+
+

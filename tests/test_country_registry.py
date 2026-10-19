@@ -111,4 +111,231 @@ def test_global_registry_inventory_integrity() -> None:
     coverage = GLOBAL_COUNTRY_REGISTRY.list_coverage()
     assert len(coverage) >= 5
     country_codes = {entry["country_code"] for entry in coverage}
-    assert {"SA", "AE", "US", "GB"}.issubset(country_codes)
+    assert {"SA", "AE", "US", "GB", "EG"}.issubset(country_codes)
+
+    # SA e-invoicing is verified and valid in date window
+    sa_einv = GLOBAL_COUNTRY_REGISTRY.require_verified_capability("SA", "einvoicing", "2024-01-01")
+    assert sa_einv.country_code == "SA"
+    assert "qr_tlv_encoding" in sa_einv.capabilities
+    assert sa_einv.external_review_ref == "ZATCA-EINV-AUDIT-2021-V1"
+
+    # AE VAT is verified
+    ae_vat = GLOBAL_COUNTRY_REGISTRY.require_verified_capability("AE", "tax_vat", "2024-01-01")
+    assert ae_vat.country_code == "AE"
+    assert "designated_zones" in ae_vat.capabilities
+
+    # GB MTD is verified
+    gb_vat = GLOBAL_COUNTRY_REGISTRY.require_verified_capability("GB", "tax_vat", "2024-01-01")
+    assert gb_vat.country_code == "GB"
+    assert "mtd_vat_return" in gb_vat.capabilities
+
+
+def test_zatca_phase1_and_phase2_tlv_qr_encoding() -> None:
+    from reconforge.packs.country.sa import (
+        generate_zatca_qr_tlv,
+        get_sa_vat_rate_for_date,
+        parse_zatca_qr_tlv,
+    )
+
+    # Date-effective VAT rates
+    rate_2019 = get_sa_vat_rate_for_date("2019-06-15")
+    assert rate_2019.rate_basis_points == 500
+    rate_2024 = get_sa_vat_rate_for_date("2024-06-15")
+    assert rate_2024.rate_basis_points == 1500
+
+    # Phase 1 QR generation (Tags 1 to 5)
+    qr_b64 = generate_zatca_qr_tlv(
+        seller_name="ReconForge Enterprise Ltd",
+        vat_number="300000000000003",
+        timestamp_iso="2026-10-19T07:00:00Z",
+        invoice_total_gross_formatted="115.00",
+        vat_total_formatted="15.00",
+    )
+    assert isinstance(qr_b64, str)
+    assert len(qr_b64) > 0
+
+    parsed = parse_zatca_qr_tlv(qr_b64)
+    assert parsed[1].decode("utf-8") == "ReconForge Enterprise Ltd"
+    assert parsed[2].decode("utf-8") == "300000000000003"
+    assert parsed[3].decode("utf-8") == "2026-10-19T07:00:00Z"
+    assert parsed[4].decode("utf-8") == "115.00"
+    assert parsed[5].decode("utf-8") == "15.00"
+
+    # Phase 2 QR generation (Tags 1 to 9)
+    xml_hash = b"\xaa" * 32
+    signature = b"\xbb" * 64
+    public_key = b"\xcc" * 64
+    stamp = b"\xdd" * 16
+
+    qr_p2 = generate_zatca_qr_tlv(
+        seller_name="ReconForge Enterprise Ltd",
+        vat_number="300000000000003",
+        timestamp_iso="2026-10-19T07:00:00Z",
+        invoice_total_gross_formatted="115.00",
+        vat_total_formatted="15.00",
+        xml_hash=xml_hash,
+        ecdsa_signature=signature,
+        ecdsa_public_key=public_key,
+        cryptographic_stamp=stamp,
+    )
+    parsed_p2 = parse_zatca_qr_tlv(qr_p2)
+    assert parsed_p2[6] == xml_hash
+    assert parsed_p2[7] == signature
+    assert parsed_p2[8] == public_key
+    assert parsed_p2[9] == stamp
+
+
+def test_uae_fta_vat_and_designated_zones() -> None:
+    from reconforge.packs.country.ae import (
+        AETaxInvoiceSummary,
+        get_ae_vat_rate,
+        is_designated_zone_supply,
+        validate_ae_trn,
+    )
+    from reconforge.packs.tax.models import TaxCategory
+
+    assert validate_ae_trn("100123456789012")
+    assert not validate_ae_trn("200123456789012")  # Doesn't start with 100
+    assert not validate_ae_trn("100123")  # Too short
+
+    rate = get_ae_vat_rate(TaxCategory.STANDARD)
+    assert rate.rate_basis_points == 500
+
+    # Designated zone check
+    assert is_designated_zone_supply("JAFZA", "DAFZA")
+    assert not is_designated_zone_supply("JAFZA", "MAINLAND_DUBAI")
+
+    # Invoice summary check
+    summary = AETaxInvoiceSummary(
+        trn_supplier="100123456789012",
+        trn_customer=None,
+        supply_date="2026-10-10",
+        gross_minor=10500,
+        net_minor=10000,
+        vat_minor=500,
+    )
+    assert summary.gross_minor == summary.net_minor + summary.vat_minor
+
+
+def test_uk_hmrc_mtd_vat_and_9box_return() -> None:
+    from reconforge.packs.country.gb import HMRC9BoxVATReturn, get_gb_vat_rate
+    from reconforge.packs.tax.models import TaxCategory
+
+    std_rate = get_gb_vat_rate(TaxCategory.STANDARD)
+    assert std_rate.rate_basis_points == 2000
+    red_rate = get_gb_vat_rate(TaxCategory.REDUCED)
+    assert red_rate.rate_basis_points == 500
+
+    # 9-box return arithmetic
+    vat_return = HMRC9BoxVATReturn(
+        box1_vat_due_sales_minor=200000,
+        box2_vat_due_acquisitions_minor=10000,
+        box4_vat_reclaimed_minor=85000,
+        box6_total_sales_ex_vat_minor=1000000,
+        box7_total_purchases_ex_vat_minor=425000,
+        box8_total_supplies_ex_vat_minor=50000,
+        box9_total_acquisitions_ex_vat_minor=50000,
+    )
+    # Box 3 = Box 1 + Box 2 = 200,000 + 10,000 = 210,000
+    assert vat_return.box3_total_vat_due_minor == 210000
+    # Box 5 = Box 3 - Box 4 = 210,000 - 85,000 = 125,000 (payable)
+    assert vat_return.box5_net_vat_due_minor == 125000
+
+
+def test_egypt_eta_einvoicing_and_vat() -> None:
+    from reconforge.packs.country.eg import ETADocumentHeader, get_eg_vat_rate, validate_eg_tax_id
+    from reconforge.packs.tax.models import TaxCategory
+
+    assert validate_eg_tax_id("123456789")
+    assert not validate_eg_tax_id("12345")
+
+    rate = get_eg_vat_rate(TaxCategory.STANDARD)
+    assert rate.rate_basis_points == 1400
+
+    header = ETADocumentHeader(
+        issuer_id="123456789",
+        issuer_name="Cairo Industrial Corp",
+        receiver_id="987654321",
+        receiver_name="Alexandria Trading Co",
+        document_type="I",
+        document_type_version="1.0",
+        date_time_issued="2026-10-19T08:00:00Z",
+        taxpayer_activity_code="4610",
+        internal_id="INV-2026-001",
+    )
+    assert header.document_type == "I"
+
+
+def test_us_sales_tax_and_economic_nexus() -> None:
+    from reconforge.packs.country.us import (
+        determine_applicable_rate_bps,
+        evaluate_economic_nexus,
+    )
+
+    # Remote seller with $150,000 sales -> has nexus
+    assert evaluate_economic_nexus("CA", annual_sales_minor=15_000_000, annual_transactions=50)
+    # Remote seller with 250 transactions -> has nexus
+    assert evaluate_economic_nexus("CA", annual_sales_minor=5_000_000, annual_transactions=250)
+    # Under both thresholds -> no nexus
+    assert not evaluate_economic_nexus("CA", annual_sales_minor=5_000_000, annual_transactions=50)
+
+    # Origin state vs destination state
+    ca_rate = determine_applicable_rate_bps("CA", "TX", has_nexus_in_destination=False)
+    assert ca_rate == 725  # Origin CA applies when no nexus in destination
+
+
+def test_tax_engine_exact_integer_exclusive_and_inclusive_calculations() -> None:
+    from reconforge.packs.tax.engine import (
+        calculate_multi_rate_tax,
+        calculate_tax_exclusive,
+        calculate_tax_inclusive,
+    )
+    from reconforge.packs.tax.models import TaxCategory, TaxRate
+
+    # 1. Tax Exclusive (15% VAT on 100.00 SAR = 10000 minor)
+    res_ex = calculate_tax_exclusive(10000, 1500, currency="SAR")
+    assert res_ex.net_total_minor == 10000
+    assert res_ex.tax_total_minor == 1500
+    assert res_ex.gross_total_minor == 11500
+    assert res_ex.net_total_minor + res_ex.tax_total_minor == res_ex.gross_total_minor
+
+    # 2. Half-up rounding boundary in exclusive:
+    # Net = 333 minor (3.33 SAR), Rate = 15% (1500 bps).
+    # Exact tax = 333 * 0.15 = 49.95 -> rounds up to 50 minor.
+    res_halfup = calculate_tax_exclusive(333, 1500, currency="SAR")
+    assert res_halfup.tax_total_minor == 50
+    assert res_halfup.gross_total_minor == 383
+    assert res_halfup.net_total_minor + res_halfup.tax_total_minor == res_halfup.gross_total_minor
+
+    # 3. Tax Inclusive extraction (115.00 SAR gross with 15% VAT):
+    # Net = 100.00 SAR (10000 minor), Tax = 15.00 SAR (1500 minor)
+    res_inc = calculate_tax_inclusive(11500, 1500, currency="SAR")
+    assert res_inc.net_total_minor == 10000
+    assert res_inc.tax_total_minor == 1500
+    assert res_inc.gross_total_minor == 11500
+    assert res_inc.net_total_minor + res_inc.tax_total_minor == res_inc.gross_total_minor
+
+    # 4. Tax Inclusive extraction on odd numbers with ZERO integer leakage:
+    # Gross = 1000 minor, Rate = 15% (1500 bps).
+    # Net = (1000 * 10000 + 5750) // 11500 = 10005750 // 11500 = 870 minor.
+    # Tax = 1000 - 870 = 130 minor.
+    # Check: 870 + 130 == 1000!
+    res_inc_odd = calculate_tax_inclusive(1000, 1500, currency="SAR")
+    assert res_inc_odd.net_total_minor == 870
+    assert res_inc_odd.tax_total_minor == 130
+    assert res_inc_odd.gross_total_minor == 1000
+    assert res_inc_odd.net_total_minor + res_inc_odd.tax_total_minor == res_inc_odd.gross_total_minor
+
+    # 5. Multi-rate calculation
+    rate_15 = TaxRate(tax_id="VAT15", name="15%", country_code="SA", category=TaxCategory.STANDARD, rate_basis_points=1500)
+    rate_0 = TaxRate(tax_id="VAT0", name="0%", country_code="SA", category=TaxCategory.ZERO_RATED, rate_basis_points=0)
+    multi_res = calculate_multi_rate_tax([(10000, rate_15), (5000, rate_0)], currency="SAR", inclusive=False)
+    assert multi_res.net_total_minor == 15000
+    assert multi_res.tax_total_minor == 1500
+    assert multi_res.gross_total_minor == 16500
+
+    # 6. Float prohibition check
+    with pytest.raises(TypeError):
+        calculate_tax_exclusive(100.50, 1500)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        calculate_tax_inclusive(115.00, 1500)  # type: ignore[arg-type]

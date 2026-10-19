@@ -40,8 +40,10 @@ Measured on primary host (Python 3.12.13, Windows PowerShell):
 | Check | Tool / Scope | Result | Execution Time |
 | --- | --- | --- | ---: |
 | Python Lint | `python -m ruff check reconforge tests` | 0 issues found | 0.38 s |
-| Python Typecheck | `python -m mypy reconforge/domain/... tests/...` | 8 source files clean | 0.82 s |
-| Level 1 Domain Slices | `python -m pytest <45 tests across A1,A2,B1,B2,C1,C2>` | 45 passed, 0 failures | 1.50 s |
+| Python Typecheck | `python -m mypy reconforge/domain/... tests/...` | 22 source files clean | 1.12 s |
+| Sentinel Domain Test Suite | `python -m pytest <14 suites across domains>` | 229 passed, 0 failures | 10.80 s |
+| Adversarial Stress Suite | `python -m pytest tests/test_adversarial_*.py` | 51 passed, 0 failures | 0.63 s |
+| Forensic AST Division Check | Zero `ast.Div` in monetary/tax/cost paths | 100% PASS (21 files) | 0.15 s |
 | Web Typecheck | `npm --prefix apps/web run typecheck` | 0 errors | 1.98 s |
 | Git Hygiene | `git diff --check` | Clean | 0.04 s |
 

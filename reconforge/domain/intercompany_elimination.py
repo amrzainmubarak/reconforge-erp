@@ -16,7 +16,6 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from decimal import Decimal
 from typing import Literal
 
 from reconforge.domain.consolidation import ConsolidationAccountType, ConsolidationError
@@ -24,7 +23,7 @@ from reconforge.domain.consolidation_lifecycle import (
     ConsolidationElimination,
     ConsolidationEliminationLine,
 )
-from reconforge.utils.money import InvalidAmountError, Money
+from reconforge.utils.money import CurrencyRegistryContext, InvalidAmountError, MinorMoney, Money
 
 INTERCOMPANY_ELIMINATION_SCHEMA_VERSION = 1
 INTERCOMPANY_ELIMINATION_ALGORITHM_VERSION = "intercompany-elimination-v1"
@@ -127,6 +126,45 @@ class IntercompanyEliminationInputLine:
             "source_reference": self.source_reference,
             "transaction_id": self.transaction_id,
         }
+
+    @classmethod
+    def from_minor_money(
+        cls,
+        *,
+        transaction_id: str,
+        period_name: str,
+        entity_code: str,
+        counterparty_code: str,
+        reference: str,
+        group_account_code: str,
+        account_type: ConsolidationAccountType,
+        amount: MinorMoney,
+        source_reference: str,
+        source_digest: str,
+    ) -> IntercompanyEliminationInputLine:
+        """Construct an elimination input line from a MinorMoney integer minor-unit instance."""
+        return cls(
+            transaction_id=transaction_id,
+            period_name=period_name,
+            entity_code=entity_code,
+            counterparty_code=counterparty_code,
+            reference=reference,
+            group_account_code=group_account_code,
+            account_type=account_type,
+            amount=amount.to_money(),
+            source_reference=source_reference,
+            source_digest=source_digest,
+        )
+
+    def to_minor_money(self, registry_context: CurrencyRegistryContext | None = None) -> MinorMoney:
+        """Export this line amount as MinorMoney integer minor units."""
+        return MinorMoney(
+            minor_units=self.amount.to_minor_units(),
+            currency=self.amount.currency,
+            registry_context=registry_context,
+        )
+
+
 
 
 def intercompany_elimination_input_line_from_dict(
@@ -354,8 +392,8 @@ def prepare_intercompany_eliminations(
         if entities != counterparties:
             resolutions.append(_unresolved(group_key=group_key, lines=group, reason="non_reciprocal_entity_coverage"))
             continue
-        total = sum((line.amount.amount for line in group), start=Decimal("0"))
-        if total != 0:
+        total_minor = sum(line.amount.to_minor_units() for line in group)
+        if total_minor != 0:
             resolutions.append(_unresolved(group_key=group_key, lines=group, reason="source_group_is_not_zero_sum"))
             continue
 
@@ -367,7 +405,7 @@ def prepare_intercompany_eliminations(
                 entity_code=line.entity_code,
                 group_account_code=line.group_account_code,
                 account_type=line.account_type,
-                amount=Money.from_exact(-line.amount.amount, currency, strict_precision=True),
+                amount=Money.from_minor_units(-line.amount.to_minor_units(), currency),
                 source_reference=f"intercompany:{line.transaction_id}:source:{line.source_digest}",
                 source_digest=line.source_digest,
             )
@@ -445,3 +483,71 @@ def verify_intercompany_elimination_payload(
     ):
         raise ConsolidationError("Intercompany elimination result does not reproduce from its source lines.")
     return result
+
+
+@dataclass(frozen=True)
+class IntercompanyDiscrepancyDiagnostic:
+    """Machine-readable diagnostic explaining an unresolved intercompany reconciliation group."""
+
+    group_key: str
+    period_name: str
+    reference: str
+    currency: str
+    reason: str
+    discrepancy_minor: int
+    entity_balances_minor: dict[str, int]
+    missing_counterparties: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "currency": self.currency,
+            "discrepancy_minor": self.discrepancy_minor,
+            "entity_balances_minor": dict(self.entity_balances_minor),
+            "group_key": self.group_key,
+            "missing_counterparties": list(self.missing_counterparties),
+            "period_name": self.period_name,
+            "reason": self.reason,
+            "reference": self.reference,
+        }
+
+
+def diagnose_intercompany_discrepancies(
+    lines: tuple[IntercompanyEliminationInputLine, ...],
+    result: IntercompanyEliminationResult,
+) -> tuple[IntercompanyDiscrepancyDiagnostic, ...]:
+    """Produce machine-readable discrepancy diagnostics for all unresolved intercompany groups."""
+    lines_by_tx = {line.transaction_id: line for line in lines}
+    diagnostics: list[IntercompanyDiscrepancyDiagnostic] = []
+
+    for resolution in result.resolutions:
+        if resolution.status != "unresolved":
+            continue
+        group_lines = [lines_by_tx[tx_id] for tx_id in resolution.source_transaction_ids if tx_id in lines_by_tx]
+        if not group_lines:
+            continue
+        sample = group_lines[0]
+        entities = {item.entity_code for item in group_lines}
+        counterparties = {item.counterparty_code for item in group_lines}
+        missing = tuple(sorted((entities - counterparties) | (counterparties - entities)))
+
+        entity_balances: dict[str, int] = {}
+        for item in group_lines:
+            entity_balances[item.entity_code] = entity_balances.get(item.entity_code, 0) + item.amount.to_minor_units()
+
+        total_minor = sum(item.amount.to_minor_units() for item in group_lines)
+        discrepancy = abs(total_minor)
+
+        diagnostics.append(
+            IntercompanyDiscrepancyDiagnostic(
+                group_key=resolution.group_key,
+                period_name=sample.period_name,
+                reference=sample.reference,
+                currency=sample.amount.currency,
+                reason=resolution.reason,
+                discrepancy_minor=discrepancy,
+                entity_balances_minor=entity_balances,
+                missing_counterparties=missing,
+            )
+        )
+    return tuple(diagnostics)
+

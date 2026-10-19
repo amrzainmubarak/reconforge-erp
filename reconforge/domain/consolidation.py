@@ -12,7 +12,14 @@ from datetime import UTC, datetime
 from decimal import Decimal, localcontext
 from typing import Literal, cast
 
-from reconforge.utils.money import CurrencyRegistry, ExchangeRate, InvalidAmountError, Money
+from reconforge.utils.money import (
+    CurrencyRegistry,
+    CurrencyRegistryContext,
+    ExchangeRate,
+    InvalidAmountError,
+    MinorMoney,
+    Money,
+)
 
 CONSOLIDATION_TRANSLATION_SCHEMA_VERSION = 1
 CONSOLIDATION_TRANSLATION_ALGORITHM_VERSION = "consolidation-translation-v1"
@@ -202,6 +209,47 @@ class ConsolidationBalance:
             "source_line_id": self.source_line_id,
             "source_trial_balance_digest": self.source_trial_balance_digest,
         }
+
+    @classmethod
+    def from_minor_money(
+        cls,
+        *,
+        source_line_id: str,
+        source_trial_balance_digest: str,
+        entity_code: str,
+        source_account_code: str,
+        group_account_code: str,
+        account_type: ConsolidationAccountType,
+        period_id: str,
+        amount: MinorMoney,
+        rate_type: TranslationRateType,
+        rate_bucket: str,
+    ) -> ConsolidationBalance:
+        """Construct a ConsolidationBalance directly from a MinorMoney integer minor-unit instance."""
+        money = amount.to_money()
+        return cls(
+            source_line_id=source_line_id,
+            source_trial_balance_digest=source_trial_balance_digest,
+            entity_code=entity_code,
+            source_account_code=source_account_code,
+            group_account_code=group_account_code,
+            account_type=account_type,
+            period_id=period_id,
+            amount=money.amount,
+            currency=money.currency,
+            rate_type=rate_type,
+            rate_bucket=rate_bucket,
+        )
+
+    def to_minor_money(self, registry_context: CurrencyRegistryContext | None = None) -> MinorMoney:
+        """Export this balance as a MinorMoney instance with integer minor units."""
+        money = Money.from_exact(self.amount, self.currency, strict_precision=True, registry_context=registry_context)
+        return MinorMoney(
+            minor_units=money.to_minor_units(),
+            currency=self.currency,
+            registry_context=registry_context,
+        )
+
 
 
 @dataclass(frozen=True)

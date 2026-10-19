@@ -551,3 +551,117 @@ def diagnose_intercompany_discrepancies(
         )
     return tuple(diagnostics)
 
+
+@dataclass(frozen=True)
+class IntercompanyProfitInStockRule:
+    """Governance rule for eliminating unrealized intercompany inventory profit (profit-in-stock)."""
+
+    rule_id: str
+    selling_entity: str
+    buying_entity: str
+    inventory_item_code: str
+    margin_basis_points: int  # Gross margin percentage in basis points (e.g. 2500 for 25.00%)
+    ending_inventory_cost_minor: int  # Carrying value of inventory held at buying entity
+    nci_share_basis_points: int  # Non-controlling interest percentage in basis points (0 for wholly-owned / downstream)
+    currency: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "rule_id", _identifier(self.rule_id, "Rule identifier"))
+        object.__setattr__(self, "selling_entity", _identifier(self.selling_entity, "Selling entity"))
+        object.__setattr__(self, "buying_entity", _identifier(self.buying_entity, "Buying entity"))
+        object.__setattr__(self, "inventory_item_code", _identifier(self.inventory_item_code, "Inventory item code"))
+        if self.selling_entity == self.buying_entity:
+            raise ConsolidationError("Intercompany selling and buying entities must differ.")
+        if not (0 <= self.margin_basis_points <= 10_000):
+            raise ConsolidationError("Margin basis points must be between 0 and 10000.")
+        if self.ending_inventory_cost_minor < 0:
+            raise ConsolidationError("Ending inventory cost must be non-negative.")
+        if not (0 <= self.nci_share_basis_points <= 10_000):
+            raise ConsolidationError("NCI share basis points must be between 0 and 10000.")
+        object.__setattr__(self, "currency", _identifier(self.currency, "Currency"))
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "buying_entity": self.buying_entity,
+            "currency": self.currency,
+            "ending_inventory_cost_minor": self.ending_inventory_cost_minor,
+            "inventory_item_code": self.inventory_item_code,
+            "margin_basis_points": self.margin_basis_points,
+            "nci_share_basis_points": self.nci_share_basis_points,
+            "rule_id": self.rule_id,
+            "selling_entity": self.selling_entity,
+        }
+
+
+@dataclass(frozen=True)
+class IntercompanyProfitInStockElimination:
+    """Exact elimination proposal for unrealized intercompany inventory profit."""
+
+    elimination_id: str
+    rule_id: str
+    unrealized_profit_minor: int
+    parent_share_minor: int
+    nci_share_minor: int
+    currency: str
+    debit_account: str
+    credit_account: str
+    rationale: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "elimination_id", _identifier(self.elimination_id, "Elimination identifier"))
+        object.__setattr__(self, "rule_id", _identifier(self.rule_id, "Rule identifier"))
+        if self.parent_share_minor + self.nci_share_minor != self.unrealized_profit_minor:
+            raise ConsolidationError("Parent and NCI shares must strictly conserve total unrealized profit.")
+        object.__setattr__(self, "currency", _identifier(self.currency, "Currency"))
+        object.__setattr__(self, "debit_account", _identifier(self.debit_account, "Debit account"))
+        object.__setattr__(self, "credit_account", _identifier(self.credit_account, "Credit account"))
+        object.__setattr__(self, "rationale", _bounded_text(self.rationale, "Rationale"))
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "credit_account": self.credit_account,
+            "currency": self.currency,
+            "debit_account": self.debit_account,
+            "elimination_id": self.elimination_id,
+            "nci_share_minor": self.nci_share_minor,
+            "parent_share_minor": self.parent_share_minor,
+            "rationale": self.rationale,
+            "rule_id": self.rule_id,
+            "unrealized_profit_minor": self.unrealized_profit_minor,
+        }
+
+
+def calculate_profit_in_stock_elimination(
+    rule: IntercompanyProfitInStockRule,
+    *,
+    debit_account: str = "COGS_ELIMINATION",
+    credit_account: str = "INVENTORY_VALUATION",
+) -> IntercompanyProfitInStockElimination:
+    """Compute exact, integer-conserved unrealized profit elimination with NCI allocation."""
+    # Profit in stock = Ending Inventory Cost * (Margin bps / 10000) using integer HALF_UP
+    product = rule.ending_inventory_cost_minor * rule.margin_basis_points
+    unrealized_profit = (product + 5_000) // 10_000
+
+    # NCI share allocation: for upstream sales (subsidiary with minority interest selling to parent)
+    nci_product = unrealized_profit * rule.nci_share_basis_points
+    nci_share = (nci_product + 5_000) // 10_000
+    parent_share = unrealized_profit - nci_share
+
+    elimination_id = f"PIS-ELIM-{rule.rule_id}-{_digest(rule.to_dict())[:16]}"
+    rationale = (
+        f"Elimination of unrealized profit in ending inventory for item {rule.inventory_item_code} "
+        f"sold by {rule.selling_entity} to {rule.buying_entity} with margin {rule.margin_basis_points} bps. "
+        f"Total unrealized profit {unrealized_profit} {rule.currency} (Parent: {parent_share}, NCI: {nci_share})."
+    )
+
+    return IntercompanyProfitInStockElimination(
+        elimination_id=elimination_id,
+        rule_id=rule.rule_id,
+        unrealized_profit_minor=unrealized_profit,
+        parent_share_minor=parent_share,
+        nci_share_minor=nci_share,
+        currency=rule.currency,
+        debit_account=debit_account,
+        credit_account=credit_account,
+        rationale=rationale,
+    )

@@ -60,8 +60,9 @@ Under the mandatory single-workspace directive (ADR0863 / 2026-10-18):
 - **Completed Deliverables**:
   - **Slice A1**: Financial Domain & Country Pack Governance: Formalize Country Coverage Registry (`reconforge/packs/country_registry.py`) and enhance Fixed Asset disposal/impairment accounting in `reconforge/domain/fixed_assets.py` without float arithmetic.
   - **Slice A2**: Treasury Liquidity & Cash Forecasting (Level 1 & Level 2): Deterministic liquidity timeline buckets, basis-point scenario modeling, and stress testing in `reconforge/domain/treasury_liquidity.py`, backed by `reconforge/infrastructure/sqlite_treasury.py`, mounted at `/api/v1/treasury` in `reconforge/api/routes/treasury_liquidity.py`, and verified in `tests/test_api_treasury_liquidity.py`.
+  - **Slice A3**: Intercompany Multi-Entity Elimination and Profit-in-Stock (Level 1 & Level 2): Reciprocal ledger pairing, diagnostic discrepancy detection, and unrealized inventory profit elimination with exact NCI allocation in `reconforge/domain/intercompany_elimination.py`, backed by `reconforge/infrastructure/sqlite_intercompany_elimination.py`, mounted at `/api/v1/intercompany/eliminations` in `reconforge/api/routes/intercompany_elimination.py`, and verified in `tests/test_intercompany_elimination_v2.py` and `tests/test_api_intercompany_eliminations.py`.
 - **Current Active Workstream**:
-  - **Slice A3**: Intercompany Multi-Entity Elimination and FX Translation Ledger Integration: Expand `reconforge/domain/intercompany_elimination.py` to reconcile paired cross-border trade and reciprocal ledger balances.
+  - **Slice A4**: Group Consolidated Financial Statements & Classified Cash Flow: Consolidated balance sheet, statement of comprehensive income, and indirect cash flow statement with multi-currency group translations.
 
 ---
 
@@ -69,6 +70,7 @@ Under the mandatory single-workspace directive (ADR0863 / 2026-10-18):
 - **Role**: Principal Industrial Operations & Materials Processing Specialist.
 - **Exclusive File Ownership**:
   - `reconforge/domain/manufacturing_*.py`
+  - `reconforge/domain/shop_floor_dispatch.py`
   - `reconforge/domain/inventory_*.py`
   - `reconforge/domain/procurement_*.py`
   - `reconforge/domain/supplier_returns.py`
@@ -79,7 +81,9 @@ Under the mandatory single-workspace directive (ADR0863 / 2026-10-18):
   - `reconforge/infrastructure/postgres_stock_*.py`
   - `reconforge/infrastructure/sqlite_inventory_*.py`
   - `reconforge/infrastructure/sqlite_manufacturing_*.py`
+  - `reconforge/infrastructure/sqlite_shop_floor.py`
   - `reconforge/api/routes/manufacturing_bom.py`
+  - `reconforge/api/routes/shop_floor_traceability.py`
   - `tests/test_*manufacturing*.py`
   - `tests/test_*inventory*.py`
   - `tests/test_*procurement*.py`
@@ -87,8 +91,9 @@ Under the mandatory single-workspace directive (ADR0863 / 2026-10-18):
 - **Completed Deliverables**:
   - **Slice B1**: Work Center Finite Capacity Planning & Rescheduling: Atomic slot booking, conflict rejection, and calendar shift handling in `reconforge/domain/manufacturing_capacity_scheduling.py`.
   - **Slice B2**: Advanced Multi-Level BOM Explosion & MRP Shortage Netting (Level 1 & Level 2): Indented BOM traversal with cycle detection, scrap factors, and lot-size replenishment in `reconforge/domain/manufacturing_bom_explosion.py`, backed by `reconforge/infrastructure/sqlite_manufacturing_bom.py`, mounted at `/api/v1/manufacturing/bom` in `reconforge/api/routes/manufacturing_bom.py`, and verified in `tests/test_api_manufacturing_bom.py`.
+  - **Slice B3**: Shop Floor Execution & Lot Traceability Genealogy (Level 1 & Level 2): Work order dispatch, routing step progression, scrap variance, and bidirectional lot genealogy tree traversal in `reconforge/domain/shop_floor_dispatch.py`, backed by `reconforge/infrastructure/sqlite_shop_floor.py`, mounted at `/api/v1/manufacturing/traceability` in `reconforge/api/routes/shop_floor_traceability.py`, and verified in `tests/test_manufacturing_shop_floor_genealogy.py` and `tests/test_api_shop_floor_traceability.py`.
 - **Current Active Workstream**:
-  - **Slice B3**: Shop Floor Execution & Traceability Genealogy: Complete batch tracking, WIP stage movements, and routing variance accounting in `reconforge/domain/manufacturing_execution_v2.py`.
+  - **Slice B4**: Master Production Scheduling (MPS) & Sourcing Optimization: Demand time buckets, MPS versioning, and purchase order forecast optimization.
 
 ---
 
@@ -105,8 +110,10 @@ Under the mandatory single-workspace directive (ADR0863 / 2026-10-18):
   - `reconforge/domain/notification_inbox.py`
   - `reconforge/infrastructure/sqlite_hcm_leave.py`
   - `reconforge/infrastructure/sqlite_crm_contracts.py`
+  - `reconforge/infrastructure/sqlite_project_billing.py`
   - `reconforge/api/routes/hcm_leave.py`
   - `reconforge/api/routes/crm_contracts.py`
+  - `reconforge/api/routes/project_milestone_billing.py`
   - `reconforge/ai/`
   - `reconforge/studio/`
   - `apps/web/`
@@ -119,8 +126,9 @@ Under the mandatory single-workspace directive (ADR0863 / 2026-10-18):
 - **Completed Deliverables**:
   - **Slice C1**: HCM Employee Leave & Self-Service Workflows (Level 1 & Level 2): `reconforge/domain/hcm_leave.py` with entitlement/absence accounting, backed by `reconforge/infrastructure/sqlite_hcm_leave.py`, mounted at `/api/v1/hcm/leave` in `reconforge/api/routes/hcm_leave.py`, and verified in `tests/test_api_hcm_leave.py`; plus explainable AI auditing in `reconforge/ai/governed_assistant.py`.
   - **Slice C2**: CRM Opportunity Pipeline, Tiered Quotation Approvals & Customer Contracts (Level 1 & Level 2): Weighted pipeline value, maker-checker discount governance, and contract lifecycle in `reconforge/domain/crm_contracts.py`, backed by `reconforge/infrastructure/sqlite_crm_contracts.py`, mounted at `/api/v1/crm/contracts` in `reconforge/api/routes/crm_contracts.py`, and verified in `tests/test_api_crm_contracts.py`.
+  - **Slice C3**: Professional Services Project Costing & Milestone Billing (Level 1 & Level 2): Project WBS hierarchy, resource role rate cards, maker-checker milestone deliverable verification, and financial posture calculation in `reconforge/domain/project_milestone_billing.py`, backed by `reconforge/infrastructure/sqlite_project_billing.py`, mounted at `/api/v1/projects/billing` in `reconforge/api/routes/project_milestone_billing.py`, and verified in `tests/test_project_milestone_billing.py` and `tests/test_api_project_milestone_billing.py`.
 - **Current Active Workstream**:
-  - **Slice C3**: Professional Services Project Costing, Resource Allocation & Milestone Billing: Link contract line items to project work breakdown structures and verified billable timesheets.
+  - **Slice C4**: Comprehensive Bilingual English/Arabic Studio User Journeys & WCAG 2.1 AA Accessibility Validation.
 
 ---
 

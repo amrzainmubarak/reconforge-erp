@@ -73,6 +73,7 @@ from reconforge.api.routes import (
     identity_administration,
     individual_cashflow,
     intercompany_cashflow,
+    intercompany_elimination,
     intercompany_fx,
     intercompany_group_diagnostic,
     intercompany_operations,
@@ -101,6 +102,7 @@ from reconforge.api.routes import (
     procurement_partial,
     procurement_sourcing,
     professional_invoice_payment,
+    project_milestone_billing,
     project_source_reconciliation,
     project_time_billing,
     receivables,
@@ -113,6 +115,7 @@ from reconforge.api.routes import (
     scoped_exports,
     security_center,
     security_governance,
+    shop_floor_traceability,
     stock_sales,
     stock_sales_v2,
     supplier_returns,
@@ -507,6 +510,9 @@ def create_api_app(
     app.include_router(manufacturing_bom.router, prefix="/api/v1")
     app.include_router(hcm_leave.router, prefix="/api/v1")
     app.include_router(crm_contracts.router, prefix="/api/v1")
+    app.include_router(intercompany_elimination.router, prefix="/api/v1")
+    app.include_router(shop_floor_traceability.router, prefix="/api/v1")
+    app.include_router(project_milestone_billing.router, prefix="/api/v1")
     app.include_router(scim.router)
     if resolved_web_root is not None:
         # The catch-all SPA must follow every API router in dispatch order.
@@ -591,6 +597,9 @@ def create_api_app(
         manufacturing_bom.router,
         hcm_leave.router,
         crm_contracts.router,
+        intercompany_elimination.router,
+        shop_floor_traceability.router,
+        project_milestone_billing.router,
     )
     core_contracts = build_route_authorization_inventory(
         authorization_routers,

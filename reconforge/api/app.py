@@ -54,6 +54,7 @@ from reconforge.api.routes import (
     consolidation_ownership,
     consolidation_ownership_change,
     consolidation_ppa,
+    crm_contracts,
     customer_partial_returns,
     customer_partial_returns_v2,
     customer_partial_returns_v3,
@@ -67,6 +68,7 @@ from reconforge.api.routes import (
     financial_installments,
     financial_reporting,
     fixed_assets,
+    hcm_leave,
     health,
     identity_administration,
     individual_cashflow,
@@ -81,6 +83,7 @@ from reconforge.api.routes import (
     inventory_valuation,
     inventory_valuation_reversal,
     landed_cost,
+    manufacturing_bom,
     manufacturing_cost_control,
     manufacturing_execution,
     manufacturing_execution_v2,
@@ -113,6 +116,7 @@ from reconforge.api.routes import (
     stock_sales,
     stock_sales_v2,
     supplier_returns,
+    treasury_liquidity,
     users,
     webauthn,
     workflow,
@@ -499,6 +503,10 @@ def create_api_app(
     app.include_router(inventory_transfer.router, prefix="/api/v1")
     app.include_router(inventory_valuation.router, prefix="/api/v1")
     app.include_router(inventory_valuation_reversal.router, prefix="/api/v1")
+    app.include_router(treasury_liquidity.router, prefix="/api/v1")
+    app.include_router(manufacturing_bom.router, prefix="/api/v1")
+    app.include_router(hcm_leave.router, prefix="/api/v1")
+    app.include_router(crm_contracts.router, prefix="/api/v1")
     app.include_router(scim.router)
     if resolved_web_root is not None:
         # The catch-all SPA must follow every API router in dispatch order.
@@ -579,6 +587,10 @@ def create_api_app(
         inventory_transfer.router,
         inventory_valuation.router,
         inventory_valuation_reversal.router,
+        treasury_liquidity.router,
+        manufacturing_bom.router,
+        hcm_leave.router,
+        crm_contracts.router,
     )
     core_contracts = build_route_authorization_inventory(
         authorization_routers,

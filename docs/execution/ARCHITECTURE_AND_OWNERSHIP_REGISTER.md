@@ -59,7 +59,7 @@ Under the mandatory single-workspace directive (ADR0863 / 2026-10-18):
   - `tests/test_*tax*.py`
 - **Completed Deliverables**:
   - **Slice A1**: Financial Domain & Country Pack Governance: Formalize Country Coverage Registry (`reconforge/packs/country_registry.py`) and enhance Fixed Asset disposal/impairment accounting in `reconforge/domain/fixed_assets.py` without float arithmetic.
-  - **Slice A2**: Treasury Liquidity & Cash Forecasting: Deterministic liquidity timeline buckets, basis-point scenario modeling, and stress testing in `reconforge/domain/treasury_liquidity.py`.
+  - **Slice A2**: Treasury Liquidity & Cash Forecasting (Level 1 & Level 2): Deterministic liquidity timeline buckets, basis-point scenario modeling, and stress testing in `reconforge/domain/treasury_liquidity.py`, backed by `reconforge/infrastructure/sqlite_treasury.py`, mounted at `/api/v1/treasury` in `reconforge/api/routes/treasury_liquidity.py`, and verified in `tests/test_api_treasury_liquidity.py`.
 - **Current Active Workstream**:
   - **Slice A3**: Intercompany Multi-Entity Elimination and FX Translation Ledger Integration: Expand `reconforge/domain/intercompany_elimination.py` to reconcile paired cross-border trade and reciprocal ledger balances.
 
@@ -79,13 +79,14 @@ Under the mandatory single-workspace directive (ADR0863 / 2026-10-18):
   - `reconforge/infrastructure/postgres_stock_*.py`
   - `reconforge/infrastructure/sqlite_inventory_*.py`
   - `reconforge/infrastructure/sqlite_manufacturing_*.py`
+  - `reconforge/api/routes/manufacturing_bom.py`
   - `tests/test_*manufacturing*.py`
   - `tests/test_*inventory*.py`
   - `tests/test_*procurement*.py`
   - `tests/test_*supplier_returns*.py`
 - **Completed Deliverables**:
   - **Slice B1**: Work Center Finite Capacity Planning & Rescheduling: Atomic slot booking, conflict rejection, and calendar shift handling in `reconforge/domain/manufacturing_capacity_scheduling.py`.
-  - **Slice B2**: Advanced Multi-Level BOM Explosion & MRP Shortage Netting: Indented BOM traversal with cycle detection, basis-point scrap factors, and lot-size replenishment rules in `reconforge/domain/manufacturing_bom_explosion.py`.
+  - **Slice B2**: Advanced Multi-Level BOM Explosion & MRP Shortage Netting (Level 1 & Level 2): Indented BOM traversal with cycle detection, scrap factors, and lot-size replenishment in `reconforge/domain/manufacturing_bom_explosion.py`, backed by `reconforge/infrastructure/sqlite_manufacturing_bom.py`, mounted at `/api/v1/manufacturing/bom` in `reconforge/api/routes/manufacturing_bom.py`, and verified in `tests/test_api_manufacturing_bom.py`.
 - **Current Active Workstream**:
   - **Slice B3**: Shop Floor Execution & Traceability Genealogy: Complete batch tracking, WIP stage movements, and routing variance accounting in `reconforge/domain/manufacturing_execution_v2.py`.
 
@@ -96,22 +97,28 @@ Under the mandatory single-workspace directive (ADR0863 / 2026-10-18):
 - **Exclusive File Ownership**:
   - `reconforge/domain/people_project_payroll.py`
   - `reconforge/domain/crm_*.py`
+  - `reconforge/domain/hcm_leave.py`
   - `reconforge/domain/project_*.py`
   - `reconforge/domain/sales_revenue.py`
   - `reconforge/domain/retail_settlement.py`
   - `reconforge/domain/notifications.py`
   - `reconforge/domain/notification_inbox.py`
+  - `reconforge/infrastructure/sqlite_hcm_leave.py`
+  - `reconforge/infrastructure/sqlite_crm_contracts.py`
+  - `reconforge/api/routes/hcm_leave.py`
+  - `reconforge/api/routes/crm_contracts.py`
   - `reconforge/ai/`
   - `reconforge/studio/`
   - `apps/web/`
   - `tests/test_*project*.py`
   - `tests/test_*payroll*.py`
   - `tests/test_*crm*.py`
+  - `tests/test_*hcm*.py`
   - `tests/test_*ai*.py`
   - `tests/test_*notifications*.py`
 - **Completed Deliverables**:
-  - **Slice C1**: HCM Employee Leave & Self-Service Workflows and Explainable Business AI Guardrails: Build `reconforge/domain/hcm_leave.py` with entitlement/absence accounting and integrate permission-aware explainable AI auditing in `reconforge/ai/governed_assistant.py`.
-  - **Slice C2**: CRM Opportunity Pipeline, Tiered Quotation Approvals & Customer Contracts: Weighted pipeline value, maker-checker discount governance, and contract lifecycle conversion in `reconforge/domain/crm_contracts.py`.
+  - **Slice C1**: HCM Employee Leave & Self-Service Workflows (Level 1 & Level 2): `reconforge/domain/hcm_leave.py` with entitlement/absence accounting, backed by `reconforge/infrastructure/sqlite_hcm_leave.py`, mounted at `/api/v1/hcm/leave` in `reconforge/api/routes/hcm_leave.py`, and verified in `tests/test_api_hcm_leave.py`; plus explainable AI auditing in `reconforge/ai/governed_assistant.py`.
+  - **Slice C2**: CRM Opportunity Pipeline, Tiered Quotation Approvals & Customer Contracts (Level 1 & Level 2): Weighted pipeline value, maker-checker discount governance, and contract lifecycle in `reconforge/domain/crm_contracts.py`, backed by `reconforge/infrastructure/sqlite_crm_contracts.py`, mounted at `/api/v1/crm/contracts` in `reconforge/api/routes/crm_contracts.py`, and verified in `tests/test_api_crm_contracts.py`.
 - **Current Active Workstream**:
   - **Slice C3**: Professional Services Project Costing, Resource Allocation & Milestone Billing: Link contract line items to project work breakdown structures and verified billable timesheets.
 

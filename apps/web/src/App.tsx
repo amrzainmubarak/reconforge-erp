@@ -53,6 +53,9 @@ const ReceivablesWorkspace = lazy(() => import("./components/ReceivablesWorkspac
 const BudgetControlWorkspace = lazy(() => import("./components/BudgetControlWorkspace").then((module) => ({ default: module.BudgetControlWorkspace })));
 const InventoryReceiptPosting = lazy(() => import("./components/InventoryReceiptPosting").then((module) => ({ default: module.InventoryReceiptPosting })));
 const JobOperationsWorkspace = lazy(() => import("./components/JobOperationsWorkspace").then((module) => ({ default: module.JobOperationsWorkspace })));
+const ConsolidatedStatementsPage = lazy(() => import("./components/ConsolidatedStatementsPage"));
+const MasterProductionSchedulePage = lazy(() => import("./components/MasterProductionSchedulePage"));
+const ShopFloorTraceabilityPage = lazy(() => import("./components/ShopFloorTraceabilityPage"));
 
 function pageFromPath(pathname: string): StudioPage {
   const normalized = pathname.replace(/\/+$/, "");
@@ -95,6 +98,9 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/procurement-sourcing")) return "procurementSourcing";
   if (normalized.endsWith("/procurement-operations")) return "procurementOperations";
   if (normalized.endsWith("/enterprise-finance") || normalized.endsWith("/erp")) return "enterpriseFinance";
+  if (normalized.endsWith("/consolidated-statements")) return "consolidatedStatements";
+  if (normalized.endsWith("/master-production-schedule")) return "masterProductionSchedule";
+  if (normalized.endsWith("/shop-floor-traceability")) return "shopFloorTraceability";
   return "dashboard";
 }
 
@@ -132,6 +138,9 @@ function pathForPage(page: StudioPage): string {
     procurementSourcing: "procurement-sourcing",
     procurementOperations: "procurement-operations",
     enterpriseFinance: "enterprise-finance",
+    consolidatedStatements: "consolidated-statements",
+    masterProductionSchedule: "master-production-schedule",
+    shopFloorTraceability: "shop-floor-traceability",
   };
   return page === "dashboard" ? `${base}/` || "/" : `${base}/${routeNames[page] ?? page}`;
 }
@@ -348,6 +357,15 @@ function StudioApp() {
         ) : null}
         {activePage === "durableJobs" ? (
           <Suspense fallback={<LoadingView translate={t} />}><JobOperationsWorkspace locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "consolidatedStatements" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><ConsolidatedStatementsPage locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "masterProductionSchedule" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><MasterProductionSchedulePage locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "shopFloorTraceability" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><ShopFloorTraceabilityPage locale={preferences.locale} /></Suspense>
         ) : null}
         </WorkspaceErrorBoundary>
       </div>

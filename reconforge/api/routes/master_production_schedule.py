@@ -17,6 +17,7 @@ from reconforge.domain.master_production_schedule import (
     MPSError,
     compute_master_production_schedule,
 )
+from reconforge.infrastructure.postgres_mps import PostgresMPSRepository
 from reconforge.infrastructure.sqlite_mps import SQLiteMPSRepository
 
 router = APIRouter(prefix="/manufacturing/mps", tags=["manufacturing-mps"])
@@ -67,7 +68,18 @@ class ComputeMPSRequest(BaseModel):
     currency: str = Field(default="USD", min_length=3, max_length=3)
 
 
-def _get_repository(request: Request) -> tuple[sqlite3.Connection, SQLiteMPSRepository]:
+def _get_repository(request: Request) -> tuple[Any, SQLiteMPSRepository | PostgresMPSRepository]:
+    factory = (
+        getattr(request.app.state, "postgres_finance_core_factory", None)
+        or getattr(request.app.state, "postgres_identity_factory", None)
+        or getattr(request.app.state, "postgres_connection_factory", None)
+    )
+    if factory is not None:
+        conn = factory.connect()
+        raw_tenant = getattr(request.state, "tenant_id", None) or getattr(request.state, "workspace_id", "default")
+        tenant_id = str(raw_tenant) if raw_tenant else "default"
+        return conn, PostgresMPSRepository(conn, tenant_id)
+
     db_path = getattr(request.app.state, "db_path", None)
     if db_path is None:
         raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")

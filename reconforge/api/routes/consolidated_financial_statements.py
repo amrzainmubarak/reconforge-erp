@@ -18,6 +18,9 @@ from reconforge.domain.consolidated_financial_statements import (
     generate_consolidated_statements,
 )
 from reconforge.domain.finance_posting import FinancePostingError
+from reconforge.infrastructure.postgres_consolidated_statements import (
+    PostgresConsolidatedStatementsRepository,
+)
 from reconforge.infrastructure.sqlite_consolidated_statements import (
     SQLiteConsolidatedStatementsRepository,
 )
@@ -124,7 +127,18 @@ class GenerateConsolidatedStatementsRequest(BaseModel):
     eliminations: IntercompanyEliminationsInput
 
 
-def _get_repository(request: Request) -> tuple[sqlite3.Connection, SQLiteConsolidatedStatementsRepository]:
+def _get_repository(request: Request) -> tuple[Any, SQLiteConsolidatedStatementsRepository | PostgresConsolidatedStatementsRepository]:
+    factory = (
+        getattr(request.app.state, "postgres_finance_core_factory", None)
+        or getattr(request.app.state, "postgres_identity_factory", None)
+        or getattr(request.app.state, "postgres_connection_factory", None)
+    )
+    if factory is not None:
+        conn = factory.connect()
+        raw_tenant = getattr(request.state, "tenant_id", None) or getattr(request.state, "workspace_id", "default")
+        tenant_id = str(raw_tenant) if raw_tenant else "default"
+        return conn, PostgresConsolidatedStatementsRepository(conn, tenant_id)
+
     db_path = getattr(request.app.state, "db_path", None)
     if db_path is None:
         raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")

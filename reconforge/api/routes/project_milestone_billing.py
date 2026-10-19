@@ -21,6 +21,9 @@ from reconforge.domain.project_milestone_billing import (
     generate_milestone_invoice,
     verify_milestone_completion,
 )
+from reconforge.infrastructure.postgres_project_milestone_billing import (
+    PostgresProjectMilestoneBillingRepository,
+)
 from reconforge.infrastructure.sqlite_project_billing import SqliteProjectBillingRepository
 
 router = APIRouter(prefix="/projects/billing", tags=["project-billing"])
@@ -85,7 +88,18 @@ class TimeLogRequest(BaseModel):
     log_date: str = Field(min_length=1)
 
 
-def _get_repo(request: Request) -> tuple[sqlite3.Connection, SqliteProjectBillingRepository]:
+def _get_repo(request: Request) -> tuple[Any, SqliteProjectBillingRepository | PostgresProjectMilestoneBillingRepository]:
+    factory = (
+        getattr(request.app.state, "postgres_finance_core_factory", None)
+        or getattr(request.app.state, "postgres_identity_factory", None)
+        or getattr(request.app.state, "postgres_connection_factory", None)
+    )
+    if factory is not None:
+        conn = factory.connect()
+        raw_tenant = getattr(request.state, "tenant_id", None) or getattr(request.state, "workspace_id", "default")
+        tenant_id = str(raw_tenant) if raw_tenant else "default"
+        return conn, PostgresProjectMilestoneBillingRepository(conn, tenant_id)
+
     db_path = getattr(request.app.state, "db_path", None)
     if db_path is None:
         raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")

@@ -20,6 +20,9 @@ from reconforge.domain.intercompany_elimination import (
     prepare_intercompany_eliminations,
 )
 from reconforge.domain.models import utc_now_text
+from reconforge.infrastructure.postgres_intercompany_elimination import (
+    PostgresIntercompanyEliminationRepository,
+)
 from reconforge.infrastructure.sqlite_intercompany_elimination import (
     SQLiteIntercompanyEliminationRepository,
 )
@@ -101,7 +104,18 @@ class ProfitInStockRequest(BaseModel):
     credit_account: str = Field(default="INVENTORY_VALUATION", min_length=1, max_length=64)
 
 
-def _get_repository(request: Request) -> tuple[sqlite3.Connection, SQLiteIntercompanyEliminationRepository]:
+def _get_repository(request: Request) -> tuple[Any, SQLiteIntercompanyEliminationRepository | PostgresIntercompanyEliminationRepository]:
+    factory = (
+        getattr(request.app.state, "postgres_finance_core_factory", None)
+        or getattr(request.app.state, "postgres_identity_factory", None)
+        or getattr(request.app.state, "postgres_connection_factory", None)
+    )
+    if factory is not None:
+        conn = factory.connect()
+        raw_tenant = getattr(request.state, "tenant_id", None) or getattr(request.state, "workspace_id", "default")
+        tenant_id = str(raw_tenant) if raw_tenant else "default"
+        return conn, PostgresIntercompanyEliminationRepository(conn, tenant_id)
+
     db_path = getattr(request.app.state, "db_path", None)
     if db_path is None:
         raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")

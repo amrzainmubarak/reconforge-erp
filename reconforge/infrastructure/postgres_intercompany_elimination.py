@@ -12,6 +12,8 @@ from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.intercompany_elimination import (
     IntercompanyEliminationInputLine,
     IntercompanyEliminationResult,
+    IntercompanyProfitInStockElimination,
+    IntercompanyProfitInStockRule,
     intercompany_elimination_input_line_from_dict,
     verify_intercompany_elimination_payload,
 )
@@ -66,6 +68,53 @@ DROP TRIGGER IF EXISTS intercompany_elimination_artifact_guard
 CREATE TRIGGER intercompany_elimination_artifact_guard
 BEFORE UPDATE OR DELETE ON reconforge.intercompany_elimination_artifacts
 FOR EACH ROW EXECUTE FUNCTION reconforge.guard_intercompany_elimination_artifact();
+
+CREATE TABLE IF NOT EXISTS reconforge.intercompany_profit_in_stock_rules (
+    tenant_id TEXT NOT NULL,
+    id TEXT NOT NULL,
+    workspace_id TEXT NOT NULL,
+    rule_id TEXT NOT NULL,
+    selling_entity TEXT NOT NULL,
+    buying_entity TEXT NOT NULL,
+    inventory_item_code TEXT NOT NULL,
+    margin_basis_points INTEGER NOT NULL,
+    ending_inventory_cost_minor BIGINT NOT NULL,
+    nci_share_basis_points INTEGER NOT NULL,
+    currency TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant_id, id),
+    UNIQUE (tenant_id, workspace_id, rule_id)
+);
+ALTER TABLE reconforge.intercompany_profit_in_stock_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.intercompany_profit_in_stock_rules FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_scope ON reconforge.intercompany_profit_in_stock_rules;
+CREATE POLICY tenant_scope ON reconforge.intercompany_profit_in_stock_rules
+    USING (tenant_id = current_setting('app.tenant_id', true))
+    WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+
+CREATE TABLE IF NOT EXISTS reconforge.intercompany_profit_in_stock_eliminations (
+    tenant_id TEXT NOT NULL,
+    id TEXT NOT NULL,
+    workspace_id TEXT NOT NULL,
+    elimination_id TEXT NOT NULL,
+    rule_id TEXT NOT NULL,
+    unrealized_profit_minor BIGINT NOT NULL,
+    parent_share_minor BIGINT NOT NULL,
+    nci_share_minor BIGINT NOT NULL,
+    currency TEXT NOT NULL,
+    debit_account TEXT NOT NULL,
+    credit_account TEXT NOT NULL,
+    rationale TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant_id, id),
+    UNIQUE (tenant_id, workspace_id, elimination_id)
+);
+ALTER TABLE reconforge.intercompany_profit_in_stock_eliminations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.intercompany_profit_in_stock_eliminations FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_scope ON reconforge.intercompany_profit_in_stock_eliminations;
+CREATE POLICY tenant_scope ON reconforge.intercompany_profit_in_stock_eliminations
+    USING (tenant_id = current_setting('app.tenant_id', true))
+    WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
 """
 
 
@@ -275,6 +324,259 @@ class PostgresIntercompanyEliminationRepository:
             raise
         except Exception as exc:
             raise PostgresIntercompanyEliminationError("PostgreSQL intercompany elimination read failed.") from exc
+
+    def save_elimination_result(
+        self,
+        workspace: str,
+        result: IntercompanyEliminationResult,
+        *,
+        actor_label: str = "local-cli",
+    ) -> str:
+        workspace_id = self._workspace(workspace)
+        actor = self._actor(actor_label)
+        identifier = self._artifact_id(workspace_id, result)
+        payload = result.to_dict()
+        request_payload: dict[str, object] = {
+            "prepared_at": result.prepared_at,
+            "prepared_by": result.prepared_by,
+            "reporting_currency": result.reporting_currency,
+            "version": result.version,
+        }
+        try:
+            with self.connection.transaction():
+                self._scope()
+                self.connection.execute(
+                    """INSERT INTO reconforge.intercompany_elimination_artifacts(
+                         tenant_id,id,workspace_id,reporting_currency,version,request_digest,result_digest,
+                         request_payload,result_payload,prepared_by,prepared_at)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,CAST(%s AS jsonb),CAST(%s AS jsonb),%s,%s)
+                       ON CONFLICT (tenant_id, id) DO NOTHING""",
+                    (
+                        self.tenant_id,
+                        identifier,
+                        workspace_id,
+                        result.reporting_currency,
+                        result.version,
+                        result.request_digest,
+                        result.result_digest,
+                        _json(request_payload),
+                        _json(payload),
+                        result.prepared_by,
+                        result.prepared_at,
+                    ),
+                )
+                PostgresAuditEventRepository(self.connection, self.tenant_id).append(
+                    actor_label=actor,
+                    actor_user_id=actor,
+                    object_type="intercompany_elimination_artifact",
+                    object_id=identifier,
+                    action="intercompany_elimination_artifact_created",
+                    after_hash=result.result_digest,
+                    metadata={
+                        "workspace_id": workspace_id,
+                        "reporting_currency": result.reporting_currency,
+                    },
+                )
+                return identifier
+        except Exception as exc:
+            raise PostgresIntercompanyEliminationError(f"PostgreSQL intercompany elimination save failed: {exc}") from exc
+
+    def save_profit_in_stock_elimination(
+        self,
+        workspace: str,
+        rule: IntercompanyProfitInStockRule,
+        elimination: IntercompanyProfitInStockElimination,
+        *,
+        actor_label: str = "local-cli",
+    ) -> str:
+        actor = self._actor(actor_label)
+        workspace_id = self._workspace(workspace)
+        rule_db_id = f"psr_{rule.rule_id}"
+        elim_db_id = f"pse_{elimination.elimination_id}"
+
+        try:
+            with self.connection.transaction():
+                self._scope()
+                # Upsert rule
+                self.connection.execute(
+                    """
+                    INSERT INTO reconforge.intercompany_profit_in_stock_rules (
+                        tenant_id, id, workspace_id, rule_id, selling_entity, buying_entity,
+                        inventory_item_code, margin_basis_points, ending_inventory_cost_minor,
+                        nci_share_basis_points, currency
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (tenant_id, workspace_id, rule_id) DO UPDATE SET
+                        margin_basis_points = excluded.margin_basis_points,
+                        ending_inventory_cost_minor = excluded.ending_inventory_cost_minor,
+                        nci_share_basis_points = excluded.nci_share_basis_points
+                    """,
+                    (
+                        self.tenant_id,
+                        rule_db_id,
+                        workspace_id,
+                        rule.rule_id,
+                        rule.selling_entity,
+                        rule.buying_entity,
+                        rule.inventory_item_code,
+                        rule.margin_basis_points,
+                        rule.ending_inventory_cost_minor,
+                        rule.nci_share_basis_points,
+                        rule.currency,
+                    ),
+                )
+
+                # Insert elimination
+                self.connection.execute(
+                    """
+                    INSERT INTO reconforge.intercompany_profit_in_stock_eliminations (
+                        tenant_id, id, workspace_id, elimination_id, rule_id,
+                        unrealized_profit_minor, parent_share_minor, nci_share_minor,
+                        currency, debit_account, credit_account, rationale
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (tenant_id, workspace_id, elimination_id) DO UPDATE SET
+                        unrealized_profit_minor = excluded.unrealized_profit_minor,
+                        parent_share_minor = excluded.parent_share_minor,
+                        nci_share_minor = excluded.nci_share_minor
+                    """,
+                    (
+                        self.tenant_id,
+                        elim_db_id,
+                        workspace_id,
+                        elimination.elimination_id,
+                        elimination.rule_id,
+                        elimination.unrealized_profit_minor,
+                        elimination.parent_share_minor,
+                        elimination.nci_share_minor,
+                        elimination.currency,
+                        elimination.debit_account,
+                        elimination.credit_account,
+                        elimination.rationale,
+                    ),
+                )
+
+                PostgresAuditEventRepository(self.connection, self.tenant_id).append(
+                    actor_label=actor,
+                    actor_user_id=actor,
+                    object_type="intercompany_profit_in_stock_elimination",
+                    object_id=elimination.elimination_id,
+                    action="profit_in_stock_eliminated",
+                    after_hash=hashlib.sha256(f"{elimination.elimination_id}:{elimination.unrealized_profit_minor}".encode()).hexdigest(),
+                    metadata={
+                        "workspace_id": workspace_id,
+                        "rule_id": rule.rule_id,
+                        "unrealized_profit_minor": elimination.unrealized_profit_minor,
+                        "parent_share_minor": elimination.parent_share_minor,
+                        "nci_share_minor": elimination.nci_share_minor,
+                    },
+                )
+                return elimination.elimination_id
+        except Exception as exc:
+            raise PostgresIntercompanyEliminationError(f"PostgreSQL profit in stock save failed: {exc}") from exc
+
+    def list_profit_in_stock_eliminations(
+        self,
+        workspace: str,
+        *,
+        actor_label: str = "local-cli",
+    ) -> list[dict[str, Any]]:
+        self._actor(actor_label)
+        workspace_id = self._workspace(workspace)
+        try:
+            with self.connection.transaction():
+                self._scope()
+                cur = self.connection.execute(
+                    """
+                    SELECT e.elimination_id, e.rule_id, e.unrealized_profit_minor,
+                           e.parent_share_minor, e.nci_share_minor, e.currency,
+                           e.debit_account, e.credit_account, e.rationale, e.created_at,
+                           r.selling_entity, r.buying_entity, r.inventory_item_code,
+                           r.margin_basis_points, r.ending_inventory_cost_minor
+                    FROM reconforge.intercompany_profit_in_stock_eliminations e
+                    JOIN reconforge.intercompany_profit_in_stock_rules r
+                      ON r.tenant_id = e.tenant_id AND r.workspace_id = e.workspace_id AND r.rule_id = e.rule_id
+                    WHERE e.tenant_id = %s AND e.workspace_id = %s
+                    ORDER BY e.created_at DESC
+                    """,
+                    (self.tenant_id, workspace_id),
+                )
+                rows = cur.fetchall()
+                results = []
+                for row in rows:
+                    results.append({
+                        "elimination_id": row[0],
+                        "rule_id": row[1],
+                        "unrealized_profit_minor": row[2],
+                        "parent_share_minor": row[3],
+                        "nci_share_minor": row[4],
+                        "currency": row[5],
+                        "debit_account": row[6],
+                        "credit_account": row[7],
+                        "rationale": row[8],
+                        "created_at": str(row[9]),
+                        "selling_entity": row[10],
+                        "buying_entity": row[11],
+                        "inventory_item_code": row[12],
+                        "margin_basis_points": row[13],
+                        "ending_inventory_cost_minor": row[14],
+                    })
+                return results
+        except Exception as exc:
+            raise PostgresIntercompanyEliminationError(f"PostgreSQL profit in stock list failed: {exc}") from exc
+
+    def list_elimination_runs(
+        self,
+        workspace: str,
+        *,
+        limit: int = 50,
+        actor_label: str = "local-cli",
+    ) -> list[dict[str, Any]]:
+        self._actor(actor_label)
+        workspace_id = self._workspace(workspace)
+        try:
+            with self.connection.transaction():
+                self._scope()
+                cur = self.connection.execute(
+                    """
+                    SELECT id, workspace_id, reporting_currency, version,
+                           request_digest, result_digest, result_payload,
+                           prepared_by, prepared_at, created_at
+                    FROM reconforge.intercompany_elimination_artifacts
+                    WHERE tenant_id = %s AND workspace_id = %s
+                    ORDER BY created_at DESC
+                    LIMIT %s
+                    """,
+                    (self.tenant_id, workspace_id, max(1, min(limit, 200))),
+                )
+                rows = cur.fetchall()
+                return [
+                    {
+                        "id": r[0],
+                        "workspace_id": r[1],
+                        "reporting_currency": r[2],
+                        "version": r[3],
+                        "request_digest": r[4],
+                        "result_digest": r[5],
+                        "result_payload": r[6] if isinstance(r[6], dict) else json.loads(r[6]),
+                        "prepared_by": r[7],
+                        "prepared_at": str(r[8]),
+                        "created_at": str(r[9]),
+                    }
+                    for r in rows
+                ]
+        except Exception as exc:
+            raise PostgresIntercompanyEliminationError(f"PostgreSQL elimination list failed: {exc}") from exc
+
+    def get_elimination_run(
+        self,
+        workspace: str,
+        run_id: str,
+        *,
+        actor_label: str = "local-cli",
+    ) -> dict[str, Any] | None:
+        try:
+            return self.get(run_id, actor_label=actor_label)
+        except PostgresIntercompanyEliminationError:
+            return None
 
 
 __all__ = [

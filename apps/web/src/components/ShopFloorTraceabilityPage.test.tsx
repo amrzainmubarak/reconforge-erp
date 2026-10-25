@@ -1,114 +1,90 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { act, fireEvent, render as renderView, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { BrowserSessionProvider, useBrowserSession } from "../browserSession";
 import ShopFloorTraceabilityPage from "./ShopFloorTraceabilityPage";
+function Controls() { const auth = useBrowserSession(); return <><button onClick={() => auth.begin({ tenantId: "tenant-test", csrfToken: "synthetic", expiresAt: "2099-01-01T00:00:00Z" }, "operator", auth.revision)}>Sign in test</button><button onClick={() => auth.clear(auth.revision)}>Sign out test</button></>; }
+function mount(locale: "en" | "ar" = "en") { return renderView(<><Controls /><ShopFloorTraceabilityPage locale={locale} /></>, { wrapper: BrowserSessionProvider }); }
+function signIn() { fireEvent.click(screen.getByRole("button", { name: "Sign in test" })); }
+const tree = { lot_id: "LOT-REAL", item_id: "ITEM-REAL", direction: "backward", children: [{ lot_id: "LOT-COMPONENT", item_id: "ITEM-COMPONENT", direction: "backward", children: [] }] };
+function respond(value: unknown = { root_lot_id: "LOT-REAL", genealogy: tree }) { const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(value))); vi.stubGlobal("fetch", fetcher); return fetcher; }
+async function trace(lot = "LOT-REAL", label = "Trace Genealogy") { fireEvent.change(screen.getByRole("textbox"), { target: { value: lot } }); await act(async () => fireEvent.click(screen.getByRole("button", { name: label }))); }
+beforeEach(() => vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Offline"))));
+afterEach(() => vi.unstubAllGlobals());
 
-describe("ShopFloorTraceabilityPage", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
+describe("ShopFloorTraceabilityPage source assurance", () => {
+  it("does not display invented initial genealogy or completed operation records", () => {
+    mount(); expect(fetch).not.toHaveBeenCalled();
+    expect(screen.queryByText("LOT_RAW_CHIP_901")).not.toBeInTheDocument();
+    expect(screen.queryByText("TECH_ALICE")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Lot Genealogy Visual Tree" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Trace Genealogy" })).toBeDisabled();
   });
-
-  it("renders correctly in English and Arabic RTL modes", () => {
-    const { container: enContainer, unmount } = render(<ShopFloorTraceabilityPage locale="en" />);
-    expect(screen.getByRole("heading", { name: "Shop Floor Execution & Bidirectional Lot Genealogy" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Genealogy Traversal Parameters" })).toBeInTheDocument();
+  it.each([401, 403, 503])("does not assert local verification after HTTP%s", async status => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Private diagnostic", { status })));
+    mount(); signIn(); await trace();
+    expect(screen.queryByText("Displaying locally verified lot genealogy")).not.toBeInTheDocument();
+    expect(screen.queryByText("LOT_RAW_CHIP_901")).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Valid genealogy could not be retrieved");
+    expect(screen.queryByText("Private diagnostic")).not.toBeInTheDocument();
+  });
+  it("uses the actual directional API route, response envelope and current tenant", async () => {
+    const fetcher = respond(); mount(); signIn(); await trace();
+    expect(fetcher.mock.calls[0][0]).toBe("/api/v1/manufacturing/traceability/genealogy/backward/LOT-REAL");
+    expect(fetcher.mock.calls[0][1]).toMatchObject({ credentials: "same-origin", cache: "no-store", headers: { "X-ReconForge-Tenant": "tenant-test" } });
+    expect(screen.getByText("LOT-COMPONENT")).toBeInTheDocument();
+    expect(screen.getByText("Genealogy returned by the server.")).toBeInTheDocument();
+    expect(screen.queryByText("TECH_ALICE")).not.toBeInTheDocument();
+  });
+  it("binds a forward trace to the requested root and direction", async () => {
+    respond({ root_lot_id: "LOT-REAL", genealogy: { ...tree, direction: "forward", children: [] } });
+    mount(); signIn(); fireEvent.change(screen.getByRole("combobox"), { target: { value: "forward" } }); await trace();
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/v1/manufacturing/traceability/genealogy/forward/LOT-REAL");
     expect(screen.getByRole("heading", { name: "Lot Genealogy Visual Tree" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Routing Steps for Order: WO_SRV_2026_01" })).toBeInTheDocument();
-    expect(enContainer.querySelector(".reporting-workspace")).toHaveAttribute("dir", "ltr");
-    unmount();
-
-    const { container: arContainer } = render(<ShopFloorTraceabilityPage locale="ar" />);
-    expect(screen.getByRole("heading", { name: "تنفيذ صالة الإنتاج والتتبع الجيني للتشغيل والدفعات" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "البحث والتتبع الجيني للدفعة" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "شجرة الأنساب والتتبع للدفعة" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "خطوات التشغيل وتنفيذ أمر الإنتاج المحفوظ" })).toBeInTheDocument();
-    expect(arContainer.querySelector(".reporting-workspace")).toHaveAttribute("dir", "rtl");
   });
-
-  it("renders hierarchical multi-tier lot genealogy visual tree", () => {
-    render(<ShopFloorTraceabilityPage locale="en" />);
-
-    // Root node
-    expect(screen.getAllByText("LOT_FG_SERVER_001").length).toBeGreaterThan(0);
-    expect(screen.getByText("FINISHED_SERVER_RACK")).toBeInTheDocument();
-
-    // Intermediate and leaf nodes
-    expect(screen.getByText("LOT_RAW_CHIP_901")).toBeInTheDocument();
-    expect(screen.getByText("CPU_MAIN_PROCESSOR")).toBeInTheDocument();
-    expect(screen.getByText("LOT_RAW_PCB_402")).toBeInTheDocument();
-    expect(screen.getByText("SERVER_MOTHERBOARD")).toBeInTheDocument();
-    expect(screen.getByText("LOT_RAW_CAPACITOR_101")).toBeInTheDocument();
-    expect(screen.getByText("ELECTROLYTIC_CAPACITOR")).toBeInTheDocument();
+  it.each([
+    ["missing data", null],
+    ["wrong root envelope", { root_lot_id: "OTHER", genealogy: tree }],
+    ["wrong tree root", { root_lot_id: "LOT-REAL", genealogy: { ...tree, lot_id: "OTHER" } }],
+    ["wrong direction", { root_lot_id: "LOT-REAL", genealogy: { ...tree, direction: "forward" } }],
+    ["missing children", { root_lot_id: "LOT-REAL", genealogy: { ...tree, children: undefined } }],
+    ["ancestor cycle", { root_lot_id: "LOT-REAL", genealogy: { ...tree, children: [tree] } }],
+    ["too many nodes", { root_lot_id: "LOT-REAL", genealogy: { ...tree, children: Array.from({ length: 1001 }, (_value, index) => ({ ...tree, lot_id: `CHILD-${index}`, children: [] })) } }],
+  ])("rejects malformed server genealogy: %s", async (_label, value) => {
+    respond(value); mount(); signIn(); await trace();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Lot Genealogy Visual Tree" })).not.toBeInTheDocument();
   });
-
-  it("renders dispatch routing steps with quantity conservation and scrap reasons", () => {
-    render(<ShopFloorTraceabilityPage locale="en" />);
-
-    // Step 1
-    expect(screen.getByText("WC_SMT_ASSEMBLY")).toBeInTheDocument();
-    expect(screen.getByText("TECH_ALICE")).toBeInTheDocument();
-    expect(screen.getByText("42")).toBeInTheDocument();
-
-    // Step 2 with scrap
-    expect(screen.getByText("WC_FINAL_TESTING")).toBeInTheDocument();
-    expect(screen.getByText("TECH_BOB")).toBeInTheDocument();
-    expect(screen.getByText("35")).toBeInTheDocument();
-    expect(screen.getByText("495")).toBeInTheDocument();
-    expect(screen.getByText("5")).toBeInTheDocument();
-    expect(screen.getByText("THERMAL_FAILURE")).toBeInTheDocument();
+  it("rejects an excessively deep genealogy tree", async () => {
+    let deep = { ...tree, children: [] };
+    for (let index = 15; index > 0; index--) deep = { ...tree, lot_id: `CHILD-${index}`, children: [deep] } as typeof deep;
+    respond({ root_lot_id: "LOT-REAL", genealogy: { ...tree, children: [deep] } });
+    mount(); signIn(); await trace(); expect(screen.getByRole("alert")).toBeInTheDocument();
   });
-
-  it("submits genealogy traversal query and updates tree from API response", async () => {
-    const mockTree = {
-      tree: {
-        lot_id: "LOT_RAW_CHIP_901",
-        item_id: "CPU_MAIN_PROCESSOR",
-        direction: "forward",
-        children: [
-          {
-            lot_id: "LOT_FG_SERVER_001",
-            item_id: "FINISHED_SERVER_RACK",
-            direction: "forward",
-            children: [],
-          },
-        ],
-      },
-    };
-
-    vi.spyOn(globalThis, "fetch").mockImplementation(() => {
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(mockTree),
-      } as Response);
-    });
-
-    render(<ShopFloorTraceabilityPage locale="en" />);
-
-    const lotInput = screen.getByLabelText("Lot / Batch ID");
-    fireEvent.change(lotInput, { target: { value: "LOT_RAW_CHIP_901" } });
-
-    const dirSelect = screen.getByLabelText("Trace Direction");
-    fireEvent.change(dirSelect, { target: { value: "forward" } });
-
-    const traceBtn = screen.getByRole("button", { name: "Trace Genealogy" });
-    fireEvent.click(traceBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText("Lot genealogy tree traced successfully")).toBeInTheDocument();
-    });
+  it("clears prior genealogy when the selected lot or direction changes", async () => {
+    respond(); mount(); signIn(); await trace(); expect(screen.getByText("LOT-COMPONENT")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "forward" } });
+    expect(screen.queryByText("LOT-COMPONENT")).not.toBeInTheDocument();
   });
-
-  it("falls back to local verification message when genealogy API call fails", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(() => {
-      return Promise.reject(new Error("Network offline"));
-    });
-
-    render(<ShopFloorTraceabilityPage locale="en" />);
-
-    const traceBtn = screen.getByRole("button", { name: "Trace Genealogy" });
-    fireEvent.click(traceBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText("Displaying locally verified lot genealogy")).toBeInTheDocument();
-    });
+  it("rejects a late response from a revoked browser session", async () => {
+    let finish: ((value: Response) => void) | undefined;
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(() => new Promise<Response>(resolve => { finish = resolve; })));
+    mount(); signIn(); await trace();
+    fireEvent.click(screen.getByRole("button", { name: "Sign out test" }));
+    await act(async () => finish!(new Response(JSON.stringify({ root_lot_id: "LOT-REAL", genealogy: tree }))));
+    expect(screen.queryByText("LOT-COMPONENT")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Lot Genealogy Visual Tree" })).not.toBeInTheDocument();
+  });
+  it("rejects a late response after an input change even when transport ignores abort", async () => {
+    let finish: ((value: Response) => void) | undefined;
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(() => new Promise<Response>(resolve => { finish = resolve; })));
+    mount(); signIn(); await trace();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "NEW-LOT" } });
+    await act(async () => finish!(new Response(JSON.stringify({ root_lot_id: "LOT-REAL", genealogy: tree }))));
+    expect(screen.queryByText("LOT-COMPONENT")).not.toBeInTheDocument();
+  });
+  it("shows actionable Arabic network errors in RTL", async () => {
+    const view = mount("ar"); signIn(); await trace("LOT-REAL", "تتبع الشجرة الجينية");
+    expect(view.container.querySelector(".reporting-workspace")).toHaveAttribute("dir", "rtl");
+    expect(screen.getByRole("alert")).toHaveTextContent("تعذر استرجاع شجرة صالحة");
   });
 });

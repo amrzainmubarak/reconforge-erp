@@ -1,134 +1,86 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { act, fireEvent, render as renderView, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { BrowserSessionProvider, useBrowserSession } from "../browserSession";
 import ConsolidatedStatementsPage from "./ConsolidatedStatementsPage";
 
-describe("ConsolidatedStatementsPage", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
+function Controls() {
+  const auth = useBrowserSession();
+  return <><button onClick={() => auth.begin({ tenantId: "tenant-test", csrfToken: "synthetic-csrf", expiresAt: "2099-01-01T00:00:00Z" }, "reviewer", auth.revision)}>Sign in test</button><button onClick={() => auth.clear(auth.revision)}>Sign out test</button></>;
+}
+function mount(locale: "en" | "ar" = "en") { return renderView(<><Controls /><ConsolidatedStatementsPage locale={locale} /></>, { wrapper: BrowserSessionProvider }); }
+async function signIn() { await act(async () => fireEvent.click(screen.getByRole("button", { name: "Sign in test" }))); }
+const digest = "a".repeat(64);
+const run = { id: "actual-statement-run", period_id: "FY2026", reporting_currency: "JPY", prepared_by: "actual-reviewer", created_at: "2026-10-25T10:00:00Z", report_digest: digest,
+  statements: { balance_sheet: { total_assets_minor: 100, total_liabilities_minor: 40, equity: { total_equity_minor: 60 } }, income_statement: { consolidated_net_profit_minor: -7 } } };
+function respond(value: unknown = { total_count: 1, runs: [run] }) { const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(value))); vi.stubGlobal("fetch", fetcher); return fetcher; }
+beforeEach(() => vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Offline"))));
+afterEach(() => vi.unstubAllGlobals());
+
+describe("ConsolidatedStatementsPage source assurance", () => {
+  it("does not invent statements or request data without a browser session", () => {
+    mount();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(screen.queryByText("$4,250,000")).not.toBeInTheDocument();
+    expect(screen.queryByText("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")).not.toBeInTheDocument();
+    expect(screen.getByText("Sign in to an authorized workspace to read stored statements.")).toBeInTheDocument();
   });
-
-  it("renders correctly in English and Arabic RTL modes", async () => {
-    const { container: enContainer, unmount } = render(<ConsolidatedStatementsPage locale="en" />);
-    expect(screen.getByRole("heading", { name: "Group Consolidated Financial Statements" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Consolidation Parameters" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Consolidated Statement Run Ledger" })).toBeInTheDocument();
-    expect(enContainer.querySelector(".reporting-workspace")).toHaveAttribute("dir", "ltr");
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Consolidated Financial Posture" })).toBeInTheDocument();
-    });
-    unmount();
-
-    const { container: arContainer } = render(<ConsolidatedStatementsPage locale="ar" />);
-    expect(screen.getByRole("heading", { name: "القوائم المالية الموحدة للمجموعة" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "معايير التوحيد المالي" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "سجل التشغيل والأدلة المحفوظة" })).toBeInTheDocument();
-    expect(arContainer.querySelector(".reporting-workspace")).toHaveAttribute("dir", "rtl");
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "الملخص المالي الموحد" })).toBeInTheDocument();
-    });
+  it("disables generation until real source balances can be selected", async () => {
+    const fetcher = respond(); mount(); await signIn();
+    const button = screen.getByRole("button", { name: "Generate Statements" });
+    expect(button).toBeDisabled(); fireEvent.click(button);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher.mock.calls[0][1].method).toBeUndefined();
+    expect(screen.getByText(/real source balances and a currency policy/)).toBeInTheDocument();
   });
-
-  it("displays fallback consolidated financial posture metrics and cryptographic digest", async () => {
-    render(<ConsolidatedStatementsPage locale="en" />);
-
-    // Wait for fallback metrics to be mounted
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Consolidated Financial Posture" })).toBeInTheDocument();
-    });
-
-    expect(screen.getByText("$4,250,000")).toBeInTheDocument();
-    expect(screen.getByText("$1,500,000")).toBeInTheDocument();
-    expect(screen.getByText("$2,750,000")).toBeInTheDocument();
-    expect(screen.getByText("$320,000")).toBeInTheDocument();
-    expect(screen.getByText("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")).toBeInTheDocument();
+  it("reads actual backend field names and displays exact minor units without assuming cents", async () => {
+    const fetcher = respond(); mount(); await signIn();
+    expect(screen.getByText("100 JPY")).toBeInTheDocument();
+    expect(screen.getByText("60 JPY")).toBeInTheDocument();
+    expect(screen.getByText("-7 JPY")).toBeInTheDocument();
+    expect(screen.getByText(digest)).toBeInTheDocument();
+    expect(fetcher.mock.calls[0][1]).toMatchObject({ credentials: "same-origin", cache: "no-store", headers: { "X-ReconForge-Tenant": "tenant-test" } });
+    expect(screen.queryByText(/\$/)).not.toBeInTheDocument();
   });
-
-  it("submits consolidation form and renders success notification", async () => {
-    const mockRun = {
-      run_id: "csr_GRP_GLOBAL_CORP_FY2026_Q3_NEW",
-      id: "csr_GRP_GLOBAL_CORP_FY2026_Q3_NEW",
-      group_id: "GRP_GLOBAL_CORP",
-      organization_id: "ORG_HOLDING",
-      reporting_currency: "USD",
-      period_id: "FY2026_Q3",
-      period_start: "2026-07-01",
-      period_end: "2026-09-30",
-      as_of_date: "2026-09-30",
-      report_digest: "new_digest_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab",
-      prepared_by: "enterprise_auditor",
-      created_at: "2026-10-19T12:00:00Z",
-      statements: {
-        balance_sheet: {
-          total_assets_minor: 500000000,
-          total_liabilities_minor: 200000000,
-          total_equity_minor: 300000000,
-          nci_equity_minor: 30000000,
-        },
-        income_statement: {
-          gross_profit_minor: 90000000,
-          operating_income_minor: 50000000,
-          consolidated_net_income_minor: 40000000,
-          parent_net_income_minor: 36000000,
-          nci_net_income_minor: 4000000,
-        },
-      },
-    };
-
-    vi.spyOn(globalThis, "fetch").mockImplementation((url) => {
-      if (typeof url === "string" && url.includes("/generate")) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockRun),
-        } as Response);
-      }
-      return Promise.reject(new Error("Not found"));
-    });
-
-    render(<ConsolidatedStatementsPage locale="en" />);
-
-    const generateBtn = screen.getByRole("button", { name: "Generate Statements" });
-    fireEvent.click(generateBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText("Consolidated financial statements generated successfully")).toBeInTheDocument();
-    });
-
-    expect(screen.getByText("$5,000,000")).toBeInTheDocument();
-    expect(screen.getByText("new_digest_1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab")).toBeInTheDocument();
+  it.each([401, 403, 503])("clears figures on HTTP%s without exposing server error content", async status => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Sensitive diagnostic", { status })));
+    mount(); await signIn();
+    expect(screen.getByRole("alert")).toHaveTextContent("Valid statement runs could not be loaded");
+    expect(screen.queryByText("100 JPY")).not.toBeInTheDocument();
+    expect(screen.queryByText("$4,250,000")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sensitive diagnostic")).not.toBeInTheDocument();
   });
-
-  it("handles generation error gracefully with failure alert", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation((url) => {
-      if (typeof url === "string" && url.includes("/generate")) {
-        return Promise.resolve({
-          ok: false,
-          status: 500,
-        } as Response);
-      }
-      return Promise.reject(new Error("Not found"));
-    });
-
-    render(<ConsolidatedStatementsPage locale="en" />);
-
-    const generateBtn = screen.getByRole("button", { name: "Generate Statements" });
-    fireEvent.click(generateBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText("Statement generation failed")).toBeInTheDocument();
-    });
+  it.each([
+    ["missing result", null],
+    ["missing income", { total_count: 1, runs: [{ ...run, statements: { balance_sheet: run.statements.balance_sheet } }] }],
+    ["unsafe amount", { total_count: 1, runs: [{ ...run, statements: { ...run.statements, balance_sheet: { ...run.statements.balance_sheet, total_assets_minor: Number.MAX_SAFE_INTEGER + 1 } } }] }],
+    ["imbalance", { total_count: 1, runs: [{ ...run, statements: { ...run.statements, balance_sheet: { ...run.statements.balance_sheet, total_assets_minor: 101 } } }] }],
+    ["duplicate run", { total_count: 2, runs: [run, run] }],
+  ])("fails closed for malformed server results: %s", async (_label, value) => {
+    respond(value); mount(); await signIn();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText("100 JPY")).not.toBeInTheDocument();
+    expect(screen.queryByText(digest)).not.toBeInTheDocument();
   });
-
-  it("allows selecting a historical run from the ledger to inspect statements", async () => {
-    render(<ConsolidatedStatementsPage locale="en" />);
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Inspect" })).toBeInTheDocument();
-    });
-
-    const inspectBtn = screen.getByRole("button", { name: "Inspect" });
-    fireEvent.click(inspectBtn);
-
-    expect(screen.getByText("csr_GRP_GLOBAL_CORP_FY2026_Q3_a1b2c3d4")).toBeInTheDocument();
-    expect(screen.getByText("$4,250,000")).toBeInTheDocument();
+  it("renders server empty result without a fake financial posture", async () => {
+    respond({ total_count: 0, runs: [] }); mount(); await signIn();
+    expect(screen.getByText("No stored statement runs were returned.")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Consolidated Financial Posture" })).not.toBeInTheDocument();
+  });
+  it("clears financial figures before refresh and after session revocation", async () => {
+    const fetcher = respond(); mount(); await signIn();
+    expect(screen.getByText("100 JPY")).toBeInTheDocument();
+    fetcher.mockRejectedValue(new TypeError("Offline"));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Refresh" })));
+    expect(screen.queryByText("100 JPY")).not.toBeInTheDocument();
+    respond(); await act(async () => fireEvent.click(screen.getByRole("button", { name: "Refresh" })));
+    expect(screen.getByText("100 JPY")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Sign out test" }));
+    expect(screen.queryByText("100 JPY")).not.toBeInTheDocument();
+  });
+  it("renders Arabic errors and RTL without invented metrics", async () => {
+    const view = mount("ar"); await signIn();
+    expect(view.container.querySelector(".reporting-workspace")).toHaveAttribute("dir", "rtl");
+    expect(screen.getByRole("alert")).toHaveTextContent("تعذر تحميل قوائم صالحة");
   });
 });
+

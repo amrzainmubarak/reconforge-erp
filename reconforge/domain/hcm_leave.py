@@ -21,6 +21,11 @@ class HCMLeaveError(FinancePostingError):
     """Raised when a leave operation violates entitlement, date, or authorization invariants."""
 
 
+def _require_integer(value: object, field: str, code: str) -> None:
+    if type(value) is not int:
+        raise HCMLeaveError(code, f"{field} must be an exact integer.")
+
+
 @dataclass(frozen=True)
 class LeaveEntitlementBalance:
     employee_id: str
@@ -31,6 +36,9 @@ class LeaveEntitlementBalance:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "employee_id", text(self.employee_id, "employee_id"))
+        _require_integer(self.annual_entitlement_days, "annual_entitlement_days", "leave_entitlement_invalid")
+        _require_integer(self.accrued_days, "accrued_days", "leave_balance_invalid")
+        _require_integer(self.consumed_days, "consumed_days", "leave_balance_invalid")
         if self.annual_entitlement_days < 0 or self.annual_entitlement_days > 365:
             raise HCMLeaveError("leave_entitlement_invalid", "Annual entitlement must be between 0 and 365 days.")
         if self.accrued_days < 0 or self.consumed_days < 0:
@@ -64,6 +72,7 @@ class LeaveRequest:
         object.__setattr__(self, "reason", text(self.reason, "reason", maximum=500))
         if self.rejection_reason is not None:
             object.__setattr__(self, "rejection_reason", text(self.rejection_reason, "rejection_reason", maximum=500))
+        _require_integer(self.requested_days, "requested_days", "leave_days_invalid")
         if self.requested_days < 1 or self.requested_days > 365:
             raise HCMLeaveError("leave_days_invalid", "Requested days must be between 1 and 365.")
         try:
@@ -80,6 +89,7 @@ def accrue_monthly_entitlement(
     completed_months: int,
 ) -> LeaveEntitlementBalance:
     """Computes exact cumulative leave entitlement based on completed service months."""
+    _require_integer(completed_months, "completed_months", "leave_service_invalid")
     if completed_months < 0 or completed_months > 600:
         raise HCMLeaveError("leave_service_invalid", "Completed service months must be between 0 and 600.")
     # Cumulative integer entitlement: (annual_entitlement * completed_months) // 12
@@ -99,6 +109,8 @@ def accrue_prorated_entitlement(
     total_year_days: int = 365,
 ) -> LeaveEntitlementBalance:
     """Computes exact integer day-prorated leave accrual with half-up rounding."""
+    _require_integer(total_year_days, "total_year_days", "leave_year_days_invalid")
+    _require_integer(service_days, "service_days", "leave_service_days_invalid")
     if total_year_days <= 0:
         raise HCMLeaveError("leave_year_days_invalid", "Total year days must be positive.")
     if service_days < 0 or service_days > total_year_days:
@@ -307,6 +319,7 @@ def rollover_leave_entitlement(
     max_carryover_days: int,
 ) -> tuple[LeaveEntitlementBalance, int]:
     """Rollovers unused leave balance to the next period with carryover cap and forfeiture calculation."""
+    _require_integer(max_carryover_days, "max_carryover_days", "leave_carryover_invalid")
     if max_carryover_days < 0 or max_carryover_days > 365:
         raise HCMLeaveError("leave_carryover_invalid", "Max carryover days must be between 0 and 365.")
 

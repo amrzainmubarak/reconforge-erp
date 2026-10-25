@@ -19,7 +19,7 @@ from tests.test_postgres_inventory_receipt_posting import receipt_database as en
 
 _ = enterprise_database
 ROOT = Path(__file__).parents[1]
-HEAD = "0151_pg_enterprise_erp_v1_tables"
+HEAD = "0152_pg_performance_indexes"
 TABLES = (
     "stock_sales_monetary_origins", "customer_partial_return_monetary_plans", "customer_partial_return_monetary_entries",
     "customer_partial_return_monetary_events", "customer_partial_return_monetary_history",
@@ -62,7 +62,7 @@ def migrate(dsn: str, operation: str, revision: str) -> subprocess.CompletedProc
 
 def test_actual_empty_current_head_roundtrip_preserves_original_core(enterprise_database: tuple[str, str]) -> None:
     admin, app = enterprise_database
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 150 and POSTGRES_MIGRATION_REVISIONS[-1] == HEAD
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 151 and POSTGRES_MIGRATION_REVISIONS[-1] == HEAD
     assert not any(revision.startswith("0137_") for revision in POSTGRES_MIGRATION_REVISIONS)
     with psycopg.connect(admin) as connection:
         assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == (HEAD,)

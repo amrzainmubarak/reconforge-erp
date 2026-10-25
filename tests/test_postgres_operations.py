@@ -54,8 +54,10 @@ def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None
         "0148_pg_partial_return_rounding",
         "0149_pg_monetary_partial_returns",
         "0150_pg_native_query_plans",
+        "0151_pg_enterprise_erp_v1_tables",
+        "0152_pg_performance_indexes",
     )
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 149
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 151
 
 
 def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:

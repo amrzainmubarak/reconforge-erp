@@ -13,7 +13,7 @@
     "manager_commit": "3010295ae7ff572de459987ad70db315a62ecd61",
     "linux_x86_64_archive_sha256": "1fd052f196108d87e61fc3d98fe06b4ec758c9a1eb1466a6fd1a436fe45885f2",
     "windows_x86_64_archive_sha256": "acfde570451cfdb8689fa159a138ee805ba4e241c466432750302c86254b0984",
-    "exclude_newer": "2026-10-03T00:00:00Z",
+    "exclude_newer": "2026-10-25T00:00:00Z",
     "supported_python": [
       "3.11",
       "3.12"
@@ -68,12 +68,17 @@
       "supported_db_schema": 6,
       "max_database_age_hours": 120,
       "scan_input_format": "syft-json",
-      "fail_severities": ["Critical", "High"],
+      "fail_severities": [
+        "Critical",
+        "High"
+      ],
       "unknown_severity_policy": "fail",
       "vex_document": "docs/security/container-runtime.openvex.json",
       "vex_document_sha256": "dbaadf43e903aceb501b17a72bf67208d281a1c6a445d868ed865f1b7e3ea30e",
       "vex_context": "https://openvex.dev/ns/v0.2.0",
-      "vex_allowed_statuses": ["fixed"],
+      "vex_allowed_statuses": [
+        "fixed"
+      ],
       "vex_max_review_age_days": 30
     }
   },

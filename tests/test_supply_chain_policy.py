@@ -5,6 +5,7 @@ import importlib.util
 import json
 import re
 import shutil
+import tomllib
 from collections.abc import Callable
 from datetime import date
 from pathlib import Path
@@ -130,7 +131,13 @@ def test_repository_policy_closes_resolution_and_exception_inputs() -> None:
     assert policy["container_audits"]["vulnerability"]["vex_allowed_statuses"] == ["fixed"]
     assert policy["container_resolution"]["service_images"]["postgres_16_ci"].startswith("postgres:16-alpine@sha256:")
     assert active == []
-    assert python_packages == 128
+    # OTel's 1.45.1 security update split HTTP transport and OTLP common
+    # into two additional upstream packages; retain an exact inventory check.
+    assert python_packages == 130
+    lock = tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))
+    locked_versions = {entry["name"]: entry["version"] for entry in lock["package"]}
+    assert locked_versions["opentelemetry-exporter-http-transport"] == "0.66b1"
+    assert locked_versions["opentelemetry-exporter-otlp-common"] == "0.66b1"
     assert npm_packages == 211
     assert npm_gap == 0
 

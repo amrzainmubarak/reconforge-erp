@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager, nullcontext
 from typing import cast
 
 from reconforge.domain.hcm_leave import (
+    HCMLeaveError,
     LeaveCategory,
     LeaveEntitlementBalance,
     LeaveRequest,
@@ -49,7 +52,22 @@ class SqliteHCMLeaveRepository:
 
     def __init__(self, connection: sqlite3.Connection) -> None:
         self._conn = connection
+        self._mutation_active = False
         self._init_tables()
+
+    @contextmanager
+    def mutation(self) -> Iterator[None]:
+        """Serialize the read/validate/write transition and commit its effects together."""
+        self._conn.execute("BEGIN IMMEDIATE")
+        self._mutation_active = True
+        try:
+            with self._conn:
+                yield
+        finally:
+            self._mutation_active = False
+
+    def close(self) -> None:
+        self._conn.close()
 
     def _init_tables(self) -> None:
         self._conn.executescript(CREATE_HCM_LEAVE_TABLES_SQL)
@@ -78,7 +96,7 @@ class SqliteHCMLeaveRepository:
         )
 
     def save_balance(self, workspace_id: str, balance: LeaveEntitlementBalance) -> None:
-        with self._conn:
+        with nullcontext() if self._mutation_active else self._conn:
             self._conn.execute(
                 """
                 INSERT INTO hcm_leave_entitlement_balances (
@@ -128,21 +146,22 @@ class SqliteHCMLeaveRepository:
             rejection_reason=row[10],
         )
 
-    def save_request(self, workspace_id: str, request: LeaveRequest) -> None:
-        with self._conn:
-            self._conn.execute(
+    def save_request(self, workspace_id: str, request: LeaveRequest, *, create_only: bool = False) -> None:
+        with nullcontext() if self._mutation_active else self._conn:
+            cursor = self._conn.execute(
                 """
                 INSERT INTO hcm_leave_requests (
                     workspace_id, request_id, employee_id, employee_user_id,
                     leave_type, start_date, end_date, requested_days,
                     status, reason, approved_by_user_id, rejection_reason
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """ + ("ON CONFLICT(workspace_id, request_id) DO NOTHING" if create_only else """
                 ON CONFLICT(workspace_id, request_id) DO UPDATE SET
                     status = excluded.status,
                     reason = excluded.reason,
                     approved_by_user_id = excluded.approved_by_user_id,
                     rejection_reason = excluded.rejection_reason
-                """,
+                """),
                 (
                     workspace_id,
                     request.request_id,
@@ -158,6 +177,9 @@ class SqliteHCMLeaveRepository:
                     request.rejection_reason,
                 ),
             )
+
+            if create_only and cursor.rowcount != 1:
+                raise HCMLeaveError("leave_request_exists", "A leave request with this identifier already exists.")
 
     def list_requests(
         self, workspace_id: str, employee_id: str | None = None

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any, cast
 
 from reconforge.domain.hcm_leave import (
+    HCMLeaveError,
     LeaveCategory,
     LeaveEntitlementBalance,
     LeaveRequest,
@@ -66,6 +69,21 @@ class PostgresHCMLeaveRepository:
     def __init__(self, connection: Any, tenant_id: str) -> None:
         self.connection = connection
         self.tenant_id = validate_tenant_id(tenant_id)
+        self._mutation_active = False
+
+    @contextmanager
+    def mutation(self) -> Iterator[None]:
+        """Hold request and entitlement row locks until the complete transition commits."""
+        with self.connection.transaction():
+            self._scope()
+            self._mutation_active = True
+            try:
+                yield
+            finally:
+                self._mutation_active = False
+
+    def close(self) -> None:
+        self.connection.close()
 
     def _scope(self) -> None:
         set_local_tenant_scope(self.connection, self.tenant_id)
@@ -79,7 +97,7 @@ class PostgresHCMLeaveRepository:
             SELECT employee_id, leave_type, annual_entitlement_days, accrued_days, consumed_days
             FROM reconforge.hcm_leave_entitlement_balances
             WHERE workspace_id = %s AND employee_id = %s AND leave_type = %s
-            """,
+            """ + (" FOR UPDATE" if self._mutation_active else ""),
             (workspace_id, employee_id, leave_type),
         )
         row = cursor.fetchone()
@@ -127,7 +145,7 @@ class PostgresHCMLeaveRepository:
                    approved_by_user_id, rejection_reason
             FROM reconforge.hcm_leave_requests
             WHERE workspace_id = %s AND request_id = %s
-            """,
+            """ + (" FOR UPDATE" if self._mutation_active else ""),
             (workspace_id, request_id),
         )
         row = cursor.fetchone()
@@ -147,21 +165,22 @@ class PostgresHCMLeaveRepository:
             rejection_reason=row[10],
         )
 
-    def save_request(self, workspace_id: str, request: LeaveRequest) -> None:
+    def save_request(self, workspace_id: str, request: LeaveRequest, *, create_only: bool = False) -> None:
         with self.connection.transaction():
             self._scope()
-            self.connection.execute(
+            cursor = self.connection.execute(
                 """
                 INSERT INTO reconforge.hcm_leave_requests (
                     tenant_id, workspace_id, request_id, employee_id, employee_user_id,
                     leave_type, start_date, end_date, requested_days,
                     status, reason, approved_by_user_id, rejection_reason
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """ + ("ON CONFLICT(tenant_id, workspace_id, request_id) DO NOTHING" if create_only else """
                 ON CONFLICT (tenant_id, workspace_id, request_id) DO UPDATE SET
                     status = excluded.status,
                     approved_by_user_id = excluded.approved_by_user_id,
                     rejection_reason = excluded.rejection_reason
-                """,
+                """),
                 (
                     self.tenant_id,
                     workspace_id,
@@ -178,6 +197,9 @@ class PostgresHCMLeaveRepository:
                     request.rejection_reason,
                 ),
             )
+
+            if create_only and cursor.rowcount != 1:
+                raise HCMLeaveError("leave_request_exists", "A leave request with this identifier already exists.")
 
     def list_requests(
         self, workspace_id: str, employee_id: str | None = None

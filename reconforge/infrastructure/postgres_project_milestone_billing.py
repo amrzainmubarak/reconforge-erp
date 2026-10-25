@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Mapping
 from typing import Any
 
 from reconforge.domain.project_milestone_billing import (
@@ -442,6 +443,8 @@ class PostgresProjectMilestoneBillingRepository:
         actor_label: str = "project-billing",
     ) -> str:
         """Post authoritative balanced double-entry GL voucher for milestone billing into Finance Core."""
+        if finance_core_repo is None:
+            raise PlatformError("Finance Core repository is required for canonical milestone posting.")
         try:
             entry_number = f"PMI-{invoice.invoice_id}"
             whole = invoice.billed_amount_minor // (10 ** precision)
@@ -463,23 +466,22 @@ class PostgresProjectMilestoneBillingRepository:
                     "description": f"Milestone billing Revenue {invoice.milestone_id}",
                 },
             ]
-            if finance_core_repo is not None:
-                entry = finance_core_repo.create_entry(
-                    entry_number=entry_number,
-                    organization_code=organization_code,
-                    entity_code=entity_code,
-                    period_id=period_id,
-                    journal_code=journal_code,
-                    posting_date=invoice.issued_at.split("T")[0] if "T" in invoice.issued_at else invoice.issued_at,
-                    description=f"Project milestone invoice {invoice.invoice_id}",
-                    lines=lines,
-                    workspace=invoice.workspace_id,
-                    source_type="Generated",
-                    actor_label=actor_label,
-                )
-                entry_id = str(entry.get("id", entry_number))
-            else:
-                entry_id = entry_number
+            entry = finance_core_repo.create_entry(
+                entry_number=entry_number,
+                organization_code=organization_code,
+                entity_code=entity_code,
+                period_id=period_id,
+                journal_code=journal_code,
+                posting_date=invoice.issued_at.split("T")[0] if "T" in invoice.issued_at else invoice.issued_at,
+                description=f"Project milestone invoice {invoice.invoice_id}",
+                lines=lines,
+                workspace=invoice.workspace_id,
+                source_type="Generated",
+                actor_label=actor_label,
+            )
+            entry_id = entry.get("id") if isinstance(entry, Mapping) else None
+            if not isinstance(entry_id, str) or not entry_id.strip():
+                raise PlatformError("Finance Core did not return a canonical entry identifier.")
 
             with self.connection.transaction():
                 self._scope()

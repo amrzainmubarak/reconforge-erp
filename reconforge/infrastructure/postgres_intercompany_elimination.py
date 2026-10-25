@@ -493,6 +493,8 @@ class PostgresIntercompanyEliminationRepository:
         actor_label: str = "intercompany-elimination",
     ) -> str:
         """Post authoritative balanced double-entry elimination GL voucher into Finance Core."""
+        if finance_core_repo is None:
+            raise PostgresIntercompanyEliminationError("Finance Core repository is required for canonical elimination posting.")
         workspace_id = self._workspace(workspace)
         try:
             entry_number = f"PIS-{elimination.elimination_id}"
@@ -515,23 +517,22 @@ class PostgresIntercompanyEliminationRepository:
                     "description": f"Inventory valuation reduction {elimination.elimination_id}",
                 },
             ]
-            if finance_core_repo is not None:
-                entry = finance_core_repo.create_entry(
-                    entry_number=entry_number,
-                    organization_code=organization_code,
-                    entity_code=entity_code,
-                    period_id=period_id,
-                    journal_code=journal_code,
-                    posting_date=posting_date,
-                    description=f"Intercompany profit-in-stock elimination {elimination.elimination_id}",
-                    lines=lines,
-                    workspace=workspace_id,
-                    source_type="Generated",
-                    actor_label=actor_label,
-                )
-                entry_id = str(entry.get("id", entry_number))
-            else:
-                entry_id = entry_number
+            entry = finance_core_repo.create_entry(
+                entry_number=entry_number,
+                organization_code=organization_code,
+                entity_code=entity_code,
+                period_id=period_id,
+                journal_code=journal_code,
+                posting_date=posting_date,
+                description=f"Intercompany profit-in-stock elimination {elimination.elimination_id}",
+                lines=lines,
+                workspace=workspace_id,
+                source_type="Generated",
+                actor_label=actor_label,
+            )
+            entry_id = entry.get("id") if isinstance(entry, Mapping) else None
+            if not isinstance(entry_id, str) or not entry_id.strip():
+                raise PostgresIntercompanyEliminationError("Finance Core did not return a canonical entry identifier.")
 
             with self.connection.transaction():
                 self._scope()

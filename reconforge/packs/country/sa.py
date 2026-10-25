@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import base64
-import xml.etree.ElementTree as ET
+# The standard library tree is used for XML generation; parsing uses DefusedET.
+import xml.etree.ElementTree as ET  # nosec B405
 from dataclasses import dataclass
 from datetime import date
 from typing import Any, Final
+
+from defusedxml import ElementTree as DefusedET
+from defusedxml.common import DefusedXmlException
 
 from reconforge.packs.tax.models import TaxCategory, TaxRate
 
@@ -336,7 +340,10 @@ def build_zatca_ubl_xml(
 
 def parse_zatca_ubl_xml(xml_content: str) -> dict[str, Any]:
     """Parse a ZATCA UBL 2.1 XML document and extract canonical metadata, totals, and embedded QR code."""
-    root = ET.fromstring(xml_content)
+    try:
+        root = DefusedET.fromstring(xml_content, forbid_dtd=True, forbid_entities=True, forbid_external=True)
+    except DefusedXmlException:
+        raise ValueError("Unsafe XML declarations are not permitted in invoice input.") from None
     ns = {
         "inv": "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
         "cac": "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",

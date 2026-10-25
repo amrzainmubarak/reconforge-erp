@@ -1,248 +1,125 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useBrowserSession } from "../browserSession";
 import type { Locale } from "../types";
 import { translate } from "../i18n";
 import "./FinancialReportingPage.css";
 
-export interface GovernedAssistantWorkspaceProps {
-  locale: Locale;
-}
-
+export interface GovernedAssistantWorkspaceProps { locale: Locale }
 export interface CitationGraphNode {
   evidence_id: string;
   source_type: string;
   digest: string;
-  confidence: number;
+  record_id: string;
+  summary: string;
 }
-
 export interface AssistantProposal {
   id: string;
   action_type: string;
   summary: string;
   requires_approval: boolean;
-  status: "PendingReview" | "Approved" | "Rejected";
+  status: "PendingReview";
 }
-
 export interface AssistantResponseView {
   query_id: string;
   query_text: string;
   answer: string;
   confidence_score: number;
   requires_clarification: boolean;
-  security_refusal: boolean;
-  autonomous_gl_refusal: boolean;
   data_classification: string;
   citation_graph: CitationGraphNode[];
   proposals: AssistantProposal[];
 }
 
+const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
+const text = (value: unknown, max = 500): value is string => typeof value === "string" && value.trim().length > 0 && value.length <= max;
+function parseResponse(value: unknown, queryId: string, query: string): AssistantResponseView {
+  const invalid = (): never => { throw new Error("assistant_response_invalid"); };
+  if (!object(value) || value.query_id !== queryId || !text(value.answer, 5000)
+    || typeof value.confidence_score !== "number" || !Number.isFinite(value.confidence_score) || value.confidence_score < 0 || value.confidence_score > 1
+    || typeof value.requires_clarification !== "boolean" || !["Public", "Internal", "Restricted", "Confidential"].includes(String(value.data_classification))
+    || !Array.isArray(value.citation_graph) || value.citation_graph.length > 1000
+    || !Array.isArray(value.cited_evidence_ids) || value.cited_evidence_ids.length > 1000 || !value.cited_evidence_ids.every(item => text(item))
+    || !Array.isArray(value.proposals) || value.proposals.length > 1000) return invalid();
+  const citedEvidenceIds = value.cited_evidence_ids;
+  if ((value.confidence_score < 0.85 || value.requires_clarification) && value.proposals.length > 0) return invalid();
+  const citationIds = new Set<string>(), recordIds = new Set<string>();
+  const citations = value.citation_graph.map(node => {
+    if (!object(node) || !text(node.node_id) || citationIds.has(node.node_id) || !text(node.entity_type)
+      || !text(node.record_id) || !text(node.version_digest) || !text(node.summary)) return invalid();
+    citationIds.add(node.node_id); recordIds.add(node.record_id);
+    return { evidence_id: node.node_id, source_type: node.entity_type, digest: node.version_digest, record_id: node.record_id, summary: node.summary };
+  });
+  if (citedEvidenceIds.some(id => !recordIds.has(id as string)) || [...recordIds].some(id => !citedEvidenceIds.includes(id))) return invalid();
+  const proposalIds = new Set<string>();
+  const proposals = value.proposals.map(proposal => {
+    if (!object(proposal) || !text(proposal.proposal_id) || proposalIds.has(proposal.proposal_id)
+      || !text(proposal.action_type) || !text(proposal.target_entity_id) || !recordIds.has(proposal.target_entity_id) || !text(proposal.summary)
+      || proposal.requires_maker_checker !== true || !text(proposal.required_permission)) return invalid();
+    proposalIds.add(proposal.proposal_id);
+    return { id: proposal.proposal_id, action_type: proposal.action_type, summary: proposal.summary, requires_approval: true, status: "PendingReview" as const };
+  });
+  return { query_id: queryId, query_text: query, answer: value.answer, confidence_score: value.confidence_score,
+    requires_clarification: value.requires_clarification,
+    data_classification: String(value.data_classification), citation_graph: citations, proposals };
+}
+
 export function GovernedAssistantWorkspace({ locale }: GovernedAssistantWorkspaceProps) {
+  const auth = useBrowserSession();
   const isAr = locale === "ar";
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
-
   const [queryInput, setQueryInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [workspaceId] = useState("WS-ENTERPRISE-01");
-  const [responseView, setResponseView] = useState<AssistantResponseView | null>({
-    query_id: "Q-INIT-001",
-    query_text: isAr ? "ما هي المعاملات المعلقة في حساب التسوية البنكية؟" : "What are the unposted items in the bank clearing account?",
-    answer: isAr
-      ? "استناداً إلى سجلات المطابقة الموثقة لـ WS-ENTERPRISE-01، هناك بندان معلقان بقيمة إجمالية قدرها 50,000 ريال سعودي بانتظار إشعار المقاصة."
-      : "Based on verified reconciliation evidence in WS-ENTERPRISE-01, 2 unposted items exist totaling 50,000.00 SAR awaiting bank clearing confirmation.",
-    confidence_score: 0.94,
-    requires_clarification: false,
-    security_refusal: false,
-    autonomous_gl_refusal: false,
-    data_classification: "Internal",
-    citation_graph: [
-      {
-        evidence_id: "EV-BNK-2026-001",
-        source_type: "BankStatementLine",
-        digest: "a1b2c3d4e5f60123456789abcdef0123456789abcdef0123456789abcdef0123",
-        confidence: 0.96,
-      },
-      {
-        evidence_id: "EV-REC-2026-089",
-        source_type: "ReconciliationMatch",
-        digest: "f6e5d4c3b2a19876543210fedcba9876543210fedcba9876543210fedcba9876",
-        confidence: 0.92,
-      },
-    ],
-    proposals: [
-      {
-        id: "PROP-001",
-        action_type: "reconciliation_exception_triage",
-        summary: isAr ? "إحالة البند المعلق إلى أمين الخزينة للتحقق" : "Route unposted clearing item to Treasury Reviewer",
-        requires_approval: true,
-        status: "PendingReview",
-      },
-    ],
-  });
+  const [responseView, setResponseView] = useState<AssistantResponseView | null>(null);
+  const [feedback, setFeedback] = useState<{ message: string; type: "error" } | null>(null);
+  const requestNumber = useRef(0), activeRequest = useRef<AbortController | null>(null);
+  useEffect(() => {
+    setResponseView(null); setFeedback(null); setLoading(false);
+    return () => { requestNumber.current++; activeRequest.current?.abort(); };
+  }, [locale, auth.revision]);
 
-  const [feedback, setFeedback] = useState<{ message: string; type: "success" | "error" } | null>(null);
-
-  // Check injection heuristics locally for rapid user feedback
-  const detectInjection = (text: string): boolean => {
-    const lower = text.toLowerCase();
-    return (
-      lower.includes("ignore previous instructions") ||
-      lower.includes("drop table") ||
-      lower.includes("bypass rls") ||
-      lower.includes("grant admin") ||
-      lower.includes("system prompt")
-    );
-  };
-
-  const detectGlPosting = (text: string): boolean => {
-    const lower = text.toLowerCase();
-    return (
-      lower.includes("autonomously post") ||
-      lower.includes("directly post to gl") ||
-      lower.includes("post journal directly") ||
-      lower.includes("modify balance") ||
-      lower.includes("bypass approval")
-    );
-  };
-
-  const handleSubmit = async (e?: FormEvent, customQuery?: string) => {
-    if (e) e.preventDefault();
-    const query = (customQuery || queryInput).trim();
+  const handleSubmit = async (event?: FormEvent, customQuery?: string) => {
+    event?.preventDefault();
+    const query = (customQuery ?? queryInput).trim();
     if (!query) return;
+    activeRequest.current?.abort();
+    const controller = new AbortController(); activeRequest.current = controller;
+    const revision = ++requestNumber.current;
+    const sessionRevision = auth.revision;
+    const queryId = `Q-${crypto.randomUUID()}`;
+    setLoading(true); setFeedback(null); setResponseView(null);
 
-    setLoading(true);
-    setFeedback(null);
-
-    // Security heuristic check
-    if (detectInjection(query)) {
-      setResponseView({
-        query_id: `Q-SEC-${Date.now()}`,
-        query_text: query,
-        answer: isAr
-          ? "رفض أمني: تم اكتشاف محاولة حقن للأوامر أو تصعيد صلاحيات غير مصرح به. تم تسجيل الحادثة في سجل التدقيق الأمني."
-          : "Security Refusal: Prompt injection or privilege escalation pattern detected. Incident logged to audit trail.",
-        confidence_score: 0.0,
-        requires_clarification: false,
-        security_refusal: true,
-        autonomous_gl_refusal: false,
-        data_classification: "Restricted",
-        citation_graph: [],
-        proposals: [],
-      });
-      setFeedback({
-        message: isAr ? "تم رفض الاستعلام لأسباب أمنية (Prompt Injection Refusal)" : "Query refused due to prompt injection heuristics",
-        type: "error",
-      });
-      setLoading(false);
-      return;
+    // This local warning does not claim a server security decision or audit event.
+    const injection = /ignore previous instructions|drop table|bypass rls|grant admin|system prompt/i.test(query);
+    const autonomous = /autonomously post|directly post to gl|post journal directly|modify balance|bypass approval/i.test(query);
+    if (injection || autonomous) {
+      setFeedback({ type: "error", message: injection
+        ? (isAr ? "تحذير محلي: رُفض نمط قد يتضمن حقن تعليمات. لم يُرسل الاستعلام ولم يُسجل حدث تدقيق على الخادم." : "Client warning: Possible prompt injection refused. The query was not sent and no server audit event was recorded.")
+        : (isAr ? "تحذير محلي: لا ينفذ المساعد ترحيلات دفتر الأستاذ. استخدم مسار الاعتماد البشري المخوّل." : "Client warning: The assistant cannot perform autonomous GL postings. Use the authorized human approval workflow.") });
+      setLoading(false); return;
     }
-
-    if (detectGlPosting(query)) {
-      setResponseView({
-        query_id: `Q-GL-${Date.now()}`,
-        query_text: query,
-        answer: isAr
-          ? "قاعدة مطلقة: يُحظر تماماً على الذكاء الاصطناعي ترحيل قيود دفتر الأستاذ العام بصورة آلية مستقلة. جميع المعاملات تتطلب صانعاً ومعتمداً بشريين."
-          : "Invariant Enforced: Autonomous GL postings are strictly prohibited. AI is advisory only; human maker-checker dual custody is mandatory.",
-        confidence_score: 0.0,
-        requires_clarification: false,
-        security_refusal: false,
-        autonomous_gl_refusal: true,
-        data_classification: "Restricted",
-        citation_graph: [],
-        proposals: [],
-      });
-      setFeedback({
-        message: isAr ? "يُمنع الترحيل الآلي للدفتر العام (Zero-Autonomous GL Invariant)" : "Autonomous GL posting prohibited by core invariants",
-        type: "error",
-      });
-      setLoading(false);
-      return;
-    }
-
-    // Try live API if reachable, else use deterministic simulated response
     try {
-      const res = await fetch("/api/v1/ai/assistant/query", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query_id: `Q-${Date.now()}`,
-          prompt: query,
-          workspace_id: workspaceId,
-          source_records: [
-            { id: "REC-101", workspace_id: workspaceId, amount: 15000, reference: "MATCH-01" },
-            { id: "REC-102", workspace_id: workspaceId, amount: 35000, reference: "MATCH-02" },
-          ],
-        }),
+      const response = await fetch("/api/v1/ai/assistant/query", {
+        method: "POST", credentials: "same-origin", cache: "no-store", signal: controller.signal,
+        headers: { "Content-Type": "application/json", Accept: "application/json", ...(auth.session ? {
+          "X-ReconForge-Tenant": auth.session.tenantId, "X-ReconForge-CSRF": auth.session.csrfToken,
+        } : {}) },
+        body: JSON.stringify({ query_id: queryId, query_text: query }),
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        setResponseView({
-          query_id: data.query_id,
-          query_text: query,
-          answer: data.answer,
-          confidence_score: data.confidence_score,
-          requires_clarification: data.requires_clarification,
-          security_refusal: false,
-          autonomous_gl_refusal: false,
-          data_classification: data.data_classification || "Internal",
-          citation_graph: data.citation_graph || [],
-          proposals: data.proposals || [],
-        });
-      } else {
-        throw new Error("Fallback to deterministic response");
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) throw new Error("assistant_access_denied");
+        throw new Error("assistant_unavailable");
       }
-    } catch {
-      // Deterministic evaluation
-      const isLowConfidence = query.length < 15;
-      const score = isLowConfidence ? 0.72 : 0.91;
-      setResponseView({
-        query_id: `Q-${Date.now()}`,
-        query_text: query,
-        answer: isLowConfidence
-          ? (isAr ? "الاستعلام مختصر جداً أو غير محدد بدقة. يرجى تقديم تفاصيل إضافية لتحديد السجلات المطلوبة." : "The query is ambiguous or lacks sufficient criteria. Please provide additional context or reference numbers.")
-          : (isAr ? `بناءً على فحص السجلات الموثقة لـ ${workspaceId}، تم التحقق من سلامة البيانات ومطابقة الأرصدة بنجاح.` : `Based on verified evidence in ${workspaceId}, dataset integrity is substantiated with zero unhedged variances.`),
-        confidence_score: score,
-        requires_clarification: isLowConfidence,
-        security_refusal: false,
-        autonomous_gl_refusal: false,
-        data_classification: "Internal",
-        citation_graph: isLowConfidence ? [] : [
-          {
-            evidence_id: "EV-DET-2026-101",
-            source_type: "JournalEntry",
-            digest: "c4ca4238a0b923820dcc509a6f75849b20261019000102030405060708090a0b",
-            confidence: 0.93,
-          },
-        ],
-        proposals: isLowConfidence ? [] : [
-          {
-            id: `PROP-${Date.now()}`,
-            action_type: "verify_evidence_binder",
-            summary: isAr ? "أرشفة الأدلة في السجل الرقمي غير القابل للتعديل" : "Seal evidence records in tamper-evident retention ledger",
-            requires_approval: true,
-            status: "PendingReview",
-          },
-        ],
-      });
+      const result = parseResponse(await response.json(), queryId, query);
+      if (revision === requestNumber.current && !controller.signal.aborted && auth.isCurrent(sessionRevision)) setResponseView(result);
+    } catch (error) {
+      if (revision !== requestNumber.current || controller.signal.aborted || !auth.isCurrent(sessionRevision)) return;
+      setResponseView(null);
+      setFeedback({ type: "error", message: error instanceof Error && error.message === "assistant_access_denied"
+        ? (isAr ? "تعذر التحقق من صلاحية الوصول. سجّل الدخول إلى مساحة عمل مخوّلة ثم أعد المحاولة. لا تتوفر نتيجة تقييم." : "Access could not be verified. Sign in to an authorized workspace and retry. No evaluation is available.")
+        : (isAr ? "تعذر الحصول على استجابة صالحة من المساعد. تحقق من الاتصال والخدمة ثم أعد المحاولة. لم يتم تقييم بيانات مالية أو أدلة." : "A valid assistant response could not be obtained. Check the connection and service, then retry. No financial data or evidence was evaluated.") });
     } finally {
-      setLoading(false);
+      if (revision === requestNumber.current && !controller.signal.aborted && auth.isCurrent(sessionRevision)) setLoading(false);
     }
-  };
-
-  const handleProposalAction = (propId: string, action: "Approved" | "Rejected") => {
-    if (!responseView) return;
-    setResponseView({
-      ...responseView,
-      proposals: responseView.proposals.map((p) =>
-        p.id === propId ? { ...p, status: action } : p
-      ),
-    });
-    setFeedback({
-      message: isAr
-        ? `تم ${action === "Approved" ? "اعتماد" : "رفض"} المقترح ${propId} بواسطة المعتمد البشري`
-        : `Proposal ${propId} ${action === "Approved" ? "approved" : "rejected"} by authorized human dual-custody`,
-      type: "success",
-    });
   };
 
   return (
@@ -269,6 +146,8 @@ export function GovernedAssistantWorkspace({ locale }: GovernedAssistantWorkspac
         </div>
       )}
 
+      {!responseView && !loading && !feedback && <p role="status">{isAr ? "أرسل استفساراً لطلب استجابة من الخادم. لم يتم تقييم بيانات مالية أو أدلة بعد." : "Submit a query to request a server response. No financial data or evidence has been evaluated yet."}</p>}
+
       {/* Query Input Section */}
       <section aria-labelledby="assistant-query-heading" className="panel">
         <h2 id="assistant-query-heading" style={{ margin: "0 0 1rem", fontSize: "1.2rem", color: "#16324f" }}>
@@ -276,12 +155,13 @@ export function GovernedAssistantWorkspace({ locale }: GovernedAssistantWorkspac
         </h2>
         <form onSubmit={(e) => handleSubmit(e)} className="reporting-form" style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "0.5rem" }}>
           <div>
-            <label htmlFor="assistant-query-input" style={{ display: "none" }}>{t("governedQueryPlaceholder")}</label>
+            <label htmlFor="assistant-query-input">{t("governedQueryPlaceholder")}</label>
             <input
               id="assistant-query-input"
               type="text"
               value={queryInput}
-              onChange={(e) => setQueryInput(e.target.value)}
+              onChange={(e) => { activeRequest.current?.abort(); requestNumber.current++; setLoading(false); setResponseView(null); setFeedback(null); setQueryInput(e.target.value); }}
+              maxLength={1000}
               placeholder={t("governedQueryPlaceholder")}
               style={{ width: "100%", padding: "0.75rem", borderRadius: "6px", border: "1px solid #ccd6e0" }}
               required
@@ -347,48 +227,11 @@ export function GovernedAssistantWorkspace({ locale }: GovernedAssistantWorkspac
       {/* Response Details & Governance Gauges */}
       {responseView && (
         <>
-          {/* Security Alert Banners */}
-          {responseView.security_refusal && (
-            <div
-              role="status"
-              aria-live="polite"
-              style={{
-                padding: "1rem",
-                borderRadius: "8px",
-                background: "#fee4e2",
-                border: "2px solid #d92d20",
-                color: "#7a1710",
-                fontWeight: 600,
-              }}
-            >
-              <h3>🛡️ {t("governedPromptInjectionAlert")}</h3>
-              <p style={{ margin: "0.5rem 0 0", fontWeight: 400 }}>{responseView.answer}</p>
-            </div>
-          )}
-
-          {responseView.autonomous_gl_refusal && (
-            <div
-              role="status"
-              aria-live="polite"
-              style={{
-                padding: "1rem",
-                borderRadius: "8px",
-                background: "#fff4cc",
-                border: "2px solid #b54708",
-                color: "#593800",
-                fontWeight: 600,
-              }}
-            >
-              <h3>⚖️ {t("governedAutonomousGlRefusal")}</h3>
-              <p style={{ margin: "0.5rem 0 0", fontWeight: 400 }}>{responseView.answer}</p>
-            </div>
-          )}
-
           {/* Response Main Panel */}
           <section aria-labelledby="assistant-answer-heading" className="panel">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <h2 id="assistant-answer-heading" style={{ margin: 0, fontSize: "1.2rem", color: "#16324f" }}>
-                {isAr ? "إجابة المساعد المدعومة بالأدلة" : "Grounded Assistant Evaluation"}
+                {isAr ? "استجابة المساعد من الخادم" : "Server Assistant Response"}
               </h2>
               <span style={{ fontSize: "0.85rem", background: "#e8eef5", color: "#16324f", padding: "0.2rem 0.6rem", borderRadius: "4px", fontWeight: 600 }}>
                 {responseView.data_classification}
@@ -437,8 +280,8 @@ export function GovernedAssistantWorkspace({ locale }: GovernedAssistantWorkspac
                     <tr>
                       <th>{isAr ? "معرّف الدليل" : "Evidence Node ID"}</th>
                       <th>{isAr ? "نوع المصدر" : "Source Entity Type"}</th>
-                      <th>{isAr ? "بصمة النزاهة التشفيرية" : "SHA-256 Digest"}</th>
-                      <th>{isAr ? "درجة المطابقة" : "Confidence"}</th>
+                      <th>{isAr ? "إصدار المصدر" : "Source Version"}</th>
+                      <th>{isAr ? "السجل المصدر" : "Source Record"}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -449,7 +292,7 @@ export function GovernedAssistantWorkspace({ locale }: GovernedAssistantWorkspac
                         <td><code style={{ fontSize: "0.75rem" }}>{node.digest}</code></td>
                         <td>
                           <span style={{ color: "#0c6257", fontWeight: 700 }}>
-                            {(node.confidence * 100).toFixed(0)}%
+                            {node.record_id}
                           </span>
                         </td>
                       </tr>
@@ -486,70 +329,10 @@ export function GovernedAssistantWorkspace({ locale }: GovernedAssistantWorkspac
                         <td><code>{prop.action_type}</code></td>
                         <td>{prop.summary}</td>
                         <td>
-                          <span
-                            style={{
-                              padding: "0.2rem 0.5rem",
-                              borderRadius: "999px",
-                              fontSize: "0.8rem",
-                              fontWeight: 600,
-                              background:
-                                prop.status === "Approved"
-                                  ? "#ecfdf3"
-                                  : prop.status === "Rejected"
-                                  ? "#fee4e2"
-                                  : "#fff4cc",
-                              color:
-                                prop.status === "Approved"
-                                  ? "#02542d"
-                                  : prop.status === "Rejected"
-                                  ? "#7a1710"
-                                  : "#593800",
-                            }}
-                          >
-                            {prop.status}
-                          </span>
+                          <span>{isAr ? "يتطلب مراجعة بشرية" : "Human review required"}</span>
                         </td>
                         <td>
-                          {prop.status === "PendingReview" ? (
-                            <div style={{ display: "flex", gap: "0.3rem" }}>
-                              <button
-                                type="button"
-                                onClick={() => handleProposalAction(prop.id, "Approved")}
-                                style={{
-                                  padding: "0.25rem 0.6rem",
-                                  background: "#02542d",
-                                  color: "#ffffff",
-                                  border: 0,
-                                  borderRadius: "4px",
-                                  cursor: "pointer",
-                                  fontSize: "0.8rem",
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {isAr ? "اعتماد الصانع/المعتمد ✓" : "Dual Approve ✓"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleProposalAction(prop.id, "Rejected")}
-                                style={{
-                                  padding: "0.25rem 0.6rem",
-                                  background: "#7a1710",
-                                  color: "#ffffff",
-                                  border: 0,
-                                  borderRadius: "4px",
-                                  cursor: "pointer",
-                                  fontSize: "0.8rem",
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {isAr ? "رفض المقترح ✗" : "Reject ✗"}
-                              </button>
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: "0.8rem", color: "#667085" }}>
-                              {isAr ? "تم تسجيل القرار في سجل التدقيق" : "Recorded in Audit Log"}
-                            </span>
-                          )}
+                          <p>{isAr ? "المقترح استشاري فقط. استخدم مسار العمل المخوّل للمراجعة والاعتماد؛ لا ينفذ المساعد القرار." : "Advisory proposal only. Use the authorized workflow for review and approval; the assistant does not execute this decision."}</p>
                         </td>
                       </tr>
                     ))}

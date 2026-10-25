@@ -1,5 +1,12 @@
 # ReconForge Integration and CI Status
 
+## Current assurance checkpoint — 2026-10-25
+
+**The current release is not accepted.** [Prerequisite repairs, measured results
+and remaining gates](ASSURANCE_2026-10-25.md) supersede broad completion,
+certification, performance and comparative claims below. Earlier snapshots
+retain their original source/scope and do not qualify the current source.
+
 Authoritative status tracking repository state, local quality baselines, continuous integration runs, and verification gates.
 
 ---

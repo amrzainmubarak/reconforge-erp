@@ -1,5 +1,18 @@
 ﻿# Claims Evidence Matrix
 
+## Current bounded assurance — 2026-10-25
+
+Current program acceptance is OPEN; [source-bound record](ASSURANCE_2026-10-25.md).
+
+| Claim | Code evidence | Test evidence | Runtime evidence | Maturity | Allowed wording |
+| --- | --- | --- | --- | --- | --- |
+| Leave owner/atomic transitions | HCM API + SQLite/PG HCM adapters; session transaction ownership |15 new authenticated HTTP/session regressions; legacy HCM/auth compatibility |43 local Python passes; separate restricted-role PG adapter proof | Experimental bounded repair | Tested leave transitions reject unauthorized/duplicate changes and conserve entitlement in tested races/failures |
+| Canonical ledger reference required | Project/IC Finance Core guard | independent recording adapter tests | candidate-focused-finance record | Experimental boundary | Missing/malformed canonical IDs fail closed; API posting/validation atomicity remains unqualified |
+| Truthful server failure UX | Assistant/statements/MPS/genealogy components | EN/AR denial, stale-session and invalid-response tests |1205 component cases,111 files; no browser conformance result | Experimental read/advice | Does not invent financial results on server failure; source-less generation unavailable |
+| XML declaration rejection | country/sa.py defused parser |8 ingress regressions; country compatibility tests | independent qa-sa-xml record | Tested parser boundary | Rejects DTD/entities/external declarations; no legal/statutory certification |
+| Existing migration0152 head | runtime registry + unchanged0152 SQL | native down/up tests |2 live PostgreSQL16.15 passes +16 catalog indexes | Local native fixture | Existing0152 head upgrades/downgrades in tested fixture;13 newer module schemas still absent |
+| Complete ERP, all6 assurance gates, global superiority | insufficient integration evidence | current authorization gate failures | no coherent current release qualification | planned / NOT ACCEPTED | No complete ERP, production, certification or competitive advantage claim |
+
 ## Governed operating integrity (2026-10-10 publication snapshot)
 
 | Claim | Code evidence | Test evidence | Runtime evidence | Maturity | Allowed wording |

@@ -1,5 +1,17 @@
 # ReconForge Execution Evidence Log
 
+## E-ASSURANCE-20261025 — Bounded repair, no program acceptance
+
+[Assurance record](ASSURANCE_2026-10-25.md) and
+[portable source/log/hash index](ASSURANCE_2026-10-25.json) bind baseline negatives,
+independently reproduced defects, narrow repairs and remaining release gates.
+The final serialized web run passed1205 cases/111 files. HCM/auth43 passed;
+native migration2 passed and explicitly-installed HCM adapter checks passed on
+PostgreSQL16.15. These overlapping/narrow cohorts are not a whole-release total.
+Current authorization-inventory failures and unavailable browser/container/remote
+qualification remain visible. Historical broad certification claims below are
+not accepted as current release evidence.
+
 ## Critical Enterprise Integration Acceptance Directive Evidence — 2026-10-19
 
 Verified on branch `amr/enterprise-erp-v1-execution-20261018`:

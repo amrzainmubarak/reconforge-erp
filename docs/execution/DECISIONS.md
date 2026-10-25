@@ -1,5 +1,13 @@
 # ReconForge Execution Decisions Log
 
+## D869 — Repair prerequisites and withdraw unsupported acceptance (2026-10-25)
+
+[ADR0869](../adr/0869-repair-assurance-prerequisites-before-optimization.md)
+records owner-only/atomic leave transitions, correct session transaction ownership,
+real ledger references, truthful browser error states, safe XML ingress, and the
+existing0152 registry correction. Current Q/S/U/P/I/R remain open. Preserve initial
+and intermediate failures; no protected-main change, worktree, release or deployment.
+
 ## Review and admit PR141 into main only after final checks (2026-10-18)
 
 The user explicitly requests review, conditional merge into main and an updated

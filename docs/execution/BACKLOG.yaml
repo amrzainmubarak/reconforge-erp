@@ -1,10 +1,16 @@
 schema_version: 2
-updated_at: "2026-10-18"
+updated_at: "2026-10-25"
 phase: "Enterprise ERP v1.0 — Functional Completion"
-active_sprint: "M7 FINAL CLOSURE: frozen M7.7/M7.9; only witnessed correctness and compatibility blockers; then exact-head HTTPS/restore/CI acceptance; no optional expansion or comparative benchmarks"
+active_sprint: "Repair reproduced release-entry safety defects; all six global gates remain open; no unrelated optimization or superiority claims"
 completion_source_of_truth: "docs/execution/ENTERPRISE_COMPLETION_MASTER_MATRIX.md"
 major_domain_wip_limit: 1
 completion_status_values: [VERIFIED COMPLETE, INCOMPLETE, BLOCKED, NOT STARTED]
+assurance_checkpoint:
+  date: "2026-10-25"
+  entry_source: "7af61cddb1fc96a3f5f348257c772206171572c1"
+  report: "docs/execution/ASSURANCE_2026-10-25.md"
+  program_accepted: false
+  open_gates: [Q, S, U, P, I, R]
 snapshot:
   evidence_base_commit: "37518287126e0f630e726592dda8cc981faa2a96"
   policy_change_commit: "the commit containing this file"
@@ -14,6 +20,34 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-ASSURANCE-SAFETY-20261025
+    depends_on: []
+    priority: P0
+    area: assurance-prerequisites
+    title: Repair independently reproduced leave ownership atomicity session locks fake ledger references browser results and XML ingress
+    status: completed
+    exit_evidence: "ASSURANCE_2026-10-25.md/.json;15 new HCM/session regressions;43 HCM/auth passes;1205 serialized component passes;8 independently rerun XML ingress cases; narrow Finance Core guard and current0152 migration registry. No whole-release acceptance."
+  - id: AMR-ASSURANCE-CANONICAL-20261025
+    depends_on: [AMR-ASSURANCE-SAFETY-20261025]
+    priority: P0
+    area: canonical-financial-integration
+    title: Connect real project and intercompany API workflows to governed validated GL with atomic source linking and explicit currency precision
+    status: in_progress
+    exit_evidence: "Missing and malformed ID paths now fail closed; actual production API canonical integration idempotency and validation remain unqualified."
+  - id: AMR-ASSURANCE-SCHEMAS-20261025
+    depends_on: [AMR-ASSURANCE-SAFETY-20261025]
+    priority: P0
+    area: deployment-and-isolation
+    title: Migrate thirteen HCM CRM capacity and BOM PostgreSQL tables with scoped permissions and populated recovery
+    status: in_progress
+    exit_evidence: "Existing0152 down/up tests2pass; HCM native adapter proof explicitly installs its schema and does not establish deployment."
+  - id: AMR-ASSURANCE-RELEASE-20261025
+    depends_on: [AMR-ASSURANCE-CANONICAL-20261025, AMR-ASSURANCE-SCHEMAS-20261025]
+    priority: P0
+    area: current-source-release-acceptance
+    title: Resolve current authorization scope gates and qualify locked native HTTP browser security container recovery and CI on one source
+    status: in_progress
+    exit_evidence: "All6 global gates OPEN; five current authorization-inventory failures retained; browser binary CDN and Docker registry connectivity block local qualification; remote TLS attempts failed."
   - id: AMR-REGRESSION-20261018
     depends_on: [AMR-WORKSPACE-20261018]
     priority: P1

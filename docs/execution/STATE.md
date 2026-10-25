@@ -1,6 +1,13 @@
 # Execution State
 
-## Global Engineering Assurance & Competitive Superiority Program — VICTORY CONFIRMED — 2026-10-19
+## Current assurance checkpoint — 2026-10-25
+
+**The current release is not accepted.** [Prerequisite repairs, measured results
+and remaining gates](ASSURANCE_2026-10-25.md) supersede broad completion,
+certification, performance and comparative claims below. Earlier snapshots
+retain their original source/scope and do not qualify the current source.
+
+## Historical unaccepted global assurance assertion — 2026-10-19
 
 Completed all 6 Enterprise Acceptance Gates (Q, S, U, P, I, R) under the Global Engineering Assurance & Competitive Superiority Command on branch `amr/enterprise-erp-v1-execution-20261018`:
 - Single-workspace policy strictly maintained in `F:\reconforge-erp` with exactly 1 Git worktree.

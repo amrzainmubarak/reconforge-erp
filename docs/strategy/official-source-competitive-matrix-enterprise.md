@@ -1,5 +1,12 @@
 # Official-Source Enterprise Competitive Capability Matrix
 
+> Current2026-10-25 review: all historical Parity/Advantage Verified labels below
+> are **COMPARISON INCONCLUSIVE** until product/edition/date-bound equivalent
+> source and runtime evidence are supplied. Performance is **NOT COMPARABLE —
+> INSUFFICIENT EVIDENCE**. The prerequisite release has not passed; see
+> [current assurance](../execution/ASSURANCE_2026-10-25.md). No vendor absence,
+> uniqueness or global ranking can be inferred from this inventory.
+
 This is an ethical, evidence-bounded technical comparison of ReconForge against five prominent enterprise enterprise-resource and financial systems: **SAP S/4HANA**, **Oracle Fusion Cloud ERP**, **Microsoft Dynamics 365 Finance & Supply Chain**, **Oracle NetSuite**, and **Odoo Enterprise**.
 
 This document records capabilities as documented in official first-party vendor publications compared against runtime code, tests, and execution evidence in this repository. It does not rank products, make marketing claims, or assert unverified superiority. Missing evidence is documented as an open gap.

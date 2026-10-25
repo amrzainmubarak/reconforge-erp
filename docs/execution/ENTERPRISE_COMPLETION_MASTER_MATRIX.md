@@ -1,5 +1,12 @@
 # ReconForge Enterprise ERP v1.0 — completion source of truth
 
+## Current assurance checkpoint — 2026-10-25
+
+**The current release is not accepted.** [Prerequisite repairs, measured results
+and remaining gates](ASSURANCE_2026-10-25.md) supersede broad completion,
+certification, performance and comparative claims below. Earlier snapshots
+retain their original source/scope and do not qualify the current source.
+
 Accepted bounded M7 v1/v2 source: `37518287126e0f630e726592dda8cc981faa2a96`.
 Audited integration predecessor: `5017eb943d8216f6bb1d2024623e2e2df5c0db49`, above accepted
 M6 `f0d90b2690e6e128516e2ba7da5958a0411fc4b4`. Date: 2026-10-15.

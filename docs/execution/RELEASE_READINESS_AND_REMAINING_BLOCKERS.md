@@ -1,5 +1,12 @@
 # ReconForge Release Readiness and Remaining Blockers
 
+## Current assurance checkpoint — 2026-10-25
+
+**The current release is not accepted.** [Prerequisite repairs, measured results
+and remaining gates](ASSURANCE_2026-10-25.md) supersede broad completion,
+certification, performance and comparative claims below. Earlier snapshots
+retain their original source/scope and do not qualify the current source.
+
 Authoritative release readiness criteria, capability closure roadmap, and blocking issues tracking toward ReconForge Enterprise ERP v1.0.
 
 ---

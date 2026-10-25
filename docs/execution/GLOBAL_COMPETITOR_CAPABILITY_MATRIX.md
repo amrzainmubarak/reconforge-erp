@@ -1,5 +1,12 @@
 # ReconForge Global Competitor Capability Matrix
 
+## Current assurance checkpoint — 2026-10-25
+
+**The current release is not accepted.** [Prerequisite repairs, measured results
+and remaining gates](ASSURANCE_2026-10-25.md) supersede broad completion,
+certification, performance and comparative claims below. Earlier snapshots
+retain their original source/scope and do not qualify the current source.
+
 Objective, evidence-based competitive analysis evaluating leading enterprise ERP suites against ReconForge.
 All evaluations are sourced from official vendor documentation, release notes, and technical architectures.
 

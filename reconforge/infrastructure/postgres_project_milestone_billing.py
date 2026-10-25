@@ -442,7 +442,7 @@ class PostgresProjectMilestoneBillingRepository:
         precision: int = 2,
         actor_label: str = "project-billing",
     ) -> str:
-        """Post authoritative balanced double-entry GL voucher for milestone billing into Finance Core."""
+        """Create and link a balanced Finance Core draft; validation and approval remain separate."""
         if finance_core_repo is None:
             raise PlatformError("Finance Core repository is required for canonical milestone posting.")
         try:
@@ -482,6 +482,8 @@ class PostgresProjectMilestoneBillingRepository:
             entry_id = entry.get("id") if isinstance(entry, Mapping) else None
             if not isinstance(entry_id, str) or not entry_id.strip():
                 raise PlatformError("Finance Core did not return a canonical entry identifier.")
+            returned_status = entry.get("status")
+            entry_status = returned_status if isinstance(returned_status, str) and returned_status in {"Draft", "Validated", "Voided"} else "Unknown"
 
             with self.connection.transaction():
                 self._scope()
@@ -498,12 +500,13 @@ class PostgresProjectMilestoneBillingRepository:
                     actor_user_id=actor_label,
                     object_type="project_milestone_invoice",
                     object_id=invoice.invoice_id,
-                    action="milestone_gl_posted",
+                    action="milestone_gl_linked",
                     after_hash=hashlib.sha256(f"{invoice.invoice_id}:{entry_id}:{invoice.billed_amount_minor}".encode()).hexdigest(),
                     metadata={
                         "workspace_id": invoice.workspace_id,
                         "invoice_id": invoice.invoice_id,
                         "finance_entry_id": entry_id,
+                        "finance_entry_status": entry_status,
                         "amount_minor": invoice.billed_amount_minor,
                     },
                 )

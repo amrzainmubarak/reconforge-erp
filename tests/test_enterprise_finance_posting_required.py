@@ -150,3 +150,33 @@ def test_finance_core_failure_never_creates_posted_evidence(posting_case: Any) -
 
     assert connection.statements == []
     assert events == []
+
+
+def test_finance_core_draft_is_linked_without_claiming_posting_or_approval(posting_case: Any) -> None:
+    method, kwargs, _error, _connection, events = posting_case
+    finance = FinanceBoundary({"id": "GLE-canonical-draft", "status": "Draft"})
+
+    assert method(**kwargs, finance_core_repo=finance) == "GLE-canonical-draft"
+
+    assert len(finance.calls) == 1
+    assert len(events) == 1
+    expected_action = "milestone_gl_linked" if "invoice" in kwargs else "profit_in_stock_gl_linked"
+    assert events[0]["action"] == expected_action
+    assert "posted" not in events[0]["action"]
+    assert events[0]["metadata"]["finance_entry_status"] == "Draft"
+    assert sum(Decimal(line["debit"]) for line in finance.calls[0]["lines"]) == Decimal("123.45")
+    assert sum(Decimal(line["credit"]) for line in finance.calls[0]["lines"]) == Decimal("123.45")
+
+
+@pytest.mark.parametrize("response", [
+    {"id": "GLE-canonical-draft"},
+    {"id": "GLE-canonical-draft", "status": None},
+    {"id": "GLE-canonical-draft", "status": {"unexpected": "data"}},
+    {"id": "GLE-canonical-draft", "status": "Untrusted status\nwith details"},
+])
+def test_missing_or_invalid_finance_status_is_recorded_as_unknown(posting_case: Any, response: object) -> None:
+    method, kwargs, _error, _connection, events = posting_case
+
+    assert method(**kwargs, finance_core_repo=FinanceBoundary(response)) == "GLE-canonical-draft"
+
+    assert events[0]["metadata"]["finance_entry_status"] == "Unknown"

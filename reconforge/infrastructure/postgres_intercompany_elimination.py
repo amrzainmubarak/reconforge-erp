@@ -492,7 +492,7 @@ class PostgresIntercompanyEliminationRepository:
         precision: int = 2,
         actor_label: str = "intercompany-elimination",
     ) -> str:
-        """Post authoritative balanced double-entry elimination GL voucher into Finance Core."""
+        """Create and link a balanced Finance Core draft; validation and approval remain separate."""
         if finance_core_repo is None:
             raise PostgresIntercompanyEliminationError("Finance Core repository is required for canonical elimination posting.")
         workspace_id = self._workspace(workspace)
@@ -533,6 +533,8 @@ class PostgresIntercompanyEliminationRepository:
             entry_id = entry.get("id") if isinstance(entry, Mapping) else None
             if not isinstance(entry_id, str) or not entry_id.strip():
                 raise PostgresIntercompanyEliminationError("Finance Core did not return a canonical entry identifier.")
+            returned_status = entry.get("status")
+            entry_status = returned_status if isinstance(returned_status, str) and returned_status in {"Draft", "Validated", "Voided"} else "Unknown"
 
             with self.connection.transaction():
                 self._scope()
@@ -549,12 +551,13 @@ class PostgresIntercompanyEliminationRepository:
                     actor_user_id=actor_label,
                     object_type="intercompany_profit_in_stock_elimination",
                     object_id=elimination.elimination_id,
-                    action="profit_in_stock_gl_posted",
+                    action="profit_in_stock_gl_linked",
                     after_hash=hashlib.sha256(f"{elimination.elimination_id}:{entry_id}:{elimination.unrealized_profit_minor}".encode()).hexdigest(),
                     metadata={
                         "workspace_id": workspace_id,
                         "elimination_id": elimination.elimination_id,
                         "finance_entry_id": entry_id,
+                        "finance_entry_status": entry_status,
                         "amount_minor": elimination.unrealized_profit_minor,
                     },
                 )

@@ -1,5 +1,15 @@
 # Execution State
 
+## Draft delivery and dependency triage — 2026-10-25
+
+[Draft PR143](https://github.com/amrzainmubarak/reconforge-erp/pull/143) contains
+the bounded repair and170-entry independently verified evidence packet.
+Runtime sourcea91852a7; all6 global gates OPEN. Creation/push succeeded;
+subsequent live status reads hit TLS failures. No merge/release/deployment.
+Default-branch metadata reports69 alerts (6critical/30high/25medium/8low);
+controlled locked applicability review/update is P0, with no exploitability
+conclusion or waiver. See [delivery receipt](ASSURANCE_DELIVERY_2026-10-25.json).
+
 ## Current assurance checkpoint — 2026-10-25
 
 **The current release is not accepted.** [Prerequisite repairs, measured results

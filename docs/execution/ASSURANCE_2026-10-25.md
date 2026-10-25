@@ -158,3 +158,22 @@ The owned PostgreSQL cluster was stopped after verifying its exact data director
 the original Windows PostgreSQL service was untouched and recovery files remain.
 The initial pg_ctl wrapper timeout is retained as a negative setup observation,
 even though later native connections and tests succeeded.
+
+## Draft publication and newly observed dependency alerts
+
+[Draft PR143](https://github.com/amrzainmubarak/reconforge-erp/pull/143) was
+created successfully after the initial TLS failures. The
+[delivery snapshot](ASSURANCE_DELIVERY_2026-10-25.json) binds the successful
+publication command and default-branch dependency metadata. Subsequent live PR/CI
+reads hit TLS timeouts; no merge, production release or CI acceptance is claimed.
+
+GitHub reports69 open default-branch alerts at source
+`9fe77d7f8f68ece527b055208b14afc9d10e2b7b`:6 critical,30 high,25 medium,8 low.
+These are alerts, not independently confirmed exploits or a claim that all apply
+to every deployment. Critical entries name Pillow (locked12.3.0) and certifi
+(locked2026.7.22); these lockversions are unchanged in this repair. Controlled
+dependency refresh, authoritative advisory review and locked supported-profile
+verification are P0 before launch. No risk waiver. These alerts are separate
+from the15 remaining Bandit findings and are not summed into one vulnerability
+count. The failed live snapshot/parser attempt produced no source or PR update;
+the successful creation receipt remains the publication evidence.

@@ -9,6 +9,7 @@ assurance_checkpoint:
   date: "2026-10-25"
   entry_source: "7af61cddb1fc96a3f5f348257c772206171572c1"
   report: "docs/execution/ASSURANCE_2026-10-25.md"
+  draft_pr: "https://github.com/amrzainmubarak/reconforge-erp/pull/143"
   program_accepted: false
   open_gates: [Q, S, U, P, I, R]
 snapshot:
@@ -20,6 +21,13 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-ASSURANCE-DEPENDENCIES-20261025
+    depends_on: [AMR-ASSURANCE-SAFETY-20261025]
+    priority: P0
+    area: locked-dependency-assurance
+    title: Triage default-branch69 advisory alerts and refresh affected locks with supported-profile regression
+    status: in_progress
+    exit_evidence: "ASSURANCE_DELIVERY_2026-10-25.json; GitHub main9fe77 reports6critical30high25medium8low alerts; critical entries include lockedPillow12.3.0/certifi2026.7.22. Locks retained; no exploitability determination or waiver. Controlled advisory review/update and locked audit remain required."
   - id: AMR-ASSURANCE-SAFETY-20261025
     depends_on: []
     priority: P0
@@ -42,7 +50,7 @@ tasks:
     status: in_progress
     exit_evidence: "Existing0152 down/up tests2pass; HCM native adapter proof explicitly installs its schema and does not establish deployment."
   - id: AMR-ASSURANCE-RELEASE-20261025
-    depends_on: [AMR-ASSURANCE-CANONICAL-20261025, AMR-ASSURANCE-SCHEMAS-20261025]
+    depends_on: [AMR-ASSURANCE-CANONICAL-20261025, AMR-ASSURANCE-SCHEMAS-20261025, AMR-ASSURANCE-DEPENDENCIES-20261025]
     priority: P0
     area: current-source-release-acceptance
     title: Resolve current authorization scope gates and qualify locked native HTTP browser security container recovery and CI on one source

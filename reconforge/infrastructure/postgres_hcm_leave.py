@@ -93,11 +93,11 @@ class PostgresHCMLeaveRepository:
     ) -> LeaveEntitlementBalance | None:
         self._scope()
         cursor = self.connection.execute(
-            """
+            "".join(("""
             SELECT employee_id, leave_type, annual_entitlement_days, accrued_days, consumed_days
             FROM reconforge.hcm_leave_entitlement_balances
             WHERE workspace_id = %s AND employee_id = %s AND leave_type = %s
-            """ + (" FOR UPDATE" if self._mutation_active else ""),
+            """, " FOR UPDATE" if self._mutation_active else "")),
             (workspace_id, employee_id, leave_type),
         )
         row = cursor.fetchone()
@@ -139,13 +139,13 @@ class PostgresHCMLeaveRepository:
     def get_request(self, workspace_id: str, request_id: str) -> LeaveRequest | None:
         self._scope()
         cursor = self.connection.execute(
-            """
+            "".join(("""
             SELECT request_id, employee_id, employee_user_id, leave_type,
                    start_date, end_date, requested_days, status, reason,
                    approved_by_user_id, rejection_reason
             FROM reconforge.hcm_leave_requests
             WHERE workspace_id = %s AND request_id = %s
-            """ + (" FOR UPDATE" if self._mutation_active else ""),
+            """, " FOR UPDATE" if self._mutation_active else "")),
             (workspace_id, request_id),
         )
         row = cursor.fetchone()
@@ -169,18 +169,18 @@ class PostgresHCMLeaveRepository:
         with self.connection.transaction():
             self._scope()
             cursor = self.connection.execute(
-                """
+                "".join(("""
                 INSERT INTO reconforge.hcm_leave_requests (
                     tenant_id, workspace_id, request_id, employee_id, employee_user_id,
                     leave_type, start_date, end_date, requested_days,
                     status, reason, approved_by_user_id, rejection_reason
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """ + ("ON CONFLICT(tenant_id, workspace_id, request_id) DO NOTHING" if create_only else """
+                """, "ON CONFLICT(tenant_id, workspace_id, request_id) DO NOTHING" if create_only else """
                 ON CONFLICT (tenant_id, workspace_id, request_id) DO UPDATE SET
                     status = excluded.status,
                     approved_by_user_id = excluded.approved_by_user_id,
                     rejection_reason = excluded.rejection_reason
-                """),
+                """)),
                 (
                     self.tenant_id,
                     workspace_id,

@@ -149,19 +149,19 @@ class SqliteHCMLeaveRepository:
     def save_request(self, workspace_id: str, request: LeaveRequest, *, create_only: bool = False) -> None:
         with nullcontext() if self._mutation_active else self._conn:
             cursor = self._conn.execute(
-                """
+                "".join(("""
                 INSERT INTO hcm_leave_requests (
                     workspace_id, request_id, employee_id, employee_user_id,
                     leave_type, start_date, end_date, requested_days,
                     status, reason, approved_by_user_id, rejection_reason
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """ + ("ON CONFLICT(workspace_id, request_id) DO NOTHING" if create_only else """
+                """, "ON CONFLICT(workspace_id, request_id) DO NOTHING" if create_only else """
                 ON CONFLICT(workspace_id, request_id) DO UPDATE SET
                     status = excluded.status,
                     reason = excluded.reason,
                     approved_by_user_id = excluded.approved_by_user_id,
                     rejection_reason = excluded.rejection_reason
-                """),
+                """)),
                 (
                     workspace_id,
                     request.request_id,

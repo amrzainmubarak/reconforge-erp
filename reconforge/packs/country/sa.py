@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+
 # The standard library tree is used for XML generation; parsing uses DefusedET.
 import xml.etree.ElementTree as ET  # nosec B405
 from dataclasses import dataclass

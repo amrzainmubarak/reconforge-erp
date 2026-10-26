@@ -1,5 +1,16 @@
 # ReconForge Enterprise ERP v1.0 — completion source of truth
 
+## Current enterprise integration checkpoint — 2026-10-26
+
+**RELEASE BLOCKED.** [Current program](ENTERPRISE_PROGRAM_2026-10-26.md),
+[independent five-cycle matrix](ENTERPRISE_CYCLES_2026-10-26.md) and the
+[retained prerequisite assurance](ASSURANCE_2026-10-26.md) define actual scope.
+Four HCM rename/reviewer authorization failures and the cross-entity RLS leak
+were repaired with independent native evidence; full release acceptance remains open. Multi-register assets lack a qualified versioned
+native owner. Partial stock-to-cash evidence does not close the full sales cycle.
+The real React Studio redesign is in progress. Historical snapshots below do
+not qualify the current dirty source or close any of the six requested gates.
+
 ## Current assurance checkpoint — 2026-10-25
 
 **The current release is not accepted.** [Prerequisite repairs, measured results

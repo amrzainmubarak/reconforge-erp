@@ -1,0 +1,149 @@
+schema_version: 1
+release_decision: RELEASE BLOCKED
+latest_checkpoint: docs/execution/ENTERPRISE_PROGRAM_2026-10-26.md
+entry_sha: ff8a45cb0c2b3f9f6f7c657f65728b9c2dfb3b25
+branch: amr/assurance-prerequisite-repair-20261025
+pull_request: https://github.com/amrzainmubarak/reconforge-erp/pull/143
+working_directory: F:\reconforge-erp
+preservation: output/release-blocker-20261025/preexisting-manifest.json
+blockers:
+- id: RB-AUTH
+  severity: P1
+  impact: Enterprise routes lacked explicit server scope; HCM personal objects lacked authoritative employee binding.
+  root_cause: Unregistered route cohort and trust in submitted employee identity.
+  owner: agent_a_authorization
+  affected_files:
+  - reconforge/api/enterprise_scope.py
+  - reconforge/api/routes/hcm_leave.py
+  - reconforge/infrastructure/postgres_hcm_leave.py
+  - reconforge/infrastructure/sqlite_hcm_leave.py
+  fix_commit: 1dd66eaf
+  verification_command: python -m pytest tests/test_api_authorization_inventory.py tests/test_enterprise_authorization_scope.py
+    tests/test_hcm_leave_authorization_regression.py
+  actual_result: Stable IDs, canonical review and revision0156 entity RLS verified independently and in source-frozen51
+    native cases; full program remains unaccepted.
+  acceptance_status: bounded_verified_release_open
+- id: RB-SECURITY
+  severity: P1
+  impact: Ten silent persistence/fallback failures and five SQL construction scanner warnings require individual
+    disposition.
+  root_cause: Broad exception swallowing and static query assembly.
+  owner: agent_b_security
+  affected_files:
+  - reconforge/api/app.py
+  - reconforge/infrastructure/postgres_fixed_assets.py
+  - reconforge/infrastructure/postgres_reconciliation.py
+  - reconforge/infrastructure/postgres_mps.py
+  - reconforge/infrastructure/postgres_manufacturing_capacity.py
+  - reconforge/infrastructure/sqlite_manufacturing_capacity.py
+  fix_commit: 1dd66eaf
+  verification_command: python -m bandit -q -r reconforge
+  actual_result: Full Bandit passes; safe persistence/refusal repairs tested. Final image has0Critical/High but9Medium/1Negligible
+    matches; full security closure is not asserted.
+  acceptance_status: open
+- id: RB-DEPENDENCIES
+  severity: P1
+  impact: Default-main69 alerts include6Critical/30High; applicability must be established against actual artifacts.
+  root_cause: Older default-branch Python and npm locks.
+  owner: agent_b_security
+  affected_files:
+  - pyproject.toml
+  - uv.lock
+  - apps/web/package.json
+  - apps/web/package-lock.json
+  - docs/security/supply-chain-policy.v1.json
+  fix_commit: d487fc83
+  verification_command: .github/scripts/run_locked_python_audit.py; npm --prefix apps/web audit
+  actual_result: Current locked Python and npm audits report0known findings. Runtime image interpreter/BusyBox findings
+    are separately retained; no blanket vulnerability-free claim.
+  acceptance_status: open
+- id: RB-MIGRATIONS
+  severity: P1
+  impact: Deployment omitted module tables; revision0151 downgrade deleted an artifact table owned by0063.
+  root_cause: Runtime DDL outside official chain and duplicate table ownership.
+  owner: principal_lead
+  affected_files:
+  - alembic/versions/0153_postgres_enterprise_modules.py
+  - alembic/versions/0154_postgres_enterprise_finance_bridge.py
+  - reconforge/infrastructure/postgres_enterprise_modules_schema.py
+  - reconforge/infrastructure/postgres_enterprise_erp_v1_schema.py
+  - reconforge/db/migration_58_enterprise_modules.py
+  fix_commit: 1dd66eaf
+  verification_command: python -m pytest tests/test_postgres_enterprise_migrations.py tests/test_alembic_postgres.py
+  actual_result: Official chain through0156, empty down/up, populated refusal and native restore/replay pass in
+    source-frozen51 cohort. No universal migration or DR claim.
+  acceptance_status: bounded_verified_release_open
+- id: RB-GL
+  severity: P1
+  impact: Missing canonical source-owned posting and mutable prepared sources could invalidate financial evidence.
+  root_cause: Missing atomic authoritative bridge and database source sealing.
+  owner: principal_lead
+  affected_files:
+  - reconforge/infrastructure/postgres_enterprise_finance_bridge.py
+  - reconforge/infrastructure/postgres_enterprise_finance_bridge_schema.py
+  - reconforge/api/enterprise_finance_contract.py
+  fix_commit: 1dd66eaf
+  verification_command: python -m pytest tests/test_postgres_enterprise_finance_bridge.py
+  actual_result: Source-owned canonical bridge passes native proofs; partial stock-to-cash has independent FIFO/GL/cash
+    oracle and safe replay. Five complete cycles remain BLOCKED.
+  acceptance_status: bounded_verified_release_open
+- id: RB-PRODUCT
+  severity: P1
+  impact: HCM/CRM/project UI displayed local fake success and operational rows.
+  root_cause: Hardcoded component state with no authoritative API request.
+  owner: agent_c_integrations
+  affected_files:
+  - apps/web/src/components/HcmLeaveWorkspace.tsx
+  - apps/web/src/components/CrmSubscriptionWorkspace.tsx
+  - apps/web/src/components/ProjectMilestoneWorkspace.tsx
+  - apps/web/src/components/enterpriseWorkflow.tsx
+  fix_commit: c67eb7d5
+  verification_command: npm --prefix apps/web run test:run; npm --prefix apps/web run e2e
+  actual_result: Actual Studio53destinations/eightgroups, permission-aware shell and truthful API workflows;1257frontend
+    and two frozen main-App browser cases pass. Global scope/dashboard gaps remain open.
+  acceptance_status: bounded_verified_release_open
+- id: RB-ACCEPTANCE
+  severity: P1
+  impact: No exact final source has passed all mandatory CI/native/browser/container/recovery gates.
+  root_cause: Final source not frozen; predecessor CI has seven failed jobs and security failures.
+  owner: principal_lead
+  affected_files:
+  - docs/execution/STATE.md
+  - docs/execution/EVIDENCE.md
+  fix_commit: f3cfbad9
+  verification_command: gh pr checks 143
+  actual_result: Source-frozen local51native/1257frontend/2primarybrowser and container policy pass. One current
+    quality integration test remains red; final pushed-source hosted qualification pending.
+  acceptance_status: open
+current_implementation_source: f3cfbad9d4ab4484b1ec365797cd5c9f9b2346a0
+frozen_local_results:
+  native:
+    passed: 51
+    skipped: 0
+    failed: 0
+  frontend:
+    passed: 1257
+    files: 115
+  primary_browser:
+    passed: 2
+    retries: 0
+  ci_and_historical_contracts:
+    passed: 137
+  release_accepted: false
+runtime_security:
+  policy_status: passed
+  critical: 0
+  high: 0
+  medium: 9
+  negligible: 1
+  active_exceptions: 0
+  image_config_digest: sha256:bb63260400c8c4c2597f4c31bec5cd84ff57c96338ed108dbece7f938e58ed3a
+  supported_patch_distribution: Python3.12.16 upstream release identified; official selected python:3.12.16-alpine3.24
+    tag returned not found; no unverified digest or runtime fallback selected.
+remaining_program_blockers:
+- All five full enterprise business cycles lack the complete coherent source chain.
+- Quality records do not apply actual native inventory quarantine; original API integration test remains red.
+- Native multi-register source ownership is not implemented; acquisition refuses before writes.
+- Global cross-page workspace switching and live role dashboards remain incomplete.
+- Nine medium and one negligible image matches require primary-source triage/remediation; no exception was added.
+- Final hosted CI, whole release artifact provenance/signatures and all declared acceptance gates remain open.

@@ -1,7 +1,7 @@
 schema_version: 2
-updated_at: "2026-10-25"
+updated_at: "2026-10-26"
 phase: "Enterprise ERP v1.0 — Functional Completion"
-active_sprint: "Repair reproduced release-entry safety defects; all six global gates remain open; no unrelated optimization or superiority claims"
+active_sprint: "Integrate retained repairs and primary Studio redesign; five complete cycles and final release gates remain blocked"
 completion_source_of_truth: "docs/execution/ENTERPRISE_COMPLETION_MASTER_MATRIX.md"
 major_domain_wip_limit: 1
 completion_status_values: [VERIFIED COMPLETE, INCOMPLETE, BLOCKED, NOT STARTED]
@@ -21,6 +21,26 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-ENTERPRISE-INTEGRATION-STUDIO-20261026
+    depends_on: [AMR-ASSURANCE-PREREQUISITE-20261026]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/ENTERPRISE_PROGRAM_2026-10-26.md
+    note: "Three exclusive agents: critical backend repairs, independently checked native business cycles, actual Studio navigation/design transformation. All five full cycles and source-frozen release gates remain BLOCKED until proven."
+  - id: AMR-ASSURANCE-PREREQUISITE-20261026
+    depends_on: [AMR-RELEASE-BLOCKER-CLOSURE-20261025]
+    status: in_progress
+    release_requirement: required
+    report: docs/execution/ASSURANCE_2026-10-26.md
+    note: "Bounded CRM/transaction/UI repairs verified locally; source-frozen hosted CI and completion matrix remain open. No global program acceptance."
+  - id: AMR-RELEASE-BLOCKER-CLOSURE-20261025
+    depends_on: [AMR-ASSURANCE-DEPENDENCIES-20261025, AMR-ASSURANCE-CANONICAL-20261025, AMR-ASSURANCE-SCHEMAS-20261025]
+    priority: P0
+    area: verified-release-blocker-closure
+    title: Close reproduced authorization security migration canonical posting and truthful UI blockers on PR143
+    status: in_progress
+    exit_evidence: "Single blocker register RELEASE_BLOCKERS_2026-10-25.yaml; original ff8a45cb GitHub CI/Security failures preserved. Three exclusive owners, independent cross-review, official native migrations and populated382-table restore; final frozen-source browser/container/CI remain mandatory and unqualified. No release acceptance."
   - id: AMR-ASSURANCE-DEPENDENCIES-20261025
     depends_on: [AMR-ASSURANCE-SAFETY-20261025]
     priority: P0

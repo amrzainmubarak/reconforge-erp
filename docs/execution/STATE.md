@@ -1,4 +1,23 @@
+## Bounded prerequisite repairs — 2026-10-26
+
+**RELEASE BLOCKED.** Current source is not an accepted Enterprise release.
+Three independent workstreams repaired stale verified UI results, transactional
+rescheduling, CRM provenance/workspace persistence and migration atomicity.
+[Current evidence and remaining gates](ASSURANCE_2026-10-26.md) governs this slice.
+All Q/S/U/P/I/R gates stay OPEN; PR143 still targets the older ff8a45cb source.
+No new worktree, main mutation, merge, deployment or competitive claim.
+
 # Execution State
+
+## Verified release-blocker closure in progress — 2026-10-25
+
+**RELEASE BLOCKED.** Continue PR143 on the existing branch and primary checkout.
+The [single blocker register](RELEASE_BLOCKERS_2026-10-25.yaml) governs this run;
+[ADR0870](../adr/0870-close-verified-release-blockers.md) records bounded repairs.
+Entry HEAD `ff8a45cb0c2b3f9f6f7c657f65728b9c2dfb3b25` and live Draft PR143
+match. Preserve the55 preexisting changed files in the ignored recovery capsule
+`output/release-blocker-20261025/preexisting-*`. No new worktree, merge or release.
+Current implementation and development evidence do not qualify a final source.
 
 ## Draft delivery and dependency triage — 2026-10-25
 
@@ -13229,3 +13248,13 @@ found independently: actual layers remain0, but synthetic coherent layer1/missin
 rows passed36cc. Narrowbb806 checks strict integer layer precision0 with67 pure
 cases and new actual unchanged-original isolated readers. Root's corrected final
 source, genuine unposted proposal capture and hosted M7 gates remain required.
+
+### 2026-10-26 — Enterprise integration and Studio transformation started
+
+RELEASE BLOCKED. Current program and exclusive ownership: [execution](ENTERPRISE_PROGRAM_2026-10-26.md). Entry four HCM rename/reviewer authorization failures reproduced; backend repairs, independent PostgreSQL cycles and real Studio redesign run concurrently in the primary directory. Historical green cohorts do not qualify current source.
+
+### 2026-10-26 — Source-bound integration checkpoint f3cfbad9
+
+RELEASE BLOCKED. Primary Studio53destinations/eightsections implemented. Exact-source native51/0skip, frontend1257, primarybrowser2, strictCI/history137 pass. Image source1054file binding/doctor and scannerpolicy pass with0Critical/High,9Medium,1Negligible; no exception. Python3.12.16 selected officialAlpine tag notfound; runtime remediation open. All five complete business cycles, quality-to-stock, globalworkspace/live-role dashboards and final hosted/signature/provenance qualification remain open. See ENTERPRISE_PROGRAM_2026-10-26.md. Only preserved untracked.serena metadata is intentionally excluded from Git.
+
+Publication checkpoint: ADR0874 repairs real source-archive omissions and stale migration defaults;20 focused/independent QA cases pass. Runtimecode remains f3cfbad9. Actual rebuilt archive dispositions are immutable publication-source-inspection*.json under output/enterprise-program-20261026; full release remains blocked.

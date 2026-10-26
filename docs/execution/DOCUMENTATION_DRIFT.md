@@ -94,3 +94,7 @@ DOC-006 and DOC-007 remain open, and the worktree is not an isolated release can
 ## Final October8 bounded acceptance
 
 Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.
+
+## 2026-10-26 drift correction
+
+The full baseline reproduced stale historical-policy tests: immutable October8reports were compared to the refreshed current dependency policy. Bind those historical assertions to retained8629e9c6 policy bytes; report JSON and original runner bytes remain untouched. Parser AST inventory omitted16JSONcalls and one declaration-hardenedXMLcall; reviewed coverage is now exact and explicitly PARTIAL, with FI033 wording corrected. Current money/security/runtime acceptance is never inferred from these historical reports.

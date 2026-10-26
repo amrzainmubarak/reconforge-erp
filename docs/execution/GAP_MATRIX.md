@@ -86,3 +86,7 @@ Reproduced gaps include mutable historical currency precision, cumulative AP ove
 ## Final October8 bounded acceptance
 
 Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.
+
+## 2026-10-26 required program gaps
+
+All five complete cycles remain BLOCKED; see ENTERPRISE_CYCLES_2026-10-26.md. Unqualified links include CRM-to-stock authoritative origin, coherent procurement/production/quality closure, leave-to-payroll, contract/project profitability and full group-statement reconciliation. Native multi-register assets require a versioned source owner; unsupported acquisition refuses before writes. Quality record creation does not quarantine native stock. Global scope switching and role-specific live dashboards remain incomplete. No release qualification or production deployment is authorized by local bounded tests.

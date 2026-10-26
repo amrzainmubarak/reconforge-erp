@@ -198,3 +198,7 @@ In addition to the progressive benchmark suite, five database and concurrency op
 ### 4. Interpretation Limits
 - These benchmark throughput and latency measurements reflect single-process in-memory execution on this specific host (Ryzen 7 7435HS, Windows 11).
 - Database write throughput under active network latency, PostgreSQL WAL sync (`fsync`), and multi-worker contention will be bounded by disk I/O and network round-trips; Migration 0152 indexes and batch operations are designed specifically to maximize PostgreSQL throughput under such enterprise production environments.
+
+## 2026-10-26 UI and integration measurement boundary
+
+Main Studio replaces the27-entry ERP group with8searchable sections preserving53navigation destinations.20actual breakpoint/locale/theme browser observations record overflow and shellAxe results;29PNGcaptures retain dimensions/hashes. No human task-completion savings, user satisfaction, throughput or before/after system performance improvement was measured. Test command durations are not product performance benchmarks.

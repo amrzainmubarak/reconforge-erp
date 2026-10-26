@@ -346,3 +346,7 @@ Fresh locked Python 3.12 baseline: 3366 passed, 124 skipped, 23 warnings in 817.
 ## Final October8 bounded acceptance
 
 Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.
+
+## Enterprise program diagnostic baseline — 2026-10-26
+
+Entry HEADd487fc83 plus preserved inherited patch; see ENTERPRISE_PROGRAM_2026-10-26.md. Broad supportedPython3.12 execution:10208passed,25failed,538setup errors,916skipped of11687 collected,2033.578s process. Every setup error was missing RECONFORGE_TEST_POSTGRES_ADMIN_DSN. This unconfigured/drifting run is not native or frozen-source acceptance. Original XML/log/outcome classification retained in output/enterprise-program-20261026 and output/assurance-20261026/program-python-regression. Current targeted successors and unresolved quality integration are separate evidence.

@@ -574,3 +574,11 @@ Allowed wording: "Security checks and threat-model documentation exist; deployme
 ## Final October8 bounded acceptance
 
 Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.
+
+## 2026-10-26 bounded security evidence
+
+Current entry Bandit passes; npm audit reports0known vulnerabilities and lockedPython3.12 audit reports0known findings. Stable HCM IDs and revision0156 entity RLS close independently reproduced alias/self-review and sibling-entity exposure in native15cases. Newly inventoried persistedJSON and countryXML surfaces remain PARTIAL; lack of common graph/schema budgets is explicit. Full image/hosted/source-frozen acceptance remains separate. See ENTERPRISE_PROGRAM_2026-10-26.md.
+
+### Final local image checkpoint f3cfbad9
+
+Exact image code binding1054files, doctor, SBOM and fail-closed Grypepolicy pass:0Critical/0High/9Medium/1Negligible, zero active exceptions. Current vulnerability database built2026-10-26. Supported upstream Python3.12.16 identified; selected officialAlpine3.24 tag returned notfound. No runtime upgrade or suppression without a qualified artifact. Security program remains open; raw counts and primary triage are retained.

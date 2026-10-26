@@ -822,3 +822,11 @@ also remains clean.
 ## Final October8 bounded acceptance
 
 Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.
+
+## 2026-10-26 enterprise program checkpoint
+
+Broad entry diagnostic:10208pass/25fail/538missingDSNsetup errors/916skip. Source drift is recorded; do not transfer these counts to the final commit. Targeted successors include native migration/bridge25, independentHCM15, stock/asset2, capacity3; frontend1257 and real main-App browser2. No aggregate pass total or global release qualification is inferred. See ENTERPRISE_PROGRAM_2026-10-26.md.
+
+### Final bounded frozen-source checkpoint
+
+Implementationf3cfbad9 unchanged0729d8ce digest: native51/0skip, frontend1257/115files, primaryStudio browser2, CI/history137. Current quality-quarantine integration1fail remains reproduced and unchanged. This does not turn the drifting broad entry diagnostic into a final all-Python pass.

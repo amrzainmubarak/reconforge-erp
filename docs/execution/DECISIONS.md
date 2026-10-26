@@ -1,4 +1,20 @@
+## 2026-10-26 — CRM provenance and request result validity
+
+[ADR0871](../adr/0871-crm-quotation-provenance-and-workspace-lines.md) adds SQLite59
+and forward PostgreSQL155; immutable canonical creator provenance is never
+inferred for historical records. Legacy line ownership ambiguity refuses migration
+without data loss. Form edits invalidate previous verified results. Native tests
+are mandatory in the configured release browser job; no existing gate is removed.
+
 # ReconForge Execution Decisions Log
+
+## D870 — Close verified release blockers on PR143 (2026-10-25)
+
+[ADR0870](../adr/0870-close-verified-release-blockers.md) binds official migration
+registration, explicit HCM ownership, canonical source publication, immutable
+financial evidence, truthful authenticated UI, uniform transaction scope and
+version-specific dependency remediation. Release remains blocked pending all
+mandatory acceptance gates on one source. Existing evidence and data are retained.
 
 ## D869 — Repair prerequisites and withdraw unsupported acceptance (2026-10-25)
 
@@ -13938,3 +13954,11 @@ unknown callback retain the live wrapper. Existing Stock and shared quantity
 BEFORE gates/deferred checks remain unchanged. Both OLD/NEW affinity and all
 source/effect assertions still apply; source peers approve only that closed
 dispatch. Runtime, SQL security and concurrency acceptance remain mandatory.
+
+### 2026-10-26 — Primary Studio navigation and source-bound integration
+
+Preserve every existing destination in a grouped shared registry; consume existing authenticated `/auth/me` permission snapshot instead of role-name inference or a duplicate capabilities API. Server authorization remains authoritative. Three agents have exclusive backend/frontend/new-QA-test ownership; lead retains Git and shared registries. See ENTERPRISE_PROGRAM_2026-10-26.md.
+
+### 2026-10-26 — Preserve supported runtime and residual vulnerability findings
+
+Keep source-frozen implementationf3cfbad9 reviewable. Do not invent a digest for the unavailable official python:3.12.16-alpine3.24 tag, switch unsupported Python branches, add VEX exceptions or relabel9Medium/1Negligible findings as absent. Exact image policy passes0Critical/High, but release remains blocked and supported-runtime remediation awaits a qualified distribution. ADR0873 records the canonical capacity restriction invariant.

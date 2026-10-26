@@ -510,3 +510,12 @@ This matrix governs public wording for the evidence-bounded Phase 0 implementati
 ## Final October8 bounded acceptance
 
 Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.
+
+## 2026-10-26 Studio and enterprise program claims
+
+|Claim|Code evidence|Test evidence|Runtime evidence|Maturity|Allowed wording|
+|---|---|---|---|---|---|
+|Grouped Studio navigation|Navigation.tsx, studio-routes.ts, navigation-access.ts|Navigation.redesign and permission tests|Actual authenticated mainApp29captures/20breakpoint observations|experimental|53destinations preserved in8sections; bounded tested access/navigation|
+|Entity-bound leave|postgres_hcm_leave_scope_schema.py revision0156|Existing authorization regression and new migration tests|Independent native15case cohort|experimental|Tested selected-scope RLS and stable ownership; no universal isolation claim|
+|Whole five-cycle ERP integration|Existing native owners and API modules|Partial independent stock/GL oracle|No complete coherent five-cycle evidence|planned|BLOCKED; do not claim complete integrated ERP|
+|Global cross-page workspace switching|Informational authorized-workspace list only|No switching acceptance|Not implemented|planned|Select scope in each existing page; no global switch claim|

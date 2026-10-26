@@ -1,4 +1,22 @@
+## 2026-10-26 — Independent prerequisite defect repairs
+
+See [bounded results, raw command receipts and retained failures](ASSURANCE_2026-10-26.md).
+Independent QA reproduced missing CRM author persistence and workspace line
+contamination; engineering reproduced transaction-skipped capacity writes and
+partial migration persistence; product reproduced stale verified results.
+Native/recovery/browser and focused oracles qualify only their recorded source.
+All global acceptance gates remain open.
+
 # ReconForge Execution Evidence Log
+
+## E-RELEASE-BLOCKERS-20261025 — Active source-bound closure
+
+[Blocker register](RELEASE_BLOCKERS_2026-10-25.yaml) and per-agent security,
+authorization and integration records retain original failures and successor
+results. Local receipts under `output/release-blocker-20261025/` include command,
+UTC start, elapsed time, exit, HEAD, before/after source fingerprints and log hash.
+Moving-source development runs are not a frozen-release pass. Original remote
+CI40192323104 and Security40192323115 failures remain negative evidence.
 
 ## E-ASSURANCE-20261025 — Bounded repair, no program acceptance
 
@@ -24412,3 +24430,13 @@ actual -I/-I -O target/full unchanged input custody and byte-equal mode proofs;
 closure3d96c2bdb695b8a4d41837fc9bebc4156f533db08defa8f6833b1a145a06a43c.
 The synthetic earlier-reader layer1/missing counterexample is retained separately;
 no actual native source/input was modified, and the mapper production is unchanged.
+
+### 2026-10-26 — Enterprise program entry
+
+Recovery: output/enterprise-program-20261026/entry-recovery.zip and entry-manifest.json. Entry auth failure: output/assurance-20261026/program-entry-auth.log; current full Bandit pass and npm audit0 reports retained as program-entry-bandit/program-npm-audit receipts. PR143 historical seven failed jobs remain unaccepted. See ENTERPRISE_PROGRAM_2026-10-26.md.
+
+### 2026-10-26 — Frozen implementation f3cfbad9
+
+output/assurance-20261026/program-native-frozen.json:51pass/0skip,824.297s; program-web-frozen.json:1257pass,103.891s; program-studio-source-frozen.json:2pass,130.594s; all source digests unchanged0729d8ce. Docker source-f3cfbad9 build/doctor/Syft/Grype/policy receipts bind configbb632604. output/enterprise-program-20261026/image-code-binding.json and package-code-binding.json match1054Python/Alembic files to Git, canonical EOL only.9Medium/1Negligible remain visible,0Critical/High; no security closure inferred. quality-unresolved.xml preserves current red integration test. owned-cluster-shutdown.json verifies exclusive cleanup with data retained.
+
+Publication negative: publication-omissions-before.json hashes the actual f3cfbad9 archive with three missing client files. program-studio-publication-red and corrected-red retain failures; program-publication-fixed and qa-studio-publication-review retain20-pass successors. No extraction/source-byte guard was weakened. Final artifact inspection is separate.

@@ -262,6 +262,41 @@ def _normalize_financial_text(
     return normalized
 
 
+def _validate_strict_amount_format(
+    text: str,
+    *,
+    decimal_separator: str | None,
+    thousands_separator: str | None,
+) -> None:
+    """Reject malformed grouping before separator removal can change its meaning."""
+
+    if any(char.isspace() for char in text) or (
+        "_" in text and "_" not in (decimal_separator, thousands_separator)
+    ):
+        raise InvalidAmountError("financial amount contains an invalid separator")
+    decimal = decimal_separator or "."
+    thousands = thousands_separator
+    if decimal_separator is None and thousands_separator is None:
+        thousands = ","
+    if decimal != "." and thousands != "." and "." in text:
+        raise InvalidAmountError("financial amount contains an unexpected decimal separator")
+    if not thousands or thousands not in text:
+        return
+    if thousands == decimal:
+        raise InvalidAmountError("financial separators must be distinct")
+    integer, separator, fraction = text.partition(decimal)
+    if separator and (decimal in fraction or thousands in fraction):
+        raise InvalidAmountError("financial amount has malformed separators")
+    unsigned = integer.removeprefix("+").removeprefix("-")
+    groups = unsigned.split(thousands)
+    if (
+        not groups[0].isdecimal()
+        or not 1 <= len(groups[0]) <= 3
+        or any(len(group) != 3 or not group.isdecimal() for group in groups[1:])
+    ):
+        raise InvalidAmountError("financial amount has malformed thousands grouping")
+
+
 def parse_amount(
     value: object,
     *,
@@ -312,6 +347,58 @@ def parse_amount(
     if legacy_binary_input and _warn_on_legacy_input:
         _warn_legacy_financial_input_once()
     return -parsed if negative else parsed
+
+
+def parse_guarded_amount_v3(
+    value: object,
+    *,
+    decimal_separator: str | None = None,
+    thousands_separator: str | None = None,
+) -> Decimal:
+    """Opt-in exact parser with checked grouping; not a persisted ingress policy.
+
+    Existing v1/v2 policy semantics are unchanged. Callers must record this
+    parser version themselves and must not label its output as a v2 replay.
+    """
+
+    if decimal_separator is not None and (len(decimal_separator) != 1 or decimal_separator.isspace()):
+        raise InvalidAmountError("financial amount separator must be a single non-space character")
+    if thousands_separator is not None and (len(thousands_separator) != 1 or thousands_separator.isspace()):
+        raise InvalidAmountError("financial amount separator must be a single non-space character")
+    if any(separator is not None and (separator.isalnum() or separator in "+-()")
+           for separator in (decimal_separator, thousands_separator)):
+        raise InvalidAmountError("financial amount separator must be a non-sign punctuation character")
+    if thousands_separator is not None and (decimal_separator or ".") == thousands_separator:
+        raise InvalidAmountError("financial separators must be distinct")
+    if _is_binary_floating_point(value):
+        raise InvalidAmountError("binary floating-point financial input is not allowed under guarded-amount-v3")
+    if type(value) not in (str, Decimal, int):
+        raise InvalidAmountError("financial amount must be exact text, integer, or Decimal")
+    # Typed exact numbers are already locale-independent; applying locale
+    # separators to their string representation can multiply their value.
+    if type(value) in (Decimal, int):
+        return parse_amount(value, input_policy=STRICT_FINANCIAL_INPUT_POLICY)
+
+    text = str(value).strip()
+    negative = text.startswith("(") and text.endswith(")")
+    if negative:
+        text = text[1:-1].strip()
+        if text.startswith(("+", "-")):
+            raise InvalidAmountError("financial amount has conflicting signs")
+    _validate_strict_amount_format(
+        text, decimal_separator=decimal_separator, thousands_separator=thousands_separator
+    )
+    # Keep type checks on the original value (e.g. reject binary floats).
+    if negative:
+        parsed = parse_amount(
+            text, decimal_separator=decimal_separator, thousands_separator=thousands_separator,
+            input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+        )
+        return parsed.copy_negate()
+    return parse_amount(
+        text, decimal_separator=decimal_separator, thousands_separator=thousands_separator,
+        input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
 
 
 def parse_exact_amount(

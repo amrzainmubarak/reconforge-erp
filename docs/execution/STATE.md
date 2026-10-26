@@ -1,3 +1,18 @@
+## Financial input hardening — 2026-10-27
+
+**RELEASE BLOCKED.** Source entry `790757dabb6852c2ed6dacc7a25310d48094a32c`.
+Malformed grouped financial inputs and context-sensitive negation were reproduced
+in the existing v2 reader. ADR0877 introduces an experimental opt-in guarded
+parser; recorded v1/v2 semantics remain unchanged. Production use, versioned
+policy/evidence migration, end-to-end data-quality integration and independent
+source-frozen qualification remain OPEN. No universal financial fix is claimed.
+CI on entry790757da identified a missing SELECT prerequisite for the invoker
+Finance trigger. Restricted test fixtures now restore only that read under FORCE
+RLS, including after table recreation: native50/0skip and2/0skip pass with
+source-bound receipts. Operator grants are documented; production provisioning
+and final hosted CI are not qualified. Legacy quality-to-stock and all five full
+business cycles remain BLOCKED.
+
 ## Active institutional hardening — 2026-10-26
 
 RELEASE BLOCKED. Continue from81c5b57f with stable quality actor authority and

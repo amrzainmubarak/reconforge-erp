@@ -21,6 +21,13 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-GUARDED-FINANCIAL-INGRESS-20261027
+    depends_on: [AMR-ENTERPRISE-INTEGRATION-STUDIO-20261026]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/adr/0877-opt-in-guarded-amount-parser.md
+    note: "Experimental separate parser rejects malformed groups and preserves exact parentheses without changing recorded v1/v2 semantics. Production ingress, persisted policy migration, replay and data-quality adoption remain open."
   - id: AMR-ENTERPRISE-INTEGRATION-STUDIO-20261026
     depends_on: [AMR-ASSURANCE-PREREQUISITE-20261026]
     status: in_progress

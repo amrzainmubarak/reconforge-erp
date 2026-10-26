@@ -13971,3 +13971,10 @@ upgrade; populated authority rollback refuses. Native ME2 remains the existing
 quality-stock owner; legacy NCR record status does not imply quarantine or GL.
 Source refresh failure invalidates ME2 parent totals and dependent writes,
 preserving actual child ACK and exact retry. RELEASE BLOCKED.
+
+### 2026-10-27 — Guarded amount parser and recorded-policy compatibility
+
+Do not change previously recorded strict-v2 semantics in place. The opt-in
+`parse_guarded_amount_v3` is a separate experimental function, not a persisted
+policy or deployed financial workflow; see ADR0877. Promotion requires a new
+versioned ingress contract, migration, replay, evidence and cross-engine proof.

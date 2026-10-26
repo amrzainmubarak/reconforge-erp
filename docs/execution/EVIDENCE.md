@@ -24474,3 +24474,49 @@ hardening-native-final39pass0skip and hardening-web-final1267pass are component
 checkpoints with explicit testhelper-only whole-source drift. Ruff/mypy899/Bandit
 and webbuild pass with stable own snapshots. Actual frozen successor and real
 browser gates remain separate; see QUALITY_AUTHORITY_HARDENING_2026-10-26.md.
+
+### 2026-10-27 — Financial ingress negative evidence
+
+`output/enterprise-program-20261026/financial-integrity-before.log` retains13
+failures reproduced against entry source. Existing v2 accepted malformed groups
+and context-rounded parentheses. ADR0877 preserves v2 replay behavior and adds
+an isolated opt-in parser; successor tests and review receipts are kept separately.
+No production data-quality route or whole-release acceptance is inferred.
+
+Guarded parser successor: `output/enterprise-program-20261026/guarded-amount-focused-20261027.json`
+records 86 passing tests and stable hashes for the two tested owned files.
+An independent adversarial review found changing `__str__` bypass; the successor
+rejects arbitrary objects before conversion. Another review is required on the
+final changed bytes. GitHub CI40390219358 at entry790757da failed, including the
+legacy quality case and restricted native finance role; Security/Docker/CodeQL
+workflow runs passed on that entry. None of those runs qualifies future commits.
+
+CI40390219358 at790757da: Python3.11 had10236 passed,1 failed,665 skipped;
+3.12 also failed the legacy NCR API fixture. Five native server shards recorded
+47 failures with the shared missing `enterprise_finance_bindings` SELECT at an
+invoker trigger (7 finance-integrity,10 parity,28 finance-posting,1 supply,
+1 returns). Synthetic direct job logs are retained as engineering-ci-*.log.
+An absent archive artifact followed the pytest failure; it is not an archive
+inspection pass. Current-source successor qualification is separate.
+
+Independent parser review: `output/assurance-20261026/qa-guarded-money-review.json`
+records 130 passed, zero skipped, stable whole-source digest in its review run.
+It confirms v1/v2 function bodies unchanged and v3 unused by production. Currency
+precision, persisted policy migration and end-to-end adoption remain unqualified.
+
+Native restricted-role Finance successor: `output/assurance-20261026/engineering-ci-finance-owner-read.json`
+and XML record 50 passed, zero skipped, 705.735s process at entry790757da with
+unchanged whole-source digest a561c6bc21799e4d74771eb8ed132fef6dea8667c252a089accf7f21a51e0005.
+The test fixture grants SELECT on existing source-owner directories with DML
+privileges preserved and verifies FORCE RLS and nonowner/non-BYPASSRLS. This
+does not change or qualify a deployed production role; separately review its
+required SELECT per docs/security/postgres-runtime-grants.md. Ordered re-upgrade
+cases and final hosted checks are separate.
+
+Ordered recreated-table successor: `output/assurance-20261026/engineering-ci-recreated-owner-read.json`
+records 2 passed, zero skipped, 84.531s with unchanged source digest ac65f904.
+The tests prove SELECT absent after drop/recreate, then restore only source-index
+read under the existing scoped helper before retaining their original migration
+and rollback assertions. Owned PostgreSQL test data was preserved after the
+agent verified its directory and no other clients and stopped that cluster.
+No deployed database grant was changed.

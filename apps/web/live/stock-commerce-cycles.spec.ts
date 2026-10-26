@@ -1,3 +1,4 @@
+import { openStudioDestination } from "./studio-navigation";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -15,7 +16,7 @@ async function signIn(page: Page, username: string) {
   const stepped = page.waitForResponse(reply => reply.url().endsWith("/auth/step-up"));
   await page.getByRole("button", { name: "Confirm and continue", exact: true }).click();
   expect((await stepped).status()).toBe(200);
-  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Product sales", exact: true }).click();
+  await openStudioDestination(page, "Product sales");
   for (const [label, value] of Object.entries({ Workspace: "work", Organization: "org", "Legal entity": "entity" })) await page.getByRole("combobox", { name: label, exact: true }).selectOption(value);
   await page.getByRole("button", { name: "Load selected scope", exact: true }).click();
   await expect(panel(page).getByRole("button", { name: "Refresh commercial orders", exact: true })).toBeVisible();

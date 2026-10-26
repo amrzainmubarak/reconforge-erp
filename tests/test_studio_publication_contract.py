@@ -11,6 +11,7 @@ from reconforge.infrastructure.postgres_operations import POSTGRES_MIGRATION_REV
 ROOT = Path(__file__).resolve().parents[1]
 VERIFIER = ROOT / ".github/scripts/verify_global_integrity_archive.py"
 ENTRYPOINTS = {
+    "apps/web/live/studio-navigation.ts",
     "apps/web/e2e/release-product-harness.html",
     "apps/web/e2e/release-product-harness.tsx",
     "apps/web/e2e/studio-shell.manifest.mjs",
@@ -21,10 +22,11 @@ def test_source_export_preserves_real_browser_entrypoints() -> None:
     files = FileList()
     files.set_allfiles([
         str(path.relative_to(ROOT))
-        for path in (ROOT / "apps/web/e2e").rglob("*") if path.is_file()
+        for folder in ("apps/web/e2e", "apps/web/live")
+        for path in (ROOT / folder).rglob("*") if path.is_file()
     ])
     for line in (ROOT / "MANIFEST.in").read_text(encoding="utf-8").splitlines():
-        if line.startswith(("include apps/web/e2e/", "recursive-include apps/web/e2e ")):
+        if line.startswith(("include apps/web/e2e/", "recursive-include apps/web/e2e ", "recursive-include apps/web/live ")):
             files.process_template_line(line)
     published = {Path(path).as_posix() for path in files.files}
     assert "apps/web/e2e/studio-shell.playwright.config.ts" in published

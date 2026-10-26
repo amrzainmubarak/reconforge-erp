@@ -1,3 +1,4 @@
+import { openStudioDestination } from "./studio-navigation";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type Response } from "@playwright/test";
 const base = process.env.RECONFORGE_ERP_LIVE_URL, tenant = process.env.RECONFORGE_ERP_TENANT, password = process.env.RECONFORGE_ERP_PASSWORD;
@@ -15,12 +16,12 @@ async function login(page: Page, user: string) {
   await page.getByRole("button", { name: "Confirm and continue", exact: true }).click(); await acknowledgement(await elevated);
 }
 async function budgetScope(page: Page) {
-  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Budget control", exact: true }).click();
+  await openStudioDestination(page, "Budget control");
   for (const [label, value] of Object.entries({ "Workspace ID": "work", "Organization ID": "org", "Legal entity ID": "entity" })) await page.getByLabel(label, { exact: true }).fill(value);
   await page.getByRole("button", { name: "Load budgets", exact: true }).click();
 }
 async function purchaseScope(page: Page) {
-  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Partial procurement", exact: true }).click();
+  await openStudioDestination(page, "Partial procurement");
   await page.getByRole("combobox", { name: "Workspace", exact: true }).selectOption("work");
   await page.getByRole("combobox", { name: "Organization and legal entity", exact: true }).selectOption("entity");
 }

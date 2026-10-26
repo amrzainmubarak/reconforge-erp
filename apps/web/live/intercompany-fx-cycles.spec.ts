@@ -1,3 +1,4 @@
+import { openStudioDestination } from "./studio-navigation";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
@@ -18,7 +19,7 @@ async function login(page: Page, username: string) {
   expect((await reply).status()).toBe(200);
 }
 async function enter(page: Page, sourceId = "") {
-  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Intercompany foreign trade", exact: true }).click();
+  await openStudioDestination(page, "Intercompany foreign trade");
   await expect(page.getByRole("heading", { name: "Intercompany foreign trade", exact: true })).toBeVisible();
   const form = page.getByRole("form", { name: "Apply organization scope", exact: true });
   for (const [label, value] of Object.entries({ "Workspace ID": "work", "Organization ID": "org" })) {

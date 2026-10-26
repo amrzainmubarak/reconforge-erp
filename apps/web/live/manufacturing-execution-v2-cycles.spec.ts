@@ -1,3 +1,4 @@
+import { openStudioDestination } from "./studio-navigation";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 const base = process.env.RECONFORGE_ERP_LIVE_URL, tenant = process.env.RECONFORGE_ERP_TENANT, password = process.env.RECONFORGE_ERP_PASSWORD;
@@ -13,7 +14,7 @@ async function login(page: Page, username: string) {
   await page.getByRole("button", { name: "Confirm and continue", exact: true }).click(); expect((await response).status()).toBe(200);
 }
 async function enter(page: Page, identifier = "") {
-  await page.getByRole("navigation", { name: "Primary navigation", exact: true }).getByRole("button", { name: "Manufacturing execution v2", exact: true }).click();
+  await openStudioDestination(page, "Manufacturing execution v2");
   await expect(page.getByRole("heading", { name: "Expense-backed manufacturing and quality", exact: true })).toBeVisible();
   const form = page.getByRole("form", { name: "Apply scope", exact: true });
   for (const [label, value] of Object.entries({ "Workspace ID": "work", "Organization ID": "org", "Legal entity ID": "entity" })) { const field = form.getByLabel(label, { exact: true }); await expect(field).toBeEnabled(); await field.fill(value); }

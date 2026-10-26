@@ -1,3 +1,4 @@
+import { openStudioDestination } from "./studio-navigation";
 import { readFile } from "node:fs/promises";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
@@ -21,7 +22,7 @@ async function login(page: Page, username: string) {
 }
 
 async function navigate(page: Page, name: string) {
-  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name, exact: true }).click();
+  await openStudioDestination(page, name);
   await expect(page.getByRole("heading", { name, exact: true }).first()).toBeVisible();
 }
 

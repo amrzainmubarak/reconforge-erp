@@ -95,6 +95,7 @@ jobs:
           --ignore=tests/test_enterprise_program_asset_authority.py
           --ignore=tests/test_enterprise_program_hcm_migration.py
           --ignore=tests/test_enterprise_program_capacity_quality.py
+          --ignore=tests/test_enterprise_program_quality_authority.py
           --ignore=tests/test_release_authorization_postgres.py
           --ignore=tests/test_postgres_accrual_deferral.py
           --ignore=tests/test_postgres_accrual_deferral_api.py
@@ -295,7 +296,7 @@ jobs:
           tests/test_release_product_scope.py tests/test_crm_authority_postgres_20261026.py
           tests/test_enterprise_program_stock_to_cash.py tests/test_enterprise_program_asset_authority.py
           tests/test_enterprise_program_hcm_migration.py tests/test_release_authorization_postgres.py -q
-          tests/test_enterprise_program_capacity_quality.py
+          tests/test_enterprise_program_capacity_quality.py tests/test_enterprise_program_quality_authority.py
       - name: Execute authenticated HCM CRM and canonical posting journeys
         run: |
           export RECONFORGE_RELEASE_PRODUCT_PYTHON="${GITHUB_WORKSPACE}/.venv/bin/python"

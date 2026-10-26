@@ -1,3 +1,11 @@
+## Active institutional hardening — 2026-10-26
+
+RELEASE BLOCKED. Continue from81c5b57f with stable quality actor authority and
+truthful native ME2 source-evidence refresh. Three exclusive workstreams and
+independent verification are recorded in
+[the active slice](QUALITY_AUTHORITY_HARDENING_2026-10-26.md). Legacy NCR-to-stock
+integration and all five complete enterprise cycles remain unqualified.
+
 ## Hosted corrections committed — 2026-10-26
 
 **RELEASE BLOCKED.** Successor runtime2bfbdcd2 corrects real active-navigation

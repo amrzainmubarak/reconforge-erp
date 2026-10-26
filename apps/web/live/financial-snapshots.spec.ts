@@ -1,3 +1,4 @@
+import { openStudioDestination } from "./studio-navigation";
 import { readFile } from "node:fs/promises";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
@@ -22,7 +23,7 @@ async function login(page: Page, username: string) {
 }
 
 async function reporting(page: Page) {
-  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Financial statements", exact: true }).click();
+  await openStudioDestination(page, "Financial statements");
   const scope = page.getByRole("form", { name: "Authorized scope", exact: true });
   for (const [label, value] of Object.entries({ Workspace: "work", Organization: "org", "Legal entity": "entity" })) await scope.getByLabel(label, { exact: true }).fill(value);
   const response = page.waitForResponse(reply => reply.url().endsWith("/financial-reporting/catalog"));

@@ -86,6 +86,7 @@ MONETARY_REQUIRED = (
 )
 
 STUDIO_REQUIRED = (
+    "apps/web/live/studio-navigation.ts",
     "apps/web/e2e/release-product-harness.html",
     "apps/web/e2e/release-product-harness.tsx",
     "apps/web/e2e/release-product-live.acceptance.ts",
@@ -926,8 +927,8 @@ def main() -> int:
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--index-count", type=int, default=22)
-    parser.add_argument("--migration-count", type=int, default=155)
-    parser.add_argument("--migration-head", default="0156_pg_hcm_leave_entity")
+    parser.add_argument("--migration-count", type=int, default=156)
+    parser.add_argument("--migration-head", default="0157_pg_quality_actor_authority")
     parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
     parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
     parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")

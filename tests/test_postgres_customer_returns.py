@@ -431,7 +431,11 @@ def test_forward_upgrade_retains_native_source_empty_rollback_and_populated_cred
                 assert admin.execute("SELECT has_table_privilege(%s,%s,'INSERT,UPDATE,DELETE')", (app_user, "reconforge." + table)).fetchone()[0] is False
             restore_empty_monetary_fixture_select(admin, app_user)
             # Empty later migrations recreate the scoped Finance Core directory.
-            # Restoring inverse prerequisites gives no personnel/module reads.
+            # The shared inverse guard now reads the native bridge source binding.
+            # Restore only its RLS-filtered SELECT prerequisite, never owner DML.
+            admin.execute(sql.SQL("GRANT SELECT ON reconforge.enterprise_finance_bindings TO {}").format(sql.Identifier(app_user)))
+            assert admin.execute("SELECT has_table_privilege(%s,'reconforge.enterprise_finance_bindings','SELECT')", (app_user,)).fetchone()[0] is True
+            assert admin.execute("SELECT has_table_privilege(%s,'reconforge.enterprise_finance_bindings','INSERT,UPDATE,DELETE')", (app_user,)).fetchone()[0] is False
             admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE ON reconforge.financial_effect_claim_gates TO {}").format(sql.Identifier(app_user)))
             admin.execute(sql.SQL("GRANT SELECT ON reconforge.financial_effect_ownership_guards,reconforge.financial_effect_ownership_releases TO {}").format(sql.Identifier(app_user)))
             # The empty MSP migration recreates native coordination tables.

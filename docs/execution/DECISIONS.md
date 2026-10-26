@@ -13962,3 +13962,12 @@ Preserve every existing destination in a grouped shared registry; consume existi
 ### 2026-10-26 — Preserve supported runtime and residual vulnerability findings
 
 Keep source-frozen implementationf3cfbad9 reviewable. Do not invent a digest for the unavailable official python:3.12.16-alpine3.24 tag, switch unsupported Python branches, add VEX exceptions or relabel9Medium/1Negligible findings as absent. Exact image policy passes0Critical/High, but release remains blocked and supported-runtime remediation awaits a qualified distribution. ADR0873 records the canonical capacity restriction invariant.
+
+### 2026-10-26 — ADR0876 canonical quality authority
+
+Bind canonical human creator/reviewer IDs through immutable audited authority;
+never infer historical identity from inspector names. SQLite60/PG157 atomic
+upgrade; populated authority rollback refuses. Native ME2 remains the existing
+quality-stock owner; legacy NCR record status does not imply quarantine or GL.
+Source refresh failure invalidates ME2 parent totals and dependent writes,
+preserving actual child ACK and exact retry. RELEASE BLOCKED.

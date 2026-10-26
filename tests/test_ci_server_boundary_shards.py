@@ -251,6 +251,7 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
         "tests/test_enterprise_program_asset_authority.py",
         "tests/test_enterprise_program_hcm_migration.py",
         "tests/test_enterprise_program_capacity_quality.py",
+        "tests/test_enterprise_program_quality_authority.py",
         "tests/test_release_authorization_postgres.py",
     }
     ignored = {

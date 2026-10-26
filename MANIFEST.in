@@ -1705,3 +1705,6 @@ include tests/test_monetary_valuation_contract.py
 include tests/test_postgres_monetary_customer_partial_returns.py
 include tests/test_postgres_monetary_customer_return_migration.py
 include tests/test_postgres_monetary_customer_return_security.py
+
+include docs/adr/0876-canonical-quality-review-authority.md
+include docs/execution/QUALITY_AUTHORITY_HARDENING_2026-10-26.md

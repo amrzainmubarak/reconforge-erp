@@ -199,3 +199,41 @@ and five-setting scope fixture corrections passed thirty-three cases in 7.48
 seconds (`qa-broad-fixture-review.log`). They retain injection/refusal assertions,
 server-owned source selection, unchanged ledger/effect rows and parameterized
 transaction-local settings; no production behavior was changed for those fixes.
+
+## Subsequent advisory quality authority slice
+
+The original `tests/test_manufacturing_quality_rework.py` remains unchanged.
+Its legacy quarantine expectation reproduced **one failure/five passes** in
+9.59 seconds: an advisory NCR response says `recorded`, not `quarantined`.
+No native inventory owner is invoked by that response. This stock integration
+gap remains BLOCKED and is not closed by the authority changes below.
+
+Independent real-authentication QA reproduced the identity exploit before the
+repair: after renaming the original inspector, the same immutable user could
+self-disposition their NCR (HTTP 200 rather than 403). The bounded successor
+uses canonical creator/reviewer authority and actual linked audit events.
+
+`qa-quality-native-accepted` passed eight cases in 34.46 seconds, with zero
+skipped/xfail/xpass and identical whole-source digests before/after execution:
+
+- Stable-ID self-disposition refusal after rename, independent reviewer success,
+  reused display-alias independence, forged inspector refusal and unverified
+  legacy-author refusal.
+- Actual SQLite and native PostgreSQL authority/audit/business atomicity: injected
+  authority persistence or post-write failure leaves no NCR, authority or audit
+  half-state; retry succeeds. Duplicate SQLite source creation cannot rewrite its
+  recorded quantity.
+- SQLite and native concurrent rework allocation: two 600-unit requests against a
+  1,000-unit recorded NCR retain one 600-unit allocation and refuse the other.
+- Immutable authority, native tenant/workspace FORCE RLS visibility, fresh official
+  157 installation, empty downgrade/upgrade, and populated downgrade refusal.
+- Global SQLite60 migration preserves legacy rows without inferring authority;
+  forced last-DDL or marker failure preserves both version59 markers and the
+  original rows, leaving no partial authority objects.
+
+The receipt is `output/assurance-20261026/qa-quality-native-accepted.json`, with
+associated log/XML and separate final test hashes. Native SQL proves zero
+financial posting effects for this advisory workflow. Authority is scoped to a
+workspace NCR; selected organization/entity are actor admission/audit context,
+not a claim that arbitrary legacy NCR lots are entity-owned inventory sources.
+The stock, manufacturing and five complete mandatory cycles remain BLOCKED.

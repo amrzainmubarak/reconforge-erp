@@ -13,6 +13,7 @@ from reconforge.infrastructure.postgres_finance_posting import posting_entry, po
 from reconforge.infrastructure.postgres_landed_cost import PostgresLandedCostRepository
 from reconforge.infrastructure.postgres_landed_cost_cancellation_schema import install_postgres_landed_cost_cancellation
 from reconforge.infrastructure.postgres_procurement_partial import PostgresProcurementPartialRepository
+from tests.postgres_test_hygiene import grant_native_owner_reads
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime
 from tests.test_postgres_landed_cost import phase, prepare, request, state
 from tests.test_postgres_procurement_multiline import (
@@ -394,6 +395,12 @@ def test_ordered_upgrade_refreshes_frozen_0123_owner_on_populated_source(monkeyp
         with psycopg.connect(runtime.admin_dsn) as admin:
             app_user = psycopg.conninfo.conninfo_to_dict(database[1])["user"]
             admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.landed_cost_cancellations TO {}").format(sql.Identifier(app_user)))
+            # Recreated later source indexes retain no ACL from their dropped table.
+            assert admin.execute(
+                "SELECT has_table_privilege(%s,'reconforge.enterprise_finance_bindings','SELECT')",
+                (app_user,),
+            ).fetchone()[0] is False
+            grant_native_owner_reads(admin, app_user, ("enterprise_finance_bindings",))
             original = admin.execute("SELECT pg_get_functiondef('reconforge.landed_cost_close_pre_cancel(text,text)'::regprocedure)").fetchone()[0]
             assert "native_cost" not in original and "COALESCE(jsonb_array_length(allocations),0)" not in original
         assert all_state(runtime) == before

@@ -1,3 +1,26 @@
+## Hosted corrections committed — 2026-10-26
+
+**RELEASE BLOCKED.** Successor runtime2bfbdcd2 corrects real active-navigation
+contrast;17 affected browser cases and1257 frontend cases pass. c2020a80 closes
+the proven assurance-digest false positive with two exact fingerprints and
+immutable report-byte guards; independent83 policy cases and actual current-tree
+Gitleaks pass. These successor commits await hosted qualification. Earlier heads
+below are historical checkpoints, not the current PR head. Five full cycles and
+quality-to-stock remain blocked; no merge/deployment.
+
+## Current published checkpoint — 2026-10-26
+
+**RELEASE BLOCKED.** Draft PR143 now contains published head
+`d5c6a1a6ec2726a3755161300f44965aaf47d725`; older head references below are
+historical records. Runtime source remains `f3cfbad9` with51 native/0skip,1257
+frontend and2 authenticated primary-Studio browser cases passing. Actual D5
+source-archive inspection passed. Hosted Docker, CodeQL, locked Python3.11/3.12
+audit and exact-image policy passed on D5; full CI is pending. Hosted secret scan
+found one historical Windows-checkout source hash, independently reproduced;
+its precise reviewed correction is in progress. No final hosted pass inferred.
+All five complete cycles and the current quality-to-stock regression remain
+blocked. [Current program and evidence](ENTERPRISE_PROGRAM_2026-10-26.md).
+
 ## Bounded prerequisite repairs — 2026-10-26
 
 **RELEASE BLOCKED.** Current source is not an accepted Enterprise release.

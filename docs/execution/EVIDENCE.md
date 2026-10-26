@@ -24440,3 +24440,17 @@ Recovery: output/enterprise-program-20261026/entry-recovery.zip and entry-manife
 output/assurance-20261026/program-native-frozen.json:51pass/0skip,824.297s; program-web-frozen.json:1257pass,103.891s; program-studio-source-frozen.json:2pass,130.594s; all source digests unchanged0729d8ce. Docker source-f3cfbad9 build/doctor/Syft/Grype/policy receipts bind configbb632604. output/enterprise-program-20261026/image-code-binding.json and package-code-binding.json match1054Python/Alembic files to Git, canonical EOL only.9Medium/1Negligible remain visible,0Critical/High; no security closure inferred. quality-unresolved.xml preserves current red integration test. owned-cluster-shutdown.json verifies exclusive cleanup with data retained.
 
 Publication negative: publication-omissions-before.json hashes the actual f3cfbad9 archive with three missing client files. program-studio-publication-red and corrected-red retain failures; program-publication-fixed and qa-studio-publication-review retain20-pass successors. No extraction/source-byte guard was weakened. Final artifact inspection is separate.
+
+### 2026-10-26 — Actual hosted failures and bounded successors
+
+Hosted Security40377476239: exact-image and Python3.11/3.12 pass, sole assurance
+digest finding red; hosted CI40377041698 web E2E red. Original logs retained.
+program-web-hosted-repair-cmd:1257pass/115files,113.719s (whole-source drift from
+concurrent security metadata explicit). hosted-web-reproduction-red/green:
+4fail13pass→17pass; active badge11.16:1; no skips/assertion removal.
+program-publication-policy-followup:86pass; independent qa-gitleaks-paired-policy
+83pass, registry/report LF/CRLF proofs. Official scanner archiveSHA
+d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e verified;
+gitleaks/current.json red→current-green.json zero. Local unrelated branchfinding
+remains unsuppressed; scanner-custody.json explains scope. c2020a80security and
+2bfbdcd2Studio successors require new hosted acceptance, not reuse of D5 passes.

@@ -159,3 +159,48 @@ Rollback: revert the isolated Studio commit for UI, retaining route contracts.
 Do not downgrade156 over populated leave data; use forward recovery or a separately
 verified isolated restore. No destructive cleanup of prior unsupported drafts was
 performed. The SQLite/PG migration and financial source restrictions remain intact.
+
+## Published checkpoint and hosted negative
+
+Draft PR143 publishedD5 (`d5c6a1a6ec2726a3755161300f44965aaf47d725`).
+Fresh source archive inspection passed20.625s with all155 revisions/head0156:
+`output/enterprise-program-20261026/publication-source-inspection-d5c6a1a6.json`
+SHA256 `097452d79fd8fdcfb302fc11148873bfc0dc43d7890e3abf1bf91ff46ca37d3b`.
+Hosted Docker40377041829 and CodeQL40377041696 passed. Security40377476239
+passed exact-image and locked Python3.11/3.12 gates but failed secret history
+scan and aggregate. The sole redacted finding is historical4ce241 line80 of
+ASSURANCE_2026-10-25.json, a source-file SHA256 under web_files_sha256. Independent
+review reproduces it from the historical source with Windows CRLF expansion;
+raw Git LF bytes have a different hash. Exact reviewed handling is separate,
+with original failure retained. Full CI40377041698 remains pending; no hosted
+release acceptance is claimed.
+
+## Hosted-failure corrections, successor runtime2bfbdcd2
+
+Hosted standard browser E2E exposed four failures: active Foundation badge
+contrast, two signed-in test fixture/navigation contracts, and a collapsed
+Inventory destination. Original4-failure/13-pass run is retained. The actual
+active badge now uses opaque semantic colors (measured11.16:1); notification
+fixture supplies authoritative auth/me permission, exact local sign-in avoids
+an ambiguous global action, and screenshot navigation uses actual sidebar
+search. All assertions remain. Focused actual browser17/17 and typecheck pass;
+full frontend1257/115 files pass again (113.719s process,103.45s Vitest). Whole
+source receipt changed only because independently owned security metadata was
+being finalized; this is frontend-scoped evidence, not a frozen whole-source run.
+No Python/Alembic runtime changes occurred afterf3cfbad9; its native evidence is
+retained as ancestor/component proof, never relabelled as a successor run.
+
+ADR0875 and commitc2020a80 admit only paired exact historical/current scanner
+fingerprints for the same public source hash. Full immutable report bytes (LF
+orCRLF), exact line and JSON member/value are enforced before allowance. Neither
+the original report nor scanner rules were changed. Independently reviewed
+policy83 and combined publication/policy86 pass. Checksum-verified official
+Gitleaks8.30.1 current-tree scan passes zero findings. Local --all additionally
+finds an unrelated nonancestor historical fixture on another local branch;
+that finding remains unsuppressed and is not a PR qualification result. Hosted
+original failure and local current-tree red/successor green are retained under
+output/enterprise-program-20261026/gitleaks and hosted-secret-scan.
+
+Latest runtime is2bfbdcd2. Source-frozen release acceptance remains **BLOCKED**;
+new hosted results must name the successor head explicitly. Earlier D5 Docker,
+CodeQL and dependency/image passes do not automatically qualify this successor.

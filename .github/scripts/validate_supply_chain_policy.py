@@ -40,7 +40,7 @@ _GITLEAKS_COMPLETE_CONFIG_SHA256 = "b7034f7bc41782964e2345d03fd271e3c873414bbf4b
 _GITLEAKS_DIAGNOSTIC_REGISTRY = "docs/security/gitleaks-synthetic-diagnostics-m2.v1.json"
 _GITLEAKS_DIAGNOSTIC_REGISTRY_SHA256 = "a7005466faa7032433084f86a7dd8a164fb9b0206c11c91c86fd2e21fdb05563"
 _GITLEAKS_ASSURANCE_REGISTRY = "docs/security/gitleaks-assurance-source-digest-20261025.v1.json"
-_GITLEAKS_ASSURANCE_REGISTRY_SHA256 = "1d3b3d0c1795da9bc0c0754b899f832c51e6bb2be9ac1a0aca4149ada6544c51"
+_GITLEAKS_ASSURANCE_REGISTRY_SHA256 = "bfc2b293d556593d79345ba216b01a751e3499d9b371548a0bae89ffd29c0532"
 _GITLEAKS_WAVE5_REPORTS = {
     "docs/execution/wave5-evidence/sourcing-oracle/accepted/report.json",
     "docs/execution/wave5-evidence/sourcing-oracle/initial-failure/report.json",

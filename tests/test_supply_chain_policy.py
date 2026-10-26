@@ -5,6 +5,7 @@ import importlib.util
 import json
 import re
 import shutil
+import subprocess
 import tomllib
 from collections.abc import Callable
 from datetime import date
@@ -224,6 +225,26 @@ def test_assurance_digest_supplement_preserves_the_exact_prior_ignore_bytes() ->
     assert record["source_checkout_transform"] == "git-lf-to-crlf-v1"
     assert raw[len(baseline):] == registry["exact_suffix_utf8"].encode("utf8")
     POLICY_MODULE._validate_gitleaks_config(ROOT)
+
+
+def test_assurance_registry_is_canonical_lf_and_its_git_export_validates(tmp_path: Path) -> None:
+    relative = POLICY_MODULE._GITLEAKS_ASSURANCE_REGISTRY
+    raw = (ROOT / relative).read_bytes()
+    assert b"\r" not in raw, "The published registry must contain canonical LF bytes"
+    exported = subprocess.check_output(["git", "show", f"HEAD:{relative}"], cwd=ROOT)
+    assert raw == exported
+    assert hashlib.sha256(exported).hexdigest() == POLICY_MODULE._GITLEAKS_ASSURANCE_REGISTRY_SHA256
+    root = _copy_policy_project(tmp_path)
+    (root / relative).write_bytes(exported)
+    POLICY_MODULE._validate_gitleaks_config(root)
+
+
+def test_assurance_registry_rejects_crlf_reencoding(tmp_path: Path) -> None:
+    root = _copy_policy_project(tmp_path)
+    path = root / POLICY_MODULE._GITLEAKS_ASSURANCE_REGISTRY
+    path.write_bytes(path.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+    with pytest.raises(SupplyChainPolicyError, match="reviewed assurance Gitleaks proof registry bytes"):
+        POLICY_MODULE._validate_gitleaks_config(root)
 
 
 @pytest.mark.parametrize("mutation", [

@@ -204,3 +204,13 @@ output/enterprise-program-20261026/gitleaks and hosted-secret-scan.
 Latest runtime is2bfbdcd2. Source-frozen release acceptance remains **BLOCKED**;
 new hosted results must name the successor head explicitly. Earlier D5 Docker,
 CodeQL and dependency/image passes do not automatically qualify this successor.
+
+Hosted successor40381062021 failed before scanning because the newly pinned
+registry used Windows CRLF bytes while Git publishes LF. This is a real
+publication defect, not a scanner false positive. The original log is retained
+as hosted-security-f3b0b98f-failure.log. ADR0875 follow-up writes canonical LF
+registry bytes, pins the actual Git-export hash, tests that exact export, and
+refuses CRLF reencoding of this registry. The unchanged assurance capture itself
+continues to accept only its separately reviewed full LF or CRLF representations.
+Earlier local archive pass qualified the built bytes and did not prove Linux Git
+checkout validation; new archive/hosted receipts must bind the corrected head.

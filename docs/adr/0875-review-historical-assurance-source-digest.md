@@ -41,6 +41,17 @@ the matching newline-inclusive line hash, and the exact JSON member/source/value
 It does not normalize arbitrary input or accept mixed newlines. Changed values,
 keys, unrelated report content or bytes fail policy validation before scanning.
 
+The new proof registry itself has one canonical LF representation, matching
+its committed Git blob and the existing `*.json text eol=lf` attribute. Its
+2355-byte LF digest is pinned; a CRLF re-encoding of the registry is refused.
+The first Windows-only validation incorrectly pinned 2387 CRLF bytes and
+therefore failed the hosted Linux policy gate. Retain that failed run as
+negative evidence. Regression tests now compare the registry to actual
+`git show HEAD:<registry>` bytes, validate that Git-exported temporary policy
+view, and refuse CRLF registry bytes. This registry publication contract is
+separate from the two explicitly reviewed representations of the immutable
+historical report; no general normalization of other registries is introduced.
+
 Regression tests refuse any unreviewed current-tree or extra fingerprint, altered commit
 or line, changed prefix/comment/newlines, and changed proof key, source hash,
 source commit or newline transformation. The actual hosted history and current

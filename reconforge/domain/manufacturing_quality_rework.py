@@ -23,6 +23,14 @@ class QualityReworkError(FinancePostingError):
     """Raised when quality inspection, NCR, or rework constraints are violated."""
 
 
+def require_independent_quality_actor(creator_user_id: str | None, reviewer_user_id: str) -> None:
+    """Compare verified stable identities; display labels are never authority."""
+    if creator_user_id is None:
+        raise QualityReworkError("quality_actor_authority_missing", "Verified NCR creator authority is required.")
+    if text(creator_user_id, "creator_user_id") == text(reviewer_user_id, "reviewer_user_id"):
+        raise QualityReworkError("quality_self_disposition_denied", "Independent NCR disposition is required.")
+
+
 @dataclass(frozen=True)
 class QualitySpecification:
     """Individual parameter specification and numeric tolerance band."""

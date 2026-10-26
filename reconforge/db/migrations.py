@@ -71,6 +71,7 @@ from reconforge.db.schema import (
 )
 from reconforge.infrastructure.finance_policy_schema import SQLITE_FINANCE_POLICY_MIGRATION_SQL
 from reconforge.infrastructure.notification_inbox_schema import SQLITE_NOTIFICATION_INBOX_SQL
+from reconforge.infrastructure.quality_actor_authority_schema import SQLITE_UPGRADE_SQL as QUALITY_AUTHORITY_SQL
 from reconforge.infrastructure.receivables_policy_schema import SQLITE_RECEIVABLES_POLICY_MIGRATION_SQL
 from reconforge.infrastructure.sqlite_finance_posting_schema import SQLITE_FINANCE_POSTING_MIGRATION_SQL
 from reconforge.infrastructure.sqlite_inventory_receipt_posting_schema import (
@@ -189,6 +190,7 @@ MIGRATIONS = [
     Migration(version=57, name="enterprise_erp_v1_tables", sql=SQLITE_ENTERPRISE_ERP_V1_SQL),
     Migration(version=58, name="enterprise_module_storage", sql=SQLITE_ENTERPRISE_MODULES_SQL),
     Migration(version=59, name="crm_workspace_lines_and_authority", sql=CRM_AUTHORITY_SQL),
+    Migration(version=60, name="quality_canonical_actor_authority", sql=QUALITY_AUTHORITY_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """
@@ -298,6 +300,22 @@ def run_migrations(db_path: Path | str, *, target_version: int | None = None) ->
                         (migration.version, migration.name, _utc_now()),
                     )
                     connection.execute("PRAGMA user_version = 59")
+                    connection.commit()
+                except BaseException:
+                    connection.rollback()
+                    raise
+                applied_now.append(migration.version)
+                continue
+            if migration.version == 60:
+                connection.execute("BEGIN IMMEDIATE")
+                try:
+                    # Use statement execution to retain owned DDL and version writes atomically.
+                    execute_crm_schema(connection, migration.sql)
+                    connection.execute(
+                        "INSERT INTO schema_migrations (version,name,applied_at) VALUES (?,?,?)",
+                        (migration.version, migration.name, _utc_now()),
+                    )
+                    connection.execute("PRAGMA user_version = 60")
                     connection.commit()
                 except BaseException:
                     connection.rollback()

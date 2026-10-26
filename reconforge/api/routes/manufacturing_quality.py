@@ -37,10 +37,12 @@ Manage = Annotated[LocalUser, Depends(require_quality_manage)]
 
 @contextmanager
 def _repository(
-    request: Request, *, permissions: frozenset[str]
+    request: Request, *, permissions: frozenset[str], require_hierarchy: bool = False,
 ) -> Iterator[tuple[SqliteManufacturingQualityRepository | PostgresManufacturingQualityRepository, str]]:
     try:
-        with enterprise_transaction(request, permissions=permissions) as business:
+        with enterprise_transaction(
+            request, permissions=permissions, require_hierarchy=require_hierarchy,
+        ) as business:
             if business is not None:
                 yield (
                     PostgresManufacturingQualityRepository(business.connection, business.scope.tenant_id),
@@ -53,6 +55,7 @@ def _repository(
                     status_code=500, code="db_not_configured", message="API database path is not configured."
                 )
             connection = sqlite3.connect(db_path)
+            connection.execute("PRAGMA foreign_keys=ON")
             try:
                 repository = SqliteManufacturingQualityRepository(connection)
                 if request.method.upper() == "POST":
@@ -62,9 +65,10 @@ def _repository(
             finally:
                 connection.close()
     except QualityReworkError as exc:
-        raise APIError(
-            status_code=409 if exc.code == "quality_identifier_exists" else 422, code=exc.code, message=str(exc)
-        ) from exc
+        forbidden = {"quality_actor_identity_denied", "quality_actor_authority_missing", "quality_self_disposition_denied"}
+        status = 403 if exc.code in forbidden else 404 if exc.code == "quality_ncr_not_found" else 409 if exc.code == "quality_identifier_exists" else 422
+        code = "ncr_not_found" if exc.code == "quality_ncr_not_found" else exc.code
+        raise APIError(status_code=status, code=code, message=str(exc)) from exc
 
 
 class QualitySpecPayload(BaseModel):
@@ -188,7 +192,7 @@ def evaluate_lot_inspection(request: Request, payload: EvaluateInspectionPayload
 
 @router.post("/ncrs")
 def create_ncr(request: Request, payload: NCRCreatePayload, user: Manage) -> dict[str, Any]:
-    with _repository(request, permissions=frozenset({"manufacturing_execution.manage"})) as (repo, workspace):
+    with _repository(request, permissions=frozenset({"manufacturing_execution.manage"}), require_hierarchy=True) as (repo, workspace):
         if payload.inspector_id not in {user.id, user.username}:
             raise APIError(
                 status_code=403,
@@ -204,7 +208,7 @@ def create_ncr(request: Request, payload: NCRCreatePayload, user: Manage) -> dic
             inspector_id=user.username,
             quarantined_quantity_scaled=payload.quarantined_quantity_scaled,
         )
-        repo.create_ncr(workspace, ncr)
+        repo.create_ncr(workspace, ncr, creator_user_id=user.id, actor_label=user.username)
         # A requested hold in a quality record does not change native stock.
         return {
             "status": "recorded",
@@ -212,26 +216,23 @@ def create_ncr(request: Request, payload: NCRCreatePayload, user: Manage) -> dic
             "lot_id": ncr.lot_id,
             "quarantined_quantity_scaled": ncr.quarantined_quantity_scaled,
             "inventory_effect": "not_posted",
+            "inspector_user_id": user.id,
         }
 
 
 @router.post("/ncrs/{ncr_id}/disposition")
 def disposition_ncr(request: Request, ncr_id: str, payload: NCRDispositionPayload, user: Manage) -> dict[str, Any]:
-    with _repository(request, permissions=frozenset({"manufacturing_execution.manage"})) as (repo, workspace):
-        ncr = repo.get_ncr(workspace, ncr_id, for_update=True)
-        if ncr is None:
-            raise APIError(status_code=404, code="ncr_not_found", message="NCR not found.")
-        if ncr.inspector_id in {user.id, user.username}:
-            raise APIError(
-                status_code=403, code="quality_self_disposition_denied", message="Independent disposition is required."
-            )
-        updated = ncr.disposition_ncr(disposition=payload.disposition, notes=payload.notes, actor=user.username)
-        repo.update_ncr(workspace, updated)
+    with _repository(request, permissions=frozenset({"manufacturing_execution.manage"}), require_hierarchy=True) as (repo, workspace):
+        updated = repo.disposition_ncr(
+            workspace, ncr_id, disposition=payload.disposition, notes=payload.notes,
+            actor_user_id=user.id, actor_label=user.username,
+        )
         return {
             "status": updated.status,
             "ncr_id": updated.ncr_id,
             "disposition": updated.disposition,
             "disposition_by": updated.disposition_by,
+            "disposition_by_user_id": user.id,
             "inventory_effect": "not_posted",
         }
 

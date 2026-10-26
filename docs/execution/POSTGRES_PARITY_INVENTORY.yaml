@@ -4,7 +4,7 @@ claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0156_pg_hcm_leave_entity"
+current_source_migration_head: "0157_pg_quality_actor_authority"
 native_sourcing_partition:
   claim_boundary: Complete existing native sourcing files have independent required CI owners; this mapping adds no service or parity claim.
   complete_file_owners:

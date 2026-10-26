@@ -60,8 +60,9 @@ def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None
         "0154_pg_enterprise_finance",
         "0155_pg_crm_authority",
         "0156_pg_hcm_leave_entity",
+        "0157_pg_quality_actor_authority",
     )
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 155
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 156
 
 
 def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:

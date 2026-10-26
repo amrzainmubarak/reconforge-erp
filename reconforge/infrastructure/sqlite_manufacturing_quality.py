@@ -3,13 +3,22 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import asdict
 
+from reconforge.audit import append_audit_event
+from reconforge.auth import LocalAuthService
+from reconforge.domain.finance_posting import digest_payload
 from reconforge.domain.manufacturing_quality_rework import (
+    NCRDisposition,
     NonConformanceReport,
     QualityInspectionPlan,
     QualityReworkError,
     ReworkOrder,
+    require_independent_quality_actor,
 )
+from reconforge.infrastructure.quality_actor_authority_schema import execute_quality_actor_schema
 from reconforge.infrastructure.quality_records import (
     ncr_from_row,
     ncr_values,
@@ -32,6 +41,7 @@ class SqliteManufacturingQualityRepository:
             for statement in SQLITE_QUALITY_SCHEMA.split(";"):
                 if statement.strip():
                     connection.execute(statement)
+            execute_quality_actor_schema(connection)
             connection.execute("RELEASE quality_repository_init")
         except BaseException:
             connection.execute("ROLLBACK TO quality_repository_init")
@@ -62,7 +72,75 @@ class SqliteManufacturingQualityRepository:
             ).fetchone()
         return plan_from_row(row) if row else None
 
-    def create_ncr(self, workspace: str, ncr: NonConformanceReport) -> None:
+    @contextmanager
+    def _actor_mutation(self) -> Iterator[None]:
+        owns = not self.connection.in_transaction
+        if owns:
+            self.connection.execute("BEGIN IMMEDIATE")
+        self.connection.execute("SAVEPOINT quality_actor_mutation")
+        try:
+            yield
+            self.connection.execute("RELEASE quality_actor_mutation")
+            if owns:
+                self.connection.commit()
+        except BaseException:
+            self.connection.execute("ROLLBACK TO quality_actor_mutation")
+            self.connection.execute("RELEASE quality_actor_mutation")
+            if owns:
+                self.connection.rollback()
+            raise
+
+    def _actor(self, user_id: str, actor_label: str) -> None:
+        if self.connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").fetchone() is None:
+            raise QualityReworkError("quality_actor_identity_denied", "A persisted active quality actor is required.")
+        original_factory = self.connection.row_factory
+        try:
+            self.connection.row_factory = sqlite3.Row
+            service = LocalAuthService(self.connection)
+            user = service.users.get_by_id(user_id)
+            if (user is None or user.disabled or user.username != actor_label
+                    or "manufacturing_execution.manage" not in service.roles.user_permissions(user.username)):
+                raise QualityReworkError("quality_actor_identity_denied", "Current quality actor authority is required.")
+        finally:
+            self.connection.row_factory = original_factory
+
+    def ncr_actor_id(self, workspace: str, ncr_id: str, authority_kind: str) -> str | None:
+        row = self.connection.execute(
+            "SELECT user_id FROM quality_ncr_actor_authorities WHERE workspace_id=? AND ncr_id=? "
+            "AND authority_kind=? AND identity_contract='canonical-user-v1'",
+            (workspace, ncr_id, authority_kind),
+        ).fetchone()
+        return str(row[0]) if row is not None else None
+
+    def _append_authority(self, workspace: str, ncr: NonConformanceReport, kind: str, user_id: str, label: str) -> None:
+        original_factory = self.connection.row_factory
+        try:
+            self.connection.row_factory = sqlite3.Row
+            event = append_audit_event(
+                self.connection, actor_user_id=user_id, actor_label=label, object_type="quality.ncr",
+                object_id=ncr.ncr_id, action="quality_ncr_recorded" if kind == "creator" else "quality_ncr_dispositioned",
+                after_hash=digest_payload(asdict(ncr)),
+                metadata={"workspace_id": workspace, "identity_contract": "canonical-user-v1", "scope_level": "workspace-ncr"},
+            )
+        finally:
+            self.connection.row_factory = original_factory
+        self.connection.execute(
+            "INSERT INTO quality_ncr_actor_authorities(workspace_id,ncr_id,authority_kind,user_id,actor_label,identity_contract,audit_event_id) "
+            "VALUES(?,?,?,?,?,'canonical-user-v1',?)", (workspace, ncr.ncr_id, kind, user_id, label, event.id),
+        )
+
+    def create_ncr(
+        self, workspace: str, ncr: NonConformanceReport, *, creator_user_id: str | None = None, actor_label: str | None = None,
+    ) -> None:
+        if creator_user_id is None:
+            self._insert_ncr(workspace, ncr)
+            return
+        with self._actor_mutation():
+            self._actor(creator_user_id, actor_label or "")
+            self._insert_ncr(workspace, ncr)
+            self._append_authority(workspace, ncr, "creator", creator_user_id, actor_label or "")
+
+    def _insert_ncr(self, workspace: str, ncr: NonConformanceReport) -> None:
         cursor = self.connection.execute(
             """INSERT INTO quality_ncrs(workspace_id,ncr_id,lot_id,work_order_id,defect_code,defect_severity,
             inspector_id,quarantined_quantity_scaled,status,disposition,disposition_notes,disposition_by,disposition_at,created_at)
@@ -71,6 +149,21 @@ class SqliteManufacturingQualityRepository:
         )
         if cursor.rowcount != 1:
             raise QualityReworkError("quality_identifier_exists", "The NCR identifier already exists.")
+
+    def disposition_ncr(
+        self, workspace: str, ncr_id: str, *, disposition: NCRDisposition, notes: str,
+        actor_user_id: str, actor_label: str,
+    ) -> NonConformanceReport:
+        with self._actor_mutation():
+            self._actor(actor_user_id, actor_label)
+            ncr = self.get_ncr(workspace, ncr_id, for_update=True)
+            if ncr is None:
+                raise QualityReworkError("quality_ncr_not_found", "NCR not found in the selected workspace.")
+            require_independent_quality_actor(self.ncr_actor_id(workspace, ncr_id, "creator"), actor_user_id)
+            updated = ncr.disposition_ncr(disposition=disposition, notes=notes, actor=actor_label)
+            self.update_ncr(workspace, updated)
+            self._append_authority(workspace, updated, "reviewer", actor_user_id, actor_label)
+            return updated
 
     def get_ncr(self, workspace: str, identifier: str, *, for_update: bool = False) -> NonConformanceReport | None:
         row = self.connection.execute(

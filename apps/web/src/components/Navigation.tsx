@@ -246,6 +246,8 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
                     key={item.key}
                     onClick={() => {
                       onNavigate(item.page as StudioPage);
+                      setQuery("");
+                      setExpandedGroup(group.label);
                       onMobileClose();
                     }}
                   >
@@ -255,7 +257,11 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
               }
               if (item.href) {
                 return (
-                  <a className="nav-item" aria-label={translate(item.label)} href={item.href} target="_blank" rel="noreferrer" key={item.key} onClick={onMobileClose}>
+                  <a className="nav-item" aria-label={translate(item.label)} href={item.href} target="_blank" rel="noreferrer" key={item.key} onClick={() => {
+                    setQuery("");
+                    setExpandedGroup(navigationGroupForPage(activePage)?.label ?? "navOverview");
+                    onMobileClose();
+                  }}>
                     {content}
                   </a>
                 );

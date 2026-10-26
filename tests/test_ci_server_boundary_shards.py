@@ -243,6 +243,16 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
     workflow = _workflow()
     unit = next(step for step in workflow["jobs"]["test"]["steps"] if step["name"] == "Pytest")
     assert "if" not in unit and "continue-on-error" not in unit
+    release_files = {
+        "tests/test_postgres_enterprise_finance_bridge.py",
+        "tests/test_release_product_scope.py",
+        "tests/test_crm_authority_postgres_20261026.py",
+        "tests/test_enterprise_program_stock_to_cash.py",
+        "tests/test_enterprise_program_asset_authority.py",
+        "tests/test_enterprise_program_hcm_migration.py",
+        "tests/test_enterprise_program_capacity_quality.py",
+        "tests/test_release_authorization_postgres.py",
+    }
     ignored = {
         "tests/test_postgres_financial_source_roles.py",
         "tests/test_postgres_stock_sales.py", "tests/test_postgres_stock_sales_api.py",
@@ -255,7 +265,13 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
     }
     tokens = shlex.split(unit["run"])
     assert tokens[:4] == ["uv", "run", "--no-sync", "pytest"]
-    assert Counter(tokens[4:]) == Counter(f"--ignore={path}" for path in ignored)
+    assert Counter(tokens[4:]) == Counter(f"--ignore={path}" for path in ignored | release_files)
+    release = next(step for step in workflow["jobs"]["release-product-browser"]["steps"]
+                   if step["name"] == "Verify native CRM authority and canonical bridge recovery")
+    assert "if" not in release and "continue-on-error" not in release
+    assert release["env"]["PYTEST_ADDOPTS"] == "-p tests.mandatory_native_gate"
+    assert shlex.split(release["run"])[:4] == ["uv", "run", "--no-sync", "pytest"]
+    assert Counter(shlex.split(release["run"])[4:]) == Counter([*release_files, "-q"])
     native = next(step for step in workflow["jobs"]["server-boundaries"]["steps"]
                   if step["name"] == "Run live server-boundary tests")
     groups = _partition(native["run"])
@@ -285,6 +301,27 @@ def test_integrity_owners_execute_complete_files_once_without_filtered_admission
     assert "postgres" in job["services"]
     # Legacy commerce/procurement and their migration coverage remain separate.
     assert len(groups["erp-expansion"]) == 2
+
+
+def test_primary_studio_shell_is_a_required_real_browser_gate_with_public_evidence() -> None:
+    job = _workflow()["jobs"]["release-product-browser"]
+    build = next(step for step in job["steps"] if step["name"] == "Build the real application component harness")
+    assert "build --outDir ../../output/assurance-20261026/studio-shell/web" in build["run"]
+    gate = next(step for step in job["steps"] if step["name"] == "Verify authenticated primary Studio shell and responsive access")
+    assert "if" not in gate and "continue-on-error" not in gate
+    assert [shlex.split(command) for command in gate["run"].strip().splitlines()] == [
+        ["node", "apps/web/node_modules/@playwright/test/cli.js", "test", "--config", "apps/web/e2e/studio-shell.playwright.config.ts"],
+        ["node", "apps/web/e2e/studio-shell.manifest.mjs"],
+    ]
+    assert gate["env"]["RECONFORGE_RELEASE_PRODUCT_PYTHON"] == "${{ github.workspace }}/.venv/bin/python"
+    upload = next(step for step in job["steps"] if step["name"] == "Retain primary Studio accessibility and visual evidence")
+    assert upload["if"] == "always()" and upload["with"]["if-no-files-found"] == "error"
+    assert set(upload["with"]["path"].splitlines()) == {
+        "output/assurance-20261026/studio-shell/measurements.json",
+        "output/assurance-20261026/studio-shell/screenshot-manifest.json",
+        "output/assurance-20261026/studio-shell/axe-*.json",
+        "output/assurance-20261026/studio-shell/authenticated-*.png",
+    }
 
 
 def test_enterprise_browser_matrix_requires_every_real_https_and_populated_restore_owner() -> None:

@@ -1,0 +1,144 @@
+{
+  "$schema": "../schemas/supply_chain_policy.schema.json",
+  "schema_version": 1,
+  "policy_id": "reconforge-supply-chain",
+  "effective_on": "2026-07-26",
+  "owner": "security-maintainers",
+  "review_cadence_days": 30,
+  "python_resolution": {
+    "manifest": "pyproject.toml",
+    "lock": "uv.lock",
+    "manager": "uv",
+    "manager_version": "0.11.32",
+    "manager_commit": "3010295ae7ff572de459987ad70db315a62ecd61",
+    "linux_x86_64_archive_sha256": "1fd052f196108d87e61fc3d98fe06b4ec758c9a1eb1466a6fd1a436fe45885f2",
+    "windows_x86_64_archive_sha256": "acfde570451cfdb8689fa159a138ee805ba4e241c466432750302c86254b0984",
+    "exclude_newer": "2026-10-03T00:00:00Z",
+    "supported_python": [
+      "3.11",
+      "3.12"
+    ],
+    "required_profiles": [
+      "runtime",
+      "backup",
+      "dev",
+      "docs",
+      "duckdb",
+      "federation",
+      "mfa",
+      "observability",
+      "server"
+    ]
+  },
+  "javascript_resolution": {
+    "manifest": "apps/web/package.json",
+    "lock": "apps/web/package-lock.json",
+    "install_command": "npm --prefix apps/web ci",
+    "audit_threshold": "high",
+    "known_integrity_gap_entries": 0
+  },
+  "container_resolution": {
+    "dockerfile": "Dockerfile",
+    "base_image": "python:3.12.15-alpine3.24@sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4",
+    "dependency_command": "uv sync --locked --no-dev --no-editable --python 3.12 --link-mode copy",
+    "service_images": {
+      "airgap_python": "python:3.14.1-slim@sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e",
+      "postgres_16_ci": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "postgres_drills": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
+    }
+  },
+  "container_audits": {
+    "sbom": {
+      "tool": "syft",
+      "version": "1.51.0",
+      "commit": "2293641e3bd628a01bb37639318d62c0ebe89b39",
+      "linux_x86_64_archive_sha256": "2a2e837a2c8d59ec9af5472ee22d3b04ee463c4e44476ecf993fd1e5ab6ebc7f",
+      "windows_x86_64_archive_sha256": "fc5ffaeffb993576ece9c791da5a688fb2c8969a1479bbfe58583672c64da336",
+      "native_schema_version": "16.1.10",
+      "scan_scope": "squashed",
+      "license_content_coverage": 75,
+      "minimum_license_coverage_percent": 90
+    },
+    "vulnerability": {
+      "tool": "grype",
+      "version": "0.117.0",
+      "commit": "b5fa92bbcbef655497e3be840a2f718380e2cdd3",
+      "linux_x86_64_archive_sha256": "38525dab1e06f162ebaa02f94d82d1f807076b011a44180cf2777edf1a7b9c26",
+      "windows_x86_64_archive_sha256": "7728ee9c06792e62444bd651274e4dd1e30eec02eee1266bb6c9c9d237d0f0cb",
+      "supported_db_schema": 6,
+      "max_database_age_hours": 120,
+      "scan_input_format": "syft-json",
+      "fail_severities": ["Critical", "High"],
+      "unknown_severity_policy": "fail",
+      "vex_document": "docs/security/container-runtime.openvex.json",
+      "vex_document_sha256": "dbaadf43e903aceb501b17a72bf67208d281a1c6a445d868ed865f1b7e3ea30e",
+      "vex_context": "https://openvex.dev/ns/v0.2.0",
+      "vex_allowed_statuses": ["fixed"],
+      "vex_max_review_age_days": 30
+    }
+  },
+  "secret_scanning": {
+    "config": ".gitleaks.toml",
+    "tool": "gitleaks",
+    "version": "8.30.1",
+    "commit": "83d9cd684c87d95d656c1458ef04895a7f1cbd8e",
+    "linux_x86_64_archive_sha256": "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+    "windows_x86_64_archive_sha256": "d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e",
+    "required_scopes": [
+      "full-git-history",
+      "checked-out-tree"
+    ],
+    "redaction_percent": 100
+  },
+  "dependency_audits": {
+    "python": {
+      "tool": "pip-audit",
+      "locked_extra": "dev",
+      "policy": "fail-on-every-known-advisory-without-an-active-exact-exception"
+    },
+    "javascript": {
+      "tool": "npm-audit",
+      "policy": "fail-on-high-or-critical-without-an-active-exact-exception"
+    },
+    "scanner_error_policy": "fail-closed"
+  },
+  "updates": {
+    "automated_ecosystems": [
+      "pip",
+      "npm",
+      "docker",
+      "github-actions"
+    ],
+    "automated_cadence": "weekly",
+    "lock_review_cadence_days": 30,
+    "emergency_review_trigger": "new-known-vulnerability-or-confirmed-secret"
+  },
+  "exceptions": {
+    "registry": "docs/security/supply-chain-exceptions.v1.json",
+    "max_active_days": 30,
+    "minimum_distinct_approvers": 2,
+    "critical_release_exception_allowed": false,
+    "expired_or_revoked_entries_exempt": false
+  },
+  "release_gate": {
+    "workflow": ".github/workflows/release.yml",
+    "must_run_before_external_write": true,
+    "required_checks": [
+      "policy-validation",
+      "lock-current",
+      "python-audit",
+      "javascript-audit",
+      "git-secret-scan",
+      "tree-secret-scan",
+      "container-sbom",
+      "container-vulnerability-audit",
+      "container-license-inventory"
+    ]
+  },
+  "limitations": [
+    "A lock or clean vulnerability scan does not establish package safety, provenance, reachability, or legal license suitability.",
+    "The npm lock records registry resolution and SRI for all 211 non-root entries; registry availability, package provenance, and package safety remain separate trust concerns.",
+    "Container license coverage is inventory evidence only; compatibility and distribution rights require independent legal review.",
+    "Local scans do not prove that hosted branch protection or release gates executed."
+  ]
+}

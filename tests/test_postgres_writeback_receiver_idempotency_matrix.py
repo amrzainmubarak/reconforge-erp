@@ -19,7 +19,7 @@ RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_receiver_idempot
 RECEIVER_PATH = ROOT / "reconforge/connectors/writeback_receiver.py"
 POSTGRES_RECEIVER_PATH = ROOT / "reconforge/connectors/writeback_receiver_postgres.py"
 SQLITE_REPORT_PATH = ROOT / "docs/execution/WRITEBACK_RECEIVER_IDEMPOTENCY_DRILL_2026-08-22.json"
-POLICY_PATH = ROOT / "docs/security/supply-chain-policy.v1.json"
+POLICY_PATH = ROOT / "docs/security/supply-chain-policy.retained-8629e9c6.v1.json"
 
 
 def _source_digest(path: Path) -> str:

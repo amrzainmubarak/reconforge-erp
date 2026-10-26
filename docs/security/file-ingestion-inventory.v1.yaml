@@ -1,6 +1,6 @@
 schema_version: 1
 inventory_id: reconforge-file-ingestion
-reviewed_on: "2026-10-03"
+reviewed_on: "2026-10-26"
 owner: platform-security
 claim_boundary: >-
   This inventory proves repository-visible parser coverage and bounded controls only. It does not prove
@@ -692,15 +692,15 @@ surfaces:
       - reconforge/infrastructure/postgres_intercompany_elimination.py::PostgresIntercompanyEliminationRepository._decode_row
     formats: [json]
     parser_families: [json-stdlib]
-    policy_coverage: complete
-    status: bounded
+    policy_coverage: partial
+    status: partial
     controls: [SEC-C-002, SEC-C-005, SEC-C-006]
     test_evidence: [tests/test_postgres_intercompany_elimination.py, tests/test_file_ingestion_inventory.py]
     residual_risk_ids: [R-003, R-018]
     limitations:
-      - The JSONB values are internal canonical source/result evidence, not uploads or executable content; strict source decoding and result replay reject malformed or tampered rows.
+      - The JSONB values are internal canonical source/result evidence. Typed source replay checks do not cover every artifact reader; text fallbacks lack common byte, depth, duplicate-key and non-finite-token budgets.
       - The hosted PostgreSQL runtime gate is pending; statutory consolidation, posting, provider integration, write-back, HA/DR, and production evidence remain open.
-    next_action: Add the unskipped PostgreSQL migration/RLS/replay runtime gate before promoting the parity inventory beyond contract_only.
+    next_action: Add bounded artifact decoding and current native migration/RLS/replay proof before widening this persisted reader boundary.
   - id: FI-034
     name: PostgreSQL acquisition deferred-tax evidence records
     module_ids: [finance.core]
@@ -978,6 +978,43 @@ surfaces:
       - Native source ownership, current actor and third-human duties, exact layer changes, atomic posting and populated restore need independent database evidence; parser tests do not close those gates.
     next_action: Qualify native zero-cost resale and repeated return, SQL bypass and populated restore before accepting the new factual-source path.
 
+  - id: FI-050
+    name: Enterprise persisted plan calendar and quality record hydration
+    module_ids: [platform.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/quality_records.py::plan_from_row
+      - reconforge/infrastructure/postgres_intercompany_elimination.py::_payload
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: partial
+    status: partial
+    controls: [SEC-C-002, SEC-C-004]
+    test_evidence: [tests/test_file_ingestion_inventory.py, tests/test_quality_repository_transaction_boundary.py, tests/test_postgres_enterprise_migrations.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - These calls hydrate scoped database artifacts produced by application serializers; this provenance does not make arbitrary stored JSON a bounded or authenticated document.
+      - Raw JSON decoders have no shared byte, depth, node, duplicate-key or non-finite-token budget. Domain constructors validate calendar and quality fields; report and plan dictionary readers do not universally revalidate retained digests or schemas.
+      - Database owners, restore operators and legacy persisted text remain trust dependencies. No direct upload, financial posting or malware-safety acceptance follows from this inventory.
+    next_action: Introduce a versioned bounded persisted decoder and per-artifact schema verification before widening these internal readers.
+  - id: FI-051
+    name: Country pack invoice XML metadata library parser
+    module_ids: [platform.core]
+    trust: untrusted-local
+    entrypoints: [reconforge/packs/country/sa.py::parse_zatca_ubl_xml]
+    formats: [xml]
+    parser_families: [defusedxml]
+    policy_coverage: partial
+    status: partial
+    controls: [SEC-C-002]
+    test_evidence: [tests/test_country_sa_xml_security.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - DefusedXML rejects DTD, entity and external declarations; eight retained security cases test this boundary, including local-file disclosure refusal.
+      - No input byte, graph depth, node or invoice-line limits are implemented. An unrelated XML root can return empty metadata; invoice schema and business validity are not established.
+      - This is a library parser with no production API or CLI caller identified in this review. It supplies no legal, statutory, certification or posting acceptance.
+    next_action: Add bounded document and required invoice schema validation before exposing this parser to an application ingress.
+
 direct_tabular_parser_allowlist:
   - path: reconforge/benchmark/amlsim_reconciliation.py
     parser: csv.DictReader
@@ -1025,6 +1062,46 @@ direct_tabular_parser_allowlist:
     surface_id: FI-023
     rationale: Parses only size- and hash-verified public responses after strict decoding, then requires an exact unique header set and complete rows before financial normalization.
 direct_json_parser_allowlist:
+  - path: reconforge/infrastructure/postgres_consolidated_statements.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-050
+    rationale: Hydrates application-produced scoped database JSON into retained reports, plans or typed records; no shared pre-parse byte or graph budget or universal read-time digest verification is claimed.
+  - path: reconforge/infrastructure/postgres_manufacturing_capacity.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-050
+    rationale: Hydrates application-produced scoped database JSON into retained reports, plans or typed records; no shared pre-parse byte or graph budget or universal read-time digest verification is claimed.
+  - path: reconforge/infrastructure/postgres_mps.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-050
+    rationale: Hydrates application-produced scoped database JSON into retained reports, plans or typed records; no shared pre-parse byte or graph budget or universal read-time digest verification is claimed.
+  - path: reconforge/infrastructure/quality_records.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-050
+    rationale: Hydrates application-produced scoped database JSON into retained reports, plans or typed records; no shared pre-parse byte or graph budget or universal read-time digest verification is claimed.
+  - path: reconforge/infrastructure/sqlite_consolidated_statements.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-050
+    rationale: Hydrates application-produced scoped database JSON into retained reports, plans or typed records; no shared pre-parse byte or graph budget or universal read-time digest verification is claimed.
+  - path: reconforge/infrastructure/sqlite_manufacturing_capacity.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-050
+    rationale: Hydrates application-produced scoped database JSON into retained reports, plans or typed records; no shared pre-parse byte or graph budget or universal read-time digest verification is claimed.
+  - path: reconforge/infrastructure/sqlite_mps.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-050
+    rationale: Hydrates application-produced scoped database JSON into retained reports, plans or typed records; no shared pre-parse byte or graph budget or universal read-time digest verification is claimed.
+  - path: reconforge/infrastructure/sqlite_intercompany_elimination.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-050
+    rationale: Hydrates application-produced scoped database JSON into retained reports, plans or typed records; no shared pre-parse byte or graph budget or universal read-time digest verification is claimed.
   - path: reconforge/api/routes/intercompany_group_diagnostic.py
     parser: json.loads
     call_count: 1
@@ -1122,9 +1199,9 @@ direct_json_parser_allowlist:
     rationale: Parses only the canonical PostgreSQL JSONB write-back intent after tenant/workspace selection; Pydantic validation and digest comparison fail closed before a persisted lifecycle state is returned.
   - path: reconforge/infrastructure/postgres_intercompany_elimination.py
     parser: json.loads
-    call_count: 1
+    call_count: 2
     surface_id: FI-033
-    rationale: Parses only canonical PostgreSQL JSONB intercompany source/result evidence before strict typed line decoding, replay verification, digest matching, and tenant/workspace-scoped return.
+    rationale: Hydrates scoped internal intercompany JSONB/text; typed source replay does not universally cover artifact-result readers, and no shared pre-parse byte or graph budget is claimed.
   - path: reconforge/infrastructure/postgres_consolidation_deferred_tax.py
     parser: json.loads
     call_count: 1
@@ -1217,3 +1294,8 @@ direct_xml_parser_allowlist:
     call_count: 1
     surface_id: FI-038
     rationale: Parses only bounded CAMT.053 bytes after the governed network or local boundary; defusedxml rejects entity expansion and the closed parser enforces statement, identity, Decimal, date, text, and entry-count limits.
+  - path: reconforge/packs/country/sa.py
+    parser: defusedxml.ElementTree.fromstring
+    call_count: 1
+    surface_id: FI-051
+    rationale: Library-only metadata reader explicitly forbids DTD, entities and external declarations; byte, graph and required invoice-schema validation remain incomplete and no valid-invoice or posting claim is made.

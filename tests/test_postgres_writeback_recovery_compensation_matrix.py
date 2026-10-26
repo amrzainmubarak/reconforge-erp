@@ -24,7 +24,7 @@ WRITEBACK_PATH = ROOT / "reconforge/connectors/writeback.py"
 POSTGRES_PATH = ROOT / "reconforge/infrastructure/postgres_writeback.py"
 SQLITE_PATH = ROOT / "reconforge/infrastructure/sqlite_writeback.py"
 MIGRATION_PATH = ROOT / "alembic/versions/0089_postgres_writeback_proposal_identity.py"
-POLICY_PATH = ROOT / "docs/security/supply-chain-policy.v1.json"
+POLICY_PATH = ROOT / "docs/security/supply-chain-policy.retained-8629e9c6.v1.json"
 
 
 def _source_digest(path: Path) -> str:

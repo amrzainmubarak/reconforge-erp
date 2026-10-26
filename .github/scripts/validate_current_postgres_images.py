@@ -14,6 +14,7 @@ POLICY = "docs/security/postgres-current-images.wave5.v1.json"
 IMAGE_16 = "postgres:16.15-alpine@sha256:1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551"
 IMAGE_17 = "postgres:17.11-alpine@sha256:aa90e97ee862e558111d34cfb8b2c4bec768c2b039fb791341686928560263b3"
 LEGACY_DIGEST = "8629e9c6d2f57eaf74da0dc20d54293241a97ce8c7fc6b5d10e2926048cf4992"
+LEGACY_POLICY = "docs/security/supply-chain-policy.retained-8629e9c6.v1.json"
 
 
 def validate(root: Path) -> dict[str, object]:
@@ -41,7 +42,7 @@ def validate(root: Path) -> dict[str, object]:
         ]
     ):
         raise ValueError("current PostgreSQL review scope or official references drifted")
-    original = (root / "docs/security/supply-chain-policy.v1.json").read_text(encoding="utf-8")
+    original = (root / LEGACY_POLICY).read_text(encoding="utf-8")
     digest = hashlib.sha256(original.replace("\r\n", "\n").encode("utf-8")).hexdigest()
     if digest != LEGACY_DIGEST:
         raise ValueError("historical supply-chain policy source fingerprint changed")

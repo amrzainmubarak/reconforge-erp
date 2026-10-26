@@ -13,7 +13,8 @@ SCHEMA_PATH = ROOT / "docs/schemas/postgres_writeback_identity_migration_matrix.
 REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-08.json"
 RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py"
 OBSERVATION_RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_identity_migration.py"
-POLICY_PATH = ROOT / "docs/security/supply-chain-policy.v1.json"
+# This immutable report predates the current dependency-policy refresh.
+POLICY_PATH = ROOT / "docs/security/supply-chain-policy.retained-8629e9c6.v1.json"
 
 
 def _source_digest(path: Path) -> str:

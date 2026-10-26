@@ -8,6 +8,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 VALIDATOR = runpy.run_path(str(ROOT / ".github/scripts/validate_current_postgres_images.py"))
 POLICY = str(VALIDATOR["POLICY"])
+LEGACY_POLICY = str(VALIDATOR["LEGACY_POLICY"])
 
 
 def test_current_postgres_policy_preserves_historical_evidence_and_binds_live_defaults() -> None:
@@ -17,7 +18,7 @@ def test_current_postgres_policy_preserves_historical_evidence_and_binds_live_de
 @pytest.mark.parametrize("mutation", ["policy_image", "undeclared", "historical", "ci_image", "native_image", "api_image"])
 def test_current_postgres_policy_rejects_pin_and_source_drift(tmp_path: Path, mutation: str) -> None:
     paths = [
-        POLICY, "docs/security/supply-chain-policy.v1.json", ".github/workflows/ci.yml",
+        POLICY, LEGACY_POLICY, ".github/workflows/ci.yml",
         ".github/scripts/verify_commercial_collections.py",
         ".github/scripts/verify_erp_expansion_browser.py",
         ".github/scripts/benchmark_enterprise_finance.py",
@@ -37,7 +38,7 @@ def test_current_postgres_policy_rejects_pin_and_source_drift(tmp_path: Path, mu
         path.write_text(json.dumps(document), encoding="utf-8")
     else:
         relative = {
-            "historical": "docs/security/supply-chain-policy.v1.json",
+            "historical": LEGACY_POLICY,
             "ci_image": ".github/workflows/ci.yml",
             "native_image": ".github/scripts/verify_commercial_collections.py",
             "api_image": ".github/scripts/benchmark_native_api_runtime.py",

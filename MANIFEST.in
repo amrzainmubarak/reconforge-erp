@@ -32,6 +32,7 @@ include docs/security/nist-ssdf-mapping.md
 include docs/security/slsa-provenance-plan.v1.yaml
 include docs/security/slsa-provenance-plan.md
 include docs/security/supply-chain-policy.v1.json
+include docs/security/supply-chain-policy.retained-8629e9c6.v1.json
 include docs/security/supply-chain-exceptions.v1.json
 include docs/security/supply-chain-policy.md
 include docs/maintainers/signed-release-candidates.md

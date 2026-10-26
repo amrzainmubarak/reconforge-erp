@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "classification": "exact-historical-public-source-sha256-crlf-checkout",
+  "baseline_complete_ignore_bytes": 115541,
+  "baseline_complete_ignore_sha256": "16b256759a1334fe006322e6a6e2a2fef6830c94dc7a56c39a535da1098e2dd3",
+  "complete_ignore_sha256": "ec0562c72a8c53870d60359483c99db5103a1040d3bf9b39eb3c0e3eed96f4c6",
+  "exact_suffix_utf8": "\n# Exact reviewed assurance source-file digest; current report bytes are guarded (ADR 0875).\n4ce24156522c416e36c63131bc25c65fba98eeac:docs/execution/ASSURANCE_2026-10-25.json:generic-api-key:80\ndocs/execution/ASSURANCE_2026-10-25.json:generic-api-key:80\n",
+  "finding_count": 1,
+  "record": {
+    "commit": "4ce24156522c416e36c63131bc25c65fba98eeac",
+    "path": "docs/execution/ASSURANCE_2026-10-25.json",
+    "line": 80,
+    "rule_id": "generic-api-key",
+    "history_fingerprint": "4ce24156522c416e36c63131bc25c65fba98eeac:docs/execution/ASSURANCE_2026-10-25.json:generic-api-key:80",
+    "report_blob_sha256": "9ffd487d973a56ef64ad5c1601f07e6ae7b9e26b321e51baf2e900cee195195b",
+    "report_line_sha256": "684ac277b81ddcb078b71e978bb1d1c3657d1d10b8ba77858fb00ec638d51603",
+    "json_member": "web_files_sha256",
+    "source_path": "apps/web/src/components/AdminAccessMutations.tsx",
+    "source_commit": "a91852a7b0e1f88bc77602a738556c059e8646a9",
+    "source_git_blob_sha256": "22e9a2b33bd60a5a831a951ab4ad9e77fe0c4480929a4c98b311219ceeb63f45",
+    "source_git_blob_bytes": 9530,
+    "source_checkout_sha256": "24c1c157e386fdd5fe559f576e1e2b802108c8b7201dc4360b73a1a809f435db",
+    "source_checkout_bytes": 9603,
+    "source_checkout_transform": "git-lf-to-crlf-v1",
+    "current_fingerprint": "docs/execution/ASSURANCE_2026-10-25.json:generic-api-key:80",
+    "current_report_lf_sha256": "9ffd487d973a56ef64ad5c1601f07e6ae7b9e26b321e51baf2e900cee195195b",
+    "current_report_crlf_sha256": "e663f392c54adee75b8fa1e5ff7a6e5b660e0ec7710114258fcbe01ea144e62a",
+    "current_line_crlf_sha256": "c0d1aee4da69ff77c87a4f630d1e3c60a54ae1dec18ebc0d32b41448ee1de0cb"
+  },
+  "original_redacted_finding_sha256": "231e43c607cbe6bb82c956d207e9bb39d8e01dfc25437bf3b62641af4b58e370",
+  "review_scope": "One historical and one current fingerprint for the same source digest; current full report and exact line bytes guarded; no rule or path exclusions, other commits, or evidence rewriting."
+}

@@ -70,6 +70,8 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         "docs/security/gitleaks-public-source-digests-wave4.v1.json",
         "docs/security/gitleaks-public-source-digests-wave5.v1.json",
         "docs/security/gitleaks-synthetic-diagnostics-m2.v1.json",
+        "docs/security/gitleaks-assurance-source-digest-20261025.v1.json",
+        "docs/execution/ASSURANCE_2026-10-25.json",
         "docs/execution/wave5-evidence/sourcing-oracle/accepted/report.json",
         "docs/execution/wave5-evidence/sourcing-oracle/initial-failure/report.json",
         "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
@@ -206,6 +208,84 @@ def test_wave5_public_digest_ignores_close_exact_population_and_baseline_bytes()
     assert len(raw[78266:].splitlines()) == 332
     assert hashlib.sha256(raw).hexdigest() == POLICY_MODULE._GITLEAKS_COMPLETE_IGNORE_SHA256
     POLICY_MODULE._validate_gitleaks_config(ROOT)
+
+
+def test_assurance_digest_supplement_preserves_the_exact_prior_ignore_bytes() -> None:
+    registry = _json(ROOT / POLICY_MODULE._GITLEAKS_ASSURANCE_REGISTRY)
+    raw = (ROOT / ".gitleaksignore").read_bytes()
+    baseline = POLICY_MODULE._reviewed_assurance_ignore_baseline(ROOT, raw)
+    assert len(baseline) == 115541
+    assert registry["finding_count"] == 1
+    assert hashlib.sha256(baseline).hexdigest() == registry["baseline_complete_ignore_sha256"]
+    record = registry["record"]
+    assert record["source_git_blob_sha256"] != record["source_checkout_sha256"]
+    assert record["source_git_blob_bytes"] == 9530
+    assert record["source_checkout_bytes"] == 9603
+    assert record["source_checkout_transform"] == "git-lf-to-crlf-v1"
+    assert raw[len(baseline):] == registry["exact_suffix_utf8"].encode("utf8")
+    POLICY_MODULE._validate_gitleaks_config(ROOT)
+
+
+@pytest.mark.parametrize("mutation", [
+    "current_fingerprint", "extra_fingerprint", "history_commit", "history_line", "prefix_comment",
+    "suffix_newlines", "registry_key", "registry_hash", "registry_commit", "registry_transform",
+    "report_value", "report_key", "report_unrelated_content", "report_mixed_newlines",
+])
+def test_assurance_digest_supplement_rejects_scope_or_proof_drift(tmp_path: Path, mutation: str) -> None:
+    root = _copy_policy_project(tmp_path)
+    ignore = root / ".gitleaksignore"
+    registry_path = root / POLICY_MODULE._GITLEAKS_ASSURANCE_REGISTRY
+    registry = _json(registry_path)
+    raw = ignore.read_bytes()
+    record = registry["record"]
+    fingerprint = record["history_fingerprint"]
+    if mutation == "current_fingerprint":
+        raw += record["current_fingerprint"].removesuffix("80").encode() + b"81\n"
+    elif mutation == "extra_fingerprint":
+        raw += b"tests/unreviewed.py:generic-api-key:1\n"
+    elif mutation == "history_commit":
+        raw = raw.replace(record["commit"].encode(), b"0" * 40)
+    elif mutation == "history_line":
+        raw = raw.replace(fingerprint.encode(), fingerprint.removesuffix("80").encode() + b"81")
+    elif mutation == "prefix_comment":
+        raw = b"# changed\n" + raw
+    elif mutation == "suffix_newlines":
+        raw = raw[:115541] + raw[115541:].replace(b"\n", b"\r\n")
+    elif mutation == "registry_key":
+        record["json_member"] = "credentials"
+    elif mutation == "registry_hash":
+        record["source_checkout_sha256"] = "0" * 64
+    elif mutation == "registry_commit":
+        record["source_commit"] = "0" * 40
+    elif mutation == "registry_transform":
+        record["source_checkout_transform"] = "no-transform"
+    else:
+        report_path = root / record["path"]
+        content = report_path.read_bytes()
+        if mutation == "report_value":
+            content = content.replace(record["source_checkout_sha256"].encode(), b"0" * 64)
+        elif mutation == "report_key":
+            content = content.replace(record["source_path"].encode(), b"credentials/private-key")
+        elif mutation == "report_unrelated_content":
+            content += b"\n"
+        else:
+            content = content.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n", 1)
+        report_path.write_bytes(content)
+    ignore.write_bytes(raw)
+    if mutation.startswith("registry_"):
+        _write_json(registry_path, registry)
+    with pytest.raises(SupplyChainPolicyError, match="reviewed"):
+        POLICY_MODULE._validate_gitleaks_config(root)
+
+
+@pytest.mark.parametrize("crlf", [False, True])
+def test_assurance_report_accepts_only_reviewed_complete_lf_or_crlf_bytes(tmp_path: Path, crlf: bool) -> None:
+    root = _copy_policy_project(tmp_path)
+    registry = _json(root / POLICY_MODULE._GITLEAKS_ASSURANCE_REGISTRY)
+    path = root / registry["record"]["path"]
+    raw = path.read_bytes().replace(b"\r\n", b"\n")
+    path.write_bytes(raw.replace(b"\n", b"\r\n") if crlf else raw)
+    POLICY_MODULE._validate_gitleaks_config(root)
 
 
 @pytest.mark.parametrize("mutation", ["new_history", "current_tree_fingerprint", "review_registry"])

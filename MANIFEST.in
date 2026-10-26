@@ -1474,6 +1474,9 @@ include tests/test_stable_power_environment_verifier.py
 include docs/security/gitleaks-public-source-digests-wave4.v1.json
 include docs/security/gitleaks-public-source-digests-wave5.v1.json
 include docs/security/gitleaks-synthetic-diagnostics-m2.v1.json
+include docs/security/gitleaks-assurance-source-digest-20261025.v1.json
+include docs/adr/0875-review-historical-assurance-source-digest.md
+include docs/execution/ASSURANCE_2026-10-25.json
 include .gitleaks.toml
 include .gitleaksignore
 include .github/scripts/validate_supply_chain_policy.py

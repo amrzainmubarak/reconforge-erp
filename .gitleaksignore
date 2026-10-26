@@ -1027,3 +1027,7 @@ b7801291b182fd11f4e22b1e7994461e0c4fecc0:docs/execution/wave5-evidence/sourcing-
 # Exact reviewed historical diagnostic fixtures; current-tree values stay scanned (ADR 0857).
 21fcd925db15dd9925cac650c129ab63beba199e:tests/test_browser_diagnostic_writer.py:generic-api-key:22
 6eca23f47a082a438f32db80503569b814b431f2:tests/test_browser_diagnostic_writer.py:generic-api-key:22
+
+# Exact reviewed assurance source-file digest; current report bytes are guarded (ADR 0875).
+4ce24156522c416e36c63131bc25c65fba98eeac:docs/execution/ASSURANCE_2026-10-25.json:generic-api-key:80
+docs/execution/ASSURANCE_2026-10-25.json:generic-api-key:80

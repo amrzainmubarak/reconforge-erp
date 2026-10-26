@@ -39,6 +39,8 @@ _GITLEAKS_COMPLETE_IGNORE_SHA256 = "8b58ab3f98d251a2e77c95e5569baf4f5ab2cb37fc12
 _GITLEAKS_COMPLETE_CONFIG_SHA256 = "b7034f7bc41782964e2345d03fd271e3c873414bbf4bd6c8eb2045f9d4845be8"
 _GITLEAKS_DIAGNOSTIC_REGISTRY = "docs/security/gitleaks-synthetic-diagnostics-m2.v1.json"
 _GITLEAKS_DIAGNOSTIC_REGISTRY_SHA256 = "a7005466faa7032433084f86a7dd8a164fb9b0206c11c91c86fd2e21fdb05563"
+_GITLEAKS_ASSURANCE_REGISTRY = "docs/security/gitleaks-assurance-source-digest-20261025.v1.json"
+_GITLEAKS_ASSURANCE_REGISTRY_SHA256 = "1d3b3d0c1795da9bc0c0754b899f832c51e6bb2be9ac1a0aca4149ada6544c51"
 _GITLEAKS_WAVE5_REPORTS = {
     "docs/execution/wave5-evidence/sourcing-oracle/accepted/report.json",
     "docs/execution/wave5-evidence/sourcing-oracle/initial-failure/report.json",
@@ -675,8 +677,53 @@ def _validate_reviewed_gitleaks_hashes(root: Path, ignore_lines: list[str]) -> N
         raise SupplyChainPolicyError("reviewed Gitleaks ignores must match the exact 520 fingerprints")
 
 
+def _reviewed_assurance_ignore_baseline(root: Path, raw: bytes) -> bytes:
+    """Admit one source digest with historical and byte-guarded current fingerprints."""
+    registry_path = _required_path(root, _GITLEAKS_ASSURANCE_REGISTRY)
+    if hashlib.sha256(registry_path.read_bytes()).hexdigest() != _GITLEAKS_ASSURANCE_REGISTRY_SHA256:
+        raise SupplyChainPolicyError("reviewed assurance Gitleaks proof registry bytes drifted")
+    registry = _load_json(registry_path)
+    record = registry["record"]
+    baseline = raw[:115541]
+    fingerprint = (
+        "4ce24156522c416e36c63131bc25c65fba98eeac:"
+        "docs/execution/ASSURANCE_2026-10-25.json:generic-api-key:80"
+    )
+    if (
+        registry["schema_version"] != 1
+        or registry["finding_count"] != 1
+        or registry["baseline_complete_ignore_bytes"] != 115541
+        or registry["baseline_complete_ignore_sha256"] != "16b256759a1334fe006322e6a6e2a2fef6830c94dc7a56c39a535da1098e2dd3"
+        or hashlib.sha256(baseline).hexdigest() != registry["baseline_complete_ignore_sha256"]
+        or record["history_fingerprint"] != fingerprint
+        or record["current_fingerprint"] != "docs/execution/ASSURANCE_2026-10-25.json:generic-api-key:80"
+        or record["source_checkout_transform"] != "git-lf-to-crlf-v1"
+        or raw != baseline + registry["exact_suffix_utf8"].encode("utf8")
+        or hashlib.sha256(raw).hexdigest() != registry["complete_ignore_sha256"]
+    ):
+        raise SupplyChainPolicyError("reviewed exact historical assurance Gitleaks suffix drifted")
+    report_path = _required_path(root, record["path"])
+    report_raw = report_path.read_bytes()
+    if hashlib.sha256(report_raw).hexdigest() not in {
+        record["current_report_lf_sha256"], record["current_report_crlf_sha256"],
+    }:
+        raise SupplyChainPolicyError("reviewed current assurance report bytes drifted")
+    lines = report_raw.splitlines(keepends=True)
+    line = lines[record["line"] - 1]
+    match = _PUBLIC_DIGEST_LINE.fullmatch(line.decode("utf8").rstrip("\r\n"))
+    report = _load_json(report_path)
+    if (
+        hashlib.sha256(line).hexdigest() not in {record["report_line_sha256"], record["current_line_crlf_sha256"]}
+        or match is None or match.groups() != (record["source_path"], record["source_checkout_sha256"])
+        or report[record["json_member"]][record["source_path"]] != record["source_checkout_sha256"]
+    ):
+        raise SupplyChainPolicyError("reviewed current assurance source digest line drifted")
+    return baseline
+
+
 def _reviewed_complete_ignore_baseline(root: Path, raw: bytes) -> bytes:
     """Keep the frozen Wave5 bytes and admit only two reviewed historical fakes."""
+    raw = _reviewed_assurance_ignore_baseline(root, raw)
     registry_path = _required_path(root, _GITLEAKS_DIAGNOSTIC_REGISTRY)
     if hashlib.sha256(registry_path.read_bytes()).hexdigest() != _GITLEAKS_DIAGNOSTIC_REGISTRY_SHA256:
         raise SupplyChainPolicyError("reviewed diagnostic Gitleaks supplement bytes drifted")

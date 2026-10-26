@@ -10,6 +10,7 @@ from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_crm_contracts import PostgresCRMContractsRepository
 from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
+from reconforge.infrastructure.postgres_operations import POSTGRES_MIGRATION_REVISIONS
 from tests.test_postgres_enterprise_migrations import migrate
 from tests.test_postgres_inventory_receipt_posting import create_receipt_runtime, receipt_database  # noqa: F401
 
@@ -82,11 +83,14 @@ def test_migrated_crm_authority_is_scoped_and_immutable(receipt_database: tuple[
             "SELECT tenant_id,workspace_id,quote_id,user_id,identity_contract FROM reconforge.crm_quotation_authorities WHERE quote_id='Q-AUTHORITY'",
         ).fetchall()
         assert before == [(runtime.tenant, "work", "Q-AUTHORITY", author_id, "canonical-user-v1")]
+    with psycopg.connect(runtime.admin_dsn) as connection:
+        before_revision = connection.execute("SELECT version_num FROM alembic_version").fetchone()
+        assert before_revision == (POSTGRES_MIGRATION_REVISIONS[-1],)
     refused = migrate(runtime.admin_dsn, "downgrade", "0154_pg_enterprise_finance")
     assert refused.returncode != 0
     assert "Populated CRM authority prevents downgrade" in refused.stderr
     with psycopg.connect(runtime.admin_dsn) as connection:
-        assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == ("0156_pg_hcm_leave_entity",)
+        assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == before_revision
     with runtime.actor(username) as (connection, _receipts, _actor):
         connection.row_factory = tuple_row
         assert connection.execute(

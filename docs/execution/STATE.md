@@ -1,3 +1,24 @@
+## Exact matching and navigation hardening — 2026-10-27
+
+**RELEASE BLOCKED.** Entry source `c085dbd114734f9577c26b4ae96f13c5857cc5dc`.
+The existing grouped v1 strategy produces a false match under Decimal precision;
+the PostgreSQL worker now fails closed when it detects outer-context Inexact.
+Native proof covers one new failed attempt without partial outputs; nested FX,
+signed-zero digest drift and prior checkpoints remain outside that proof. ADR0878 adds a separate exact experimental domain path with a required
+currency registry context and version-bound content evidence. This path is not
+registered in the worker/API; old results remain unchanged and the existing v1
+runtime blocker remains open. Independent tests and oracle receipts are in
+`output/enterprise-program-20261026/qa-exact-grouped-final.json`.
+
+The existing Studio sidebar now resets destination search after navigation and
+retains the selected section. Real local preview browser and component results
+are bounded to that interaction; they do not prove authenticated PostgreSQL
+business cycles. The CRM populated-downgrade test now checks the actual recorded
+Alembic head before/after refusal; original data and refusal checks remain.
+Five complete enterprise cycles, v1 safety, role provisioning and final CI
+remain unqualified. [Competitor reference](COMPETITOR_REFERENCE_2026-10-27.md)
+compares documented capabilities without a superiority claim.
+
 ## Financial input hardening — 2026-10-27
 
 **RELEASE BLOCKED.** Source entry `790757dabb6852c2ed6dacc7a25310d48094a32c`.

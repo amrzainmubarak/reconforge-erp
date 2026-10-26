@@ -24520,3 +24520,49 @@ read under the existing scoped helper before retaining their original migration
 and rollback assertions. Owned PostgreSQL test data was preserved after the
 agent verified its directory and no other clients and stopped that cluster.
 No deployed database grant was changed.
+
+### 2026-10-27 — Grouped matching, Studio search and CRM test repair
+
+`output/enterprise-program-20261026/grouped-decimal-context-negative-20261027.log`
+reproduces v1 false match under precision3 and unmatched under precision28.
+`qa-exact-grouped-final.json` binds source hashes to independent 3000 integer
+comparisons, 10000 Fraction precision checks and 29 focused tests. The new v2
+contract is opt-in and no worker, stored replay, FX or production integration
+is qualified.
+`navigation-search-browser-final-20261027.log` records4 local preview browser
+passes (desktop and Arabic360/390/768); component/accessibility scope is in the
+source tests. No PostgreSQL browser or user-time claim follows.
+`backend-crm-head-red-20261027.json` and `backend-crm-head-green-20261027.json`
+retain native failure and successor 1 pass/0 skip, 15.515s, unchanged successor
+source digest. The actual populated downgrade remains refused and source rows
+remain unchanged. No production migration or ACL changed.
+
+`qa-exact-grouped-final-default-context.json` independently confirms false
+match in v1 at standard Decimal precision28 for distinct 29-digit amounts, and
+30 v1/v2 tests pass on fixed code/test hashes. The independent 3000 integer and
+10000 Fraction checks remain tied to the unchanged v2 engine hash. This is not
+production worker, FX, tenant-isolation or stored-replay qualification.
+
+The worker Inexact guard was independently compared with entry HEAD for three
+exact cases (`qa-worker-conservation-final.json`). Native fail-closed verification
+`output/assurance-20261026/principal-grouped-guard-native-20261027.json` passed
+1/0skip with an unchanged whole-source digest; synthetic inputs remained intact
+and the new attempt wrote no results/checkpoints. Initial harness failures remain
+in `backend-grouped-guard-native-20261027.json`. This does not inspect checkpoints
+from prior attempts, nested FX rounding, or signed-zero v1 digest drift.
+
+`qa-exact-grouped-final-rounding.json` records 31 grouped tests with stable
+source hashes and links the independent 13000-case arithmetic oracle; the
+current guarded v1 worker still has signed-zero and nested FX limitations.
+`grouped-native-ci-gate-before-20261027.log` preserves the CI contract's red
+state; the successor adds the whole native guard module to the mandatory
+matching-runtime shard and passes9 CI contract tests. The generic Python shard
+excludes that native module because it has no database; the mandatory shard
+uses mandatory_native_gate and does not accept skips.
+
+`navigation-search-browser-final-20261027.log`:4 actual local preview browser
+tests, including RTL drawer widths360/390/768. QA component tests pass6 and
+typecheck passes. This is neither authenticated PostgreSQL workflow evidence
+nor whole-product accessibility acceptance. A separate test invocation from
+the repository root failed because it omitted the web test environment; the
+correct working-directory rerun passed11.

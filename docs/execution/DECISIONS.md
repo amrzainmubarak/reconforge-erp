@@ -13978,3 +13978,11 @@ Do not change previously recorded strict-v2 semantics in place. The opt-in
 `parse_guarded_amount_v3` is a separate experimental function, not a persisted
 policy or deployed financial workflow; see ADR0877. Promotion requires a new
 versioned ingress contract, migration, replay, evidence and cross-engine proof.
+
+### 2026-10-27 — Version exact grouped arithmetic before worker adoption
+
+The existing grouped evaluator depends on ambient Decimal context and can
+produce false matches. A separate experimental domain contract with immutable
+registry context, bounded arithmetic and independent content fingerprints is
+recorded in ADR0878. It does not relabel old outputs or alter the worker.
+No overall competitive superiority or completed ERP lifecycle is claimed.

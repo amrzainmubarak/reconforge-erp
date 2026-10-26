@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Annotated, Any
+from collections.abc import Iterator
+from contextlib import contextmanager
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from reconforge.api.dependencies import require_any_permission, require_permission
+from reconforge.api.enterprise_scope import enterprise_transaction
 from reconforge.api.errors import APIError
 from reconforge.auth.models import LocalUser
 from reconforge.domain.shop_floor_dispatch import (
@@ -81,46 +84,23 @@ class StepProgressRequest(BaseModel):
     step: OperationStepInput
 
 
-def _get_repo(request: Request) -> tuple[Any, SqliteShopFloorRepository | PostgresShopFloorRepository]:
-    server_mode = bool(getattr(request.app.state, "server_mode", False))
-    factory = (
-        getattr(request.app.state, "postgres_finance_core_factory", None)
-        or getattr(request.app.state, "postgres_identity_factory", None)
-        or getattr(request.app.state, "postgres_connection_factory", None)
-    )
-    if server_mode:
-        if factory is None:
-            raise APIError(
-                status_code=503,
-                code="server_postgres_unavailable",
-                message="Enterprise production profile requires PostgreSQL.",
-            )
+@contextmanager
+def _get_repo(request: Request, *, permissions: frozenset[str], permission_mode: Literal["all", "any"] = "all") -> Iterator[tuple[Any, SqliteShopFloorRepository | PostgresShopFloorRepository]]:
+    with enterprise_transaction(request, permissions=permissions, permission_mode=permission_mode) as business:
+        if business is not None:
+            connection = business.connection
+            repository = PostgresShopFloorRepository(connection, business.scope.tenant_id)
+            yield connection, repository
+            return
+        db_path = getattr(request.app.state, "db_path", None)
+        if db_path is None:
+            raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
+        connection = sqlite3.connect(db_path)
         try:
-            conn = factory.connect()
-        except Exception as exc:
-            raise APIError(
-                status_code=503,
-                code="server_postgres_unavailable",
-                message=f"Enterprise production profile database connection failed: {exc}",
-            ) from exc
-        raw_tenant = getattr(request.state, "tenant_id", None) or getattr(request.state, "workspace_id", "default")
-        tenant_id = str(raw_tenant) if raw_tenant else "default"
-        return conn, PostgresShopFloorRepository(conn, tenant_id)
-
-    if factory is not None:
-        try:
-            conn = factory.connect()
-            raw_tenant = getattr(request.state, "tenant_id", None) or getattr(request.state, "workspace_id", "default")
-            tenant_id = str(raw_tenant) if raw_tenant else "default"
-            return conn, PostgresShopFloorRepository(conn, tenant_id)
-        except Exception:
-            pass
-
-    db_path = getattr(request.app.state, "db_path", None)
-    if db_path is None:
-        raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
-    conn = sqlite3.connect(db_path)
-    return conn, SqliteShopFloorRepository(conn)
+            local_repository = SqliteShopFloorRepository(connection)
+            yield connection, local_repository
+        finally:
+            connection.close()
 
 
 @router.post("/lots")
@@ -130,26 +110,24 @@ def register_lot(
     user: ShopFloorManage,
 ) -> dict[str, Any]:
     """Register a new batch lot and link its consumed parent component lots."""
-    conn, repo = _get_repo(request)
-    try:
-        workspace = getattr(request.state, "workspace_id", "default")
-        lot_record = LotTraceabilityRecord(
-            workspace_id=workspace,
-            lot_id=payload.lot_id,
-            item_id=payload.item_id,
-            batch_number=payload.batch_number,
-            quantity_scaled=payload.quantity_scaled,
-            scale_factor=payload.scale_factor,
-            status=payload.status,
-            notes=payload.notes,
-        )
-        parents = [(p.parent_lot_id, p.quantity_consumed_scaled) for p in payload.parent_lots]
-        repo.register_lot(lot_record, parents)
-        return {"status": "registered", "lot_id": lot_record.lot_id}
-    except ShopFloorExecutionError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
-    finally:
-        conn.close()
+    with _get_repo(request, permissions=frozenset({'manufacturing_execution.manage'}), permission_mode="all") as ((conn, repo)):
+        try:
+            workspace = getattr(request.state, "workspace_id", "default")
+            lot_record = LotTraceabilityRecord(
+                workspace_id=workspace,
+                lot_id=payload.lot_id,
+                item_id=payload.item_id,
+                batch_number=payload.batch_number,
+                quantity_scaled=payload.quantity_scaled,
+                scale_factor=payload.scale_factor,
+                status=payload.status,
+                notes=payload.notes,
+            )
+            parents = [(p.parent_lot_id, p.quantity_consumed_scaled) for p in payload.parent_lots]
+            repo.register_lot(lot_record, parents)
+            return {"status": "registered", "lot_id": lot_record.lot_id}
+        except ShopFloorExecutionError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
 
 
 @router.get("/lots/{lot_id}")
@@ -159,8 +137,7 @@ def get_lot(
     user: ShopFloorRead,
 ) -> dict[str, Any]:
     """Retrieve lot details and status."""
-    conn, repo = _get_repo(request)
-    try:
+    with _get_repo(request, permissions=frozenset({'manufacturing_execution.manage', 'manufacturing_execution.read'}), permission_mode="any") as ((conn, repo)):
         workspace = getattr(request.state, "workspace_id", "default")
         lot = repo.get_lot(workspace, lot_id)
         if not lot:
@@ -174,8 +151,6 @@ def get_lot(
             "status": lot.status,
             "notes": lot.notes,
         }
-    finally:
-        conn.close()
 
 
 @router.post("/dispatch")
@@ -185,42 +160,40 @@ def dispatch_work_order(
     user: ShopFloorManage,
 ) -> dict[str, Any]:
     """Dispatch a work order to the shop floor with defined operation routing steps."""
-    conn, repo = _get_repo(request)
-    try:
-        workspace = getattr(request.state, "workspace_id", "default")
-        domain_steps = tuple(
-            ShopFloorOperationStep(
-                step_id=s.step_id,
-                work_order_id=s.work_order_id,
-                operation_sequence=s.operation_sequence,
-                work_center_id=s.work_center_id,
-                operator_id=s.operator_id,
-                status=s.status,
-                actual_run_minutes=s.actual_run_minutes,
-                quantity_completed_scaled=s.quantity_completed_scaled,
-                quantity_scrapped_scaled=s.quantity_scrapped_scaled,
-                scrap_reason_code=s.scrap_reason_code,
-                started_at=s.started_at,
-                completed_at=s.completed_at,
+    with _get_repo(request, permissions=frozenset({'manufacturing_execution.manage'}), permission_mode="all") as ((conn, repo)):
+        try:
+            workspace = getattr(request.state, "workspace_id", "default")
+            domain_steps = tuple(
+                ShopFloorOperationStep(
+                    step_id=s.step_id,
+                    work_order_id=s.work_order_id,
+                    operation_sequence=s.operation_sequence,
+                    work_center_id=s.work_center_id,
+                    operator_id=s.operator_id,
+                    status=s.status,
+                    actual_run_minutes=s.actual_run_minutes,
+                    quantity_completed_scaled=s.quantity_completed_scaled,
+                    quantity_scrapped_scaled=s.quantity_scrapped_scaled,
+                    scrap_reason_code=s.scrap_reason_code,
+                    started_at=s.started_at,
+                    completed_at=s.completed_at,
+                )
+                for s in payload.steps
             )
-            for s in payload.steps
-        )
-        dispatch = WorkOrderDispatch(
-            workspace_id=workspace,
-            dispatch_id=payload.dispatch_id,
-            work_order_id=payload.work_order_id,
-            item_id=payload.item_id,
-            scheduled_quantity_scaled=payload.scheduled_quantity_scaled,
-            dispatched_lot_id=payload.dispatched_lot_id,
-            dispatched_at=payload.dispatched_at,
-            steps=domain_steps,
-        )
-        repo.save_dispatch(dispatch)
-        return {"status": "dispatched", "dispatch_id": dispatch.dispatch_id}
-    except ShopFloorExecutionError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
-    finally:
-        conn.close()
+            dispatch = WorkOrderDispatch(
+                workspace_id=workspace,
+                dispatch_id=payload.dispatch_id,
+                work_order_id=payload.work_order_id,
+                item_id=payload.item_id,
+                scheduled_quantity_scaled=payload.scheduled_quantity_scaled,
+                dispatched_lot_id=payload.dispatched_lot_id,
+                dispatched_at=payload.dispatched_at,
+                steps=domain_steps,
+            )
+            repo.save_dispatch(dispatch)
+            return {"status": "dispatched", "dispatch_id": dispatch.dispatch_id}
+        except ShopFloorExecutionError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
 
 
 @router.get("/dispatches/{dispatch_id}")
@@ -230,8 +203,7 @@ def get_dispatch(
     user: ShopFloorRead,
 ) -> dict[str, Any]:
     """Retrieve full dispatch and current progress across all routing steps."""
-    conn, repo = _get_repo(request)
-    try:
+    with _get_repo(request, permissions=frozenset({'manufacturing_execution.manage', 'manufacturing_execution.read'}), permission_mode="any") as ((conn, repo)):
         workspace = getattr(request.state, "workspace_id", "default")
         dispatch = repo.get_dispatch(workspace, dispatch_id)
         if not dispatch:
@@ -260,8 +232,6 @@ def get_dispatch(
                 for s in dispatch.steps
             ],
         }
-    finally:
-        conn.close()
 
 
 @router.post("/steps/progress")
@@ -271,35 +241,33 @@ def progress_step(
     user: ShopFloorManage,
 ) -> dict[str, Any]:
     """Progress an operation step with sequence validation and quantity conservation."""
-    conn, repo = _get_repo(request)
-    try:
-        workspace = getattr(request.state, "workspace_id", "default")
-        dispatch = repo.get_dispatch(workspace, payload.dispatch_id)
-        if not dispatch:
-            raise APIError(status_code=404, code="dispatch_not_found", message=f"Dispatch {payload.dispatch_id} not found")
+    with _get_repo(request, permissions=frozenset({'manufacturing_execution.manage'}), permission_mode="all") as ((conn, repo)):
+        try:
+            workspace = getattr(request.state, "workspace_id", "default")
+            dispatch = repo.get_dispatch(workspace, payload.dispatch_id)
+            if not dispatch:
+                raise APIError(status_code=404, code="dispatch_not_found", message=f"Dispatch {payload.dispatch_id} not found")
 
-        s = payload.step
-        domain_step = ShopFloorOperationStep(
-            step_id=s.step_id,
-            work_order_id=s.work_order_id,
-            operation_sequence=s.operation_sequence,
-            work_center_id=s.work_center_id,
-            operator_id=s.operator_id,
-            status=s.status,
-            actual_run_minutes=s.actual_run_minutes,
-            quantity_completed_scaled=s.quantity_completed_scaled,
-            quantity_scrapped_scaled=s.quantity_scrapped_scaled,
-            scrap_reason_code=s.scrap_reason_code,
-            started_at=s.started_at,
-            completed_at=s.completed_at,
-        )
-        validate_step_progression(dispatch, domain_step)
-        repo.save_step(workspace, domain_step)
-        return {"status": "step_updated", "step_id": domain_step.step_id, "step_status": domain_step.status}
-    except ShopFloorExecutionError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
-    finally:
-        conn.close()
+            s = payload.step
+            domain_step = ShopFloorOperationStep(
+                step_id=s.step_id,
+                work_order_id=s.work_order_id,
+                operation_sequence=s.operation_sequence,
+                work_center_id=s.work_center_id,
+                operator_id=s.operator_id,
+                status=s.status,
+                actual_run_minutes=s.actual_run_minutes,
+                quantity_completed_scaled=s.quantity_completed_scaled,
+                quantity_scrapped_scaled=s.quantity_scrapped_scaled,
+                scrap_reason_code=s.scrap_reason_code,
+                started_at=s.started_at,
+                completed_at=s.completed_at,
+            )
+            validate_step_progression(dispatch, domain_step)
+            repo.save_step(workspace, domain_step)
+            return {"status": "step_updated", "step_id": domain_step.step_id, "step_status": domain_step.status}
+        except ShopFloorExecutionError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
 
 
 def _serialize_genealogy_node(node: Any) -> dict[str, Any]:
@@ -318,17 +286,15 @@ def get_backward_genealogy(
     user: ShopFloorRead,
 ) -> dict[str, Any]:
     """Trace all raw materials and subcomponents consumed to manufacture this lot."""
-    conn, repo = _get_repo(request)
-    try:
-        workspace = getattr(request.state, "workspace_id", "default")
-        edges = repo.get_genealogy_edges(workspace)
-        item_map = repo.get_lot_item_map(workspace)
-        tree = traverse_genealogy(lot_id, edges, item_map, direction="backward")
-        return {"root_lot_id": lot_id, "genealogy": _serialize_genealogy_node(tree)}
-    except ShopFloorExecutionError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
-    finally:
-        conn.close()
+    with _get_repo(request, permissions=frozenset({'manufacturing_execution.manage', 'manufacturing_execution.read'}), permission_mode="any") as ((conn, repo)):
+        try:
+            workspace = getattr(request.state, "workspace_id", "default")
+            edges = repo.get_genealogy_edges(workspace)
+            item_map = repo.get_lot_item_map(workspace)
+            tree = traverse_genealogy(lot_id, edges, item_map, direction="backward")
+            return {"root_lot_id": lot_id, "genealogy": _serialize_genealogy_node(tree)}
+        except ShopFloorExecutionError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
 
 
 @router.get("/genealogy/forward/{lot_id}")
@@ -338,14 +304,12 @@ def get_forward_genealogy(
     user: ShopFloorRead,
 ) -> dict[str, Any]:
     """Trace all finished goods and parent assemblies that consumed this lot (recall analysis)."""
-    conn, repo = _get_repo(request)
-    try:
-        workspace = getattr(request.state, "workspace_id", "default")
-        edges = repo.get_genealogy_edges(workspace)
-        item_map = repo.get_lot_item_map(workspace)
-        tree = traverse_genealogy(lot_id, edges, item_map, direction="forward")
-        return {"root_lot_id": lot_id, "genealogy": _serialize_genealogy_node(tree)}
-    except ShopFloorExecutionError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
-    finally:
-        conn.close()
+    with _get_repo(request, permissions=frozenset({'manufacturing_execution.manage', 'manufacturing_execution.read'}), permission_mode="any") as ((conn, repo)):
+        try:
+            workspace = getattr(request.state, "workspace_id", "default")
+            edges = repo.get_genealogy_edges(workspace)
+            item_map = repo.get_lot_item_map(workspace)
+            tree = traverse_genealogy(lot_id, edges, item_map, direction="forward")
+            return {"root_lot_id": lot_id, "genealogy": _serialize_genealogy_node(tree)}
+        except ShopFloorExecutionError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc

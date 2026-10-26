@@ -10,8 +10,9 @@ from reconforge.domain.manufacturing_bom_explosion import (
     BOMExplosionEngine,
 )
 from reconforge.domain.models import utc_now_text
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope
 from reconforge.platform.common import PlatformError
 
 POSTGRES_BOM_SCHEMA_SQL = r"""
@@ -78,7 +79,7 @@ class PostgresManufacturingBOMRepository:
         self.tenant_id = validate_tenant_id(tenant_id)
 
     def _scope(self) -> None:
-        set_local_tenant_scope(self.connection, self.tenant_id)
+        ensure_repository_tenant_scope(self.connection, self.tenant_id)
 
     def save_bom(
         self,

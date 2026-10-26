@@ -157,6 +157,8 @@ def test_postgres_treasury_repository_lifecycle() -> None:
         def execute(self, sql: str, params: tuple[Any, ...] = ()) -> FakeCursor:
             self.executed.append((sql, params))
             clean = " ".join(sql.split())
+            if "current_setting('app.tenant_id'" in clean:
+                return FakeCursor([("00000000-0000-0000-0000-000000000001", "org_pg", "ws_pg", "le_pg", "le_pg")])
             if "set_config('app.tenant_id'" in clean:
                 return FakeCursor([])
             if "INSERT INTO reconforge.treasury_cash_positions" in clean:
@@ -216,3 +218,4 @@ def test_postgres_treasury_repository_lifecycle() -> None:
     flows = repo.list_flows("ws_pg", "le_pg", "SAR", "2026-11-01", "2026-11-10")
     assert len(flows) == 1
     assert flows[0].amount_minor == 500_000_00
+    assert not any("set_config(" in statement for statement, _parameters in conn.executed)

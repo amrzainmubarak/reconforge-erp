@@ -69,6 +69,7 @@ from reconforge.api.routes import (
     financial_installments,
     financial_reporting,
     fixed_assets,
+    governed_assistant,
     hcm_leave,
     health,
     identity_administration,
@@ -86,9 +87,11 @@ from reconforge.api.routes import (
     inventory_valuation_reversal,
     landed_cost,
     manufacturing_bom,
+    manufacturing_capacity,
     manufacturing_cost_control,
     manufacturing_execution,
     manufacturing_execution_v2,
+    manufacturing_quality,
     manufacturing_supply_plan,
     master_data,
     master_production_schedule,
@@ -536,6 +539,9 @@ def create_api_app(
     app.include_router(inventory_valuation_reversal.router, prefix="/api/v1")
     app.include_router(treasury_liquidity.router, prefix="/api/v1")
     app.include_router(manufacturing_bom.router, prefix="/api/v1")
+    app.include_router(manufacturing_capacity.router, prefix="/api/v1")
+    app.include_router(manufacturing_quality.router, prefix="/api/v1")
+    app.include_router(governed_assistant.router, prefix="/api/v1")
     app.include_router(hcm_leave.router, prefix="/api/v1")
     app.include_router(crm_contracts.router, prefix="/api/v1")
     app.include_router(intercompany_elimination.router, prefix="/api/v1")
@@ -625,6 +631,9 @@ def create_api_app(
         inventory_valuation_reversal.router,
         treasury_liquidity.router,
         manufacturing_bom.router,
+        manufacturing_capacity.router,
+        manufacturing_quality.router,
+        governed_assistant.router,
         hcm_leave.router,
         crm_contracts.router,
         intercompany_elimination.router,

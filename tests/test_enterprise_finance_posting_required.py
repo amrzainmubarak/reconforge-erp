@@ -89,7 +89,7 @@ def posting_case(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
         error = PostgresIntercompanyEliminationError
 
     monkeypatch.setattr(module, "PostgresAuditEventRepository", AuditBoundary)
-    monkeypatch.setattr(module, "set_local_tenant_scope", lambda *args: None)
+    monkeypatch.setattr(module, "ensure_repository_tenant_scope", lambda *args: None)
     kwargs.update(organization_code="ORG", entity_code="ENTITY", period_id="PERIOD", actor_label="reviewer")
     return method, kwargs, error, connection, events
 

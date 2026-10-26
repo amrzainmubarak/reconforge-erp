@@ -81,19 +81,18 @@ class PostgresRelationalTestAdapter:
 
     def __init__(self) -> None:
         self._sqlite = sqlite3.connect(":memory:")
-        self._active_tenant: str | None = None
+        self._settings: dict[str, str] = {}
         self._audit_events: list[dict[str, Any]] = []
         self._register_functions()
         self._init_schema()
 
     def _register_functions(self) -> None:
         def _set_config(name: str, val: str, is_local: bool) -> str:
-            if name == "app.tenant_id":
-                self._active_tenant = val
+            self._settings[name] = val
             return val
 
         def _current_setting(name: str, missing_ok: bool = True) -> str:
-            return self._active_tenant or ""
+            return self._settings.get(name, "")
 
         self._sqlite.create_function("set_config", 3, _set_config)
         self._sqlite.create_function("current_setting", 1, lambda name: _current_setting(name))
@@ -420,6 +419,12 @@ class PostgresRelationalTestAdapter:
     def close(self) -> None:
         self._sqlite.close()
 
+    def select_transaction_tenant(self, tenant_id: str) -> None:
+        """Model the caller selecting a new tenant, never a repository widening it."""
+        from reconforge.infrastructure.postgres import set_local_tenant_scope
+
+        set_local_tenant_scope(self, tenant_id)
+
 
 # -----------------------------------------------------------------------------
 # Test Cases
@@ -478,10 +483,16 @@ def test_postgres_shop_floor_multi_tenant_isolation_and_genealogy() -> None:
 
     # 2. Multi-tenant isolation verification: Tenant Beta CANNOT see Tenant Alpha's data
     assert repo_a.get_lot("ws_main", "LOT_FG_01") is not None
+    from reconforge.platform.common import PlatformError
+
+    with pytest.raises(PlatformError, match="does not match the active transaction"):
+        repo_b.get_lot("ws_main", "LOT_FG_01")
+    conn.select_transaction_tenant("tenant_beta")
     assert repo_b.get_lot("ws_main", "LOT_FG_01") is None
     assert repo_b.get_dispatch("ws_main", "DISP_100") is None
 
     # 3. Traversal verification on Tenant Alpha
+    conn.select_transaction_tenant("tenant_alpha")
     node_bwd = repo_a.traverse("ws_main", "LOT_FG_01", "backward")
     assert node_bwd.lot_id == "LOT_FG_01"
     assert len(node_bwd.children) == 1
@@ -580,6 +591,7 @@ def test_postgres_project_milestone_billing_gl_and_financial_posture() -> None:
     assert posture.profit_margin_bps == 7_000
 
     # 5. Multi-tenant isolation: Tenant Beta cannot see Tenant Alpha's project data
+    conn.select_transaction_tenant("tenant_beta")
     assert len(repo_b.list_tasks("ws_projects", "PRJ_DIGITAL")) == 0
     assert repo_b.get_milestone("ws_projects", "MS_DELIVERABLE_1") is None
     posture_b = repo_b.get_financial_posture("ws_projects", "PRJ_DIGITAL", "USD")
@@ -670,6 +682,7 @@ def test_postgres_consolidated_statements_and_mps_isolation() -> None:
 
     # Multi-tenant statement run isolation
     assert repo_cons_a.get_run(workspace_id="ws_finance", run_id=run_id) is not None
+    conn.select_transaction_tenant("tenant_beta")
     assert repo_cons_b.get_run(workspace_id="ws_finance", run_id=run_id) is None
 
     # MPS Plan persistence and shortage procurement requisitions
@@ -701,11 +714,15 @@ def test_postgres_consolidated_statements_and_mps_isolation() -> None:
         unit_price_ceiling_minor=50_000,
         currency="USD",
     )
+    conn.select_transaction_tenant("tenant_alpha")
     repo_mps_a.save_plan(workspace_id="ws_mfg", plan_result=plan)
 
     assert repo_mps_a.get_plan(workspace_id="ws_mfg", plan_id="MPS_P100", revision="rev1") is not None
+    conn.select_transaction_tenant("tenant_beta")
     assert repo_mps_b.get_plan(workspace_id="ws_mfg", plan_id="MPS_P100", revision="rev1") is None
+    conn.select_transaction_tenant("tenant_alpha")
     assert len(repo_mps_a.list_requisitions(workspace_id="ws_mfg", plan_id="MPS_P100")) > 0
+    conn.select_transaction_tenant("tenant_beta")
     assert len(repo_mps_b.list_requisitions(workspace_id="ws_mfg", plan_id="MPS_P100")) == 0
 
 
@@ -739,6 +756,7 @@ def test_postgres_intercompany_profit_in_stock_zero_leakage_and_isolation() -> N
 
     # Multi-tenant isolation verification
     elim_a = repo_a.list_profit_in_stock_eliminations("ws_global")
+    conn.select_transaction_tenant("tenant_beta")
     elim_b = repo_b.list_profit_in_stock_eliminations("ws_global")
     assert len(elim_a) == 1
     assert len(elim_b) == 0
@@ -766,17 +784,16 @@ def test_enterprise_routes_fail_closed_mode(tmp_path: Any) -> None:
     )()
 
     for repo_fn in (get_cons_repo, get_elim_repo, get_mps_repo, get_proj_repo, get_sf_repo):
-        with pytest.raises(APIError) as exc_info:
-            repo_fn(mock_request)
+        with pytest.raises(APIError) as exc_info, repo_fn(mock_request, permissions=frozenset({"finance_core.read"})):
+            pytest.fail("Unconfigured enterprise storage must refuse before yielding")
         assert exc_info.value.status_code == 503
         assert exc_info.value.code == "server_postgres_unavailable"
-        assert "Enterprise production profile requires PostgreSQL" in exc_info.value.message
+        assert exc_info.value.message == "Enterprise mode requires PostgreSQL."
 
     # Verify that in Community / Local profile (server_mode=False), SQLite repo resolves cleanly
     mock_app.state.server_mode = False
-    sqlite_conn, sqlite_repo = get_cons_repo(mock_request)
-    assert sqlite_repo is not None
-    sqlite_conn.close()
+    with get_cons_repo(mock_request, permissions=frozenset({"finance_core.read"})) as (_sqlite_conn, sqlite_repo):
+        assert sqlite_repo is not None
 
 
 def test_live_postgres_enterprise_security_force_rls_and_canonical_gl() -> None:
@@ -784,6 +801,7 @@ def test_live_postgres_enterprise_security_force_rls_and_canonical_gl() -> None:
     import os
     import subprocess
     import sys
+    from urllib.parse import urlsplit, urlunsplit
     from uuid import uuid4
 
     try:
@@ -820,10 +838,10 @@ def test_live_postgres_enterprise_security_force_rls_and_canonical_gl() -> None:
     with psycopg.connect(admin_base, autocommit=True) as conn:
         conn.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name)))
 
-    admin_dsn = f"postgresql://postgres:postgres@127.0.0.1:55432/{db_name}"
+    admin_dsn = urlunsplit(urlsplit(admin_base)._replace(path="/" + db_name))
     app_user = f"app_user_{uuid4().hex[:8]}"
     app_pass = f"pass_{uuid4().hex[:8]}"
-    app_dsn = f"postgresql://{app_user}:{app_pass}@127.0.0.1:55432/{db_name}"
+    app_dsn = psycopg.conninfo.make_conninfo(admin_base, dbname=db_name, user=app_user, password=app_pass)
 
     try:
         # Run Alembic migrations to current HEAD (0151)
@@ -885,8 +903,8 @@ def test_live_postgres_enterprise_security_force_rls_and_canonical_gl() -> None:
         with PostgresTenantBoundary(factory).transaction(tenant_b) as conn:
             conn.execute("INSERT INTO reconforge.domain_workspaces (tenant_id, id, name) VALUES (%s, %s, %s)", (tenant_b, workspace_id, "Manufacturing WS Beta"))
 
-        # Tenant Alpha inserts enterprise data and posts GL vouchers
-        with PostgresTenantBoundary(factory).transaction(tenant_a) as conn:
+        # Tenant Alpha selects its actual source workspace before repository I/O.
+        with PostgresTenantBoundary(factory).transaction(tenant_a, workspace_id=workspace_id) as conn:
             sf_repo = PostgresShopFloorRepository(conn, tenant_a)
             lot = LotTraceabilityRecord(
                 workspace_id=workspace_id,
@@ -933,6 +951,7 @@ def test_live_postgres_enterprise_security_force_rls_and_canonical_gl() -> None:
             gl_lines = conn.execute("SELECT account_id, debit_minor, credit_minor FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s", (tenant_a, entry_id)).fetchall()
             assert len(gl_lines) == 2
             assert sum(line[1] for line in gl_lines) == sum(line[2] for line in gl_lines) == 1_000_000
+            assert conn.execute("SELECT status FROM reconforge.finance_entries WHERE tenant_id=%s AND id=%s", (tenant_a, entry_id)).fetchone()[0] == "Draft"
 
             # Intercompany Profit in Stock elimination
             elim_repo = PostgresIntercompanyEliminationRepository(conn, tenant_a)
@@ -964,9 +983,11 @@ def test_live_postgres_enterprise_security_force_rls_and_canonical_gl() -> None:
             elim_lines = conn.execute("SELECT account_id, debit_minor, credit_minor FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s", (tenant_a, elim_entry_id)).fetchall()
             assert len(elim_lines) == 2
             assert sum(line[1] for line in elim_lines) == sum(line[2] for line in elim_lines) == 100_000  # 500,000 * 20% = 100,000
+            assert conn.execute("SELECT status FROM reconforge.finance_entries WHERE tenant_id=%s AND id=%s", (tenant_a, elim_entry_id)).fetchone()[0] == "Draft"
+            assert conn.execute("SELECT count(*) FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (tenant_a,)).fetchone()[0] == 0
 
         # Adversarial Verification: Tenant Beta under FORCE RLS
-        with PostgresTenantBoundary(factory).transaction(tenant_b) as conn:
+        with PostgresTenantBoundary(factory).transaction(tenant_b, workspace_id=workspace_id) as conn:
             # 1. SELECT cross-tenant read returns 0 rows
             assert len(conn.execute("SELECT * FROM reconforge.shop_floor_lots WHERE lot_id='LOT_LIVE_001'").fetchall()) == 0
             assert len(conn.execute("SELECT * FROM reconforge.project_milestone_invoices WHERE invoice_id='INV_LIVE_001'").fetchall()) == 0

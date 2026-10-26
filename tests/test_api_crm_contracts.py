@@ -413,8 +413,8 @@ def test_crm_contracts_server_mode_fail_closed() -> None:
     mock_request.app.state.postgres_identity_factory = None
     mock_request.app.state.postgres_connection_factory = None
 
-    with pytest.raises(APIError) as exc_info:
-        _repo(mock_request)
+    with pytest.raises(APIError) as exc_info, _repo(mock_request, permissions=frozenset({"sales.manage"})):
+        pytest.fail("Enterprise mode must refuse an absent PostgreSQL backend before yielding a repository.")
 
     assert exc_info.value.status_code == 503
     assert exc_info.value.code == "server_postgres_unavailable"

@@ -242,6 +242,7 @@ def test_hcm_leave_server_mode_fail_closed() -> None:
 
     from reconforge.api.errors import APIError
     from reconforge.api.routes.hcm_leave import _repo
+    from reconforge.auth.models import LocalUser
 
     # Mock request with server_mode=True and no postgres factory
     mock_request = MagicMock()
@@ -250,8 +251,11 @@ def test_hcm_leave_server_mode_fail_closed() -> None:
     mock_request.app.state.postgres_identity_factory = None
     mock_request.app.state.postgres_connection_factory = None
 
-    with pytest.raises(APIError) as exc_info:
-        _repo(mock_request)
+    user = LocalUser(id="synthetic-personnel", username="synthetic-personnel", display_name="Synthetic personnel")
+    with pytest.raises(APIError) as exc_info, _repo(
+        mock_request, user=user, permissions=frozenset({"people_project_payroll.personnel"}),
+    ):
+        pytest.fail("Unconfigured PostgreSQL mode was entered.")
 
     assert exc_info.value.status_code == 503
     assert exc_info.value.code == "server_postgres_unavailable"

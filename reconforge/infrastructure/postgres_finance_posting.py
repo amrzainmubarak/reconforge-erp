@@ -434,6 +434,7 @@ class PostgresFinancePostingRepository:
             if entry["entry_number"].upper().startswith(("ME2W-", "ME2R-", "ME2P-", "ME2K-", "ME2X-", "MSP1-", "MSP1D-", "MSP1K-", "MSP1Q-")) or entry["id"].upper().startswith(("ME2W-", "ME2R-", "ME2P-", "ME2K-", "ME2X-", "MSP1-", "MSP1D-", "MSP1K-", "MSP1Q-")):
                 raise FinancePostingError("posting_source_unsupported", "Engineering definitions and held production cannot be posted as financial sources.")
             enterprise_sources: tuple[tuple[tuple[str, ...], ParticipantKind], ...] = (
+                (("PMI-", "PIS-", "PMI1-", "PIS1-", "PMIR1-", "PISR1-"), "enterprise-finance"),
                 (("ME2-", "ME2C-"), "manufacturing-v2-post"),
                 (("IC2-", "IC2S-", "IC2R-", "IC2E-"), "intercompany-fx"),
                 (("HC1-", "HC1P-"), "people-payroll"),
@@ -695,6 +696,13 @@ class PostgresFinancePostingRepository:
             if original["source_kind"] not in {"Manual", "Reversal"}:
                 raise FinancePostingError("posting_source_unsupported", "Inventory postings require a reviewed full source inverse.")
             source = posting_entry(self.connection, self.tenant_id, original["entry_id"])
+            enterprise_prefixes = ("PMI-", "PIS-", "PMI1-", "PIS1-", "PMIR1-", "PISR1-")
+            if source["entry_number"].upper().startswith(enterprise_prefixes) or source["id"].upper().startswith(enterprise_prefixes):
+                participant_type = source_participant_type("enterprise-finance")
+                if participant_type is None or not isinstance(_source_owner, participant_type) or not _source_owner.admits_reversal(
+                    self.connection, self.tenant_id, source["id"], original["id"], number
+                ):
+                    raise FinancePostingError("posting_source_unsupported", "Enterprise financial sources require their exact reviewed native inverse.")
             partial_prefixes = ("CR2-", "CRF2-", "CR2R-", "CRF2R-")
             if source["entry_number"].upper().startswith(partial_prefixes) or source["id"].upper().startswith(partial_prefixes):
                 participant_type = source_participant_type("customer-partial-return")

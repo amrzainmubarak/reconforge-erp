@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 from typing import cast
 
+from reconforge.db.migration_59_crm_scope import CRM_AUTHORITY_SQL, execute_crm_schema, upgrade_crm_lines
 from reconforge.domain.crm_contracts import (
     BillingFrequency,
     ContractStatus,
@@ -18,6 +19,7 @@ from reconforge.domain.crm_contracts import (
     SubscriptionPlan,
     SubscriptionStatus,
 )
+from reconforge.domain.finance_posting import FinancePostingError
 
 CREATE_CRM_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS crm_opportunities (
@@ -108,8 +110,16 @@ class SqliteCRMContractsRepository:
         self._init_tables()
 
     def _init_tables(self) -> None:
-        self._conn.executescript(CREATE_CRM_TABLES_SQL)
-        self._conn.commit()
+        self._conn.execute("SAVEPOINT crm_repository_init")
+        try:
+            execute_crm_schema(self._conn, CREATE_CRM_TABLES_SQL)
+            upgrade_crm_lines(self._conn)
+            execute_crm_schema(self._conn, CRM_AUTHORITY_SQL)
+            self._conn.execute("RELEASE crm_repository_init")
+        except BaseException:
+            self._conn.execute("ROLLBACK TO crm_repository_init")
+            self._conn.execute("RELEASE crm_repository_init")
+            raise
 
     # --- Opportunities ---
 
@@ -171,9 +181,18 @@ class SqliteCRMContractsRepository:
 
     # --- Quotations ---
 
-    def save_quotation(self, quote: CustomerQuotation) -> None:
+    def quotation_author_id(self, workspace_id: str, quote_id: str) -> str | None:
+        row = self._conn.execute(
+            "SELECT user_id FROM crm_quotation_authorities WHERE workspace_id=? AND quote_id=? AND identity_contract='canonical-user-v1'",
+            (workspace_id, quote_id),
+        ).fetchone()
+        return str(row[0]) if row is not None else None
+
+    def save_quotation(self, quote: CustomerQuotation, *, author_user_id: str | None = None) -> None:
+        if author_user_id is not None and author_user_id != quote.submitter_user_id:
+            raise FinancePostingError("crm_quotation_author_denied", "Quotation authorship must be the authenticated immutable identity.")
         with self._conn:
-            self._conn.execute(
+            cursor = self._conn.execute(
                 """
                 INSERT INTO crm_quotations (
                     workspace_id, quote_id, opportunity_id, customer_id,
@@ -184,6 +203,8 @@ class SqliteCRMContractsRepository:
                     status = excluded.status,
                     approved_by_user_id = excluded.approved_by_user_id,
                     approval_role = excluded.approval_role
+                WHERE ?
+                RETURNING quote_id
                 """,
                 (
                     quote.workspace_id,
@@ -196,18 +217,27 @@ class SqliteCRMContractsRepository:
                     quote.status,
                     quote.approved_by_user_id,
                     quote.approval_role,
+                    author_user_id is None,
                 ),
             )
-            self._conn.execute("DELETE FROM crm_quotation_lines WHERE quote_id = ?", (quote.quote_id,))
+            if cursor.fetchone() is None:
+                raise FinancePostingError("crm_quotation_exists", "Quotation creation cannot replace an existing source.")
+            if author_user_id is not None:
+                self._conn.execute(
+                    "INSERT INTO crm_quotation_authorities(workspace_id,quote_id,user_id,identity_contract) VALUES(?,?,?,'canonical-user-v1')",
+                    (quote.workspace_id, quote.quote_id, author_user_id),
+                )
+            self._conn.execute("DELETE FROM crm_quotation_lines WHERE workspace_id = ? AND quote_id = ?", (quote.workspace_id, quote.quote_id))
             for line in quote.lines:
                 self._conn.execute(
                     """
                     INSERT INTO crm_quotation_lines (
-                        quote_id, line_number, item_id, description,
+                        workspace_id, quote_id, line_number, item_id, description,
                         quantity, unit_price_minor, discount_bps
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
+                        quote.workspace_id,
                         quote.quote_id,
                         line.line_number,
                         line.item_id,
@@ -237,10 +267,10 @@ class SqliteCRMContractsRepository:
             """
             SELECT line_number, item_id, description, quantity, unit_price_minor, discount_bps
             FROM crm_quotation_lines
-            WHERE quote_id = ?
+            WHERE workspace_id = ? AND quote_id = ?
             ORDER BY line_number ASC
             """,
-            (quote_id,),
+            (workspace_id, quote_id),
         )
         lines = tuple(
             QuotationLineItem(

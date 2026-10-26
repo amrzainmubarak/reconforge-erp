@@ -385,9 +385,19 @@ CREATE POLICY tenant_scope ON reconforge.intercompany_profit_in_stock_eliminatio
 """
 
 DOWNGRADE_SQL = r"""
+-- Refuse destructive rollback of module-owned records. The artifact table is
+-- owned by revision0063 and must survive a downgrade of revision0151.
+DO $retained$ DECLARE t TEXT; populated BOOLEAN; BEGIN
+ FOREACH t IN ARRAY ARRAY['intercompany_profit_in_stock_eliminations','intercompany_profit_in_stock_rules',
+  'consolidated_statement_runs','mps_sourcing_requisitions','mps_plans','project_time_logs',
+  'project_milestone_invoices','project_milestones','project_resource_rate_cards','project_wbs_tasks',
+  'shop_floor_steps','shop_floor_dispatches','shop_floor_lot_genealogy','shop_floor_lots'] LOOP
+  EXECUTE format('SELECT EXISTS(SELECT 1 FROM reconforge.%I)',t) INTO populated;
+  IF populated THEN RAISE EXCEPTION 'Populated enterprise records prevent downgrade; use forward recovery'; END IF;
+ END LOOP;
+END $retained$;
 DROP TABLE IF EXISTS reconforge.intercompany_profit_in_stock_eliminations CASCADE;
 DROP TABLE IF EXISTS reconforge.intercompany_profit_in_stock_rules CASCADE;
-DROP TABLE IF EXISTS reconforge.intercompany_elimination_artifacts CASCADE;
 
 DROP TABLE IF EXISTS reconforge.consolidated_statement_runs CASCADE;
 

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
+import pytest
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
@@ -13,6 +14,7 @@ from reconforge.auth.policy import PolicyDecision
 from reconforge.auth.policy_cache import PolicyDecisionCache
 from reconforge.db import run_migrations
 from reconforge.infrastructure.postgres import (
+    PostgresConfigurationError,
     PostgresExecutionScope,
     set_local_tenant_scope,
 )
@@ -29,7 +31,7 @@ from reconforge.infrastructure.postgres_reconciliation import (
 
 
 class _MockConnection:
-    """Mock connection to test the combined multi-GUC statement and execution counts."""
+    """Capture every transaction-local scope setting and its bound value."""
 
     def __init__(self) -> None:
         self.executed: list[tuple[str, tuple[Any, ...] | None]] = []
@@ -43,27 +45,36 @@ class _MockConnection:
         return mock_cursor
 
 
-def test_set_local_tenant_scope_executes_single_combined_multiguc_statement() -> None:
-    """Verify set_local_tenant_scope executes a single 5-setting SELECT statement."""
+@pytest.mark.parametrize("full_hierarchy", [False, True])
+def test_set_local_tenant_scope_sets_every_local_guc_and_clears_absent_scope(full_hierarchy: bool) -> None:
+    """Verify all five local settings, including explicit clearing of absent scope."""
     connection = _MockConnection()
     scope = set_local_tenant_scope(
         connection,
         "tenant-corp",
-        organization_id="org-main",
-        workspace_id="ws-prod",
-        legal_entity_id="le-hq",
+        organization_id="org-main" if full_hierarchy else None,
+        workspace_id="ws-prod" if full_hierarchy else None,
+        legal_entity_id="le-hq" if full_hierarchy else None,
     )
 
-    assert scope == PostgresExecutionScope("tenant-corp", "org-main", "ws-prod", "le-hq")
-    # Must be exactly 1 SQL execution instead of 5 separate round-trips
-    assert len(connection.executed) == 1
-    query, params = connection.executed[0]
-    assert "set_config('app.tenant_id'" in query
-    assert "set_config('app.organization_id'" in query
-    assert "set_config('app.workspace_id'" in query
-    assert "set_config('app.legal_entity_id'" in query
-    assert "set_config('app.entity_id'" in query
-    assert params == ("tenant-corp", "org-main", "ws-prod", "le-hq", "le-hq")
+    assert scope == PostgresExecutionScope(
+        "tenant-corp", "org-main" if full_hierarchy else None,
+        "ws-prod" if full_hierarchy else None, "le-hq" if full_hierarchy else None,
+    )
+    assert connection.executed == [
+        ("SELECT set_config('app.tenant_id', %s, true)", ("tenant-corp",)),
+        ("SELECT set_config('app.organization_id', %s, true)", ("org-main" if full_hierarchy else "",)),
+        ("SELECT set_config('app.workspace_id', %s, true)", ("ws-prod" if full_hierarchy else "",)),
+        ("SELECT set_config('app.legal_entity_id', %s, true)", ("le-hq" if full_hierarchy else "",)),
+        ("SELECT set_config('app.entity_id', %s, true)", ("le-hq" if full_hierarchy else "",)),
+    ]
+
+
+def test_invalid_child_scope_never_partially_changes_connection_gucs() -> None:
+    connection = _MockConnection()
+    with pytest.raises(PostgresConfigurationError):
+        set_local_tenant_scope(connection, "tenant-corp", legal_entity_id="orphan-entity")
+    assert connection.executed == []
 
 
 def test_reconciliation_append_results_batch_set_validation_and_chunking() -> None:

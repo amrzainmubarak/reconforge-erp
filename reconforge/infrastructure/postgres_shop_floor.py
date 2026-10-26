@@ -12,8 +12,9 @@ from reconforge.domain.shop_floor_dispatch import (
     WorkOrderDispatch,
     traverse_genealogy,
 )
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope
 from reconforge.platform.common import PlatformError
 
 POSTGRES_SHOP_FLOOR_SCHEMA_SQL = r"""
@@ -107,7 +108,7 @@ class PostgresShopFloorRepository:
         self.tenant_id = validate_tenant_id(tenant_id)
 
     def _scope(self) -> None:
-        set_local_tenant_scope(self.connection, self.tenant_id)
+        ensure_repository_tenant_scope(self.connection, self.tenant_id)
 
     def register_lot(
         self,

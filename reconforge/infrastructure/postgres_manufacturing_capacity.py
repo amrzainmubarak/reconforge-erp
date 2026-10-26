@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from typing import Any
 
 from reconforge.domain.manufacturing_capacity_scheduling import (
@@ -13,8 +14,9 @@ from reconforge.domain.manufacturing_capacity_scheduling import (
     book_capacity_slot,
 )
 from reconforge.domain.models import utc_now_text
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope as set_local_tenant_scope
 from reconforge.platform.common import PlatformError
 
 POSTGRES_CAPACITY_SCHEMA_SQL = r"""
@@ -192,12 +194,24 @@ class PostgresManufacturingCapacityRepository:
                     return None
 
                 wc_id, name, daily_cap, blackouts_raw, fixed_asset_id = row
-                if isinstance(blackouts_raw, str):
-                    blackout_dates = frozenset(json.loads(blackouts_raw))
-                elif isinstance(blackouts_raw, (list, tuple)):
-                    blackout_dates = frozenset(blackouts_raw)
-                else:
-                    blackout_dates = frozenset()
+                try:
+                    blackouts = json.loads(blackouts_raw) if isinstance(blackouts_raw, str) else blackouts_raw
+                except (ValueError, RecursionError):
+                    raise CapacitySchedulingError(
+                        "capacity_persisted_data_invalid", "Persisted blackout restrictions are invalid.",
+                    ) from None
+                if not isinstance(blackouts, (list, tuple)) or any(type(value) is not str for value in blackouts):
+                    raise CapacitySchedulingError(
+                        "capacity_persisted_data_invalid", "Persisted blackout restrictions require an array of dates.",
+                    )
+                try:
+                    if any(date.fromisoformat(value).isoformat() != value for value in blackouts):
+                        raise ValueError
+                except ValueError:
+                    raise CapacitySchedulingError(
+                        "capacity_persisted_data_invalid", "Persisted blackout dates require canonical YYYY-MM-DD values.",
+                    ) from None
+                blackout_dates = frozenset(blackouts)
 
                 shift_cur = self.connection.execute(
                     """
@@ -211,12 +225,19 @@ class PostgresManufacturingCapacityRepository:
                 shifts: list[WorkCenterShift] = []
                 for s_row in shift_cur.fetchall():
                     s_id, s_name, s_start, s_end, s_break, s_dow_raw = s_row
-                    if isinstance(s_dow_raw, str):
-                        dow_set = frozenset(json.loads(s_dow_raw))
-                    elif isinstance(s_dow_raw, (list, tuple)):
-                        dow_set = frozenset(s_dow_raw)
-                    else:
-                        dow_set = frozenset()
+                    try:
+                        weekdays = json.loads(s_dow_raw) if isinstance(s_dow_raw, str) else s_dow_raw
+                    except (ValueError, RecursionError):
+                        raise CapacitySchedulingError(
+                            "capacity_persisted_data_invalid", "Persisted weekday restrictions are invalid.",
+                        ) from None
+                    if not isinstance(weekdays, (list, tuple)) or any(
+                        type(value) is not int or not 0 <= value <= 6 for value in weekdays
+                    ):
+                        raise CapacitySchedulingError(
+                            "capacity_persisted_data_invalid", "Persisted weekday restrictions require integers from zero to six.",
+                        )
+                    dow_set = frozenset(weekdays)
                     shifts.append(
                         WorkCenterShift(
                             shift_id=s_id,
@@ -236,6 +257,8 @@ class PostgresManufacturingCapacityRepository:
                     shifts=tuple(shifts),
                     fixed_asset_id=fixed_asset_id,
                 )
+        except CapacitySchedulingError:
+            raise
         except Exception as exc:
             raise PlatformError(f"PostgreSQL work center calendar get failed: {exc}") from exc
 
@@ -285,13 +308,13 @@ class PostgresManufacturingCapacityRepository:
                     conditions.append("status = 'BOOKED'")
 
                 lock_clause = " FOR UPDATE" if for_update else ""
-                query = f"""
+                query = "".join(("""
                     SELECT reservation_id, workcenter_id, work_order_id, operation_sequence,
                            scheduled_date, duration_minutes, start_minute, end_minute, shift_id
                     FROM reconforge.capacity_slot_reservations
-                    WHERE {' AND '.join(conditions)}
-                    ORDER BY scheduled_date ASC, start_minute ASC, reservation_id ASC{lock_clause}
-                """
+                    WHERE """, (' AND '.join(conditions)), """
+                    ORDER BY scheduled_date ASC, start_minute ASC, reservation_id ASC""", (lock_clause), """
+                """))
                 cur = self.connection.execute(query, tuple(params))
                 slots: list[CapacitySlotReservation] = []
                 for r in cur.fetchall():

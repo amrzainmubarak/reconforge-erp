@@ -8,8 +8,9 @@ from typing import Any
 
 from reconforge.domain.master_production_schedule import MPSPlanResult
 from reconforge.domain.models import utc_now_text
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope as set_local_tenant_scope
 from reconforge.platform.common import PlatformError
 
 POSTGRES_MPS_SCHEMA_SQL = r"""
@@ -298,15 +299,15 @@ class PostgresMPSRepository:
                     params.append(item_id)
                 where_clause = " AND ".join(conditions)
                 cur = self.connection.execute(
-                    f"""
+                    "".join(("""
                     SELECT id, workspace_id, requisition_id, plan_id, plan_revision,
                            item_id, bucket_index, required_date, shortage_quantity_scaled,
                            order_quantity_scaled, preferred_supplier_id, unit_price_ceiling_minor,
                            currency, requisition_digest, status, created_at
                     FROM reconforge.mps_sourcing_requisitions
-                    WHERE {where_clause}
+                    WHERE """, (where_clause), """
                     ORDER BY bucket_index ASC
-                    """,
+                    """)),
                     tuple(params),
                 )
                 rows = cur.fetchall()

@@ -180,6 +180,7 @@ def test_postgres_capacity_repository_scoping_and_rls() -> None:
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
     mock_conn.execute.return_value = mock_cursor
+    mock_cursor.fetchone.return_value = ("tenant_mfg_corp", "org-a", "ws-a", "entity-a", "entity-a")
     mock_conn.transaction.return_value.__enter__ = MagicMock(return_value=None)
     mock_conn.transaction.return_value.__exit__ = MagicMock(return_value=None)
 
@@ -188,10 +189,10 @@ def test_postgres_capacity_repository_scoping_and_rls() -> None:
 
     # Verify RLS session setting
     repo._scope()
-    mock_conn.execute.assert_any_call(
-        "SELECT set_config('app.tenant_id', %s, true)",
-        ("tenant_mfg_corp",),
-    )
+    # Joining an active repository must preserve all five authenticated GUCs.
+    assert "current_setting('app.tenant_id'" in mock_conn.execute.call_args_list[0].args[0]
+    assert not any("set_config(" in call.args[0] for call in mock_conn.execute.call_args_list)
+
 
 
 def test_postgres_capacity_repository_book_slot_advisory_lock_and_row_lock() -> None:
@@ -201,7 +202,9 @@ def test_postgres_capacity_repository_book_slot_advisory_lock_and_row_lock() -> 
 
     def execute_side_effect(query: str, params: Any = None) -> MagicMock:
         cursor = MagicMock()
-        if "FROM reconforge.workcenter_calendars" in query:
+        if "current_setting('app.tenant_id'" in query:
+            cursor.fetchone.return_value = ("tenant_mfg_corp", "org-a", "ws-a", "entity-a", "entity-a")
+        elif "FROM reconforge.workcenter_calendars" in query:
             cursor.fetchone.return_value = ("WC-PG-01", "Postgres CNC", 480, "[]", None)
         elif "FROM reconforge.workcenter_shifts" in query or (
             "FROM reconforge.capacity_slot_reservations" in query and "FOR UPDATE" in query
@@ -255,7 +258,9 @@ def test_postgres_capacity_repository_book_slot_conflict_propagates_directly() -
 
     def execute_side_effect(query: str, params: Any = None) -> MagicMock:
         cursor = MagicMock()
-        if "FROM reconforge.workcenter_calendars" in query:
+        if "current_setting('app.tenant_id'" in query:
+            cursor.fetchone.return_value = ("tenant_mfg_corp", "org-a", "ws-a", "entity-a", "entity-a")
+        elif "FROM reconforge.workcenter_calendars" in query:
             cursor.fetchone.return_value = ("WC-PG-01", "Postgres CNC", 480, "[]", None)
         elif "FROM reconforge.workcenter_shifts" in query:
             cursor.fetchall.return_value = []
@@ -294,7 +299,9 @@ def test_postgres_capacity_repository_reschedule_slot_advisory_lock() -> None:
 
     def execute_side_effect(query: str, params: Any = None) -> MagicMock:
         cursor = MagicMock()
-        if "FROM reconforge.workcenter_calendars" in query:
+        if "current_setting('app.tenant_id'" in query:
+            cursor.fetchone.return_value = ("tenant_mfg_corp", "org-a", "ws-a", "entity-a", "entity-a")
+        elif "FROM reconforge.workcenter_calendars" in query:
             cursor.fetchone.return_value = ("WC-PG-01", "Postgres CNC", 480, "[]", None)
         elif "FROM reconforge.workcenter_shifts" in query:
             cursor.fetchall.return_value = []

@@ -80,9 +80,12 @@ class WorkCenterCalendar:
             )
         for d in self.blackout_dates:
             try:
-                date.fromisoformat(d)
-            except ValueError as exc:
-                raise CapacitySchedulingError("capacity_date_invalid", f"Invalid blackout date format: {d}") from exc
+                if date.fromisoformat(d).isoformat() != d:
+                    raise ValueError
+            except (TypeError, ValueError):
+                raise CapacitySchedulingError(
+                    "capacity_date_invalid", "Blackout dates require canonical YYYY-MM-DD values.",
+                ) from None
 
 
 @dataclass(frozen=True)
@@ -104,9 +107,12 @@ class CapacitySlotReservation:
         if self.operation_sequence < 1:
             raise CapacitySchedulingError("capacity_sequence_invalid", "Operation sequence must be >= 1.")
         try:
-            date.fromisoformat(self.scheduled_date)
-        except ValueError as exc:
-            raise CapacitySchedulingError("capacity_date_invalid", f"Invalid scheduled date: {self.scheduled_date}") from exc
+            if date.fromisoformat(self.scheduled_date).isoformat() != self.scheduled_date:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise CapacitySchedulingError(
+                "capacity_date_invalid", "Scheduled dates require canonical YYYY-MM-DD values.",
+            ) from None
         if not 1 <= self.duration_minutes <= MAX_MINUTES_PER_DAY:
             raise CapacitySchedulingError(
                 "capacity_duration_invalid",

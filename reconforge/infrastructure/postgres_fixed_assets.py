@@ -1,7 +1,6 @@
 """Source-owned acquisition, depreciation and disposal on the native GL."""
 
 from collections.abc import Mapping
-from contextlib import suppress
 from typing import Any
 from uuid import uuid4
 
@@ -393,115 +392,19 @@ class PostgresFixedAssetsRepository:
             return {"assets": [{**row["payload"], **self._state(row["payload"])} for row in rows[:limit]],
                     "next_after": rows[limit-1]["id"] if len(rows) > limit else None}
 
-    def _ensure_register_states_table(self) -> None:
-        with suppress(Exception):
-            self.connection.execute(POSTGRES_REGISTER_STATES_SCHEMA_SQL)
 
     def acquire_multi_register(self, request: MultiRegisterAssetAcquisition, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
-        """Persist multi-register asset acquisition supporting statutory, tax, and IFRS registers."""
-        with self.owner._transaction():
-            scope = records(self.connection.execute(
-                """SELECT c.code AS currency_code,c.minor_units AS currency_precision FROM reconforge.legal_entities e
-                JOIN reconforge.currencies c ON c.tenant_id=e.tenant_id AND c.code=e.currency_code AND c.active
-                WHERE e.tenant_id=%s AND e.id=%s AND e.organization_id=%s FOR SHARE OF e,c""",
-                (self.tenant_id, request.legal_entity_id, request.organization_id)))
-            if not scope:
-                raise FinancePostingError("asset_scope_denied", "Current functional currency and asset hierarchy are required.")
+        """Refuse unsupported native ownership before creating any financial state.
 
-            primary = request.registers[0]
-            req_args = {
-                "workspace_id": request.workspace_id,
-                "organization_id": request.organization_id,
-                "legal_entity_id": request.legal_entity_id,
-                "organization_code": request.organization_code,
-                "entity_code": request.entity_code,
-                "asset_number": request.asset_number,
-                "name": request.name,
-                "journal_code": request.journal_code,
-                "period_id": request.period_id,
-                "posting_date": request.posting_date,
-                "in_service_date": request.in_service_date,
-                "cost_minor": primary.cost_minor,
-                "salvage_minor": primary.salvage_minor,
-                "useful_life_months": primary.useful_life_months,
-                "asset_account_code": primary.asset_account_code,
-                "accumulated_account_code": primary.accumulated_depreciation_account_code,
-                "expense_account_code": primary.depreciation_expense_account_code,
-                "cash_account_code": request.cash_account_code,
-                "gain_account_code": primary.gain_account_code,
-                "loss_account_code": primary.loss_account_code,
-                "reason": request.reason,
-            }
-            self.owner._actor(actor, "finance_core.manage", {**req_args, **scope[0], "amount_minor": primary.cost_minor})
-            digest, replay = self._command(req_args, "prepare", command_id, actor, {"kind": "acquire_multi", **req_args})
-            if replay is not None:
-                self._authorize_plan(actor, "finance_core.manage", replay)
-                return replay
-
-            asset_id = "FA-" + uuid4().hex
-            registers_payload = [
-                {
-                    "register_code": r.register_code,
-                    "cost_minor": r.cost_minor,
-                    "salvage_minor": r.salvage_minor,
-                    "useful_life_months": r.useful_life_months,
-                    "asset_account_code": r.asset_account_code,
-                    "accumulated_depreciation_account_code": r.accumulated_depreciation_account_code,
-                    "accumulated_impairment_account_code": r.accumulated_impairment_account_code,
-                    "depreciation_expense_account_code": r.depreciation_expense_account_code,
-                    "impairment_loss_account_code": r.impairment_loss_account_code,
-                    "gain_account_code": r.gain_account_code,
-                    "loss_account_code": r.loss_account_code,
-                }
-                for r in request.registers
-            ]
-            init_states = {
-                r.register_code: {
-                    "register_code": r.register_code,
-                    "accumulated_depreciation_minor": 0,
-                    "accumulated_impairment_minor": 0,
-                    "months_depreciated": 0,
-                    "carrying_value_minor": r.cost_minor,
-                }
-                for r in request.registers
-            }
-            asset = {
-                "schema_version": "fixed-asset-v1",
-                "id": asset_id,
-                **req_args,
-                **scope[0],
-                "preparer_actor_id": actor.user_id,
-                "multi_register": True,
-                "registers": registers_payload,
-                "primary_register_code": primary.register_code,
-                "register_states": init_states,
-            }
-            asset["asset_digest"] = digest_payload(asset)
-            self.owner._actor(actor, "finance_core.manage", {**asset, "amount_minor": asset["cost_minor"]})
-            self.connection.execute("""INSERT INTO reconforge.fixed_assets
-                (tenant_id,id,workspace_id,organization_id,legal_entity_id,asset_number,payload)
-                VALUES(%s,%s,%s,%s,%s,%s,%s::jsonb)""",
-                (self.tenant_id, asset["id"], request.workspace_id, request.organization_id, request.legal_entity_id,
-                 request.asset_number, canonical_json(asset)))
-
-            self._ensure_register_states_table()
-            try:
-                for r in request.registers:
-                    self.connection.execute("""INSERT INTO reconforge.fixed_asset_register_states
-                        (tenant_id,asset_id,register_code,workspace_id,cost_minor,salvage_minor,useful_life_months,
-                         accumulated_depreciation_minor,accumulated_impairment_minor,months_depreciated,carrying_value_minor)
-                        VALUES(%s,%s,%s,%s,%s,%s,%s,0,0,0,%s)
-                        ON CONFLICT(tenant_id,asset_id,register_code) DO NOTHING""",
-                        (self.tenant_id, asset_id, r.register_code, request.workspace_id, r.cost_minor, r.salvage_minor,
-                         r.useful_life_months, r.cost_minor))
-            except Exception:
-                pass
-
-            operation = {"kind": "acquire", "period_id": request.period_id, "posting_date": request.posting_date,
-                         "through_month": "", "proceeds_minor": 0, "reason": request.reason}
-            return self._prepare(asset, operation, {"acquired": False, "disposed": False, "accumulated_minor": 0,
-                                                    "months": 0, "sequence": 0, "last_posting_date": request.posting_date},
-                                 actor, digest, command_id, {"kind": "acquire_multi", **req_args})
+        The canonical v1 owner accepts a single-register asset and cannot verify
+        the inherited multi-register payload or command. A separate versioned
+        owner and migration are required before this operation can be enabled.
+        """
+        raise FinancePostingError(
+            "asset_multi_register_owner_required",
+            "Native multi-register acquisition requires a versioned financial source owner; "
+            "no asset or ledger state was changed.",
+        )
 
     def get_register_states(self, asset_id: str, *, actor: PostingActor) -> dict[str, AssetRegisterState]:
         """Return current carrying value, accumulated depreciation, and impairment per register."""
@@ -656,12 +559,11 @@ class PostgresFixedAssetsRepository:
                 "UPDATE reconforge.fixed_assets SET payload=%s::jsonb WHERE tenant_id=%s AND id=%s",
                 (canonical_json(asset), self.tenant_id, asset_id),
             )
-            with suppress(Exception):
-                self.connection.execute("""UPDATE reconforge.fixed_asset_register_states
-                    SET accumulated_impairment_minor=%s, carrying_value_minor=%s, updated_at=now()
-                    WHERE tenant_id=%s AND asset_id=%s AND register_code=%s""",
-                    (new_reg_state.accumulated_impairment_minor, new_reg_state.carrying_value_minor,
-                     self.tenant_id, asset_id, register_code))
+            self.connection.execute("""UPDATE reconforge.fixed_asset_register_states
+                SET accumulated_impairment_minor=%s, carrying_value_minor=%s, updated_at=now()
+                WHERE tenant_id=%s AND asset_id=%s AND register_code=%s""",
+                (new_reg_state.accumulated_impairment_minor, new_reg_state.carrying_value_minor,
+                 self.tenant_id, asset_id, register_code))
 
             audit, outbox = self.owner._event(
                 {**asset, "loss_minor": loss, "register_code": register_code},
@@ -806,10 +708,9 @@ class PostgresFixedAssetsRepository:
                 "UPDATE reconforge.fixed_assets SET payload=%s::jsonb WHERE tenant_id=%s AND id=%s",
                 (canonical_json(asset), self.tenant_id, asset_id),
             )
-            with suppress(Exception):
-                self.connection.execute("""UPDATE reconforge.fixed_asset_register_states
-                    SET carrying_value_minor=0, updated_at=now()
-                    WHERE tenant_id=%s AND asset_id=%s""", (self.tenant_id, asset_id))
+            self.connection.execute("""UPDATE reconforge.fixed_asset_register_states
+                SET carrying_value_minor=0, updated_at=now()
+                WHERE tenant_id=%s AND asset_id=%s""", (self.tenant_id, asset_id))
 
             audit, outbox = self.owner._event(
                 {**asset, "proceeds_minor": proceeds_minor},

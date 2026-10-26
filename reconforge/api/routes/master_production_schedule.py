@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import asdict
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from reconforge.api.dependencies import require_any_permission, require_permission
+from reconforge.api.enterprise_scope import enterprise_transaction
 from reconforge.api.errors import APIError
 from reconforge.auth.models import LocalUser
 from reconforge.domain.master_production_schedule import (
@@ -68,46 +71,23 @@ class ComputeMPSRequest(BaseModel):
     currency: str = Field(default="USD", min_length=3, max_length=3)
 
 
-def _get_repository(request: Request) -> tuple[Any, SQLiteMPSRepository | PostgresMPSRepository]:
-    server_mode = bool(getattr(request.app.state, "server_mode", False))
-    factory = (
-        getattr(request.app.state, "postgres_finance_core_factory", None)
-        or getattr(request.app.state, "postgres_identity_factory", None)
-        or getattr(request.app.state, "postgres_connection_factory", None)
-    )
-    if server_mode:
-        if factory is None:
-            raise APIError(
-                status_code=503,
-                code="server_postgres_unavailable",
-                message="Enterprise production profile requires PostgreSQL.",
-            )
+@contextmanager
+def _get_repository(request: Request, *, permissions: frozenset[str], permission_mode: Literal["all", "any"] = "all") -> Iterator[tuple[Any, SQLiteMPSRepository | PostgresMPSRepository]]:
+    with enterprise_transaction(request, permissions=permissions, permission_mode=permission_mode) as business:
+        if business is not None:
+            connection = business.connection
+            repository = PostgresMPSRepository(connection, business.scope.tenant_id)
+            yield connection, repository
+            return
+        db_path = getattr(request.app.state, "db_path", None)
+        if db_path is None:
+            raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
+        connection = sqlite3.connect(db_path)
         try:
-            conn = factory.connect()
-        except Exception as exc:
-            raise APIError(
-                status_code=503,
-                code="server_postgres_unavailable",
-                message=f"Enterprise production profile database connection failed: {exc}",
-            ) from exc
-        raw_tenant = getattr(request.state, "tenant_id", None) or getattr(request.state, "workspace_id", "default")
-        tenant_id = str(raw_tenant) if raw_tenant else "default"
-        return conn, PostgresMPSRepository(conn, tenant_id)
-
-    if factory is not None:
-        try:
-            conn = factory.connect()
-            raw_tenant = getattr(request.state, "tenant_id", None) or getattr(request.state, "workspace_id", "default")
-            tenant_id = str(raw_tenant) if raw_tenant else "default"
-            return conn, PostgresMPSRepository(conn, tenant_id)
-        except Exception:
-            pass
-
-    db_path = getattr(request.app.state, "db_path", None)
-    if db_path is None:
-        raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
-    conn = sqlite3.connect(db_path)
-    return conn, SQLiteMPSRepository(conn)
+            local_repository = SQLiteMPSRepository(connection)
+            yield connection, local_repository
+        finally:
+            connection.close()
 
 
 @router.post("/compute")
@@ -117,47 +97,45 @@ def compute_and_save_mps(
     user: MPSManage,
 ) -> dict[str, Any]:
     """Compute deterministic MPS schedule, ATP, and generate shortage purchase requisitions."""
-    conn, repo = _get_repository(request)
-    try:
-        domain_buckets = [b.to_domain() for b in payload.buckets]
+    with _get_repository(request, permissions=frozenset({'manufacturing_supply_plan.manage'}), permission_mode="all") as ((conn, repo)):
+        try:
+            domain_buckets = [b.to_domain() for b in payload.buckets]
 
-        plan_result = compute_master_production_schedule(
-            plan_id=payload.plan_id,
-            plan_name=payload.plan_name,
-            revision=payload.revision,
-            item_id=payload.item_id,
-            unit_of_measure=payload.unit_of_measure,
-            quantity_scale=payload.quantity_scale,
-            safety_stock_scaled=payload.safety_stock_scaled,
-            lot_size_multiple_scaled=payload.lot_size_multiple_scaled,
-            opening_inventory_scaled=payload.opening_inventory_scaled,
-            buckets=domain_buckets,
-            preferred_supplier_id=payload.preferred_supplier_id,
-            unit_price_ceiling_minor=payload.unit_price_ceiling_minor,
-            currency=payload.currency,
-        )
+            plan_result = compute_master_production_schedule(
+                plan_id=payload.plan_id,
+                plan_name=payload.plan_name,
+                revision=payload.revision,
+                item_id=payload.item_id,
+                unit_of_measure=payload.unit_of_measure,
+                quantity_scale=payload.quantity_scale,
+                safety_stock_scaled=payload.safety_stock_scaled,
+                lot_size_multiple_scaled=payload.lot_size_multiple_scaled,
+                opening_inventory_scaled=payload.opening_inventory_scaled,
+                buckets=domain_buckets,
+                preferred_supplier_id=payload.preferred_supplier_id,
+                unit_price_ceiling_minor=payload.unit_price_ceiling_minor,
+                currency=payload.currency,
+            )
 
-        workspace_id = getattr(request.state, "workspace_id", "default")
-        record_id = repo.save_plan(
-            workspace_id=workspace_id,
-            plan_result=plan_result,
-            created_by=user.username,
-        )
+            workspace_id = getattr(request.state, "workspace_id", "default")
+            record_id = repo.save_plan(
+                workspace_id=workspace_id,
+                plan_result=plan_result,
+                created_by=user.username,
+            )
 
-        return {
-            "status": "computed",
-            "record_id": record_id,
-            "plan_digest": plan_result.plan_digest,
-            "plan_id": plan_result.plan_id,
-            "revision": plan_result.revision,
-            "schedule_rows_count": len(plan_result.schedule_rows),
-            "sourcing_requisitions_count": len(plan_result.sourcing_requisitions),
-            "plan": asdict(plan_result),
-        }
-    except MPSError as exc:
-        raise APIError(status_code=422, code=exc.code, message=str(exc)) from exc
-    finally:
-        conn.close()
+            return {
+                "status": "computed",
+                "record_id": record_id,
+                "plan_digest": plan_result.plan_digest,
+                "plan_id": plan_result.plan_id,
+                "revision": plan_result.revision,
+                "schedule_rows_count": len(plan_result.schedule_rows),
+                "sourcing_requisitions_count": len(plan_result.sourcing_requisitions),
+                "plan": asdict(plan_result),
+            }
+        except MPSError as exc:
+            raise APIError(status_code=422, code=exc.code, message=str(exc)) from exc
 
 
 @router.get("/plans")
@@ -167,13 +145,10 @@ def list_mps_plans(
     item_id: str | None = Query(default=None),
 ) -> dict[str, Any]:
     """List MPS plans in the workspace."""
-    conn, repo = _get_repository(request)
-    try:
+    with _get_repository(request, permissions=frozenset({'manufacturing_supply_plan.manage', 'manufacturing_supply_plan.read'}), permission_mode="any") as ((conn, repo)):
         workspace_id = getattr(request.state, "workspace_id", "default")
         plans = repo.list_plans(workspace_id=workspace_id, item_id=item_id)
         return {"total_count": len(plans), "plans": plans}
-    finally:
-        conn.close()
 
 
 @router.get("/plans/{plan_id}/{revision}")
@@ -184,15 +159,12 @@ def get_mps_plan(
     user: MPSRead,
 ) -> dict[str, Any]:
     """Retrieve an exact MPS plan with schedule rows and ATP."""
-    conn, repo = _get_repository(request)
-    try:
+    with _get_repository(request, permissions=frozenset({'manufacturing_supply_plan.manage', 'manufacturing_supply_plan.read'}), permission_mode="any") as ((conn, repo)):
         workspace_id = getattr(request.state, "workspace_id", "default")
         plan = repo.get_plan(workspace_id=workspace_id, plan_id=plan_id, revision=revision)
         if not plan:
             raise APIError(status_code=404, code="mps_plan_not_found", message=f"MPS plan {plan_id} r{revision} not found.")
         return plan
-    finally:
-        conn.close()
 
 
 @router.get("/requisitions")
@@ -202,10 +174,7 @@ def list_sourcing_requisitions(
     plan_id: str | None = Query(default=None),
 ) -> dict[str, Any]:
     """List generated shortage sourcing requisitions."""
-    conn, repo = _get_repository(request)
-    try:
+    with _get_repository(request, permissions=frozenset({'manufacturing_supply_plan.manage', 'manufacturing_supply_plan.read'}), permission_mode="any") as ((conn, repo)):
         workspace_id = getattr(request.state, "workspace_id", "default")
         reqs = repo.list_requisitions(workspace_id=workspace_id, plan_id=plan_id)
         return {"total_count": len(reqs), "requisitions": reqs}
-    finally:
-        conn.close()

@@ -17,7 +17,10 @@ from reconforge.domain.crm_contracts import (
     SubscriptionPlan,
     SubscriptionStatus,
 )
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.domain.finance_posting import FinancePostingError
+from reconforge.infrastructure.postgres import validate_tenant_id
+from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope
+from reconforge.platform.common import current_server_principal
 
 POSTGRES_CRM_CONTRACTS_SCHEMA_SQL = r"""
 CREATE TABLE IF NOT EXISTS reconforge.crm_opportunities (
@@ -63,6 +66,31 @@ DROP POLICY IF EXISTS tenant_scope ON reconforge.crm_quotations;
 CREATE POLICY tenant_scope ON reconforge.crm_quotations
     USING (tenant_id = current_setting('app.tenant_id', true))
     WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+
+
+CREATE TABLE IF NOT EXISTS reconforge.crm_quotation_authorities (
+    tenant_id TEXT NOT NULL,
+    workspace_id TEXT NOT NULL,
+    quote_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    identity_contract TEXT NOT NULL CHECK(identity_contract='canonical-user-v1'),
+    PRIMARY KEY(tenant_id,workspace_id,quote_id),
+    FOREIGN KEY(tenant_id,workspace_id,quote_id) REFERENCES reconforge.crm_quotations(tenant_id,workspace_id,quote_id),
+    FOREIGN KEY(tenant_id,user_id) REFERENCES reconforge.identity_users(tenant_id,id)
+);
+ALTER TABLE reconforge.crm_quotation_authorities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.crm_quotation_authorities FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_scope ON reconforge.crm_quotation_authorities;
+CREATE POLICY tenant_scope ON reconforge.crm_quotation_authorities
+    USING (tenant_id=current_setting('app.tenant_id',true) AND workspace_id=current_setting('app.workspace_id',true))
+    WITH CHECK (tenant_id=current_setting('app.tenant_id',true) AND workspace_id=current_setting('app.workspace_id',true));
+CREATE OR REPLACE FUNCTION reconforge.reject_crm_authority_mutation() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+BEGIN RAISE EXCEPTION 'Quotation authority is immutable'; END;
+$$;
+DROP TRIGGER IF EXISTS crm_authority_immutable ON reconforge.crm_quotation_authorities;
+CREATE TRIGGER crm_authority_immutable BEFORE UPDATE OR DELETE ON reconforge.crm_quotation_authorities
+FOR EACH ROW EXECUTE FUNCTION reconforge.reject_crm_authority_mutation();
 
 CREATE TABLE IF NOT EXISTS reconforge.crm_quotation_lines (
     tenant_id TEXT NOT NULL,
@@ -156,7 +184,7 @@ class PostgresCRMContractsRepository:
         self.tenant_id = validate_tenant_id(tenant_id)
 
     def _scope(self) -> None:
-        set_local_tenant_scope(self.connection, self.tenant_id)
+        ensure_repository_tenant_scope(self.connection, self.tenant_id)
 
     # --- Opportunities ---
 
@@ -250,10 +278,21 @@ class PostgresCRMContractsRepository:
 
     # --- Quotations ---
 
-    def save_quotation(self, quote: CustomerQuotation) -> None:
+    def quotation_author_id(self, workspace_id: str, quote_id: str) -> str | None:
+        self._scope()
+        row = self.connection.execute(
+            "SELECT user_id FROM reconforge.crm_quotation_authorities WHERE tenant_id=%s AND workspace_id=%s AND quote_id=%s AND identity_contract='canonical-user-v1'",
+            (self.tenant_id, workspace_id, quote_id),
+        ).fetchone()
+        return str(row[0]) if row is not None else None
+
+    def save_quotation(self, quote: CustomerQuotation, *, author_user_id: str | None = None) -> None:
+        principal = current_server_principal()
+        if author_user_id is not None and (author_user_id != quote.submitter_user_id or (principal is not None and author_user_id != principal.user.id)):
+            raise FinancePostingError("crm_quotation_author_denied", "Quotation authorship must be the authenticated immutable identity.")
         with self.connection.transaction():
             self._scope()
-            self.connection.execute(
+            cursor = self.connection.execute(
                 """
                 INSERT INTO reconforge.crm_quotations (
                     tenant_id, workspace_id, quote_id, opportunity_id, customer_id,
@@ -264,6 +303,8 @@ class PostgresCRMContractsRepository:
                     status = excluded.status,
                     approved_by_user_id = excluded.approved_by_user_id,
                     approval_role = excluded.approval_role
+                WHERE %s
+                RETURNING quote_id
                 """,
                 (
                     self.tenant_id,
@@ -277,8 +318,16 @@ class PostgresCRMContractsRepository:
                     quote.status,
                     quote.approved_by_user_id,
                     quote.approval_role,
+                    author_user_id is None,
                 ),
             )
+            if cursor.fetchone() is None:
+                raise FinancePostingError("crm_quotation_exists", "Quotation creation cannot replace an existing source.")
+            if author_user_id is not None:
+                self.connection.execute(
+                    "INSERT INTO reconforge.crm_quotation_authorities(tenant_id,workspace_id,quote_id,user_id,identity_contract) VALUES(%s,%s,%s,%s,'canonical-user-v1')",
+                    (self.tenant_id, quote.workspace_id, quote.quote_id, author_user_id),
+                )
             for line in quote.lines:
                 self.connection.execute(
                     """

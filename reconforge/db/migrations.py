@@ -19,6 +19,8 @@ from reconforge.db.migration_55_payables_payment_link_reversal import (
 )
 from reconforge.db.migration_56_job_operations import SQLITE_JOB_OPERATIONS_UPGRADE_SQL
 from reconforge.db.migration_57_enterprise_erp_v1 import SQLITE_ENTERPRISE_ERP_V1_SQL
+from reconforge.db.migration_58_enterprise_modules import SQLITE_ENTERPRISE_MODULES_SQL
+from reconforge.db.migration_59_crm_scope import CRM_AUTHORITY_SQL, execute_crm_schema, upgrade_crm_lines
 from reconforge.db.schema import (
     ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL,
     API_SESSIONS_SCHEMA_SQL,
@@ -185,6 +187,8 @@ MIGRATIONS = [
     ),
     Migration(version=56, name="governed_durable_job_operations", sql=SQLITE_JOB_OPERATIONS_UPGRADE_SQL),
     Migration(version=57, name="enterprise_erp_v1_tables", sql=SQLITE_ENTERPRISE_ERP_V1_SQL),
+    Migration(version=58, name="enterprise_module_storage", sql=SQLITE_ENTERPRISE_MODULES_SQL),
+    Migration(version=59, name="crm_workspace_lines_and_authority", sql=CRM_AUTHORITY_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """
@@ -282,6 +286,22 @@ def run_migrations(db_path: Path | str, *, target_version: int | None = None) ->
                     name=migration.name,
                     applied_at=_utc_now(),
                 )
+                applied_now.append(migration.version)
+                continue
+            if migration.version == 59:
+                connection.execute("BEGIN IMMEDIATE")
+                try:
+                    upgrade_crm_lines(connection)
+                    execute_crm_schema(connection, migration.sql)
+                    connection.execute(
+                        "INSERT INTO schema_migrations (version,name,applied_at) VALUES (?,?,?)",
+                        (migration.version, migration.name, _utc_now()),
+                    )
+                    connection.execute("PRAGMA user_version = 59")
+                    connection.commit()
+                except BaseException:
+                    connection.rollback()
+                    raise
                 applied_now.append(migration.version)
                 continue
             connection.executescript(migration.sql)

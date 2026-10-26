@@ -223,13 +223,13 @@ class SqliteManufacturingCapacityRepository:
         if active_only:
             conditions.append("status = 'BOOKED'")
 
-        query = f"""
+        query = "".join(("""
             SELECT reservation_id, workcenter_id, work_order_id, operation_sequence,
                    scheduled_date, duration_minutes, start_minute, end_minute, shift_id
             FROM capacity_slot_reservations
-            WHERE {' AND '.join(conditions)}
+            WHERE """, (' AND '.join(conditions)), """
             ORDER BY scheduled_date ASC, start_minute ASC, reservation_id ASC
-        """
+        """))
         cur = self._conn.execute(query, tuple(params))
         slots: list[CapacitySlotReservation] = []
         for r in cur.fetchall():
@@ -355,52 +355,52 @@ class SqliteManufacturingCapacityRepository:
             if not self._conn.in_transaction:
                 self._conn.execute("BEGIN IMMEDIATE")
 
-                active = self.list_reservations(
-                    workspace_id=workspace_id,
-                    workcenter_id=new_slot.workcenter_id,
-                    scheduled_date=new_slot.scheduled_date,
-                    active_only=True,
-                )
+            active = self.list_reservations(
+                workspace_id=workspace_id,
+                workcenter_id=new_slot.workcenter_id,
+                scheduled_date=new_slot.scheduled_date,
+                active_only=True,
+            )
 
-                # Release existing slot logically from in-memory pool to validate domain
-                filtered_active = [
-                    s for s in active
-                    if not (s.work_order_id == work_order_id and s.operation_sequence == operation_sequence)
-                ]
-                book_capacity_slot(filtered_active, new_slot, cal)
+            # Release existing slot logically from in-memory pool to validate domain
+            filtered_active = [
+                s for s in active
+                if not (s.work_order_id == work_order_id and s.operation_sequence == operation_sequence)
+            ]
+            book_capacity_slot(filtered_active, new_slot, cal)
 
-                rec_id = f"{workspace_id}:{new_slot.reservation_id}"
-                now = utc_now_text()
-                self._conn.execute(
-                    """
-                    UPDATE capacity_slot_reservations
-                    SET status = 'RELEASED'
-                    WHERE workspace_id = ? AND work_order_id = ? AND operation_sequence = ? AND status = 'BOOKED'
-                    """,
-                    (workspace_id, work_order_id, operation_sequence),
-                )
-                self._conn.execute(
-                    """
-                    INSERT INTO capacity_slot_reservations (
-                        id, workspace_id, reservation_id, workcenter_id,
-                        work_order_id, operation_sequence, scheduled_date,
-                        duration_minutes, start_minute, end_minute, shift_id,
-                        status, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'BOOKED', ?)
-                    """,
-                    (
-                        rec_id,
-                        workspace_id,
-                        new_slot.reservation_id,
-                        new_slot.workcenter_id,
-                        new_slot.work_order_id,
-                        new_slot.operation_sequence,
-                        new_slot.scheduled_date,
-                        new_slot.duration_minutes,
-                        new_slot.start_minute,
-                        new_slot.end_minute,
-                        new_slot.shift_id,
-                        now,
-                    ),
-                )
+            rec_id = f"{workspace_id}:{new_slot.reservation_id}"
+            now = utc_now_text()
+            self._conn.execute(
+                """
+                UPDATE capacity_slot_reservations
+                SET status = 'RELEASED'
+                WHERE workspace_id = ? AND work_order_id = ? AND operation_sequence = ? AND status = 'BOOKED'
+                """,
+                (workspace_id, work_order_id, operation_sequence),
+            )
+            self._conn.execute(
+                """
+                INSERT INTO capacity_slot_reservations (
+                    id, workspace_id, reservation_id, workcenter_id,
+                    work_order_id, operation_sequence, scheduled_date,
+                    duration_minutes, start_minute, end_minute, shift_id,
+                    status, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'BOOKED', ?)
+                """,
+                (
+                    rec_id,
+                    workspace_id,
+                    new_slot.reservation_id,
+                    new_slot.workcenter_id,
+                    new_slot.work_order_id,
+                    new_slot.operation_sequence,
+                    new_slot.scheduled_date,
+                    new_slot.duration_minutes,
+                    new_slot.start_minute,
+                    new_slot.end_minute,
+                    new_slot.shift_id,
+                    now,
+                ),
+            )
         return new_slot

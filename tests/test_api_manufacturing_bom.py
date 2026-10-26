@@ -199,6 +199,15 @@ def test_postgres_bom_repository_scoping_and_rls() -> None:
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
     mock_conn.execute.return_value = mock_cursor
+    mock_cursor.fetchone.return_value = ("tenant_bom_test", "org-a", "ws-a", "entity-a", "entity-a")
+    def scoped_cursor(query: str, params: object = None) -> MagicMock:
+        cursor = MagicMock()
+        if "current_setting('app.tenant_id'" in query:
+            cursor.fetchone.return_value = ("tenant_bom_test", "org-a", "ws-a", "entity-a", "entity-a")
+        elif "domain_audit_ledger_state" in query:
+            cursor.fetchone.return_value = {"last_sequence":0,"last_event_hash":"0"*64}
+        return cursor
+    mock_conn.execute.side_effect = scoped_cursor
     mock_conn.transaction.return_value.__enter__ = MagicMock(return_value=None)
     mock_conn.transaction.return_value.__exit__ = MagicMock(return_value=None)
 
@@ -206,10 +215,10 @@ def test_postgres_bom_repository_scoping_and_rls() -> None:
     assert repo.tenant_id == "tenant_bom_test"
 
     repo._scope()
-    mock_conn.execute.assert_any_call(
-        "SELECT set_config('app.tenant_id', %s, true)",
-        ("tenant_bom_test",),
-    )
+    # Joining an active repository must preserve all five authenticated GUCs.
+    assert "current_setting('app.tenant_id'" in mock_conn.execute.call_args_list[0].args[0]
+    assert not any("set_config(" in call.args[0] for call in mock_conn.execute.call_args_list)
+
 
     # Test save_bom SQL contains eco_number and change_reason
     comp = BOMComponentLine(

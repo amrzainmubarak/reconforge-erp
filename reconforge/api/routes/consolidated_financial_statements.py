@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import asdict
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from reconforge.api.dependencies import require_any_permission, require_permission
+from reconforge.api.enterprise_scope import enterprise_transaction
 from reconforge.api.errors import APIError
 from reconforge.auth.models import LocalUser
 from reconforge.domain.consolidated_financial_statements import (
@@ -127,46 +130,23 @@ class GenerateConsolidatedStatementsRequest(BaseModel):
     eliminations: IntercompanyEliminationsInput
 
 
-def _get_repository(request: Request) -> tuple[Any, SQLiteConsolidatedStatementsRepository | PostgresConsolidatedStatementsRepository]:
-    server_mode = bool(getattr(request.app.state, "server_mode", False))
-    factory = (
-        getattr(request.app.state, "postgres_finance_core_factory", None)
-        or getattr(request.app.state, "postgres_identity_factory", None)
-        or getattr(request.app.state, "postgres_connection_factory", None)
-    )
-    if server_mode:
-        if factory is None:
-            raise APIError(
-                status_code=503,
-                code="server_postgres_unavailable",
-                message="Enterprise production profile requires PostgreSQL.",
-            )
+@contextmanager
+def _get_repository(request: Request, *, permissions: frozenset[str], permission_mode: Literal["all", "any"] = "all") -> Iterator[tuple[Any, SQLiteConsolidatedStatementsRepository | PostgresConsolidatedStatementsRepository]]:
+    with enterprise_transaction(request, permissions=permissions, permission_mode=permission_mode) as business:
+        if business is not None:
+            connection = business.connection
+            repository = PostgresConsolidatedStatementsRepository(connection, business.scope.tenant_id)
+            yield connection, repository
+            return
+        db_path = getattr(request.app.state, "db_path", None)
+        if db_path is None:
+            raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
+        connection = sqlite3.connect(db_path)
         try:
-            conn = factory.connect()
-        except Exception as exc:
-            raise APIError(
-                status_code=503,
-                code="server_postgres_unavailable",
-                message=f"Enterprise production profile database connection failed: {exc}",
-            ) from exc
-        raw_tenant = getattr(request.state, "tenant_id", None) or getattr(request.state, "workspace_id", "default")
-        tenant_id = str(raw_tenant) if raw_tenant else "default"
-        return conn, PostgresConsolidatedStatementsRepository(conn, tenant_id)
-
-    if factory is not None:
-        try:
-            conn = factory.connect()
-            raw_tenant = getattr(request.state, "tenant_id", None) or getattr(request.state, "workspace_id", "default")
-            tenant_id = str(raw_tenant) if raw_tenant else "default"
-            return conn, PostgresConsolidatedStatementsRepository(conn, tenant_id)
-        except Exception:
-            pass
-
-    db_path = getattr(request.app.state, "db_path", None)
-    if db_path is None:
-        raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
-    conn = sqlite3.connect(db_path)
-    return conn, SQLiteConsolidatedStatementsRepository(conn)
+            local_repository = SQLiteConsolidatedStatementsRepository(connection)
+            yield connection, local_repository
+        finally:
+            connection.close()
 
 
 @router.post("/generate")
@@ -176,40 +156,38 @@ def generate_statements_endpoint(
     user: FinanceManage,
 ) -> dict[str, Any]:
     """Generate, verify mathematical invariants, and persist consolidated financial statements."""
-    conn, repo = _get_repository(request)
-    try:
-        domain_entities = [e.to_domain() for e in payload.entities]
-        domain_eliminations = payload.eliminations.to_domain()
+    with _get_repository(request, permissions=frozenset({'finance_core.manage'}), permission_mode="all") as ((conn, repo)):
+        try:
+            domain_entities = [e.to_domain() for e in payload.entities]
+            domain_eliminations = payload.eliminations.to_domain()
 
-        statements = generate_consolidated_statements(
-            group_id=payload.group_id,
-            organization_id=payload.organization_id,
-            reporting_currency=payload.reporting_currency,
-            period_id=payload.period_id,
-            period_start=payload.period_start,
-            period_end=payload.period_end,
-            as_of_date=payload.as_of_date,
-            entities=domain_entities,
-            eliminations=domain_eliminations,
-        )
+            statements = generate_consolidated_statements(
+                group_id=payload.group_id,
+                organization_id=payload.organization_id,
+                reporting_currency=payload.reporting_currency,
+                period_id=payload.period_id,
+                period_start=payload.period_start,
+                period_end=payload.period_end,
+                as_of_date=payload.as_of_date,
+                entities=domain_entities,
+                eliminations=domain_eliminations,
+            )
 
-        workspace_id = getattr(request.state, "workspace_id", "default")
-        run_id = repo.save_run(
-            workspace_id=workspace_id,
-            statements=statements,
-            prepared_by=user.username,
-        )
+            workspace_id = getattr(request.state, "workspace_id", "default")
+            run_id = repo.save_run(
+                workspace_id=workspace_id,
+                statements=statements,
+                prepared_by=user.username,
+            )
 
-        return {
-            "status": "generated",
-            "run_id": run_id,
-            "report_digest": statements.report_digest,
-            "statements": asdict(statements),
-        }
-    except FinancePostingError as exc:
-        raise APIError(status_code=422, code=exc.code, message=str(exc)) from exc
-    finally:
-        conn.close()
+            return {
+                "status": "generated",
+                "run_id": run_id,
+                "report_digest": statements.report_digest,
+                "statements": asdict(statements),
+            }
+        except FinancePostingError as exc:
+            raise APIError(status_code=422, code=exc.code, message=str(exc)) from exc
 
 
 @router.get("/runs")
@@ -219,13 +197,10 @@ def list_statement_runs_endpoint(
     group_id: str | None = Query(default=None),
 ) -> dict[str, Any]:
     """List historical consolidated statement runs for the user's workspace."""
-    conn, repo = _get_repository(request)
-    try:
+    with _get_repository(request, permissions=frozenset({'finance_core.manage', 'finance_core.read'}), permission_mode="any") as ((conn, repo)):
         workspace_id = getattr(request.state, "workspace_id", "default")
         runs = repo.list_runs(workspace_id=workspace_id, group_id=group_id)
         return {"total_count": len(runs), "runs": runs}
-    finally:
-        conn.close()
 
 
 @router.get("/runs/{run_id}")
@@ -235,12 +210,9 @@ def get_statement_run_endpoint(
     user: FinanceRead,
 ) -> dict[str, Any]:
     """Retrieve an exact consolidated statement run by ID."""
-    conn, repo = _get_repository(request)
-    try:
+    with _get_repository(request, permissions=frozenset({'finance_core.manage', 'finance_core.read'}), permission_mode="any") as ((conn, repo)):
         workspace_id = getattr(request.state, "workspace_id", "default")
         run = repo.get_run(workspace_id=workspace_id, run_id=run_id)
         if not run:
             raise APIError(status_code=404, code="statement_run_not_found", message=f"Run {run_id} not found.")
         return run
-    finally:
-        conn.close()

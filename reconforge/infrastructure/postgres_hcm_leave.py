@@ -13,7 +13,9 @@ from reconforge.domain.hcm_leave import (
     LeaveRequest,
     LeaveStatus,
 )
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres import validate_tenant_id
+from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope
 
 POSTGRES_HCM_LEAVE_SCHEMA_SQL = r"""
 CREATE TABLE IF NOT EXISTS reconforge.hcm_leave_entitlement_balances (
@@ -86,7 +88,57 @@ class PostgresHCMLeaveRepository:
         self.connection.close()
 
     def _scope(self) -> None:
-        set_local_tenant_scope(self.connection, self.tenant_id)
+        ensure_repository_tenant_scope(self.connection, self.tenant_id)
+
+    def employee_is_linked_to(self, workspace_id: str, employee_id: str, user_id: str) -> bool:
+        """Resolve personal authority from the canonical employee, under its RLS.
+
+        An employee identifier or a caller-supplied username is not proof of
+        ownership. The ordinary runtime reads only the existing public employee
+        linkage; private personnel credentials and tables are not used here.
+        """
+        self._scope()
+        return self.connection.execute(
+            """
+            SELECT 1 FROM reconforge.hc_employees
+            WHERE tenant_id = %s AND workspace_id = %s AND id = %s AND linked_user_id = %s
+              AND organization_id=current_setting('app.organization_id',true)
+              AND legal_entity_id=current_setting('app.legal_entity_id',true)
+            """,
+            (self.tenant_id, workspace_id, employee_id, user_id),
+        ).fetchone() is not None
+
+    def employee_is_in_scope(self, workspace_id: str, employee_id: str) -> bool:
+        """HR may maintain an in-scope employee without assigning personal identity."""
+        self._scope()
+        return self.connection.execute(
+            """SELECT 1 FROM reconforge.hc_employees
+            WHERE tenant_id=%s AND workspace_id=%s AND id=%s
+              AND organization_id=current_setting('app.organization_id',true)
+              AND legal_entity_id=current_setting('app.legal_entity_id',true) FOR SHARE""",
+            (self.tenant_id, workspace_id, employee_id),
+        ).fetchone() is not None
+
+    def employee_identity_id(self, workspace_id: str, employee_id: str) -> str | None:
+        """Resolve and retain the canonical employee owner during a review."""
+        self._scope()
+        row = self.connection.execute(
+            """SELECT linked_user_id FROM reconforge.hc_employees
+            WHERE tenant_id=%s AND workspace_id=%s AND id=%s
+              AND organization_id=current_setting('app.organization_id',true)
+              AND legal_entity_id=current_setting('app.legal_entity_id',true) FOR SHARE""",
+            (self.tenant_id, workspace_id, employee_id),
+        ).fetchone()
+        return str(row[0]) if row is not None and row[0] is not None else None
+
+    def record_action(self, workspace_id: str, object_id: str, action: str, *, actor_user_id: str, actor_label: str) -> None:
+        """The existing audit chain commits atomically with this leave mutation."""
+        if not self._mutation_active:
+            raise HCMLeaveError("leave_transaction_required", "Leave audit requires the business transaction.")
+        PostgresAuditEventRepository(self.connection, self.tenant_id).append(
+            actor_user_id=actor_user_id, actor_label=actor_label, object_type="hcm.leave",
+            object_id=object_id, action=action, metadata={"schema_version": 1, "workspace_id": workspace_id},
+        )
 
     def get_balance(
         self, workspace_id: str, employee_id: str, leave_type: str

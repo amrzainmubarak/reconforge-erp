@@ -7,6 +7,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager, nullcontext
 from typing import cast
 
+from reconforge.audit import append_audit_event
 from reconforge.domain.hcm_leave import (
     HCMLeaveError,
     LeaveCategory,
@@ -16,6 +17,13 @@ from reconforge.domain.hcm_leave import (
 )
 
 CREATE_HCM_LEAVE_TABLES_SQL = """
+CREATE TABLE IF NOT EXISTS hcm_employee_identities (
+    workspace_id TEXT NOT NULL,
+    employee_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    PRIMARY KEY (workspace_id, employee_id)
+);
+
 CREATE TABLE IF NOT EXISTS hcm_leave_entitlement_balances (
     workspace_id TEXT NOT NULL,
     employee_id TEXT NOT NULL,
@@ -69,9 +77,54 @@ class SqliteHCMLeaveRepository:
     def close(self) -> None:
         self._conn.close()
 
+    @property
+    def connection(self) -> sqlite3.Connection:
+        return self._conn
+
     def _init_tables(self) -> None:
         self._conn.executescript(CREATE_HCM_LEAVE_TABLES_SQL)
         self._conn.commit()
+
+    def bind_employee(self, workspace_id: str, employee_id: str, user_id: str) -> None:
+        """Persist an explicit manager-provisioned link to an existing identity.
+
+        Existing links cannot be reassigned by updating an entitlement balance.
+        Historical unbound employees remain unbound; ownership is never inferred
+        from a previous caller-controlled leave request.
+        """
+        with nullcontext() if self._mutation_active else self._conn:
+            user = self._conn.execute("SELECT id FROM users WHERE id=? AND disabled=0", (user_id,)).fetchone()
+            if user is None:
+                raise HCMLeaveError("leave_employee_identity_missing", "An existing active user identity is required.")
+            self._conn.execute(
+                "INSERT INTO hcm_employee_identities(workspace_id,employee_id,user_id) VALUES(?,?,?) "
+                "ON CONFLICT(workspace_id,employee_id) DO NOTHING", (workspace_id, employee_id, user_id),
+            )
+            if not self.employee_is_linked_to(workspace_id, employee_id, user_id):
+                raise HCMLeaveError("leave_employee_identity_conflict", "The employee already has a different identity link.")
+
+    def employee_is_linked_to(self, workspace_id: str, employee_id: str, user_id: str) -> bool:
+        return self._conn.execute(
+            "SELECT 1 FROM hcm_employee_identities WHERE workspace_id=? AND employee_id=? AND user_id=?",
+            (workspace_id, employee_id, user_id),
+        ).fetchone() is not None
+
+    def employee_identity_id(self, workspace_id: str, employee_id: str) -> str | None:
+        """Return the explicitly provisioned stable owner, never a legacy label."""
+        row = self._conn.execute(
+            "SELECT user_id FROM hcm_employee_identities WHERE workspace_id=? AND employee_id=?",
+            (workspace_id, employee_id),
+        ).fetchone()
+        return str(row[0]) if row is not None else None
+
+    def record_action(self, workspace_id: str, object_id: str, action: str, *, actor_user_id: str, actor_label: str) -> None:
+        """Append redacted business evidence inside the caller-owned mutation."""
+        if not self._mutation_active:
+            raise HCMLeaveError("leave_transaction_required", "Leave audit requires the business transaction.")
+        append_audit_event(
+            self._conn, actor_user_id=actor_user_id, actor_label=actor_label, object_type="hcm.leave",
+            object_id=object_id, action=action, metadata={"schema_version": 1, "workspace_id": workspace_id},
+        )
 
     def get_balance(
         self, workspace_id: str, employee_id: str, leave_type: str

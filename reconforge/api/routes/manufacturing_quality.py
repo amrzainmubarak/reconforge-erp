@@ -1,15 +1,18 @@
-"""FastAPI routes for Quality Inspection Plans, Non-Conformance Reports (NCR), and Rework Orders."""
+"""Authenticated quality workflow records with explicit storage and effect boundaries."""
 
 from __future__ import annotations
 
-import json
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import asdict
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from reconforge.api.dependencies import require_permission
+from reconforge.api.enterprise_scope import enterprise_transaction
 from reconforge.api.errors import APIError
 from reconforge.auth.models import LocalUser
 from reconforge.domain.manufacturing_quality_rework import (
@@ -20,7 +23,10 @@ from reconforge.domain.manufacturing_quality_rework import (
     ReworkOrder,
     ReworkRoutingStep,
 )
-from reconforge.platform.common import PlatformError
+from reconforge.infrastructure.postgres_manufacturing_quality import PostgresManufacturingQualityRepository
+from reconforge.infrastructure.sqlite_manufacturing_quality import (
+    SqliteManufacturingQualityRepository,
+)
 
 router = APIRouter(prefix="/manufacturing/quality", tags=["manufacturing-quality"])
 require_quality_read = require_permission("manufacturing_execution.read")
@@ -28,74 +34,37 @@ require_quality_manage = require_permission("manufacturing_execution.manage")
 Read = Annotated[LocalUser, Depends(require_quality_read)]
 Manage = Annotated[LocalUser, Depends(require_quality_manage)]
 
-SQLITE_QUALITY_SCHEMA = """
-CREATE TABLE IF NOT EXISTS quality_inspection_plans (
-    plan_id TEXT PRIMARY KEY,
-    workspace_id TEXT NOT NULL,
-    item_id TEXT NOT NULL,
-    revision TEXT NOT NULL,
-    name TEXT NOT NULL,
-    sample_size_units INTEGER NOT NULL,
-    specifications_json TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    UNIQUE (workspace_id, item_id, revision)
-);
 
-CREATE TABLE IF NOT EXISTS quality_ncrs (
-    ncr_id TEXT PRIMARY KEY,
-    workspace_id TEXT NOT NULL,
-    lot_id TEXT NOT NULL,
-    work_order_id TEXT NOT NULL,
-    defect_code TEXT NOT NULL,
-    defect_severity TEXT NOT NULL,
-    inspector_id TEXT NOT NULL,
-    quarantined_quantity_scaled INTEGER NOT NULL,
-    status TEXT NOT NULL,
-    disposition TEXT,
-    disposition_notes TEXT,
-    disposition_by TEXT,
-    disposition_at TEXT,
-    created_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS quality_rework_orders (
-    rework_order_id TEXT PRIMARY KEY,
-    workspace_id TEXT NOT NULL,
-    parent_work_order_id TEXT NOT NULL,
-    ncr_id TEXT NOT NULL,
-    item_id TEXT NOT NULL,
-    rework_quantity_scaled INTEGER NOT NULL,
-    rework_routing_steps_json TEXT NOT NULL,
-    rework_cost_center TEXT NOT NULL,
-    status TEXT NOT NULL,
-    accumulated_rework_cost_minor INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL,
-    completed_at TEXT
-);
-"""
-
-
-def _get_db(request: Request) -> sqlite3.Connection:
-    server_mode = bool(getattr(request.app.state, "server_mode", False))
-    factory = (
-        getattr(request.app.state, "postgres_finance_core_factory", None)
-        or getattr(request.app.state, "postgres_identity_factory", None)
-        or getattr(request.app.state, "postgres_connection_factory", None)
-    )
-    if server_mode and factory is None:
+@contextmanager
+def _repository(
+    request: Request, *, permissions: frozenset[str]
+) -> Iterator[tuple[SqliteManufacturingQualityRepository | PostgresManufacturingQualityRepository, str]]:
+    try:
+        with enterprise_transaction(request, permissions=permissions) as business:
+            if business is not None:
+                yield (
+                    PostgresManufacturingQualityRepository(business.connection, business.scope.tenant_id),
+                    business.scope.workspace_id,
+                )
+                return
+            db_path = getattr(request.app.state, "db_path", None)
+            if db_path is None:
+                raise APIError(
+                    status_code=500, code="db_not_configured", message="API database path is not configured."
+                )
+            connection = sqlite3.connect(db_path)
+            try:
+                repository = SqliteManufacturingQualityRepository(connection)
+                if request.method.upper() == "POST":
+                    connection.execute("BEGIN IMMEDIATE")
+                with connection:
+                    yield repository, getattr(request.state, "workspace_id", "default")
+            finally:
+                connection.close()
+    except QualityReworkError as exc:
         raise APIError(
-            status_code=503,
-            code="server_postgres_unavailable",
-            message="Enterprise production profile requires PostgreSQL.",
-        )
-
-    db_path = getattr(request.app.state, "db_path", None)
-    if db_path is None:
-        raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
-    conn = sqlite3.connect(db_path)
-    with conn:
-        conn.executescript(SQLITE_QUALITY_SCHEMA)
-    return conn
+            status_code=409 if exc.code == "quality_identifier_exists" else 422, code=exc.code, message=str(exc)
+        ) from exc
 
 
 class QualitySpecPayload(BaseModel):
@@ -169,67 +138,17 @@ class LogReworkStepPayload(BaseModel):
 
 
 @router.post("/inspection-plans")
-def register_inspection_plan(
-    request: Request,
-    payload: InspectionPlanPayload,
-    user: Manage,
-) -> dict[str, Any]:
-    """Register quality inspection plan with parameter tolerances."""
-    conn = _get_db(request)
-    try:
-        specs = tuple(
-            QualitySpecification(
-                param_name=s.param_name,
-                target_value=s.target_value,
-                tolerance_lower=s.tolerance_lower,
-                tolerance_upper=s.tolerance_upper,
-                unit_of_measure=s.unit_of_measure,
-                is_critical=s.is_critical,
-            )
-            for s in payload.specifications
-        )
+def register_inspection_plan(request: Request, payload: InspectionPlanPayload, user: Manage) -> dict[str, Any]:
+    with _repository(request, permissions=frozenset({"manufacturing_execution.manage"})) as (repo, workspace):
         plan = QualityInspectionPlan(
             plan_id=payload.plan_id,
             item_id=payload.item_id,
             revision=payload.revision,
             name=payload.name,
             sample_size_units=payload.sample_size_units,
-            specifications=specs,
+            specifications=tuple(QualitySpecification(**spec.model_dump()) for spec in payload.specifications),
         )
-        workspace_id = getattr(request.state, "workspace_id", "default")
-        specs_json = json.dumps([
-            {
-                "param_name": s.param_name,
-                "target_value": s.target_value,
-                "tolerance_lower": s.tolerance_lower,
-                "tolerance_upper": s.tolerance_upper,
-                "unit_of_measure": s.unit_of_measure,
-                "is_critical": s.is_critical,
-            }
-            for s in plan.specifications
-        ])
-        with conn:
-            conn.execute(
-                """
-                INSERT INTO quality_inspection_plans (
-                    plan_id, workspace_id, item_id, revision, name,
-                    sample_size_units, specifications_json, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-                ON CONFLICT (workspace_id, item_id, revision) DO UPDATE SET
-                    name = excluded.name,
-                    sample_size_units = excluded.sample_size_units,
-                    specifications_json = excluded.specifications_json
-                """,
-                (
-                    plan.plan_id,
-                    workspace_id,
-                    plan.item_id,
-                    plan.revision,
-                    plan.name,
-                    plan.sample_size_units,
-                    specs_json,
-                ),
-            )
+        repo.save_plan(workspace, plan)
         return {
             "status": "registered",
             "plan_id": plan.plan_id,
@@ -237,454 +156,166 @@ def register_inspection_plan(
             "revision": plan.revision,
             "specifications_count": len(plan.specifications),
         }
-    except (QualityReworkError, PlatformError) as exc:
-        raise APIError(status_code=422, code=getattr(exc, "code", "quality_plan_invalid"), message=str(exc)) from exc
-    finally:
-        conn.close()
 
 
 @router.get("/inspection-plans/{item_id}")
 def get_inspection_plan(
-    request: Request,
-    item_id: str,
-    user: Read,
-    revision: str | None = Query(default=None),
+    request: Request, item_id: str, user: Read, revision: str | None = Query(default=None)
 ) -> dict[str, Any]:
-    """Retrieve quality inspection plan for item."""
-    conn = _get_db(request)
-    try:
-        workspace_id = getattr(request.state, "workspace_id", "default")
-        if revision:
-            cur = conn.execute(
-                """
-                SELECT plan_id, item_id, revision, name, sample_size_units, specifications_json
-                FROM quality_inspection_plans
-                WHERE workspace_id = ? AND item_id = ? AND revision = ?
-                """,
-                (workspace_id, item_id, revision),
-            )
-        else:
-            cur = conn.execute(
-                """
-                SELECT plan_id, item_id, revision, name, sample_size_units, specifications_json
-                FROM quality_inspection_plans
-                WHERE workspace_id = ? AND item_id = ?
-                ORDER BY created_at DESC LIMIT 1
-                """,
-                (workspace_id, item_id),
-            )
-        row = cur.fetchone()
-        if not row:
-            raise APIError(status_code=404, code="plan_not_found", message=f"No inspection plan found for item '{item_id}'.")
-        return {
-            "plan_id": row[0],
-            "item_id": row[1],
-            "revision": row[2],
-            "name": row[3],
-            "sample_size_units": row[4],
-            "specifications": json.loads(row[5]),
-        }
-    finally:
-        conn.close()
+    with _repository(request, permissions=frozenset({"manufacturing_execution.read"})) as (repo, workspace):
+        plan = repo.get_plan(workspace, item_id, revision)
+        if plan is None:
+            raise APIError(status_code=404, code="plan_not_found", message="Inspection plan not found.")
+        return asdict(plan)
 
 
 @router.post("/evaluate")
-def evaluate_lot_inspection(
-    request: Request,
-    payload: EvaluateInspectionPayload,
-    user: Read,
-) -> dict[str, Any]:
-    """Evaluate measured lot inspection parameters against plan."""
-    conn = _get_db(request)
-    try:
-        workspace_id = getattr(request.state, "workspace_id", "default")
-        cur = conn.execute(
-            """
-            SELECT specifications_json FROM quality_inspection_plans
-            WHERE workspace_id = ? AND item_id = ?
-            ORDER BY created_at DESC LIMIT 1
-            """,
-            (workspace_id, payload.item_id),
-        )
-        row = cur.fetchone()
-        if not row:
-            raise APIError(status_code=404, code="plan_not_found", message=f"No plan found for item '{payload.item_id}'.")
-        specs_data = json.loads(row[0])
-        specs = tuple(
-            QualitySpecification(
-                param_name=s["param_name"],
-                target_value=s["target_value"],
-                tolerance_lower=s["tolerance_lower"],
-                tolerance_upper=s["tolerance_upper"],
-                unit_of_measure=s.get("unit_of_measure", "scaled"),
-                is_critical=s.get("is_critical", True),
-            )
-            for s in specs_data
-        )
-        plan = QualityInspectionPlan(
-            plan_id="eval_plan",
-            item_id=payload.item_id,
-            revision="1.0",
-            name="Evaluation Plan",
-            sample_size_units=1,
-            specifications=specs,
-        )
-        is_passed, defects = plan.evaluate_measurements(payload.measurements)
+def evaluate_lot_inspection(request: Request, payload: EvaluateInspectionPayload, user: Read) -> dict[str, Any]:
+    with _repository(request, permissions=frozenset({"manufacturing_execution.read"})) as (repo, workspace):
+        plan = repo.get_plan(workspace, payload.item_id)
+        if plan is None:
+            raise APIError(status_code=404, code="plan_not_found", message="Inspection plan not found.")
+        passed, defects = plan.evaluate_measurements(payload.measurements)
         return {
             "item_id": payload.item_id,
-            "is_passed": is_passed,
-            "status": "accepted" if is_passed else "rejected",
+            "plan_id": plan.plan_id,
+            "revision": plan.revision,
+            "is_passed": passed,
+            "status": "accepted" if passed else "rejected",
             "defects": defects,
         }
-    finally:
-        conn.close()
 
 
 @router.post("/ncrs")
-def create_ncr(
-    request: Request,
-    payload: NCRCreatePayload,
-    user: Manage,
-) -> dict[str, Any]:
-    """Create a formal Non-Conformance Report (quarantining material)."""
-    conn = _get_db(request)
-    try:
-        workspace_id = getattr(request.state, "workspace_id", "default")
+def create_ncr(request: Request, payload: NCRCreatePayload, user: Manage) -> dict[str, Any]:
+    with _repository(request, permissions=frozenset({"manufacturing_execution.manage"})) as (repo, workspace):
+        if payload.inspector_id not in {user.id, user.username}:
+            raise APIError(
+                status_code=403,
+                code="inspector_identity_denied",
+                message="Inspector identity must be the authenticated actor.",
+            )
         ncr = NonConformanceReport(
             ncr_id=payload.ncr_id,
             lot_id=payload.lot_id,
             work_order_id=payload.work_order_id,
             defect_code=payload.defect_code,
             defect_severity=payload.defect_severity,
-            inspector_id=payload.inspector_id,
+            inspector_id=user.username,
             quarantined_quantity_scaled=payload.quarantined_quantity_scaled,
         )
-        with conn:
-            conn.execute(
-                """
-                INSERT INTO quality_ncrs (
-                    ncr_id, workspace_id, lot_id, work_order_id,
-                    defect_code, defect_severity, inspector_id,
-                    quarantined_quantity_scaled, status, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', datetime('now'))
-                """,
-                (
-                    ncr.ncr_id,
-                    workspace_id,
-                    ncr.lot_id,
-                    ncr.work_order_id,
-                    ncr.defect_code,
-                    ncr.defect_severity,
-                    ncr.inspector_id,
-                    ncr.quarantined_quantity_scaled,
-                ),
-            )
+        repo.create_ncr(workspace, ncr)
+        # A requested hold in a quality record does not change native stock.
         return {
-            "status": "quarantined",
+            "status": "recorded",
             "ncr_id": ncr.ncr_id,
             "lot_id": ncr.lot_id,
             "quarantined_quantity_scaled": ncr.quarantined_quantity_scaled,
+            "inventory_effect": "not_posted",
         }
-    finally:
-        conn.close()
 
 
 @router.post("/ncrs/{ncr_id}/disposition")
-def disposition_ncr(
-    request: Request,
-    ncr_id: str,
-    payload: NCRDispositionPayload,
-    user: Manage,
-) -> dict[str, Any]:
-    """MRB disposition for a Non-Conformance Report."""
-    conn = _get_db(request)
-    try:
-        workspace_id = getattr(request.state, "workspace_id", "default")
-        cur = conn.execute(
-            """
-            SELECT lot_id, work_order_id, defect_code, defect_severity,
-                   inspector_id, quarantined_quantity_scaled, status
-            FROM quality_ncrs
-            WHERE workspace_id = ? AND ncr_id = ?
-            """,
-            (workspace_id, ncr_id),
-        )
-        row = cur.fetchone()
-        if not row:
-            raise APIError(status_code=404, code="ncr_not_found", message=f"NCR '{ncr_id}' not found.")
-        ncr = NonConformanceReport(
-            ncr_id=ncr_id,
-            lot_id=row[0],
-            work_order_id=row[1],
-            defect_code=row[2],
-            defect_severity=row[3],
-            inspector_id=row[4],
-            quarantined_quantity_scaled=row[5],
-            status=row[6],
-        )
-        dispositioned = ncr.disposition_ncr(
-            disposition=payload.disposition,
-            notes=payload.notes,
-            actor=user.username,
-        )
-        with conn:
-            conn.execute(
-                """
-                UPDATE quality_ncrs
-                SET status = ?, disposition = ?, disposition_notes = ?,
-                    disposition_by = ?, disposition_at = datetime('now')
-                WHERE workspace_id = ? AND ncr_id = ?
-                """,
-                (
-                    dispositioned.status,
-                    dispositioned.disposition,
-                    dispositioned.disposition_notes,
-                    dispositioned.disposition_by,
-                    workspace_id,
-                    ncr_id,
-                ),
+def disposition_ncr(request: Request, ncr_id: str, payload: NCRDispositionPayload, user: Manage) -> dict[str, Any]:
+    with _repository(request, permissions=frozenset({"manufacturing_execution.manage"})) as (repo, workspace):
+        ncr = repo.get_ncr(workspace, ncr_id, for_update=True)
+        if ncr is None:
+            raise APIError(status_code=404, code="ncr_not_found", message="NCR not found.")
+        if ncr.inspector_id in {user.id, user.username}:
+            raise APIError(
+                status_code=403, code="quality_self_disposition_denied", message="Independent disposition is required."
             )
+        updated = ncr.disposition_ncr(disposition=payload.disposition, notes=payload.notes, actor=user.username)
+        repo.update_ncr(workspace, updated)
         return {
-            "status": dispositioned.status,
-            "ncr_id": dispositioned.ncr_id,
-            "disposition": dispositioned.disposition,
-            "disposition_by": dispositioned.disposition_by,
+            "status": updated.status,
+            "ncr_id": updated.ncr_id,
+            "disposition": updated.disposition,
+            "disposition_by": updated.disposition_by,
+            "inventory_effect": "not_posted",
         }
-    except QualityReworkError as exc:
-        raise APIError(status_code=422, code=exc.code, message=str(exc)) from exc
-    finally:
-        conn.close()
 
 
 @router.post("/rework-orders")
-def create_rework_order(
-    request: Request,
-    payload: ReworkCreatePayload,
-    user: Manage,
-) -> dict[str, Any]:
-    """Create a rework order for dispositioned NCR."""
-    conn = _get_db(request)
-    try:
-        workspace_id = getattr(request.state, "workspace_id", "default")
-        steps = tuple(
-            ReworkRoutingStep(
-                step_number=s.step_number,
-                work_center_id=s.work_center_id,
-                operation_description=s.operation_description,
-                estimated_minutes=s.estimated_minutes,
-                labor_rate_hourly_minor=s.labor_rate_hourly_minor,
+def create_rework_order(request: Request, payload: ReworkCreatePayload, user: Manage) -> dict[str, Any]:
+    with _repository(request, permissions=frozenset({"manufacturing_execution.manage"})) as (repo, workspace):
+        ncr = repo.get_ncr(workspace, payload.ncr_id, for_update=True)
+        if ncr is None:
+            raise APIError(status_code=404, code="ncr_not_found", message="NCR not found.")
+        if (
+            ncr.status != "dispositioned"
+            or ncr.disposition != "rework"
+            or ncr.work_order_id != payload.parent_work_order_id
+        ):
+            raise APIError(
+                status_code=409,
+                code="rework_source_invalid",
+                message="Rework requires its independently dispositioned source NCR.",
             )
-            for s in payload.rework_routing_steps
-        )
+        if (
+            repo.ncr_rework_quantity(workspace, payload.ncr_id) + payload.rework_quantity_scaled
+            > ncr.quarantined_quantity_scaled
+        ):
+            raise APIError(
+                status_code=409,
+                code="rework_quantity_exceeded",
+                message="Rework quantity exceeds the recorded NCR allocation.",
+            )
         rework = ReworkOrder(
             rework_order_id=payload.rework_order_id,
             parent_work_order_id=payload.parent_work_order_id,
             ncr_id=payload.ncr_id,
             item_id=payload.item_id,
             rework_quantity_scaled=payload.rework_quantity_scaled,
-            rework_routing_steps=steps,
+            rework_routing_steps=tuple(ReworkRoutingStep(**step.model_dump()) for step in payload.rework_routing_steps),
             rework_cost_center=payload.rework_cost_center,
         ).release()
-
-        steps_json = json.dumps([
-            {
-                "step_number": s.step_number,
-                "work_center_id": s.work_center_id,
-                "operation_description": s.operation_description,
-                "estimated_minutes": s.estimated_minutes,
-                "actual_minutes": s.actual_minutes,
-                "labor_rate_hourly_minor": s.labor_rate_hourly_minor,
-            }
-            for s in rework.rework_routing_steps
-        ])
-        with conn:
-            conn.execute(
-                """
-                INSERT INTO quality_rework_orders (
-                    rework_order_id, workspace_id, parent_work_order_id,
-                    ncr_id, item_id, rework_quantity_scaled,
-                    rework_routing_steps_json, rework_cost_center,
-                    status, accumulated_rework_cost_minor, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-                """,
-                (
-                    rework.rework_order_id,
-                    workspace_id,
-                    rework.parent_work_order_id,
-                    rework.ncr_id,
-                    rework.item_id,
-                    rework.rework_quantity_scaled,
-                    steps_json,
-                    rework.rework_cost_center,
-                    rework.status,
-                    rework.accumulated_rework_cost_minor,
-                ),
-            )
+        repo.create_rework(workspace, rework)
         return {
             "status": rework.status,
             "rework_order_id": rework.rework_order_id,
             "rework_quantity_scaled": rework.rework_quantity_scaled,
             "steps_count": len(rework.rework_routing_steps),
+            "financial_effect": "not_posted",
         }
-    except QualityReworkError as exc:
-        raise APIError(status_code=422, code=exc.code, message=str(exc)) from exc
-    finally:
-        conn.close()
 
 
 @router.post("/rework-orders/{rework_order_id}/log-step")
 def log_rework_operation_step(
-    request: Request,
-    rework_order_id: str,
-    payload: LogReworkStepPayload,
-    user: Manage,
+    request: Request, rework_order_id: str, payload: LogReworkStepPayload, user: Manage
 ) -> dict[str, Any]:
-    """Log actual rework operation step execution and accumulate labor costs."""
-    conn = _get_db(request)
-    try:
-        workspace_id = getattr(request.state, "workspace_id", "default")
-        cur = conn.execute(
-            """
-            SELECT parent_work_order_id, ncr_id, item_id,
-                   rework_quantity_scaled, rework_routing_steps_json,
-                   rework_cost_center, status, accumulated_rework_cost_minor
-            FROM quality_rework_orders
-            WHERE workspace_id = ? AND rework_order_id = ?
-            """,
-            (workspace_id, rework_order_id),
-        )
-        row = cur.fetchone()
-        if not row:
-            raise APIError(status_code=404, code="rework_not_found", message=f"Rework order '{rework_order_id}' not found.")
-        raw_steps = json.loads(row[4])
-        steps = tuple(
-            ReworkRoutingStep(
-                step_number=s["step_number"],
-                work_center_id=s["work_center_id"],
-                operation_description=s["operation_description"],
-                estimated_minutes=s["estimated_minutes"],
-                actual_minutes=s.get("actual_minutes", 0),
-                labor_rate_hourly_minor=s.get("labor_rate_hourly_minor", 0),
-            )
-            for s in raw_steps
-        )
-        rework = ReworkOrder(
-            rework_order_id=rework_order_id,
-            parent_work_order_id=row[0],
-            ncr_id=row[1],
-            item_id=row[2],
-            rework_quantity_scaled=row[3],
-            rework_routing_steps=steps,
-            rework_cost_center=row[5],
-            status=row[6],
-            accumulated_rework_cost_minor=row[7],
-        )
-        updated = rework.log_rework_step(
-            step_number=payload.step_number,
-            actual_minutes=payload.actual_minutes,
-            labor_rate_hourly_minor=payload.labor_rate_hourly_minor,
-        )
-        updated_steps_json = json.dumps([
-            {
-                "step_number": s.step_number,
-                "work_center_id": s.work_center_id,
-                "operation_description": s.operation_description,
-                "estimated_minutes": s.estimated_minutes,
-                "actual_minutes": s.actual_minutes,
-                "labor_rate_hourly_minor": s.labor_rate_hourly_minor,
-            }
-            for s in updated.rework_routing_steps
-        ])
-        with conn:
-            conn.execute(
-                """
-                UPDATE quality_rework_orders
-                SET status = ?, rework_routing_steps_json = ?,
-                    accumulated_rework_cost_minor = ?
-                WHERE workspace_id = ? AND rework_order_id = ?
-                """,
-                (
-                    updated.status,
-                    updated_steps_json,
-                    updated.accumulated_rework_cost_minor,
-                    workspace_id,
-                    rework_order_id,
-                ),
-            )
+    with _repository(request, permissions=frozenset({"manufacturing_execution.manage"})) as (repo, workspace):
+        rework = repo.get_rework(workspace, rework_order_id, for_update=True)
+        if rework is None:
+            raise APIError(status_code=404, code="rework_not_found", message="Rework order not found.")
+        updated = rework.log_rework_step(**payload.model_dump())
+        repo.update_rework(workspace, updated)
         return {
             "status": updated.status,
             "rework_order_id": updated.rework_order_id,
             "step_number": payload.step_number,
             "accumulated_rework_cost_minor": updated.accumulated_rework_cost_minor,
+            "financial_effect": "not_posted",
         }
-    except QualityReworkError as exc:
-        raise APIError(status_code=422, code=exc.code, message=str(exc)) from exc
-    finally:
-        conn.close()
 
 
 @router.post("/rework-orders/{rework_order_id}/complete")
-def complete_rework_order(
-    request: Request,
-    rework_order_id: str,
-    user: Manage,
-) -> dict[str, Any]:
-    """Complete a rework order after successful operations."""
-    conn = _get_db(request)
-    try:
-        workspace_id = getattr(request.state, "workspace_id", "default")
-        cur = conn.execute(
-            """
-            SELECT parent_work_order_id, ncr_id, item_id,
-                   rework_quantity_scaled, rework_routing_steps_json,
-                   rework_cost_center, status, accumulated_rework_cost_minor
-            FROM quality_rework_orders
-            WHERE workspace_id = ? AND rework_order_id = ?
-            """,
-            (workspace_id, rework_order_id),
-        )
-        row = cur.fetchone()
-        if not row:
-            raise APIError(status_code=404, code="rework_not_found", message=f"Rework order '{rework_order_id}' not found.")
-        raw_steps = json.loads(row[4])
-        steps = tuple(
-            ReworkRoutingStep(
-                step_number=s["step_number"],
-                work_center_id=s["work_center_id"],
-                operation_description=s["operation_description"],
-                estimated_minutes=s["estimated_minutes"],
-                actual_minutes=s.get("actual_minutes", 0),
-                labor_rate_hourly_minor=s.get("labor_rate_hourly_minor", 0),
+def complete_rework_order(request: Request, rework_order_id: str, user: Manage) -> dict[str, Any]:
+    with _repository(request, permissions=frozenset({"manufacturing_execution.manage"})) as (repo, workspace):
+        rework = repo.get_rework(workspace, rework_order_id, for_update=True)
+        if rework is None:
+            raise APIError(status_code=404, code="rework_not_found", message="Rework order not found.")
+        if any(step.actual_minutes <= 0 for step in rework.rework_routing_steps):
+            raise APIError(
+                status_code=409,
+                code="rework_operations_incomplete",
+                message="Every routing operation requires an execution record.",
             )
-            for s in raw_steps
-        )
-        rework = ReworkOrder(
-            rework_order_id=rework_order_id,
-            parent_work_order_id=row[0],
-            ncr_id=row[1],
-            item_id=row[2],
-            rework_quantity_scaled=row[3],
-            rework_routing_steps=steps,
-            rework_cost_center=row[5],
-            status=row[6],
-            accumulated_rework_cost_minor=row[7],
-        )
         completed = rework.complete(actor=user.username)
-        with conn:
-            conn.execute(
-                """
-                UPDATE quality_rework_orders
-                SET status = 'completed', completed_at = datetime('now')
-                WHERE workspace_id = ? AND rework_order_id = ?
-                """,
-                (workspace_id, rework_order_id),
-            )
+        repo.update_rework(workspace, completed)
         return {
             "status": "completed",
             "rework_order_id": completed.rework_order_id,
             "total_rework_cost_minor": completed.accumulated_rework_cost_minor,
+            "financial_effect": "not_posted",
         }
-    except QualityReworkError as exc:
-        raise APIError(status_code=422, code=exc.code, message=str(exc)) from exc
-    finally:
-        conn.close()

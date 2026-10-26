@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from reconforge.api.dependencies import require_permission
+from reconforge.api.enterprise_scope import enterprise_transaction
 from reconforge.api.errors import APIError
 from reconforge.auth.models import LocalUser
+from reconforge.auth.repositories import RoleRepository
 from reconforge.domain.crm_contracts import (
     BillingFrequency,
     CustomerQuotation,
@@ -25,12 +29,12 @@ from reconforge.domain.crm_contracts import (
     renew_contract,
     resume_contract,
     suspend_contract,
-    terminate_contract,
 )
 from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.infrastructure.postgres_crm_contracts import (
     PostgresCRMContractsRepository,
 )
+from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
 from reconforge.infrastructure.sqlite_crm_contracts import (
     SqliteCRMContractsRepository,
 )
@@ -41,47 +45,55 @@ Manage = Annotated[LocalUser, Depends(require_permission("sales.manage"))]
 Approve = Annotated[LocalUser, Depends(require_permission("sales.approve"))]
 
 
-def _repo(request: Request) -> tuple[SqliteCRMContractsRepository | PostgresCRMContractsRepository, str]:
-    server_mode = bool(getattr(request.app.state, "server_mode", False))
-    factory = (
-        getattr(request.app.state, "postgres_finance_core_factory", None)
-        or getattr(request.app.state, "postgres_identity_factory", None)
-        or getattr(request.app.state, "postgres_connection_factory", None)
-    )
-    workspace_id = getattr(request.state, "workspace_id", "default")
-    if server_mode:
-        if factory is None:
-            raise APIError(
-                status_code=503,
-                code="server_postgres_unavailable",
-                message="Enterprise production profile requires PostgreSQL.",
-            )
+@contextmanager
+def _repo(
+    request: Request, *, permissions: frozenset[str], permission_mode: Literal["all", "any"] = "all"
+) -> Iterator[tuple[SqliteCRMContractsRepository | PostgresCRMContractsRepository, str]]:
+    with enterprise_transaction(request, permissions=permissions, permission_mode=permission_mode) as business:
+        if business is not None:
+            connection = business.connection
+            repository = PostgresCRMContractsRepository(connection, business.scope.tenant_id)
+            yield repository, business.scope.workspace_id
+            return
+        db_path = getattr(request.app.state, "db_path", None)
+        if db_path is None:
+            raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
+        connection = sqlite3.connect(db_path)
         try:
-            conn = factory.connect()
-        except Exception as exc:
-            raise APIError(
-                status_code=503,
-                code="server_postgres_unavailable",
-                message=f"Enterprise production profile database connection failed: {exc}",
-            ) from exc
-        raw_tenant = getattr(request.state, "tenant_id", None) or workspace_id
-        tenant_id = str(raw_tenant) if raw_tenant else "default"
-        return PostgresCRMContractsRepository(conn, tenant_id), workspace_id
+            local_repository = SqliteCRMContractsRepository(connection)
+            workspace_id = getattr(request.state, "workspace_id", "default")
+            yield local_repository, workspace_id
+        finally:
+            connection.close()
 
-    if factory is not None:
-        try:
-            conn = factory.connect()
-            raw_tenant = getattr(request.state, "tenant_id", None) or workspace_id
-            tenant_id = str(raw_tenant) if raw_tenant else "default"
-            return PostgresCRMContractsRepository(conn, tenant_id), workspace_id
-        except Exception:
-            pass
 
-    db_path = getattr(request.app.state, "db_path", None)
-    if db_path is None:
-        raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
-    conn = sqlite3.connect(db_path)
-    return SqliteCRMContractsRepository(conn), workspace_id
+def _verified_approval_role(
+    repo: SqliteCRMContractsRepository | PostgresCRMContractsRepository, user: LocalUser, requested: str
+) -> str:
+    hierarchy = ("sales_rep", "sales_manager", "commercial_director", "vp_sales", "cfo", "admin")
+    if isinstance(repo, PostgresCRMContractsRepository):
+        roles = PostgresIdentityRepository(repo.connection).user_roles(tenant_id=repo.tenant_id, user_id=user.id)
+    else:
+        repo._conn.row_factory = sqlite3.Row
+        roles = RoleRepository(repo._conn).user_roles(user.username)
+    actual = next((role for role in reversed(hierarchy) if role in roles), "sales_rep")
+    if hierarchy.index(requested) > hierarchy.index(actual):
+        raise APIError(
+            status_code=403,
+            code="quotation_role_denied",
+            message="The requested discount authority is not assigned to the authenticated reviewer.",
+        )
+    return actual
+
+
+def _quotation_author_id(
+    repo: SqliteCRMContractsRepository | PostgresCRMContractsRepository, workspace_id: str, quote_id: str
+) -> str:
+    """Only immutable creation provenance establishes the original human author."""
+    author_id = repo.quotation_author_id(workspace_id, quote_id)
+    if author_id is None:
+        raise APIError(status_code=409, code="quotation_identity_unverified", message="The original submitter requires a reviewed immutable identity binding.")
+    return author_id
 
 
 class OpportunityPayload(BaseModel):
@@ -144,51 +156,51 @@ class ContractTerminationPayload(BaseModel):
 
 @router.post("/opportunities")
 def create_opportunity(user: Manage, payload: OpportunityPayload, request: Request) -> dict[str, object]:
-    repo, ws_id = _repo(request)
-    try:
-        opp = Opportunity(
-            opportunity_id=payload.opportunity_id,
-            workspace_id=ws_id,
-            organization_id=payload.organization_id,
-            customer_id=payload.customer_id,
-            title=payload.title,
-            stage=payload.stage,
-            estimated_close_date=payload.estimated_close_date,
-            currency=payload.currency,
-            projected_amount_minor=payload.projected_amount_minor,
-            win_probability_bps=payload.win_probability_bps,
-        )
-        repo.save_opportunity(opp)
-    except FinancePostingError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        try:
+            opp = Opportunity(
+                opportunity_id=payload.opportunity_id,
+                workspace_id=ws_id,
+                organization_id=payload.organization_id,
+                customer_id=payload.customer_id,
+                title=payload.title,
+                stage=payload.stage,
+                estimated_close_date=payload.estimated_close_date,
+                currency=payload.currency,
+                projected_amount_minor=payload.projected_amount_minor,
+                win_probability_bps=payload.win_probability_bps,
+            )
+            repo.save_opportunity(opp)
+        except FinancePostingError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
 
-    return {
-        "status": "success",
-        "opportunity_id": opp.opportunity_id,
-        "stage": opp.stage,
-        "weighted_pipeline_value_minor": opp.weighted_pipeline_value_minor,
-    }
+        return {
+            "status": "success",
+            "opportunity_id": opp.opportunity_id,
+            "stage": opp.stage,
+            "weighted_pipeline_value_minor": opp.weighted_pipeline_value_minor,
+        }
 
 
 @router.get("/opportunities/{opportunity_id}")
 def get_opportunity(user: Read, opportunity_id: str, request: Request) -> dict[str, object]:
-    repo, ws_id = _repo(request)
-    opp = repo.get_opportunity(ws_id, opportunity_id)
-    if not opp:
-        raise APIError(
-            status_code=404,
-            code="opportunity_not_found",
-            message=f"Opportunity {opportunity_id} not found",
-        )
-    return {
-        "opportunity_id": opp.opportunity_id,
-        "title": opp.title,
-        "stage": opp.stage,
-        "currency": opp.currency,
-        "projected_amount_minor": opp.projected_amount_minor,
-        "win_probability_bps": opp.win_probability_bps,
-        "weighted_pipeline_value_minor": opp.weighted_pipeline_value_minor,
-    }
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        opp = repo.get_opportunity(ws_id, opportunity_id)
+        if not opp:
+            raise APIError(
+                status_code=404,
+                code="opportunity_not_found",
+                message=f"Opportunity {opportunity_id} not found",
+            )
+        return {
+            "opportunity_id": opp.opportunity_id,
+            "title": opp.title,
+            "stage": opp.stage,
+            "currency": opp.currency,
+            "projected_amount_minor": opp.projected_amount_minor,
+            "win_probability_bps": opp.win_probability_bps,
+            "weighted_pipeline_value_minor": opp.weighted_pipeline_value_minor,
+        }
 
 
 # --- Quotation Endpoints ---
@@ -196,131 +208,135 @@ def get_opportunity(user: Read, opportunity_id: str, request: Request) -> dict[s
 
 @router.post("/quotations")
 def create_quotation(user: Manage, payload: QuotationPayload, request: Request) -> dict[str, object]:
-    repo, ws_id = _repo(request)
-    lines = tuple(
-        QuotationLineItem(
-            line_number=line.line_number,
-            item_id=line.item_id,
-            description=line.description,
-            quantity=line.quantity,
-            unit_price_minor=line.unit_price_minor,
-            discount_bps=line.discount_bps,
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        lines = tuple(
+            QuotationLineItem(
+                line_number=line.line_number,
+                item_id=line.item_id,
+                description=line.description,
+                quantity=line.quantity,
+                unit_price_minor=line.unit_price_minor,
+                discount_bps=line.discount_bps,
+            )
+            for line in payload.lines
         )
-        for line in payload.lines
-    )
-    try:
-        quote = CustomerQuotation(
-            quote_id=payload.quote_id,
-            opportunity_id=payload.opportunity_id,
-            workspace_id=ws_id,
-            customer_id=payload.customer_id,
-            currency=payload.currency,
-            valid_until=payload.valid_until,
-            submitter_user_id=user.username,
-            status="draft",
-            lines=lines,
-        )
-        repo.save_quotation(quote)
-    except FinancePostingError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
+        try:
+            quote = CustomerQuotation(
+                quote_id=payload.quote_id,
+                opportunity_id=payload.opportunity_id,
+                workspace_id=ws_id,
+                customer_id=payload.customer_id,
+                currency=payload.currency,
+                valid_until=payload.valid_until,
+                submitter_user_id=user.id,
+                status="draft",
+                lines=lines,
+            )
+            repo.save_quotation(quote, author_user_id=user.id)
+        except FinancePostingError as exc:
+            raise APIError(status_code=409 if exc.code == "crm_quotation_exists" else 400, code=exc.code, message=str(exc)) from exc
 
-    return {
-        "status": "success",
-        "quote_id": quote.quote_id,
-        "total_gross_minor": quote.total_gross_minor,
-        "total_discount_minor": quote.total_discount_minor,
-        "total_net_minor": quote.total_net_minor,
-        "effective_discount_bps": quote.effective_discount_bps,
-    }
+        return {
+            "status": "success",
+            "quote_id": quote.quote_id,
+            "total_gross_minor": quote.total_gross_minor,
+            "total_discount_minor": quote.total_discount_minor,
+            "total_net_minor": quote.total_net_minor,
+            "effective_discount_bps": quote.effective_discount_bps,
+        }
 
 
 @router.get("/quotations/{quote_id}")
 def get_quotation(user: Read, quote_id: str, request: Request) -> dict[str, object]:
-    repo, ws_id = _repo(request)
-    quote = repo.get_quotation(ws_id, quote_id)
-    if not quote:
-        raise APIError(
-            status_code=404,
-            code="quotation_not_found",
-            message=f"Quotation {quote_id} not found",
-        )
-    return {
-        "quote_id": quote.quote_id,
-        "opportunity_id": quote.opportunity_id,
-        "customer_id": quote.customer_id,
-        "currency": quote.currency,
-        "valid_until": quote.valid_until,
-        "status": quote.status,
-        "submitter_user_id": quote.submitter_user_id,
-        "approved_by_user_id": quote.approved_by_user_id,
-        "total_net_minor": quote.total_net_minor,
-        "effective_discount_bps": quote.effective_discount_bps,
-    }
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        quote = repo.get_quotation(ws_id, quote_id)
+        if not quote:
+            raise APIError(
+                status_code=404,
+                code="quotation_not_found",
+                message=f"Quotation {quote_id} not found",
+            )
+        return {
+            "quote_id": quote.quote_id,
+            "opportunity_id": quote.opportunity_id,
+            "customer_id": quote.customer_id,
+            "currency": quote.currency,
+            "valid_until": quote.valid_until,
+            "status": quote.status,
+            "submitter_user_id": quote.submitter_user_id,
+            "approved_by_user_id": quote.approved_by_user_id,
+            "total_net_minor": quote.total_net_minor,
+            "effective_discount_bps": quote.effective_discount_bps,
+        }
 
 
 @router.post("/quotations/{quote_id}/approve")
 def approve_quotation(
     user: Approve, quote_id: str, payload: QuoteApprovalPayload, request: Request
 ) -> dict[str, object]:
-    repo, ws_id = _repo(request)
-    quote = repo.get_quotation(ws_id, quote_id)
-    if not quote:
-        raise APIError(
-            status_code=404,
-            code="quotation_not_found",
-            message=f"Quotation {quote_id} not found",
-        )
+    with _repo(request, permissions=frozenset({"sales.approve"}), permission_mode="all") as ((repo, ws_id)):
+        quote = repo.get_quotation(ws_id, quote_id)
+        if not quote:
+            raise APIError(
+                status_code=404,
+                code="quotation_not_found",
+                message=f"Quotation {quote_id} not found",
+            )
 
-    try:
-        approved = quote.approve(
-            approver_user_id=user.username,
-            approver_role=payload.approver_role,
-        )
-        repo.save_quotation(approved)
-    except FinancePostingError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
+        try:
+            if _quotation_author_id(repo, ws_id, quote.quote_id) == user.id:
+                raise FinancePostingError("crm_sod_violation", "Submitter cannot approve their own quotation.")
+            approved = quote.approve(
+                approver_user_id=user.id,
+                approver_role=_verified_approval_role(repo, user, payload.approver_role),
+            )
+            repo.save_quotation(approved)
+        except FinancePostingError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
 
-    return {
-        "status": "success",
-        "quote_id": approved.quote_id,
-        "quote_status": approved.status,
-        "approved_by": approved.approved_by_user_id,
-    }
+        return {
+            "status": "success",
+            "quote_id": approved.quote_id,
+            "quote_status": approved.status,
+            "approved_by": user.username,
+            "approved_by_user_id": approved.approved_by_user_id,
+        }
 
 
 @router.post("/quotations/{quote_id}/convert")
 def convert_quotation(
     user: Manage, quote_id: str, payload: ContractConversionPayload, request: Request
 ) -> dict[str, object]:
-    repo, ws_id = _repo(request)
-    quote = repo.get_quotation(ws_id, quote_id)
-    if not quote:
-        raise APIError(
-            status_code=404,
-            code="quotation_not_found",
-            message=f"Quotation {quote_id} not found",
-        )
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        quote = repo.get_quotation(ws_id, quote_id)
+        if not quote:
+            raise APIError(
+                status_code=404,
+                code="quotation_not_found",
+                message=f"Quotation {quote_id} not found",
+            )
 
-    try:
-        contract = convert_quote_to_contract(
-            quote=quote,
-            contract_id=payload.contract_id,
-            organization_id=payload.organization_id,
-            start_date=payload.start_date,
-            end_date=payload.end_date,
-            billing_frequency=payload.billing_frequency,
-            as_of_date=payload.as_of_date,
-        )
-        repo.save_contract(contract)
-    except FinancePostingError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
+        _quotation_author_id(repo, ws_id, quote.quote_id)
+        try:
+            contract = convert_quote_to_contract(
+                quote=quote,
+                contract_id=payload.contract_id,
+                organization_id=payload.organization_id,
+                start_date=payload.start_date,
+                end_date=payload.end_date,
+                billing_frequency=payload.billing_frequency,
+                as_of_date=payload.as_of_date,
+            )
+            repo.save_contract(contract)
+        except FinancePostingError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
 
-    return {
-        "status": "success",
-        "contract_id": contract.contract_id,
-        "total_contract_value_minor": contract.total_contract_value_minor,
-        "contract_status": contract.status,
-    }
+        return {
+            "status": "success",
+            "contract_id": contract.contract_id,
+            "total_contract_value_minor": contract.total_contract_value_minor,
+            "contract_status": contract.status,
+        }
 
 
 # --- Contract Endpoints ---
@@ -328,58 +344,37 @@ def convert_quotation(
 
 @router.get("/contracts/{contract_id}")
 def get_contract(user: Read, contract_id: str, request: Request) -> dict[str, object]:
-    repo, ws_id = _repo(request)
-    contract = repo.get_contract(ws_id, contract_id)
-    if not contract:
-        raise APIError(
-            status_code=404,
-            code="contract_not_found",
-            message=f"Contract {contract_id} not found",
-        )
-    return {
-        "contract_id": contract.contract_id,
-        "quote_id": contract.quote_id,
-        "customer_id": contract.customer_id,
-        "currency": contract.currency,
-        "start_date": contract.start_date,
-        "end_date": contract.end_date,
-        "billing_frequency": contract.billing_frequency,
-        "total_contract_value_minor": contract.total_contract_value_minor,
-        "status": contract.status,
-    }
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        contract = repo.get_contract(ws_id, contract_id)
+        if not contract:
+            raise APIError(
+                status_code=404,
+                code="contract_not_found",
+                message=f"Contract {contract_id} not found",
+            )
+        return {
+            "contract_id": contract.contract_id,
+            "quote_id": contract.quote_id,
+            "customer_id": contract.customer_id,
+            "currency": contract.currency,
+            "start_date": contract.start_date,
+            "end_date": contract.end_date,
+            "billing_frequency": contract.billing_frequency,
+            "total_contract_value_minor": contract.total_contract_value_minor,
+            "status": contract.status,
+        }
 
 
 @router.post("/contracts/{contract_id}/terminate")
 def terminate_contract_endpoint(
     user: Manage, contract_id: str, payload: ContractTerminationPayload, request: Request
 ) -> dict[str, object]:
-    repo, ws_id = _repo(request)
-    contract = repo.get_contract(ws_id, contract_id)
-    if not contract:
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
         raise APIError(
-            status_code=404,
-            code="contract_not_found",
-            message=f"Contract {contract_id} not found",
+            status_code=403,
+            code="termination_review_required",
+            message="Contract termination requires a persisted independent approval; a caller-supplied approver label is not sufficient.",
         )
-
-    try:
-        terminated, fee = terminate_contract(
-            contract=contract,
-            termination_date=payload.termination_date,
-            early_termination_fee_minor=payload.early_termination_fee_minor,
-            actor_id=user.username,
-            approver_id=payload.approver_id,
-        )
-        repo.save_contract(terminated)
-    except FinancePostingError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
-
-    return {
-        "status": "success",
-        "contract_id": terminated.contract_id,
-        "contract_status": terminated.status,
-        "early_termination_fee_minor": fee,
-    }
 
 
 class ContractSuspendPayload(BaseModel):
@@ -434,39 +429,39 @@ def suspend_contract_endpoint(
     user: Manage, contract_id: str, payload: ContractSuspendPayload, request: Request
 ) -> dict[str, object]:
     """Suspends an active customer contract."""
-    repo, ws_id = _repo(request)
-    contract = repo.get_contract(ws_id, contract_id)
-    if not contract:
-        raise APIError(status_code=404, code="contract_not_found", message=f"Contract {contract_id} not found")
-    try:
-        suspended = suspend_contract(contract, reason=payload.reason, actor_id=user.username)
-        repo.save_contract(suspended)
-    except FinancePostingError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
-    return {
-        "status": "success",
-        "contract_id": suspended.contract_id,
-        "contract_status": suspended.status,
-    }
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        contract = repo.get_contract(ws_id, contract_id)
+        if not contract:
+            raise APIError(status_code=404, code="contract_not_found", message=f"Contract {contract_id} not found")
+        try:
+            suspended = suspend_contract(contract, reason=payload.reason, actor_id=user.id)
+            repo.save_contract(suspended)
+        except FinancePostingError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
+        return {
+            "status": "success",
+            "contract_id": suspended.contract_id,
+            "contract_status": suspended.status,
+        }
 
 
 @router.post("/contracts/{contract_id}/resume")
 def resume_contract_endpoint(user: Manage, contract_id: str, request: Request) -> dict[str, object]:
     """Resumes a suspended customer contract."""
-    repo, ws_id = _repo(request)
-    contract = repo.get_contract(ws_id, contract_id)
-    if not contract:
-        raise APIError(status_code=404, code="contract_not_found", message=f"Contract {contract_id} not found")
-    try:
-        resumed = resume_contract(contract, actor_id=user.username)
-        repo.save_contract(resumed)
-    except FinancePostingError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
-    return {
-        "status": "success",
-        "contract_id": resumed.contract_id,
-        "contract_status": resumed.status,
-    }
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        contract = repo.get_contract(ws_id, contract_id)
+        if not contract:
+            raise APIError(status_code=404, code="contract_not_found", message=f"Contract {contract_id} not found")
+        try:
+            resumed = resume_contract(contract, actor_id=user.id)
+            repo.save_contract(resumed)
+        except FinancePostingError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
+        return {
+            "status": "success",
+            "contract_id": resumed.contract_id,
+            "contract_status": resumed.status,
+        }
 
 
 @router.post("/contracts/{contract_id}/renew")
@@ -474,27 +469,27 @@ def renew_contract_endpoint(
     user: Approve, contract_id: str, payload: ContractRenewPayload, request: Request
 ) -> dict[str, object]:
     """Renews a customer contract with price adjustments in basis points."""
-    repo, ws_id = _repo(request)
-    contract = repo.get_contract(ws_id, contract_id)
-    if not contract:
-        raise APIError(status_code=404, code="contract_not_found", message=f"Contract {contract_id} not found")
-    try:
-        renewed = renew_contract(
-            contract,
-            new_end_date=payload.new_end_date,
-            price_adjustment_bps=payload.price_adjustment_bps,
-            approver_id=user.username,
-        )
-        repo.save_contract(renewed)
-    except FinancePostingError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
-    return {
-        "status": "success",
-        "contract_id": renewed.contract_id,
-        "contract_status": renewed.status,
-        "new_end_date": renewed.end_date,
-        "total_contract_value_minor": renewed.total_contract_value_minor,
-    }
+    with _repo(request, permissions=frozenset({"sales.approve"}), permission_mode="all") as ((repo, ws_id)):
+        contract = repo.get_contract(ws_id, contract_id)
+        if not contract:
+            raise APIError(status_code=404, code="contract_not_found", message=f"Contract {contract_id} not found")
+        try:
+            renewed = renew_contract(
+                contract,
+                new_end_date=payload.new_end_date,
+                price_adjustment_bps=payload.price_adjustment_bps,
+                approver_id=user.id,
+            )
+            repo.save_contract(renewed)
+        except FinancePostingError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
+        return {
+            "status": "success",
+            "contract_id": renewed.contract_id,
+            "contract_status": renewed.status,
+            "new_end_date": renewed.end_date,
+            "total_contract_value_minor": renewed.total_contract_value_minor,
+        }
 
 
 # --- Subscription Endpoints ---
@@ -503,140 +498,142 @@ def renew_contract_endpoint(
 @router.post("/subscriptions/plans")
 def create_subscription_plan(user: Manage, payload: SubscriptionPlanPayload, request: Request) -> dict[str, object]:
     """Creates a new recurring subscription plan."""
-    repo, ws_id = _repo(request)
-    try:
-        plan = SubscriptionPlan(
-            plan_id=payload.plan_id,
-            name=payload.name,
-            currency=payload.currency,
-            billing_interval=payload.billing_interval,
-            unit_price_minor=payload.unit_price_minor,
-        )
-        repo.save_plan(ws_id, plan)
-    except FinancePostingError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
-    return {
-        "status": "success",
-        "plan_id": plan.plan_id,
-        "name": plan.name,
-        "currency": plan.currency,
-        "billing_interval": plan.billing_interval,
-        "unit_price_minor": plan.unit_price_minor,
-    }
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        try:
+            plan = SubscriptionPlan(
+                plan_id=payload.plan_id,
+                name=payload.name,
+                currency=payload.currency,
+                billing_interval=payload.billing_interval,
+                unit_price_minor=payload.unit_price_minor,
+            )
+            repo.save_plan(ws_id, plan)
+        except FinancePostingError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
+        return {
+            "status": "success",
+            "plan_id": plan.plan_id,
+            "name": plan.name,
+            "currency": plan.currency,
+            "billing_interval": plan.billing_interval,
+            "unit_price_minor": plan.unit_price_minor,
+        }
 
 
 @router.get("/subscriptions/plans/{plan_id}")
 def get_subscription_plan(user: Read, plan_id: str, request: Request) -> dict[str, object]:
     """Retrieves subscription plan by plan_id."""
-    repo, ws_id = _repo(request)
-    plan = repo.get_plan(ws_id, plan_id)
-    if not plan:
-        raise APIError(status_code=404, code="plan_not_found", message=f"Subscription plan {plan_id} not found")
-    return {
-        "plan_id": plan.plan_id,
-        "name": plan.name,
-        "currency": plan.currency,
-        "billing_interval": plan.billing_interval,
-        "unit_price_minor": plan.unit_price_minor,
-    }
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        plan = repo.get_plan(ws_id, plan_id)
+        if not plan:
+            raise APIError(status_code=404, code="plan_not_found", message=f"Subscription plan {plan_id} not found")
+        return {
+            "plan_id": plan.plan_id,
+            "name": plan.name,
+            "currency": plan.currency,
+            "billing_interval": plan.billing_interval,
+            "unit_price_minor": plan.unit_price_minor,
+        }
 
 
 @router.get("/subscriptions/plans")
 def list_subscription_plans(user: Read, request: Request) -> dict[str, object]:
     """Lists all subscription plans in workspace."""
-    repo, ws_id = _repo(request)
-    plans = repo.list_plans(ws_id)
-    return {
-        "plans": [
-            {
-                "plan_id": p.plan_id,
-                "name": p.name,
-                "currency": p.currency,
-                "billing_interval": p.billing_interval,
-                "unit_price_minor": p.unit_price_minor,
-            }
-            for p in plans
-        ]
-    }
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        plans = repo.list_plans(ws_id)
+        return {
+            "plans": [
+                {
+                    "plan_id": p.plan_id,
+                    "name": p.name,
+                    "currency": p.currency,
+                    "billing_interval": p.billing_interval,
+                    "unit_price_minor": p.unit_price_minor,
+                }
+                for p in plans
+            ]
+        }
 
 
 @router.post("/subscriptions")
 def create_subscription(user: Manage, payload: SubscriptionCreatePayload, request: Request) -> dict[str, object]:
     """Creates an active recurring customer subscription."""
-    repo, ws_id = _repo(request)
-    plan = repo.get_plan(ws_id, payload.plan_id)
-    if not plan:
-        raise APIError(status_code=400, code="plan_not_found", message=f"Plan {payload.plan_id} does not exist.")
-    try:
-        sub = Subscription(
-            subscription_id=payload.subscription_id,
-            customer_id=payload.customer_id,
-            contract_id=payload.contract_id,
-            plan_id=payload.plan_id,
-            currency=payload.currency,
-            status=payload.status,
-            current_period_start=payload.current_period_start,
-            current_period_end=payload.current_period_end,
-            auto_renew=payload.auto_renew,
-        )
-        repo.save_subscription(ws_id, sub)
-    except FinancePostingError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
-    return {
-        "status": "success",
-        "subscription_id": sub.subscription_id,
-        "customer_id": sub.customer_id,
-        "contract_id": sub.contract_id,
-        "plan_id": sub.plan_id,
-        "currency": sub.currency,
-        "subscription_status": sub.status,
-        "current_period_start": sub.current_period_start,
-        "current_period_end": sub.current_period_end,
-        "auto_renew": sub.auto_renew,
-    }
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        plan = repo.get_plan(ws_id, payload.plan_id)
+        if not plan:
+            raise APIError(status_code=400, code="plan_not_found", message=f"Plan {payload.plan_id} does not exist.")
+        try:
+            sub = Subscription(
+                subscription_id=payload.subscription_id,
+                customer_id=payload.customer_id,
+                contract_id=payload.contract_id,
+                plan_id=payload.plan_id,
+                currency=payload.currency,
+                status=payload.status,
+                current_period_start=payload.current_period_start,
+                current_period_end=payload.current_period_end,
+                auto_renew=payload.auto_renew,
+            )
+            repo.save_subscription(ws_id, sub)
+        except FinancePostingError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
+        return {
+            "status": "success",
+            "subscription_id": sub.subscription_id,
+            "customer_id": sub.customer_id,
+            "contract_id": sub.contract_id,
+            "plan_id": sub.plan_id,
+            "currency": sub.currency,
+            "subscription_status": sub.status,
+            "current_period_start": sub.current_period_start,
+            "current_period_end": sub.current_period_end,
+            "auto_renew": sub.auto_renew,
+        }
 
 
 @router.get("/subscriptions/{subscription_id}")
 def get_subscription_endpoint(user: Read, subscription_id: str, request: Request) -> dict[str, object]:
     """Retrieves customer subscription details."""
-    repo, ws_id = _repo(request)
-    sub = repo.get_subscription(ws_id, subscription_id)
-    if not sub:
-        raise APIError(status_code=404, code="subscription_not_found", message=f"Subscription {subscription_id} not found")
-    return {
-        "subscription_id": sub.subscription_id,
-        "customer_id": sub.customer_id,
-        "contract_id": sub.contract_id,
-        "plan_id": sub.plan_id,
-        "currency": sub.currency,
-        "subscription_status": sub.status,
-        "current_period_start": sub.current_period_start,
-        "current_period_end": sub.current_period_end,
-        "auto_renew": sub.auto_renew,
-    }
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        sub = repo.get_subscription(ws_id, subscription_id)
+        if not sub:
+            raise APIError(
+                status_code=404, code="subscription_not_found", message=f"Subscription {subscription_id} not found"
+            )
+        return {
+            "subscription_id": sub.subscription_id,
+            "customer_id": sub.customer_id,
+            "contract_id": sub.contract_id,
+            "plan_id": sub.plan_id,
+            "currency": sub.currency,
+            "subscription_status": sub.status,
+            "current_period_start": sub.current_period_start,
+            "current_period_end": sub.current_period_end,
+            "auto_renew": sub.auto_renew,
+        }
 
 
 @router.get("/subscriptions")
 def list_subscriptions_endpoint(user: Read, request: Request, customer_id: str | None = None) -> dict[str, object]:
     """Lists customer subscriptions."""
-    repo, ws_id = _repo(request)
-    subs = repo.list_subscriptions(ws_id, customer_id=customer_id)
-    return {
-        "subscriptions": [
-            {
-                "subscription_id": s.subscription_id,
-                "customer_id": s.customer_id,
-                "contract_id": s.contract_id,
-                "plan_id": s.plan_id,
-                "currency": s.currency,
-                "subscription_status": s.status,
-                "current_period_start": s.current_period_start,
-                "current_period_end": s.current_period_end,
-                "auto_renew": s.auto_renew,
-            }
-            for s in subs
-        ]
-    }
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        subs = repo.list_subscriptions(ws_id, customer_id=customer_id)
+        return {
+            "subscriptions": [
+                {
+                    "subscription_id": s.subscription_id,
+                    "customer_id": s.customer_id,
+                    "contract_id": s.contract_id,
+                    "plan_id": s.plan_id,
+                    "currency": s.currency,
+                    "subscription_status": s.status,
+                    "current_period_start": s.current_period_start,
+                    "current_period_end": s.current_period_end,
+                    "auto_renew": s.auto_renew,
+                }
+                for s in subs
+            ]
+        }
 
 
 @router.post("/subscriptions/proration")
@@ -644,31 +641,32 @@ def prorate_subscription_plan_change(
     user: Read, payload: SubscriptionProrationPayload, request: Request
 ) -> dict[str, object]:
     """Computes zero-float day-prorated charges and credits for a mid-cycle plan change."""
-    repo, ws_id = _repo(request)
-    old_plan = repo.get_plan(ws_id, payload.old_plan_id)
-    new_plan = repo.get_plan(ws_id, payload.new_plan_id)
-    if not old_plan:
-        raise APIError(status_code=404, code="plan_not_found", message=f"Old plan {payload.old_plan_id} not found")
-    if not new_plan:
-        raise APIError(status_code=404, code="plan_not_found", message=f"New plan {payload.new_plan_id} not found")
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        old_plan = repo.get_plan(ws_id, payload.old_plan_id)
+        new_plan = repo.get_plan(ws_id, payload.new_plan_id)
+        if not old_plan:
+            raise APIError(status_code=404, code="plan_not_found", message=f"Old plan {payload.old_plan_id} not found")
+        if not new_plan:
+            raise APIError(status_code=404, code="plan_not_found", message=f"New plan {payload.new_plan_id} not found")
 
-    try:
-        result = calculate_plan_change_proration(
-            old_plan=old_plan,
-            new_plan=new_plan,
-            period_start=payload.period_start,
-            period_end=payload.period_end,
-            change_date=payload.change_date,
-        )
-    except FinancePostingError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
+        try:
+            result = calculate_plan_change_proration(
+                old_plan=old_plan,
+                new_plan=new_plan,
+                period_start=payload.period_start,
+                period_end=payload.period_end,
+                change_date=payload.change_date,
+            )
+        except FinancePostingError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
 
-    return {
-        "status": "success",
-        "old_plan_id": old_plan.plan_id,
-        "new_plan_id": new_plan.plan_id,
-        **result,
-    }
+        return {
+            "status": "success",
+            "old_plan_id": old_plan.plan_id,
+            "new_plan_id": new_plan.plan_id,
+            "currency": old_plan.currency,
+            **result,
+        }
 
 
 @router.post("/subscriptions/{subscription_id}/cancel")
@@ -676,27 +674,29 @@ def cancel_subscription_endpoint(
     user: Manage, subscription_id: str, payload: SubscriptionCancelPayload, request: Request
 ) -> dict[str, object]:
     """Cancels an active subscription and calculates exact refundable credit."""
-    repo, ws_id = _repo(request)
-    sub = repo.get_subscription(ws_id, subscription_id)
-    if not sub:
-        raise APIError(status_code=404, code="subscription_not_found", message=f"Subscription {subscription_id} not found")
-    plan = repo.get_plan(ws_id, sub.plan_id)
-    if not plan:
-        raise APIError(status_code=400, code="plan_not_found", message=f"Plan {sub.plan_id} not found")
+    with _repo(request, permissions=frozenset({"sales.manage"}), permission_mode="all") as ((repo, ws_id)):
+        sub = repo.get_subscription(ws_id, subscription_id)
+        if not sub:
+            raise APIError(
+                status_code=404, code="subscription_not_found", message=f"Subscription {subscription_id} not found"
+            )
+        plan = repo.get_plan(ws_id, sub.plan_id)
+        if not plan:
+            raise APIError(status_code=400, code="plan_not_found", message=f"Plan {sub.plan_id} not found")
 
-    try:
-        cancelled, refund_minor = cancel_subscription_with_refund(
-            subscription=sub,
-            plan=plan,
-            cancellation_date=payload.cancellation_date,
-        )
-        repo.save_subscription(ws_id, cancelled)
-    except FinancePostingError as exc:
-        raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
+        try:
+            cancelled, refund_minor = cancel_subscription_with_refund(
+                subscription=sub,
+                plan=plan,
+                cancellation_date=payload.cancellation_date,
+            )
+            repo.save_subscription(ws_id, cancelled)
+        except FinancePostingError as exc:
+            raise APIError(status_code=400, code=exc.code, message=str(exc)) from exc
 
-    return {
-        "status": "success",
-        "subscription_id": cancelled.subscription_id,
-        "subscription_status": cancelled.status,
-        "refund_minor": refund_minor,
-    }
+        return {
+            "status": "success",
+            "subscription_id": cancelled.subscription_id,
+            "subscription_status": cancelled.status,
+            "refund_minor": refund_minor,
+        }

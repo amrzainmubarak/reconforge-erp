@@ -9,7 +9,8 @@ from reconforge.domain.treasury_liquidity import (
     LiquidityFlow,
     TreasuryLiquidityEngine,
 )
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres import validate_tenant_id
+from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope
 from reconforge.platform.common import PlatformError
 
 POSTGRES_TREASURY_SCHEMA_SQL = r"""
@@ -75,7 +76,7 @@ class PostgresTreasuryRepository:
         self.tenant_id = validate_tenant_id(tenant_id)
 
     def _scope(self) -> None:
-        set_local_tenant_scope(self.connection, self.tenant_id)
+        ensure_repository_tenant_scope(self.connection, self.tenant_id)
 
     def save_position(self, pos: CashPosition) -> None:
         try:

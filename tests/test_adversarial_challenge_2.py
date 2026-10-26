@@ -22,11 +22,10 @@ from __future__ import annotations
 import json
 import random
 from decimal import ROUND_HALF_UP, Decimal, localcontext
+from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from fastapi import FastAPI
-from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
 from reconforge.ai.governed_assistant import (
@@ -34,9 +33,9 @@ from reconforge.ai.governed_assistant import (
     GovernedAISecurityError,
     GovernedAssistantEngine,
 )
-from reconforge.api.errors import APIError, api_error_handler
-from reconforge.api.routes.governed_assistant import router as governed_assistant_router
-from reconforge.auth.models import LocalUser
+from reconforge.api import create_api_app
+from reconforge.auth import LocalAuthService
+from reconforge.db import connect, run_migrations
 from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.fixed_assets import (
     MAX_MINOR,
@@ -933,24 +932,38 @@ class TestGovernedAssistantChallenge:
         with pytest.raises(FinancePostingError, match="at most 1000 characters"):
             engine.evaluate_query("Q-1001", too_long_query, [])
 
-    def test_fastapi_assistant_query_endpoint_adversarial_battery(self) -> None:
+    def test_fastapi_assistant_query_endpoint_adversarial_battery(self, tmp_path: Path) -> None:
         """Adversarial challenge of the live FastAPI /api/v1/ai/assistant/query route:
         prompt injection, jailbreak payloads, direct GL posting attempts, cross-tenant
         data breaches, schema boundary violations, and non-autonomous invariant verification."""
-        app = FastAPI()
-        app.add_exception_handler(APIError, cast(Any, api_error_handler))
-        app.include_router(governed_assistant_router, prefix="/api/v1")
+        from tests.test_finance_core import _create_entry, _seed_finance_model
 
-        test_user = LocalUser(
-            id="USR-AI-AUDITOR",
-            username="ai_auditor",
-            display_name="AI Security Auditor",
-        )
-        route_dep = cast(APIRoute, governed_assistant_router.routes[0]).dependant.dependencies[0].call
-        assert route_dep is not None
-        app.dependency_overrides[route_dep] = lambda: test_user
+        database = tmp_path / "assistant-adversarial.sqlite"
+        run_migrations(database)
+        connection = connect(database)
+        try:
+            LocalAuthService(connection).init_admin(username="ai_auditor", password="Synthetic-Auditor-123!")
+            finance, period = _seed_finance_model(connection)
+            entry = _create_entry(finance, period, actor="ai_auditor")
+        finally:
+            connection.close()
+        client = TestClient(create_api_app(database))
+        login = client.post("/api/v1/auth/login", json={"username": "ai_auditor", "password": "Synthetic-Auditor-123!"})
+        assert login.status_code == 200, login.text
+        client.headers["Authorization"] = "Bearer " + login.json()["access_token"]
 
-        client = TestClient(app)
+        def ledger_state() -> tuple[object, ...]:
+            connection = connect(database)
+            try:
+                return (
+                    tuple(tuple(row) for row in connection.execute("SELECT * FROM ledger_entries ORDER BY id")),
+                    tuple(tuple(row) for row in connection.execute("SELECT * FROM ledger_lines ORDER BY id")),
+                    tuple(tuple(row) for row in connection.execute("SELECT * FROM finance_posting_effects ORDER BY id")),
+                )
+            finally:
+                connection.close()
+
+        before = ledger_state()
 
         # 1. Prompt Injection Payloads via HTTP POST -> Expect HTTP 403 (ai_injection_refused)
         injection_payloads = [
@@ -987,7 +1000,7 @@ class TestGovernedAssistantChallenge:
             assert res.status_code == 403, f"Expected 403 for autonomous GL command: {cmd}, got {res.status_code}"
             assert res.json()["error"]["code"] == "ai_autonomous_gl_prohibited"
 
-        # 3. Cross-Tenant Data Extraction Attempt -> Expect HTTP 403 (ai_cross_workspace_prohibited)
+        # 3. Caller-supplied foreign context is rejected before source evaluation.
         cross_tenant_res = client.post(
             "/api/v1/ai/assistant/query",
             json={
@@ -999,7 +1012,20 @@ class TestGovernedAssistantChallenge:
             },
         )
         assert cross_tenant_res.status_code == 403
-        assert cross_tenant_res.json()["error"]["code"] == "ai_cross_workspace_prohibited"
+        assert cross_tenant_res.json()["error"]["code"] == "assistant_untrusted_context"
+        assert "DOC-SECRET-99" not in cross_tenant_res.text
+        foreign_reference = client.post(
+            "/api/v1/ai/assistant/query",
+            json={"query_id": "QRY-FOREIGN-ID", "query_text": "Examine selected records", "record_ids": ["DOC-SECRET-99"]},
+        )
+        assert foreign_reference.status_code == 404
+        assert foreign_reference.json()["error"]["code"] == "assistant_source_not_found"
+        forged_confidence = client.post(
+            "/api/v1/ai/assistant/query",
+            json={"query_id": "QRY-FORGED-CONFIDENCE", "query_text": "Review selected entries", "confidence_override": 0.99},
+        )
+        assert forged_confidence.status_code == 403
+        assert forged_confidence.json()["error"]["code"] == "assistant_untrusted_context"
 
         # 4. Jailbreak Payloads -> Expect HTTP 403
         jailbreaks = [
@@ -1039,28 +1065,23 @@ class TestGovernedAssistantChallenge:
             json={
                 "query_id": "QRY-VALID-PROPOSAL",
                 "query_text": "Please approve customer refund for invoice INV-100",
-                "authorized_records": [
-                    {
-                        "id": "INV-100",
-                        "workspace_id": "default",
-                        "entity_type": "customer_invoice",
-                        "summary": "Customer refund request",
-                    }
-                ],
-                "confidence_override": 0.95,
+                "record_ids": [entry["id"]],
             },
         )
         assert valid_res.status_code == 200
         body = valid_res.json()
         assert body["query_id"] == "QRY-VALID-PROPOSAL"
-        assert body["confidence_score"] == 0.95
+        assert body["confidence_score"] >= CONFIDENCE_THRESHOLD
         assert body["requires_clarification"] is False
         assert len(body["proposals"]) == 1
         prop = body["proposals"][0]
         assert prop["requires_maker_checker"] is True
-        assert prop["target_entity_id"] == "INV-100"
+        assert prop["target_entity_id"] == entry["id"]
         assert "cannot execute postings or approvals directly" in body["answer"]
         assert len(body["citation_graph"]) == 1
+        assert body["human_action_required"] is True
+        assert body["audit_reference"]
+        assert ledger_state() == before
 
 
 

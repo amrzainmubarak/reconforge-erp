@@ -1457,15 +1457,15 @@ class PostgresReconciliationRepository:
                     p["reason_code"],
                     p["lineage_json"],
                 ])
-            sql = f"""
+            sql = "".join(("""
                 INSERT INTO reconforge.reconciliation_results
                     (tenant_id, id, run_id, left_id, right_id, match_type, confidence, explanation,
                      amount_difference, date_difference_days, status, reason_code, lineage_json)
-                VALUES {", ".join(values_clauses)}
+                VALUES """, (", ".join(values_clauses)), """
                 ON CONFLICT (tenant_id, id) DO NOTHING
                 RETURNING tenant_id, id, run_id, left_id, right_id, match_type, confidence, explanation,
                           amount_difference, date_difference_days, status, reason_code, lineage_json, created_at
-            """
+            """))
             cursor = self.connection.execute(sql, tuple(params))
             fetched = cursor.fetchall() if hasattr(cursor, "fetchall") else ()
             returned_by_id = {self._row_value(r, "id", 1): r for r in fetched}
@@ -1645,16 +1645,16 @@ class PostgresReconciliationRepository:
                     p["reason_code"],
                     p["evidence_json"],
                 ])
-            sql = f"""
+            sql = "".join(("""
                 INSERT INTO reconforge.reconciliation_exceptions
                     (tenant_id, id, run_id, exception_type, source_side, source_id, title, explanation,
                      severity, risk_score, owner_id, reason_code, evidence_json)
-                VALUES {", ".join(values_clauses)}
+                VALUES """, (", ".join(values_clauses)), """
                 ON CONFLICT (tenant_id, id) DO NOTHING
                 RETURNING tenant_id, id, run_id, exception_type, source_side, source_id, title, explanation,
                           severity, risk_score, workflow_status, owner_id, reason_code, evidence_json,
                           created_at, updated_at
-            """
+            """))
             cursor = self.connection.execute(sql, tuple(params))
             fetched = cursor.fetchall() if hasattr(cursor, "fetchall") else ()
             returned_by_id = {self._row_value(r, "id", 1): r for r in fetched}

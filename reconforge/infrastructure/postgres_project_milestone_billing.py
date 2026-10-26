@@ -6,6 +6,7 @@ import hashlib
 from collections.abc import Mapping
 from typing import Any
 
+from reconforge.domain.models import utc_now_text
 from reconforge.domain.project_milestone_billing import (
     MilestoneBillingInvoice,
     ProjectBillingError,
@@ -15,8 +16,9 @@ from reconforge.domain.project_milestone_billing import (
     ResourceRateCard,
     calculate_financial_posture,
 )
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope
 from reconforge.platform.common import PlatformError
 
 POSTGRES_PROJECT_BILLING_SCHEMA_SQL = r"""
@@ -138,7 +140,7 @@ class PostgresProjectMilestoneBillingRepository:
         self.tenant_id = validate_tenant_id(tenant_id)
 
     def _scope(self) -> None:
-        set_local_tenant_scope(self.connection, self.tenant_id)
+        ensure_repository_tenant_scope(self.connection, self.tenant_id)
 
     def save_task(self, task: ProjectWBSTask, *, actor_label: str = "system") -> None:
         try:
@@ -289,11 +291,13 @@ class PostgresProjectMilestoneBillingRepository:
         except Exception as exc:
             raise PlatformError(f"PostgreSQL get rate card failed: {exc}") from exc
 
-    def save_milestone(self, m: ProjectMilestone, *, actor_label: str = "system") -> None:
+    def save_milestone(self, m: ProjectMilestone, *, actor_label: str = "system", origin: Mapping[str, str] | None = None) -> None:
         try:
             with self.connection.transaction():
                 self._scope()
+                self._origin("milestone", m.workspace_id, m.milestone_id, origin, before=True)
                 self._save_milestone_in_tx(m)
+                self._origin("milestone", m.workspace_id, m.milestone_id, origin)
                 PostgresAuditEventRepository(self.connection, self.tenant_id).append(
                     actor_label=actor_label,
                     actor_user_id=actor_label,
@@ -382,10 +386,13 @@ class PostgresProjectMilestoneBillingRepository:
         *,
         finance_entry_id: str | None = None,
         actor_label: str = "system",
+        origin: Mapping[str, str] | None = None,
     ) -> None:
         try:
             with self.connection.transaction():
                 self._scope()
+                self._origin("milestone", milestone.workspace_id, milestone.milestone_id, origin, before=True)
+                self._origin("invoice", invoice.workspace_id, invoice.invoice_id, origin, before=True)
                 self._save_milestone_in_tx(milestone)
                 self.connection.execute(
                     """
@@ -412,6 +419,8 @@ class PostgresProjectMilestoneBillingRepository:
                         finance_entry_id,
                     ),
                 )
+                self._origin("milestone", milestone.workspace_id, milestone.milestone_id, origin)
+                self._origin("invoice", invoice.workspace_id, invoice.invoice_id, origin)
                 PostgresAuditEventRepository(self.connection, self.tenant_id).append(
                     actor_label=actor_label,
                     actor_user_id=actor_label,
@@ -429,6 +438,52 @@ class PostgresProjectMilestoneBillingRepository:
                 )
         except Exception as exc:
             raise PlatformError(f"PostgreSQL save milestone invoice failed: {exc}") from exc
+
+    def _origin(self, kind: str, workspace: str, identifier: str, origin: Mapping[str, str] | None,
+                *, before: bool = False) -> None:
+        if origin is None:
+            return
+        org, entity = origin["organization_id"], origin["legal_entity_id"]
+        row = self.connection.execute("SELECT current_setting('app.organization_id',true),current_setting('app.legal_entity_id',true),current_setting('app.workspace_id',true)").fetchone()
+        if not row or tuple(row) != (org, entity, workspace) or not org or not entity:
+            raise ProjectBillingError("project_source_scope_denied", "Source origin requires the current authenticated hierarchy.")
+        query = ("SELECT organization_id,legal_entity_id FROM reconforge.project_milestones WHERE tenant_id=%s AND workspace_id=%s AND milestone_id=%s FOR UPDATE"
+            if kind == "milestone" else
+            "SELECT organization_id,legal_entity_id FROM reconforge.project_milestone_invoices WHERE tenant_id=%s AND workspace_id=%s AND invoice_id=%s FOR UPDATE")
+        existing = self.connection.execute(query, (self.tenant_id, workspace, identifier)).fetchone()
+        if before:
+            if existing is not None and tuple(existing) != (org, entity):
+                raise ProjectBillingError("project_source_scope_denied", "Historical or foreign source origin cannot be inferred or replaced.")
+            return
+        query = ("UPDATE reconforge.project_milestones SET organization_id=%s,legal_entity_id=%s WHERE tenant_id=%s AND workspace_id=%s AND milestone_id=%s AND organization_id IS NULL AND legal_entity_id IS NULL"
+            if kind == "milestone" else
+            "UPDATE reconforge.project_milestone_invoices SET organization_id=%s,legal_entity_id=%s WHERE tenant_id=%s AND workspace_id=%s AND invoice_id=%s AND organization_id IS NULL AND legal_entity_id IS NULL")
+        self.connection.execute(query, (org, entity, self.tenant_id, workspace, identifier))
+
+    def prepare_financial_invoice(self, milestone_id: str, *, invoice_id: str, customer_code: str, issued_at: str | None,
+                                  scope: Mapping[str, str], period_id: str, posting_date: str, journal_code: str,
+                                  command_id: str, actor: Any) -> dict[str, Any]:
+        from reconforge.domain.project_milestone_billing import generate_milestone_invoice
+        from reconforge.infrastructure.postgres_enterprise_finance_bridge import PostgresEnterpriseFinanceBridge
+
+        with self.connection.transaction():
+            self._scope()
+            workspace = scope["workspace_id"]
+            prior = self.connection.execute("SELECT customer_code,issued_at,milestone_id FROM reconforge.project_milestone_invoices WHERE tenant_id=%s AND workspace_id=%s AND invoice_id=%s FOR UPDATE", (self.tenant_id, workspace, invoice_id)).fetchone()
+            if prior is not None:
+                effective_issued_at = issued_at if issued_at is not None else prior[1]
+                if tuple(prior) != (customer_code, effective_issued_at, milestone_id):
+                    raise ProjectBillingError("project_invoice_conflict", "Invoice identity belongs to another exact request.")
+            else:
+                self.connection.execute("SELECT milestone_id FROM reconforge.project_milestones WHERE tenant_id=%s AND workspace_id=%s AND milestone_id=%s FOR UPDATE", (self.tenant_id, workspace, milestone_id)).fetchone()
+                milestone = self.get_milestone(workspace, milestone_id)
+                if milestone is None:
+                    raise ProjectBillingError("milestone_not_found", "The original milestone was not found.")
+                updated, invoice = generate_milestone_invoice(milestone, customer_code=customer_code, invoice_id=invoice_id, issued_at=issued_at if issued_at is not None else utc_now_text())
+                self.save_milestone_invoice(updated, invoice, actor_label=actor.username, origin=scope)
+            return PostgresEnterpriseFinanceBridge(self.connection, self.tenant_id).prepare("ProjectMilestone", invoice_id,
+                scope=scope, period_id=period_id, posting_date=posting_date, journal_code=journal_code,
+                command_id=command_id, actor=actor)
 
     def post_milestone_invoice_to_finance_core(
         self,

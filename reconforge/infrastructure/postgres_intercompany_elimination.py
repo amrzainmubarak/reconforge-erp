@@ -17,9 +17,10 @@ from reconforge.domain.intercompany_elimination import (
     intercompany_elimination_input_line_from_dict,
     verify_intercompany_elimination_payload,
 )
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
-from reconforge.platform.common import PlatformError, normalize_text
+from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope
+from reconforge.platform.common import PlatformError, current_server_principal, normalize_text
 
 POSTGRES_INTERCOMPANY_ELIMINATION_SCHEMA_SQL = r"""
 CREATE TABLE IF NOT EXISTS reconforge.intercompany_elimination_artifacts (
@@ -175,7 +176,24 @@ class PostgresIntercompanyEliminationRepository:
         return workspace
 
     def _scope(self) -> None:
-        set_local_tenant_scope(self.connection, self.tenant_id)
+        ensure_repository_tenant_scope(self.connection, self.tenant_id)
+
+    def _artifact_workspace(self, workspace: str | None = None) -> str | None:
+        """Preserve selected request authority and the original tenant-only CLI contract."""
+        selected = self.connection.execute(
+            "SELECT current_setting('app.workspace_id',true) AS workspace_id"
+        ).fetchone()
+        if selected is None:
+            raise PostgresIntercompanyEliminationError("Intercompany workspace authority is unavailable.")
+        bound = _row_value(selected, "workspace_id", 0) or None
+        principal = current_server_principal()
+        if principal is not None and (bound is None or bound not in principal.authorized_workspace_ids):
+            raise PostgresIntercompanyEliminationError("Intercompany workspace authority is denied.")
+        if workspace is not None:
+            workspace = self._workspace(workspace)
+            if bound is not None and workspace != bound:
+                raise PostgresIntercompanyEliminationError("Intercompany workspace authority is denied.")
+        return bound or workspace
 
     def _artifact_id(self, workspace: str, result: IntercompanyEliminationResult) -> str:
         digest = hashlib.sha256(f"{self.tenant_id}|{workspace}|{result.request_digest}".encode("ascii")).hexdigest()
@@ -232,10 +250,15 @@ class PostgresIntercompanyEliminationRepository:
         *,
         workspace: str,
         actor_label: str = "local-cli",
+        actor_user_id: str | None = None,
     ) -> dict[str, Any]:
         actor = self._actor(actor_label)
+        principal = current_server_principal()
+        identity = actor_user_id or (principal.user.id if principal is not None else actor)
+        if principal is not None and identity != principal.user.id:
+            raise PlatformError("The intercompany actor must be the authenticated human.")
         workspace_id = self._workspace(workspace)
-        if actor != result.prepared_by:
+        if identity != result.prepared_by:
             raise PlatformError("The authenticated intercompany preparer must match the result preparer.")
         payload = self._verify_result(lines, result)
         request_payload: dict[str, object] = {
@@ -251,9 +274,10 @@ class PostgresIntercompanyEliminationRepository:
         try:
             with self.connection.transaction():
                 self._scope()
+                self._artifact_workspace(workspace_id)
                 existing = self.connection.execute(
-                    "SELECT * FROM reconforge.intercompany_elimination_artifacts WHERE tenant_id=%s AND id=%s",
-                    (self.tenant_id, identifier),
+                    "SELECT * FROM reconforge.intercompany_elimination_artifacts WHERE tenant_id=%s AND id=%s AND workspace_id=%s",
+                    (self.tenant_id, identifier, workspace_id),
                 ).fetchone()
                 if existing is not None:
                     stored = self._decode_row(existing)
@@ -281,7 +305,7 @@ class PostgresIntercompanyEliminationRepository:
                 )
                 PostgresAuditEventRepository(self.connection, self.tenant_id).append(
                     actor_label=actor,
-                    actor_user_id=actor,
+                    actor_user_id=identity,
                     object_type="intercompany_elimination_artifact",
                     object_id=identifier,
                     action="intercompany_elimination_artifact_created",
@@ -307,16 +331,17 @@ class PostgresIntercompanyEliminationRepository:
         except Exception as exc:
             raise PostgresIntercompanyEliminationError("PostgreSQL intercompany elimination persistence failed.") from exc
 
-    def get(self, artifact_id: str, *, actor_label: str = "local-cli") -> dict[str, Any]:
+    def get(self, artifact_id: str, *, workspace: str | None = None, actor_label: str = "local-cli") -> dict[str, Any]:
         self._actor(actor_label)
         if re.fullmatch(r"ice-[0-9a-f]{32}", artifact_id) is None:
             raise PlatformError("Intercompany elimination artifact ID is invalid.")
         try:
             with self.connection.transaction():
                 self._scope()
+                workspace_id = self._artifact_workspace(workspace)
                 row = self.connection.execute(
-                    "SELECT * FROM reconforge.intercompany_elimination_artifacts WHERE tenant_id=%s AND id=%s",
-                    (self.tenant_id, artifact_id),
+                    "SELECT * FROM reconforge.intercompany_elimination_artifacts WHERE tenant_id=%s AND id=%s AND (%s::text IS NULL OR workspace_id=%s)",
+                    (self.tenant_id, artifact_id, workspace_id, workspace_id),
                 ).fetchone()
                 if row is None:
                     raise PostgresIntercompanyEliminationError("Intercompany elimination artifact was not found.")
@@ -346,6 +371,7 @@ class PostgresIntercompanyEliminationRepository:
         try:
             with self.connection.transaction():
                 self._scope()
+                self._artifact_workspace(workspace_id)
                 self.connection.execute(
                     """INSERT INTO reconforge.intercompany_elimination_artifacts(
                          tenant_id,id,workspace_id,reporting_currency,version,request_digest,result_digest,
@@ -390,6 +416,7 @@ class PostgresIntercompanyEliminationRepository:
         *,
         finance_entry_id: str | None = None,
         actor_label: str = "local-cli",
+        origin: Mapping[str, str] | None = None,
     ) -> str:
         actor = self._actor(actor_label)
         workspace_id = self._workspace(workspace)
@@ -399,6 +426,8 @@ class PostgresIntercompanyEliminationRepository:
         try:
             with self.connection.transaction():
                 self._scope()
+                self._origin("rule", workspace_id, rule.rule_id, origin, before=True)
+                self._origin("elimination", workspace_id, elimination.elimination_id, origin, before=True)
                 # Upsert rule
                 self.connection.execute(
                     """
@@ -458,6 +487,8 @@ class PostgresIntercompanyEliminationRepository:
                     ),
                 )
 
+                self._origin("rule", workspace_id, rule.rule_id, origin)
+                self._origin("elimination", workspace_id, elimination.elimination_id, origin)
                 PostgresAuditEventRepository(self.connection, self.tenant_id).append(
                     actor_label=actor,
                     actor_user_id=actor,
@@ -477,6 +508,41 @@ class PostgresIntercompanyEliminationRepository:
                 return elimination.elimination_id
         except Exception as exc:
             raise PostgresIntercompanyEliminationError(f"PostgreSQL profit in stock save failed: {exc}") from exc
+
+    def _origin(self, kind: str, workspace: str, identifier: str, origin: Mapping[str, str] | None,
+                *, before: bool = False) -> None:
+        if origin is None:
+            return
+        org, entity = origin["organization_id"], origin["legal_entity_id"]
+        row = self.connection.execute("SELECT current_setting('app.organization_id',true),current_setting('app.legal_entity_id',true),current_setting('app.workspace_id',true)").fetchone()
+        if not row or tuple(row) != (org, entity, workspace) or not org or not entity:
+            raise PostgresIntercompanyEliminationError("Source origin requires the current authenticated hierarchy.")
+        query = ("SELECT organization_id,legal_entity_id FROM reconforge.intercompany_profit_in_stock_rules WHERE tenant_id=%s AND workspace_id=%s AND rule_id=%s FOR UPDATE"
+            if kind == "rule" else
+            "SELECT organization_id,legal_entity_id FROM reconforge.intercompany_profit_in_stock_eliminations WHERE tenant_id=%s AND workspace_id=%s AND elimination_id=%s FOR UPDATE")
+        existing = self.connection.execute(query, (self.tenant_id, workspace, identifier)).fetchone()
+        if before:
+            if existing is not None and tuple(existing) != (org, entity):
+                raise PostgresIntercompanyEliminationError("Historical or foreign source origin cannot be inferred or replaced.")
+            return
+        query = ("UPDATE reconforge.intercompany_profit_in_stock_rules SET organization_id=%s,legal_entity_id=%s WHERE tenant_id=%s AND workspace_id=%s AND rule_id=%s AND organization_id IS NULL AND legal_entity_id IS NULL"
+            if kind == "rule" else
+            "UPDATE reconforge.intercompany_profit_in_stock_eliminations SET organization_id=%s,legal_entity_id=%s WHERE tenant_id=%s AND workspace_id=%s AND elimination_id=%s AND organization_id IS NULL AND legal_entity_id IS NULL")
+        self.connection.execute(query, (org, entity, self.tenant_id, workspace, identifier))
+
+    def prepare_financial_elimination(self, rule: IntercompanyProfitInStockRule, elimination: IntercompanyProfitInStockElimination,
+                                      *, scope: Mapping[str, str], period_id: str, posting_date: str, journal_code: str,
+                                      command_id: str, actor: Any) -> dict[str, Any]:
+        from reconforge.infrastructure.postgres_enterprise_finance_bridge import PostgresEnterpriseFinanceBridge
+
+        with self.connection.transaction():
+            self._scope()
+            existing = self.connection.execute("SELECT elimination_id FROM reconforge.intercompany_profit_in_stock_eliminations WHERE tenant_id=%s AND workspace_id=%s AND elimination_id=%s FOR UPDATE", (self.tenant_id, scope["workspace_id"], elimination.elimination_id)).fetchone()
+            if existing is None:
+                self.save_profit_in_stock_elimination(scope["workspace_id"], rule, elimination, actor_label=actor.username, origin=scope)
+            return PostgresEnterpriseFinanceBridge(self.connection, self.tenant_id).prepare("ProfitInStock", elimination.elimination_id,
+                scope=scope, period_id=period_id, posting_date=posting_date, journal_code=journal_code,
+                command_id=command_id, actor=actor)
 
     def post_profit_in_stock_to_finance_core(
         self,
@@ -627,6 +693,7 @@ class PostgresIntercompanyEliminationRepository:
         try:
             with self.connection.transaction():
                 self._scope()
+                self._artifact_workspace(workspace_id)
                 cur = self.connection.execute(
                     """
                     SELECT id, workspace_id, reporting_currency, version,
@@ -666,7 +733,7 @@ class PostgresIntercompanyEliminationRepository:
         actor_label: str = "local-cli",
     ) -> dict[str, Any] | None:
         try:
-            return self.get(run_id, actor_label=actor_label)
+            return self.get(run_id, workspace=workspace, actor_label=actor_label)
         except PostgresIntercompanyEliminationError:
             return None
 

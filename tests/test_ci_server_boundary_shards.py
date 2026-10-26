@@ -176,8 +176,9 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 79  # Keep prior commands and the newly configured fixture/AR regressions.
+    assert len(commands) == 80  # The grouped-worker native guard has its own mandatory command.
     assert all(count == 1 for count in Counter(commands).values())
+    assert "uv run --no-sync pytest tests/test_postgres_grouped_matching_guard_20261027.py -q" in groups["matching-runtime"]
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
     for script, owner in PROOF_OWNERS.items():
@@ -198,6 +199,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert receipt in groups["inventory-payables"]
     for filename, owner in (
         ("tests/test_postgres_sales_owner_closure.py", "inventory-payables"),
+        ("tests/test_postgres_grouped_matching_guard_20261027.py", "matching-runtime"),
         ("tests/test_postgres_operational_finance_api.py", "finance-posting"),
         ("tests/test_postgres_financial_installments.py", "finance-reporting"),
         ("tests/test_postgres_financial_reporting.py", "finance-reporting"),
@@ -255,6 +257,7 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
         "tests/test_release_authorization_postgres.py",
     }
     ignored = {
+        "tests/test_postgres_grouped_matching_guard_20261027.py",
         "tests/test_postgres_financial_source_roles.py",
         "tests/test_postgres_stock_sales.py", "tests/test_postgres_stock_sales_api.py",
         "tests/test_postgres_stock_sales_read_authority.py",
@@ -277,6 +280,7 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
                   if step["name"] == "Run live server-boundary tests")
     groups = _partition(native["run"])
     owners = {path: owner for owner, paths in INTEGRITY_FILES.items() for path in paths}
+    owners["tests/test_postgres_grouped_matching_guard_20261027.py"] = "matching-runtime"
     for path in ignored:
         assert [owner for owner, commands in groups.items()
                 for command in commands if path in shlex.split(command)] == [

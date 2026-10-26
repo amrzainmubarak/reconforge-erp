@@ -1710,3 +1710,6 @@ include docs/adr/0876-canonical-quality-review-authority.md
 include docs/execution/QUALITY_AUTHORITY_HARDENING_2026-10-26.md
 
 include docs/adr/0877-opt-in-guarded-amount-parser.md
+
+include docs/adr/0878-exact-grouped-matching-experiment.md
+include docs/execution/COMPETITOR_REFERENCE_2026-10-27.md

@@ -20,6 +20,7 @@ input, textarea { caret-color: var(--brand-strong); }
 .nav-item-label { font-size: 12px; font-weight: 550; }
 .nav-item--active { box-shadow: none !important; background: #245a50; color: #fff; }
 .nav-item--active .nav-item-label { font-weight: 750; }
+.nav-item--active .nav-status--foundation { background: #103d34; color: #eff8f5; }
 .nav-status { text-transform: none; letter-spacing: 0; font-size: 9px; }
 .navigation-empty { padding: 12px; color: var(--sidebar-text); line-height: 1.6; font-size: 13px; }
 .sidebar--collapsed .navigation-search { display: none; }

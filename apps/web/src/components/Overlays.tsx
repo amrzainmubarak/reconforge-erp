@@ -124,7 +124,14 @@ export function CommandPalette({ translate, onClose, onNavigate, canView = () =>
     if (event.key === "Escape") { event.preventDefault(); onClose(); return; }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       const rows = [...(dialogRef.current?.querySelectorAll<HTMLElement>(".command-row:not([aria-disabled])") ?? [])];
-      if (rows.length) { event.preventDefault(); const index = rows.indexOf(document.activeElement as HTMLElement); rows[(index + (event.key === "ArrowDown" ? 1 : -1) + rows.length) % rows.length]?.focus(); }
+      if (rows.length) {
+        event.preventDefault();
+        const index = rows.indexOf(document.activeElement as HTMLElement);
+        const next = index < 0
+          ? event.key === "ArrowDown" ? 0 : rows.length - 1
+          : (index + (event.key === "ArrowDown" ? 1 : -1) + rows.length) % rows.length;
+        rows[next]?.focus();
+      }
       return;
     }
     if (event.key !== "Tab") return;

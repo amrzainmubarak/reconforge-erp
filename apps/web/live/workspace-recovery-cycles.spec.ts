@@ -12,9 +12,9 @@ const financialHeaders = () => ({
   "X-ReconForge-Workspace": "work", "X-ReconForge-Organization": "org", "X-ReconForge-Legal-Entity": "entity",
 });
 const locales = {
-  en: { navigation: "Primary navigation", returns: "Customer returns", dashboard: "Dashboard", unavailable: "Workspace unavailable",
+  en: { navigation: "Primary navigation", sales: "Sales & customers", returns: "Customer returns", dashboard: "Dashboard", unavailable: "Workspace unavailable",
     open: "Open dashboard", reload: "Reload page", heading: "Original customer returns and partial refunds", direction: "ltr" },
-  ar: { navigation: "التنقل الرئيسي", returns: "مرتجعات العملاء", dashboard: "لوحة المتابعة", unavailable: "مساحة العمل غير متاحة",
+  ar: { navigation: "التنقل الرئيسي", sales: "المبيعات والعملاء", returns: "مرتجعات العملاء", dashboard: "لوحة المتابعة", unavailable: "مساحة العمل غير متاحة",
     open: "فتح لوحة المتابعة", reload: "إعادة تحميل الصفحة", heading: "إرجاع العميل الأصلي وردّ النقد على دفعات", direction: "rtl" },
 } as const;
 type ResponsiveCheck = {
@@ -88,12 +88,15 @@ for (const locale of ["en", "ar"] as const) {
       abortedAssets.push(new URL(route.request().url()).pathname);
       await route.abort("failed");
     }, { times: 1 });
-    const failedAsset = page.waitForEvent("requestfailed", request => asset.test(request.url()));
     const navigation = page.getByRole("navigation", { name: text.navigation, exact: true });
+    const salesGroup = navigation.locator("summary").filter({ hasText: text.sales });
     let recovered = false;
     try {
-      await navigation.getByRole("button", { name: text.returns, exact: true }).click();
-      await failedAsset;
+      await salesGroup.click();
+      await Promise.all([
+        page.waitForEvent("requestfailed", request => asset.test(request.url())),
+        navigation.getByRole("button", { name: text.returns, exact: true }).click(),
+      ]);
       expect(abortedAssets).toHaveLength(1);
       const fallback = page.locator("main#main-content");
       await expect(fallback.getByRole("heading", { name: text.unavailable, exact: true })).toBeVisible();
@@ -132,6 +135,7 @@ for (const locale of ["en", "ar"] as const) {
       await dashboard.focus(); await expect(dashboard).toBeFocused(); await dashboard.press("Enter");
       await expect(navigation.getByRole("button", { name: text.dashboard, exact: true })).toHaveAttribute("aria-current", "page");
       await expect(page.getByRole("heading", { name: text.unavailable, exact: true })).toHaveCount(0);
+      await salesGroup.click();
       const again = navigation.getByRole("button", { name: text.returns, exact: true });
       await again.focus(); await expect(again).toBeFocused(); await again.press("Enter");
       await expect(fallback.getByRole("heading", { name: text.unavailable, exact: true })).toBeVisible();

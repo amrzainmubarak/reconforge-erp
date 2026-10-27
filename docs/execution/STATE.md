@@ -1,3 +1,11 @@
+## Quality entity and source ownership blockers — 2026-10-27
+
+**RELEASE BLOCKED.** On source `b8374025fde8100613e81ce10a37945c67dcbb1a`, an authenticated PostgreSQL API probe showed a user denied access to entity A could disposition an NCR created by A when using an authorized entity B in the same workspace. The current NCR contract is explicitly workspace-scoped, so this demonstrates an enterprise entity-isolation gap, not proof of misattributed historical ownership. Current NCRs lack immutable entity bindings; old owners must not be inferred. Inspection plans and rework also require review before claiming end-to-end entity isolation.
+
+A separate synthetic native receipt plus advisory NCR probe retained quantity 10, value 12000 minor units and one GL effect after NCR disposition. Its synthetic lot/work-order was not proven related to the receipt, so this documents lack of a demonstrated quality-to-inventory source link, not a verified defect in a linked posting. Quality API responses correctly say effects are not posted.
+
+A proposed transactional entity-binding migration remains unimplemented: legacy ownership, direct repository access, RLS policies, plans, rework, restore and compatibility require a coherent design and tests. An automated review flagged an agent's security-audit task as possible cybersecurity risk and stopped that agent; the notification gave no finer reason. Do not mark the issue resolved.
+
 ## FX and responsive navigation continuation — 2026-10-27
 
 **RELEASE BLOCKED.** GitHub on entry `8942e56f53c470a937a6995a3c9f0b05661ef99d` passed CodeQL but exposed a missing backlog dependency and product restore/client-version mismatch; the dependency is restored and the product native job now installs and verifies PostgreSQL 16 client tools. Hosted qualification of those corrections is pending.

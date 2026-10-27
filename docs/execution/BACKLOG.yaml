@@ -21,6 +21,13 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-QUALITY-ENTITY-SOURCE-20261027
+    depends_on: [AMR-ENTERPRISE-INTEGRATION-STUDIO-20261026]
+    status: blocked
+    priority: P0
+    release_requirement: required
+    report: docs/execution/STATE.md
+    note: "Observed PostgreSQL/API cross-entity disposition in workspace-scoped NCR; bind new source ownership without inferring legacy owners, cover plans/rework/RLS and migration/restore, and establish genuine inventory/GL linkage before acceptance."
   - id: AMR-HOSTED-FAILURES-20261027
     depends_on: [AMR-ENTERPRISE-INTEGRATION-STUDIO-20261026]
     status: in_progress

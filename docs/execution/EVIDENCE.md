@@ -24595,3 +24595,8 @@ Exact-head `8942e56f`: nine native tests without skips in `output/assurance-2026
 Independent adapter-level inverse FX evidence: `output/assurance-20261026/fx-inverse-guard-proof-20261027.json`. Experimental FX review: initial collision reproduced in `output/enterprise-program-20261026/qa-fx-independent-adversarial-20261027.json`; revised path checked against 2000 Fraction cases in `qa-fx-independent-randomized-20261027.json` and focused tests in `output/assurance-20261026/grouped-fx-v2-candidate-proof-20261027.json`. These do not establish production wiring or native persistence.
 
 Responsive navigation pre-fix evidence includes `resize-open-drawer-8942e56f.cjs` and `qa-navigation-focus-resize-20261027.json`; independent recheck is `qa-navigation-recheck-20261027.log`, agent browser suite `desktop-mobile-focus-final.log`, all under `output/enterprise-program-20261026`. Full accessibility and authenticated final-source UI verification remain required.
+
+
+## Quality isolation and source ownership — 2026-10-27
+
+Source-bound PostgreSQL/API probe `output/assurance-20261026/quality-cross-entity-probe-20261027.json` and matching script/log: identity B receives 403 for A scope, but can disposition an A-created workspace-scoped NCR under B scope. This is an observed enterprise isolation gap; historical NCR entity ownership is not established. `quality-advisory-stock-proof-20261027.json` and matching script/log demonstrate an advisory NCR did not change a separate posted receipt's quantity/value/GL effects; no association between the synthetic NCR and receipt was established. Direct-SQL bypass, plan isolation and all migration approaches remain hypotheses requiring verification.

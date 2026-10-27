@@ -9,13 +9,15 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from reconforge.api import create_api_app
 from reconforge.api.errors import APIError, api_error_handler
 from reconforge.api.routes.manufacturing_quality import (
-    require_quality_manage,
     require_quality_read,
     router,
 )
+from reconforge.auth import LocalAuthService
 from reconforge.auth.models import LocalUser
+from reconforge.db import connect, run_migrations
 from reconforge.domain.manufacturing_quality_rework import (
     NonConformanceReport,
     QualityInspectionPlan,
@@ -165,17 +167,26 @@ def test_rework_order_cost_accumulation() -> None:
 
 def test_quality_api_routes(tmp_path: object) -> None:
     db_path = str(Path(str(tmp_path)) / "quality_api_test.db")
-    app = FastAPI()
-    app.add_exception_handler(APIError, cast(Any, api_error_handler))
-    app.include_router(router, prefix="/api/v1")
-    app.state.db_path = db_path
-    app.state.server_mode = False
+    run_migrations(db_path)
+    password = "Synthetic-Quality-Test-2026!"
+    with connect(db_path) as connection:
+        auth = LocalAuthService(connection)
+        creator = auth.init_admin(username="qa_lead", password=password)
+        reviewer = auth.create_user(username="qa_reviewer", password=password, role="admin")
+        role_id = connection.execute("SELECT id FROM roles WHERE name='admin'").fetchone()[0]
+        for permission in ("manufacturing_execution.read", "manufacturing_execution.manage"):
+            connection.execute("INSERT OR IGNORE INTO permissions(name,description) VALUES(?,?)", (permission, "Synthetic quality authority"))
+            connection.execute("INSERT OR IGNORE INTO role_permissions(role_id,permission_name) VALUES(?,?)", (role_id, permission))
+        connection.commit()
 
-    user = LocalUser(id="qa_tester", username="qa_lead", display_name="QA Lead")
-    app.dependency_overrides[require_quality_read] = lambda: user
-    app.dependency_overrides[require_quality_manage] = lambda: user
+    client = TestClient(create_api_app(db_path))
 
-    client = TestClient(app)
+    def login(username: str) -> None:
+        response = client.post("/api/v1/auth/login", json={"username": username, "password": password})
+        assert response.status_code == 200, response.text
+        client.headers.update({"Authorization": "Bearer " + response.json()["access_token"]})
+
+    login(creator.username)
 
     # 1. Register inspection plan
     plan_payload = {
@@ -224,16 +235,27 @@ def test_quality_api_routes(tmp_path: object) -> None:
         "quarantined_quantity_scaled": 10_000,
     }
     resp_ncr = client.post("/api/v1/manufacturing/quality/ncrs", json=ncr_payload)
-    assert resp_ncr.status_code == 200
-    assert resp_ncr.json()["status"] == "quarantined"
+    assert resp_ncr.status_code == 200, resp_ncr.text
+    assert resp_ncr.json()["status"] == "recorded"
+    assert resp_ncr.json()["inventory_effect"] == "not_posted"
+    assert resp_ncr.json()["inspector_user_id"] == creator.id
 
-    # 5. Disposition NCR
+    # 5. The creator cannot disposition their own NCR; a separate reviewer can.
+    self_review = client.post(
+        "/api/v1/manufacturing/quality/ncrs/NCR-2026-TURBINE-01/disposition",
+        json={"disposition": "rework", "notes": "Plasma spray coating to build thickness"},
+    )
+    assert self_review.status_code == 403, self_review.text
+    assert self_review.json()["error"]["code"] == "quality_self_disposition_denied"
+    login(reviewer.username)
     resp_disp = client.post(
         "/api/v1/manufacturing/quality/ncrs/NCR-2026-TURBINE-01/disposition",
         json={"disposition": "rework", "notes": "Plasma spray coating to build thickness"},
     )
     assert resp_disp.status_code == 200
     assert resp_disp.json()["status"] == "dispositioned"
+    assert resp_disp.json()["disposition_by_user_id"] == reviewer.id
+    assert resp_disp.json()["inventory_effect"] == "not_posted"
 
     # 6. Create Rework Order
     rework_payload = {
@@ -256,6 +278,7 @@ def test_quality_api_routes(tmp_path: object) -> None:
     resp_rwo = client.post("/api/v1/manufacturing/quality/rework-orders", json=rework_payload)
     assert resp_rwo.status_code == 200
     assert resp_rwo.json()["status"] == "released"
+    assert resp_rwo.json()["financial_effect"] == "not_posted"
 
     # 7. Log rework step
     resp_step = client.post(
@@ -271,6 +294,7 @@ def test_quality_api_routes(tmp_path: object) -> None:
     assert resp_comp.status_code == 200
     assert resp_comp.json()["status"] == "completed"
     assert resp_comp.json()["total_rework_cost_minor"] == 80_000
+    assert resp_comp.json()["financial_effect"] == "not_posted"
 
 
 def test_quality_api_server_mode_fail_closed() -> None:

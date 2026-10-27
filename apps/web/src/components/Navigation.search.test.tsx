@@ -37,6 +37,18 @@ it("never exposes a denied page after a permitted search result is selected", ()
   expect(screen.queryByRole("button", { name: translate("en", "hcmLeave"), hidden: true })).not.toBeInTheDocument();
 });
 
+it("keeps denied pages hidden when a mobile search is cleared for the icon rail", () => {
+  const canView = (page: Parameters<NonNullable<React.ComponentProps<typeof Sidebar>["canView"]>>[0]) => page !== "hcmLeave";
+  const properties = { ...base, canView, translate: (key: Parameters<typeof translate>[1]) => translate("en", key) };
+  const view = render(<Sidebar {...properties} mobileOpen />);
+  const search = screen.getByRole("searchbox", { name: "Find a workspace" });
+  fireEvent.change(search, { target: { value: "no matching workspace" } });
+  view.rerender(<Sidebar {...properties} collapsed mobileOpen={false} />);
+  expect(search).toHaveValue("");
+  expect(screen.queryByRole("button", { name: translate("en", "hcmLeave"), hidden: true })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Finance & reporting" })).toHaveAttribute("aria-current", "page");
+});
+
 it("reopens the mobile drawer without retaining the previous destination search", () => {
   const onMobileClose = vi.fn();
   const props = { ...base, onMobileClose, translate: (key: Parameters<typeof translate>[1]) => translate("en", key) };

@@ -22,7 +22,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from "react";
 
 import type { MessageKey } from "../i18n";
 import type { StudioPage } from "../types";
@@ -166,6 +166,9 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
     return () => { mobile.removeEventListener("change", update); tablet.removeEventListener("change", update); };
   }, []);
   const rail = !mobileOpen && (collapsed || viewport.tablet);
+  useLayoutEffect(() => {
+    if (rail) setQuery("");
+  }, [rail]);
   const drawer = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!mobileOpen) return;

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { MobileDock, Sidebar } from "./components/Navigation";
 import { AccessibilityPanel, CommandPalette } from "./components/Overlays";
@@ -81,6 +81,51 @@ function StudioApp() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => { try { return localStorage.getItem("reconforge.studio.sidebar-collapsed") === "true"; } catch { return false; } });
   useEffect(() => { try { localStorage.setItem("reconforge.studio.sidebar-collapsed", String(sidebarCollapsed)); } catch { /* Layout preference remains usable without storage. */ } }, [sidebarCollapsed]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const lastSidebarFocus = useRef<HTMLElement | null>(null);
+  const pendingDesktopFocus = useRef<HTMLElement | null>(null);
+  const shell = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const mobile = window.matchMedia("(max-width: 840px)");
+    let focusFrame: number | undefined;
+    const handleViewportChange = (event: MediaQueryListEvent) => {
+      if (!event.matches) {
+        if (mobileMenuOpen) pendingDesktopFocus.current = lastSidebarFocus.current;
+        setMobileMenuOpen(false);
+      } else if (!mobileMenuOpen && lastSidebarFocus.current) {
+        const sidebar = shell.current?.querySelector<HTMLElement>("aside.sidebar");
+        const focused = document.activeElement;
+        if (focused !== document.body && !sidebar?.contains(focused)) return;
+        focusFrame = window.requestAnimationFrame(() => {
+          const current = document.activeElement;
+          if (!mobile.matches || (current !== document.body && !sidebar?.contains(current))) return;
+          const menu = shell.current?.querySelector<HTMLButtonElement>("button.mobile-menu-button");
+          if (menu?.getClientRects().length) menu.focus();
+        });
+      }
+    };
+    mobile.addEventListener("change", handleViewportChange);
+    return () => {
+      mobile.removeEventListener("change", handleViewportChange);
+      if (focusFrame !== undefined) window.cancelAnimationFrame(focusFrame);
+    };
+  }, [mobileMenuOpen]);
+  useLayoutEffect(() => {
+    if (mobileMenuOpen) return;
+    const previous = pendingDesktopFocus.current;
+    pendingDesktopFocus.current = null;
+    if (!previous || previous.getClientRects().length > 0) return;
+    const focused = document.activeElement;
+    if (focused !== document.body && focused !== previous) return;
+    const sidebar = shell.current?.querySelector<HTMLElement>("aside.sidebar");
+    const navigation = sidebar?.querySelector<HTMLElement>("nav.desktop-navigation");
+    const current = navigation?.querySelector<HTMLElement>('[aria-current="page"]');
+    const candidates = navigation?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]') ?? [];
+    const visible = (element: HTMLElement) => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== "hidden";
+    const workspace = sidebar?.querySelector<HTMLElement>("summary.workspace-switcher");
+    const target = (current && visible(current) ? current : [...candidates].find(visible)) ?? (workspace && visible(workspace) ? workspace : null);
+    target?.focus();
+  }, [mobileMenuOpen]);
   const [commandOpen, setCommandOpen] = useState(false);
   const commandReturnFocus = useRef<HTMLElement | null>(null);
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
@@ -149,7 +194,10 @@ function StudioApp() {
   };
 
   return (
-    <div className={`app-shell ${sidebarCollapsed ? "app-shell--collapsed" : ""}`}>
+    <div ref={shell} className={`app-shell ${sidebarCollapsed ? "app-shell--collapsed" : ""}`} onFocusCapture={event => {
+      const target = event.target;
+      lastSidebarFocus.current = target instanceof HTMLElement && target.closest("aside.sidebar") ? target : null;
+    }}>
       <a className="skip-link" href="#studio-workspace-content">{t("skipToMain")}</a>
       <Sidebar
         translate={t}

@@ -9,7 +9,7 @@ records suitable for the existing worker contract.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from decimal import Decimal, Inexact, localcontext
+from decimal import ROUND_HALF_EVEN, Decimal, Inexact, localcontext
 from typing import Any, cast
 
 from reconforge.application.matching_strategies import MatchingStrategyRequest, replay_result_envelope
@@ -296,6 +296,12 @@ class PostgresGroupedMatchingAdapter:
             # produced after implicit context rounding. Flags in independently
             # nested contexts (for example FX conversion) are outside this guard.
             with localcontext() as decimal_context:
+                # v1 hashes formatted decimal values, including signed zero;
+                # different rounding modes can therefore alter its evidence even
+                # when no arithmetic raises Inexact. Reject rather than rewrite
+                # historical v1 outputs or silently change the caller's policy.
+                if decimal_context.rounding != ROUND_HALF_EVEN:
+                    raise PostgresGroupedMatchingAdapterError("Grouped PostgreSQL matching requires the default rounding context.")
                 decimal_context.clear_flags()
                 decimal_context.traps[Inexact] = False
                 request = _request(context, partition.partition_key, partition.left_inputs, partition.right_inputs)

@@ -21,6 +21,12 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-HOSTED-FAILURES-20261027
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/STATE.md
+    note: "Repair entry head hosted quality, recovery and CodeQL findings; repeat native and browser checks on committed source and verify hosted CI. ERP browser cause, old v1 replay and five complete cycles remain open."
   - id: AMR-EXACT-GROUPED-MATCHING-20261027
     depends_on: [AMR-ENTERPRISE-INTEGRATION-STUDIO-20261026]
     status: in_progress

@@ -24566,3 +24566,16 @@ typecheck passes. This is neither authenticated PostgreSQL workflow evidence
 nor whole-product accessibility acceptance. A separate test invocation from
 the repository root failed because it omitted the web test environment; the
 correct working-directory rerun passed11.
+
+
+## Hosted failure continuation — 2026-10-27
+
+Entry PR head `80cc14ad6423288db819abf473264df00103f569` has seven failed checks: Python 3.11/3.12, ERP browser, three customer-return browser jobs and CodeQL. Actual browser diagnostics were downloaded to `output/enterprise-program-20261026/github-erp-browser-80cc14ad/`. The original CodeQL finding concerns a synthetic credential written to a fixture file.
+
+- Local quality authority: `output/assurance-20261026/integration-quality-native-20261027.json`, 5 native tests, no skips.
+- Local partial enterprise cycles: `output/assurance-20261026/integration-global-cycles-20261027.json`, 2 native tests, no skips, source changed during run; not a release receipt.
+- Authenticated product and shell browser tests: `output/enterprise-program-20261026/security-product-browser-20261027.log` and `security-shell-browser-20261027.log`, 2 each.
+- Return recovery: `output/enterprise-program-20261026/customer-returns-local-green/report.json`, 3 browser tests and restore passed, publication gate failed because tracked files were modified.
+- ERP browser: `output/enterprise-program-20261026/erp-browser-local-cached/report.json`, 1 browser test and restore passed on local PostgreSQL 17.10 with uncommitted source; GitHub root cause remains unresolved.
+
+Local results above are development evidence, not a source-frozen final acceptance. Earlier synthetic browser fixture evidence in `output/release-blocker-20261025/agent-c/browser-fixture.json` was overwritten in the first verification run.

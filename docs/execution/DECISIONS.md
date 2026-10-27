@@ -13986,3 +13986,8 @@ produce false matches. A separate experimental domain contract with immutable
 registry context, bounded arithmetic and independent content fingerprints is
 recorded in ADR0878. It does not relabel old outputs or alter the worker.
 No overall competitive superiority or completed ERP lifecycle is claimed.
+
+
+### 2026-10-27 — Browser test credential boundary
+
+Pass a fresh synthetic browser credential through the test process environment instead of retaining it in the JSON evidence fixture. Keep the identifier fixture constrained to declared keys. This is test infrastructure, does not change production authentication, and does not prove that all browser traces redact typed credentials. Historical fixture artifacts and GitHub CodeQL findings remain subject to review.

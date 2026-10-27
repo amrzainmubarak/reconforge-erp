@@ -1,3 +1,11 @@
+## Hosted failure repair continuation — 2026-10-27
+
+**RELEASE BLOCKED.** Entry PR head `80cc14ad6423288db819abf473264df00103f569` had failing Python 3.11/3.12 quality API tests, customer-return browser recovery, ERP browser recovery, and a CodeQL alert. The quality test now uses persisted distinct users and checks the current `not_posted` contract; quality-to-inventory/GL remains absent and blocked. Recovery tests open the real grouped navigation and continue asserting interrupted-load recovery. The ERP browser failure was not independently reproduced as a cause; its local authenticated journey passed, but hosted verification remains required.
+
+Browser fixtures no longer persist generated synthetic passwords; Playwright passes them in the process environment and the fixture writer permits explicit non-secret keys only. Independent review notes retained traces could contain typed test credentials, and older evidence was not sanitized. During the first local run the existing synthetic `browser-fixture.json` in the prior default evidence directory was overwritten; subsequent runs used separate directories. No claim about production credentials or CodeQL success is made until hosted analysis completes.
+
+Real PostgreSQL partial cycles and browser tests passed in development, but concurrent edits prevented source-frozen acceptance. Repeat them on the committed source. Five complete enterprise cycles, source-bound full CI, v1 matching determinism and UI acceptance remain unqualified.
+
 ## Exact matching and navigation hardening — 2026-10-27
 
 **RELEASE BLOCKED.** Entry source `c085dbd114734f9577c26b4ae96f13c5857cc5dc`.

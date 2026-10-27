@@ -42,20 +42,20 @@ def restore_metadata() -> dict[str, Any]:
                   "customer_partial_return_monetary_events", "customer_partial_return_monetary_history", "customer_partial_return_monetary_plans", "customer_partial_return_monetary_restorations"}
     catalog = dict.fromkeys(sorted(new_tables), {})
     catalog.update({"synthetic_catalog_" + str(index): {} for index in range(340)})
-    catalog.update(dict.fromkeys(REGISTERED_MODULE_TABLES + RETAINED_ENTERPRISE_TABLES + ("enterprise_finance_bindings", "enterprise_finance_commands", "crm_quotation_authorities"), {}))
-    return {"status": "passed", "tamper_refusals": 3, "snapshot": {"head": "0156_pg_hcm_leave_entity", "tables": catalog, "forced_rls_financial_tables": 93},
+    catalog.update(dict.fromkeys(REGISTERED_MODULE_TABLES + RETAINED_ENTERPRISE_TABLES + ("enterprise_finance_bindings", "enterprise_finance_commands", "crm_quotation_authorities", "quality_ncr_actor_authorities"), {}))
+    return {"status": "passed", "tamper_refusals": 3, "snapshot": {"head": "0157_pg_quality_actor_authority", "tables": catalog, "forced_rls_financial_tables": 93},
             "protected_financial_tables": protected, "unbound_tenant_probe_tables": protected.copy(),
             "sibling_workspace_probe_tables": sorted(set(TABLES) - set(audits)), "tenant_global_audit_tables": audits,
             "scope_probe_counts": {"protected": 93, "unbound_tenant": 93, "sibling_workspace": 89, "tenant_global_audit": 2}}
 
 
-def test_raw91_protected93_and_versioned_catalog383_are_distinct_guarded_contracts() -> None:
+def test_raw91_protected93_and_versioned_catalog384_are_distinct_guarded_contracts() -> None:
     assert len(TABLES) == 91 and set(FINANCIAL_TABLES) - set(TABLES) == {"currency_registry_bindings", "currency_registry_snapshots"}
-    assert len(restore_metadata()["snapshot"]["tables"]) == 347 + 14 + 19 + 2 + 1 == 383
+    assert len(restore_metadata()["snapshot"]["tables"]) == 347 + 14 + 19 + 2 + 1 + 1 == 384
     RUNNER.require_monetary_native_restore(restore_metadata())
 
 
-@pytest.mark.parametrize("damage", ["catalog340", "new-table-absent", "enterprise-table-substituted", "crm-authority-absent", "prior-head", "prior-crm-head", "extra-table", "raw91-as-protected", "audit-omitted", "workspace-omitted", "tamper-bool", "count-bool"])
+@pytest.mark.parametrize("damage", ["catalog340", "new-table-absent", "enterprise-table-substituted", "crm-authority-absent", "quality-authority-absent", "prior-head", "prior-crm-head", "prior-hcm-head", "extra-table", "raw91-as-protected", "audit-omitted", "workspace-omitted", "tamper-bool", "count-bool"])
 def test_incomplete_or_reclassified_monetary_restore_cannot_pass(damage: str) -> None:
     value = deepcopy(restore_metadata())
     if damage == "catalog340":
@@ -71,8 +71,13 @@ def test_incomplete_or_reclassified_monetary_restore_cannot_pass(damage: str) ->
         value["snapshot"]["head"] = "0152_pg_performance_indexes"
     elif damage == "prior-crm-head":
         value["snapshot"]["head"] = "0155_pg_crm_authority"
+    elif damage == "prior-hcm-head":
+        value["snapshot"]["head"] = "0156_pg_hcm_leave_entity"
     elif damage == "crm-authority-absent":
         del value["snapshot"]["tables"]["crm_quotation_authorities"]
+        value["snapshot"]["tables"]["unknown_new_table"] = {}
+    elif damage == "quality-authority-absent":
+        del value["snapshot"]["tables"]["quality_ncr_actor_authorities"]
         value["snapshot"]["tables"]["unknown_new_table"] = {}
     elif damage == "extra-table":
         value["snapshot"]["tables"]["unregistered_table"] = {}

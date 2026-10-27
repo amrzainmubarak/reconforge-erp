@@ -804,9 +804,11 @@ def require_monetary_native_restore(value: Any) -> None:
     # The original149 census was347. Revision151 added14 tables (the artifact
     # table already belonged to063),153 adds19 and154 adds2. Require every
     # named addition and the exact versioned census; never relax to >=347.
-    # Revision155 adds canonical CRM authority;156 strengthens leave policies.
+    # Revision155 adds canonical CRM authority;156 strengthens leave policies;
+    # 157 adds the forced-RLS quality actor authority table.
     extensions = set(REGISTERED_MODULE_TABLES) | set(RETAINED_ENTERPRISE_TABLES) | {
-        "enterprise_finance_bindings", "enterprise_finance_commands", "crm_quotation_authorities"}
+        "enterprise_finance_bindings", "enterprise_finance_commands", "crm_quotation_authorities",
+        "quality_ncr_actor_authorities"}
     protected = set(TABLES) | set(FINANCIAL_TABLES)
     audits = {"domain_audit_events", "domain_audit_ledger_state"}
     new_tables = {"stock_sales_monetary_origins", "customer_partial_return_monetary_commands", "customer_partial_return_monetary_entries",
@@ -814,8 +816,8 @@ def require_monetary_native_restore(value: Any) -> None:
                   "customer_partial_return_monetary_restorations"}
     if (type(value) is not dict or value.get("status") != "passed" or type(value.get("tamper_refusals")) is not int or value["tamper_refusals"] != 3
             or type(value.get("snapshot")) is not dict or type(value["snapshot"].get("tables")) is not dict
-            or value["snapshot"].get("head") != "0156_pg_hcm_leave_entity"
-            or len(value["snapshot"]["tables"]) != 383
+            or value["snapshot"].get("head") != "0157_pg_quality_actor_authority"
+            or len(value["snapshot"]["tables"]) != 384
             or not (new_tables | extensions) <= set(value["snapshot"]["tables"])
             or type(value["snapshot"].get("forced_rls_financial_tables")) is not int or value["snapshot"]["forced_rls_financial_tables"] != 93):
         raise ValueError("Monetary149 populated native restore is incomplete.")

@@ -1,3 +1,9 @@
+## Hosted environment and synthetic fixture follow-up — 2026-10-27
+
+**RELEASE BLOCKED.** On `a1e73b1b9a0b8997bee917f44cb7fb2a5975936c`, native PostgreSQL nine tests and authenticated ERP (one browser) and customer returns (three browsers) plus native restore passed on source-frozen runs. That SHA is a checkpoint, not the current release candidate. New hosted server-boundary shards failed before tests because ubuntu-latest selected Ubuntu 26.04 without postgresql-client-16; the job is now pinned to ubuntu-24.04 while preserving the major-version verifier. Hosted qualification is pending.
+
+A subsequent CodeQL alert classified the synthetic employee identifier as private. The test-only TLS server now provides allowed fixture identifiers from memory via a local-only access key, with no fixture file. The endpoint is absent from production app code. Local product and shell browsers each passed two tests; rerun hosted CodeQL and CI. Playwright traces can contain temporary test passwords and synthetic identifiers; the endpoint key was absent in the two inspected traces. Existing historical evidence is not retroactively sanitized. Five enterprise cycles and v1 financial replay remain unqualified.
+
 ## Hosted failure repair continuation — 2026-10-27
 
 **RELEASE BLOCKED.** Entry PR head `80cc14ad6423288db819abf473264df00103f569` had failing Python 3.11/3.12 quality API tests, customer-return browser recovery, ERP browser recovery, and a CodeQL alert. The quality test now uses persisted distinct users and checks the current `not_posted` contract; quality-to-inventory/GL remains absent and blocked. Recovery tests open the real grouped navigation and continue asserting interrupted-load recovery. The ERP browser failure was not independently reproduced as a cause; its local authenticated journey passed, but hosted verification remains required.

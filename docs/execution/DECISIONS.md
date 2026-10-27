@@ -13991,3 +13991,8 @@ No overall competitive superiority or completed ERP lifecycle is claimed.
 ### 2026-10-27 — Browser test credential boundary
 
 Pass a fresh synthetic browser credential through the test process environment instead of retaining it in the JSON evidence fixture. Keep the identifier fixture constrained to declared keys. This is test infrastructure, does not change production authentication, and does not prove that all browser traces redact typed credentials. Historical fixture artifacts and GitHub CodeQL findings remain subject to review.
+
+
+### 2026-10-27 — Test fixture in memory and native runner version
+
+Synthetic browser fixture identifiers are now retrieved from a disposable TLS test server endpoint protected by a test-process key, instead of retaining a JSON fixture file. The endpoint exists only in test runtime. Browser trace content is not generally redacted. The PostgreSQL 16 server-boundary job pins Ubuntu 24.04 because the Ubuntu 26.04 runner apt sources did not provide its required matching client; the fail-closed client-version validator stays enabled. Neither change is accepted until the new hosted run completes.

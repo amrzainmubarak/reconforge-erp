@@ -24579,3 +24579,10 @@ Entry PR head `80cc14ad6423288db819abf473264df00103f569` has seven failed checks
 - ERP browser: `output/enterprise-program-20261026/erp-browser-local-cached/report.json`, 1 browser test and restore passed on local PostgreSQL 17.10 with uncommitted source; GitHub root cause remains unresolved.
 
 Local results above are development evidence, not a source-frozen final acceptance. Earlier synthetic browser fixture evidence in `output/release-blocker-20261025/agent-c/browser-fixture.json` was overwritten in the first verification run.
+
+
+## Source-frozen checkpoint and hosted environment — 2026-10-27
+
+Checkpoint `a1e73b1b9a0b8997bee917f44cb7fb2a5975936c`: `output/assurance-20261026/continuation-native-a1e73b1b.json` records 9 native tests without skips; `output/enterprise-program-20261026/erp-browser-a1e73b1b-frozen/report.json` records one authenticated ERP browser and native restore; `output/enterprise-program-20261026/customer-returns-a1e73b1b-frozen/report.json` records three browser cases and native restore. Tracked source remained stable, and report flags should be reviewed with the receipts. This checkpoint predates the CI runner and fixture-endpoint changes.
+
+GitHub on that checkpoint moved ubuntu-latest to 26.04 and server-boundaries failed to install postgresql-client-16 before tests. Runner pinning keeps the native validator; future hosted results are required. CodeQL still reported the prior synthetic employee identifier file; later test-only in-memory endpoint browser logs are `security-memory-product-v3-run.log` and `security-memory-shell-v3-run.log` under `output/enterprise-program-20261026`. An intermediate failed Host configuration is preserved. `security-memory-trace-inspection-20261027.json` found synthetic login credentials and identifiers in traces, but not the endpoint key in the two traces examined. No general trace redaction is claimed.

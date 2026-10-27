@@ -24600,3 +24600,12 @@ Responsive navigation pre-fix evidence includes `resize-open-drawer-8942e56f.cjs
 ## Quality isolation and source ownership — 2026-10-27
 
 Source-bound PostgreSQL/API probe `output/assurance-20261026/quality-cross-entity-probe-20261027.json` and matching script/log: identity B receives 403 for A scope, but can disposition an A-created workspace-scoped NCR under B scope. This is an observed enterprise isolation gap; historical NCR entity ownership is not established. `quality-advisory-stock-proof-20261027.json` and matching script/log demonstrate an advisory NCR did not change a separate posted receipt's quantity/value/GL effects; no association between the synthetic NCR and receipt was established. Direct-SQL bypass, plan isolation and all migration approaches remain hypotheses requiring verification.
+
+
+## Reconciliation and Studio continuation — 2026-10-27
+
+Entry GitHub 6a69280b: Python 3.11/3.12 each reported 1 failed, 10315 passed, 665 skipped; both failures were the financial AST guard. The monetary identity/foreign browser cases completed browser and native restore but the old acceptance contract rejected the 0157 catalog. Independent actual-artifact comparison: `output/enterprise-program-20261026/independent-monetary-restore-review-20261027.json`; the quality authority table had no rows. FX reciprocal equality review: `qa-fx-reciprocal-equivalence-20261027.log` in that directory.
+
+Worker guard review and unresolved precision examples: `qa-worker-precision-guard-20261027.json` and `qa-worker-default-precision-20261027.json`. The latter tests NUMERIC storage limits with eight fractional digits and is not a valid USD currency-policy example. `output/assurance-20261026/worker-rounding-native-20261027.json` records 12 tests without skips on the then-current tree, one native PostgreSQL test plus eleven adapter tests; it was run before the worker commit.
+
+Studio locale-search proof: `output/enterprise-program-20261026/navigation-locale-evidence-20261027.json` and `navigation-locale-browser-all-20261027.log` (19 browser cases, including 16 pre-existing). Command palette checks cover 5 component cases and 2 preview browser cases. These are development evidence; execute full release gates and authenticated journeys on the integrated SHA.

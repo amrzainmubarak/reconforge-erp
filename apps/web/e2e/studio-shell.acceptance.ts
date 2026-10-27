@@ -1,17 +1,17 @@
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { translate } from "../src/i18n";
+import { getBrowserFixture } from "./browser-fixture-access";
 
 const evidence = process.env.RECONFORGE_STUDIO_SHELL_OUT ?? fileURLToPath(new URL("../../../output/assurance-20261026/studio-shell/", import.meta.url));
-const fixture = () => JSON.parse(readFileSync(`${evidence}/browser-fixture.json`, "utf8")) as { tenant: string; restricted_username: string };
 const testPassword = process.env.RECONFORGE_RELEASE_PRODUCT_TEST_PASSWORD;
 if (!testPassword) throw new Error("Missing synthetic browser test password");
 async function login(page: Page, username: string) {
   await page.goto("/enterprise-finance");
   const form = page.getByRole("form", { name: "Sign in", exact: true });
-  await form.getByLabel("Tenant", { exact: true }).fill(fixture().tenant);
+  await form.getByLabel("Tenant", { exact: true }).fill((await getBrowserFixture()).tenant);
   await form.getByLabel("Username", { exact: true }).fill(username);
   await form.getByLabel("Password", { exact: true }).fill(testPassword);
   const response = page.waitForResponse(value => new URL(value.url()).pathname === "/api/v1/auth/browser/login");
@@ -76,7 +76,10 @@ test("actual authenticated App financial table, responsive navigation, themes, R
 });
 
 test("real restricted identity cannot discover denied routes through search or mount a denied deep link", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 960 }); await login(page, fixture().restricted_username);
+  await page.setViewportSize({ width: 1440, height: 960 });
+  const restricted = (await getBrowserFixture()).restricted_username;
+  if (!restricted) throw new Error("Missing synthetic restricted username");
+  await login(page, restricted);
   await expect(page.getByText("Your permissions do not include this workspace.")).toBeVisible();
   await expect(page.getByRole("form", { name: "Select financial scope" })).toHaveCount(0);
   for (const width of [360, 390, 768, 1024, 1440]) {

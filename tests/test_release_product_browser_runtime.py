@@ -9,12 +9,15 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import secrets
 import tempfile
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
 import uvicorn
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from reconforge.api import create_api_app
 from reconforge.domain.crm_contracts import CustomerQuotation, Opportunity, QuotationLineItem, convert_quote_to_contract
@@ -58,12 +61,25 @@ def seed(runtime: Any) -> dict[str, str]:
     return {"tenant": runtime.base.tenant, "employee_id": employee["id"], "workspace": "work", "organization": "org", "entity": "entity"}
 
 
-def write_public_fixture(directory: Path, fixture: dict[str, str]) -> None:
-    """Persist only non-secret identifiers needed by the browser tests."""
+def install_browser_fixture_endpoint(app: FastAPI, fixture: dict[str, str], key: str) -> None:
+    """Expose synthetic identifiers only to the local test client, in memory."""
     allowed = {"tenant", "employee_id", "workspace", "organization", "entity", "restricted_username"}
     if not fixture.keys() <= allowed:
         raise ValueError("browser fixture contains unexpected fields")
-    (directory / "browser-fixture.json").write_text(json.dumps(fixture, indent=2), encoding="utf-8")
+    if len(key) != 64 or any(ch not in "0123456789abcdef" for ch in key):
+        raise ValueError("invalid browser fixture key")
+    metadata = fixture.copy()
+
+    async def get_fixture(request: Request) -> JSONResponse:
+        candidate = request.headers.get("x-reconforge-fixture-key", "").encode("utf-8")
+        if not secrets.compare_digest(candidate, key.encode("ascii")):
+            return JSONResponse({"detail": "Forbidden"}, status_code=403, headers={"Cache-Control": "no-store"})
+        return JSONResponse(metadata, headers={"Cache-Control": "no-store"})
+
+    app.add_api_route("/__test/browser-fixture", get_fixture, methods=["GET"], include_in_schema=False)
+    # The Studio's catch-all static mount was registered during app creation.
+    # Place this test-only endpoint ahead of it without changing production routes.
+    app.router.routes.insert(0, app.router.routes.pop())
 
 
 def main() -> None:
@@ -84,11 +100,11 @@ def main() -> None:
             raise RuntimeError("a fresh synthetic browser test password is required")
         runtime = bridge_runtime.__wrapped__(people.__wrapped__(private, test_password=password))
         fixture = seed(runtime)
-        write_public_fixture(OUT, fixture)
         with tempfile.TemporaryDirectory(prefix="reconforge-release-product-tls-") as raw:
             directory = Path(raw)
             certificate, key = create_localhost_certificate(directory)
             app = create_api_app(directory / "unused-local.db", tenant_db_root=directory / "tenants", postgres_dsn=native[1], postgres_personnel_dsn=private[2], postgres_require_tls=False, web_root=OUT / "web", allowed_hosts=("localhost",), secure_transport=True)
+            install_browser_fixture_endpoint(app, fixture, os.environ.get("RECONFORGE_RELEASE_PRODUCT_FIXTURE_KEY", ""))
             uvicorn.run(app, host="127.0.0.1", port=args.port, ssl_certfile=str(certificate), ssl_keyfile=str(key), log_level="warning")
     finally:
         with suppress(StopIteration):

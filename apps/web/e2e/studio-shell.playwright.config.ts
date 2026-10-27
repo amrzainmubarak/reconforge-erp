@@ -2,6 +2,7 @@ import { defineConfig } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 process.env.RECONFORGE_RELEASE_PRODUCT_TEST_PASSWORD ??= `Synthetic-browser-${randomBytes(32).toString("hex")}`;
+process.env.RECONFORGE_RELEASE_PRODUCT_FIXTURE_KEY ??= randomBytes(32).toString("hex");
 const port = process.env.RECONFORGE_STUDIO_SHELL_PORT ?? "24673";
 export default defineConfig({
   testDir: ".", testMatch: "studio-shell.acceptance.ts", retries: 0, workers: 1, reporter: "list",

@@ -329,6 +329,23 @@ def test_primary_studio_shell_is_a_required_real_browser_gate_with_public_eviden
     }
 
 
+def test_release_product_browser_uses_postgres_16_native_tools_before_restore() -> None:
+    job = _workflow()["jobs"]["release-product-browser"]
+    assert job["runs-on"] == "ubuntu-24.04"
+    assert job["services"]["postgres"]["image"].startswith("postgres:16.")
+    steps = job["steps"]
+    install = next(step for step in steps if step["name"] == "Install PostgreSQL 16 native client tools")
+    gate = next(step for step in steps if step["name"] == "Verify native CRM authority and canonical bridge recovery")
+    assert steps.index(install) < steps.index(gate)
+    assert "if" not in install and "continue-on-error" not in install
+    assert "sudo apt-get install --no-install-recommends -y libpq-dev postgresql-client-16" in install["run"]
+    assert 'export PATH="/usr/lib/postgresql/16/bin:$PATH"' in install["run"]
+    assert "verify_postgres_native_tools.py --expected-major 16 --print-bindir" in install["run"]
+    assert "pg_dump --version" in install["run"]
+    assert "pg_restore --version" in install["run"]
+    assert 'printf \'%s\\n\' "$native_bindir" >> "$GITHUB_PATH"' in install["run"]
+
+
 def test_enterprise_browser_matrix_requires_every_real_https_and_populated_restore_owner() -> None:
     job = _workflow()["jobs"]["enterprise-browser-recovery"]
     assert job["strategy"]["matrix"]["scenario"] == [

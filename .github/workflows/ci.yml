@@ -235,7 +235,7 @@ jobs:
         run: npm --prefix apps/web run e2e
 
   release-product-browser:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [web]
     timeout-minutes: 20
     services:
@@ -263,6 +263,16 @@ jobs:
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.12"
+      - name: Install PostgreSQL 16 native client tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y libpq-dev postgresql-client-16
+          export PATH="/usr/lib/postgresql/16/bin:$PATH"
+          native_bindir="$(python .github/scripts/verify_postgres_native_tools.py --expected-major 16 --print-bindir)"
+          pg_dump --version
+          pg_restore --version
+          printf '%s\n' "$native_bindir" >> "$GITHUB_PATH"
       - name: Set up pinned uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:

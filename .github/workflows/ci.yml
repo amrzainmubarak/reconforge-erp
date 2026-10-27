@@ -522,7 +522,8 @@ jobs:
             reconforge:ci-baseline reconforge doctor
 
   server-boundaries:
-    runs-on: ubuntu-latest
+    # Ubuntu 26.04's runner image does not provide the required PostgreSQL 16 client.
+    runs-on: ubuntu-24.04
     name: server-boundaries (${{ matrix.shard }})
     # Independent services per shard bound cumulative live verification time.
     # No shared test/web artifact is consumed; retain native evidence on their failure.

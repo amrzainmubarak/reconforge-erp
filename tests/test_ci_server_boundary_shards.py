@@ -381,6 +381,19 @@ def test_both_python_versions_inspect_built_publication_archives_and_retain_fail
     }
 
 
+def test_server_boundaries_pins_runner_and_postgres_16_client() -> None:
+    job = _workflow()["jobs"]["server-boundaries"]
+    # ubuntu-latest moved to 26.04, where the runner's apt sources did not
+    # provide the client version required by the PostgreSQL 16 service.
+    assert job["runs-on"] == "ubuntu-24.04"
+    assert job["services"]["postgres"]["image"].startswith("postgres:16.")
+    install = next(step for step in job["steps"] if step["name"] == "Install PostgreSQL native client tools")
+    assert "if" not in install and "continue-on-error" not in install
+    assert "sudo apt-get install --no-install-recommends -y libpq-dev postgresql-client-16" in install["run"]
+    assert "verify_postgres_native_tools.py --expected-major 16 --print-bindir" in install["run"]
+    assert 'printf \'%s\\n\' "$native_bindir" >> "$GITHUB_PATH"' in install["run"]
+
+
 def test_native_services_and_unconditional_report_retention_survive_partition() -> None:
     job = _workflow()["jobs"]["server-boundaries"]
     live = next(step for step in job["steps"] if step["name"] == "Run live server-boundary tests")

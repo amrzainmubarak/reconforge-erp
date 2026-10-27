@@ -1,5 +1,12 @@
 # Documentation Drift
 
+## Current assurance checkpoint — 2026-10-25
+
+**The current release is not accepted.** [Prerequisite repairs, measured results
+and remaining gates](ASSURANCE_2026-10-25.md) supersede broad completion,
+certification, performance and comparative claims below. Earlier snapshots
+retain their original source/scope and do not qualify the current source.
+
 ## Source-bound successor refresh (2026-10-10)
 
 The [Wave3 acceptance packet and limits](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md)
@@ -87,3 +94,7 @@ DOC-006 and DOC-007 remain open, and the worktree is not an isolated release can
 ## Final October8 bounded acceptance
 
 Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.
+
+## 2026-10-26 drift correction
+
+The full baseline reproduced stale historical-policy tests: immutable October8reports were compared to the refreshed current dependency policy. Bind those historical assertions to retained8629e9c6 policy bytes; report JSON and original runner bytes remain untouched. Parser AST inventory omitted16JSONcalls and one declaration-hardenedXMLcall; reviewed coverage is now exact and explicitly PARTIAL, with FI033 wording corrected. Current money/security/runtime acceptance is never inferred from these historical reports.

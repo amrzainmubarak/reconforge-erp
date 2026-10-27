@@ -1,3 +1,4 @@
+import { openStudioDestination } from "./studio-navigation";
 import { expect, test, type Locator, type Page, type Request } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { createHash } from "node:crypto";
@@ -19,7 +20,7 @@ async function login(page: Page, username: string) {
   expect((await response).status()).toBe(200);
 }
 async function enter(page: Page, identifier = "") {
-  await page.getByRole("navigation", { name: "Primary navigation", exact: true }).getByRole("button", { name: "Warehouse transfer", exact: true }).click();
+  await openStudioDestination(page, "Warehouse transfer");
   await expect(page.getByRole("heading", { name: "Warehouse transfer", exact: true })).toBeVisible();
   const form = page.getByRole("form", { name: "Apply scope", exact: true });
   for (const [label, value] of Object.entries({ "Workspace ID": "work", "Organization ID": "org", "Legal entity ID": "entity" })) {

@@ -16,7 +16,6 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from decimal import Decimal
 from typing import Literal
 
 from reconforge.domain.consolidation import ConsolidationAccountType, ConsolidationError
@@ -24,7 +23,7 @@ from reconforge.domain.consolidation_lifecycle import (
     ConsolidationElimination,
     ConsolidationEliminationLine,
 )
-from reconforge.utils.money import InvalidAmountError, Money
+from reconforge.utils.money import CurrencyRegistryContext, InvalidAmountError, MinorMoney, Money
 
 INTERCOMPANY_ELIMINATION_SCHEMA_VERSION = 1
 INTERCOMPANY_ELIMINATION_ALGORITHM_VERSION = "intercompany-elimination-v1"
@@ -127,6 +126,45 @@ class IntercompanyEliminationInputLine:
             "source_reference": self.source_reference,
             "transaction_id": self.transaction_id,
         }
+
+    @classmethod
+    def from_minor_money(
+        cls,
+        *,
+        transaction_id: str,
+        period_name: str,
+        entity_code: str,
+        counterparty_code: str,
+        reference: str,
+        group_account_code: str,
+        account_type: ConsolidationAccountType,
+        amount: MinorMoney,
+        source_reference: str,
+        source_digest: str,
+    ) -> IntercompanyEliminationInputLine:
+        """Construct an elimination input line from a MinorMoney integer minor-unit instance."""
+        return cls(
+            transaction_id=transaction_id,
+            period_name=period_name,
+            entity_code=entity_code,
+            counterparty_code=counterparty_code,
+            reference=reference,
+            group_account_code=group_account_code,
+            account_type=account_type,
+            amount=amount.to_money(),
+            source_reference=source_reference,
+            source_digest=source_digest,
+        )
+
+    def to_minor_money(self, registry_context: CurrencyRegistryContext | None = None) -> MinorMoney:
+        """Export this line amount as MinorMoney integer minor units."""
+        return MinorMoney(
+            minor_units=self.amount.to_minor_units(),
+            currency=self.amount.currency,
+            registry_context=registry_context,
+        )
+
+
 
 
 def intercompany_elimination_input_line_from_dict(
@@ -354,8 +392,8 @@ def prepare_intercompany_eliminations(
         if entities != counterparties:
             resolutions.append(_unresolved(group_key=group_key, lines=group, reason="non_reciprocal_entity_coverage"))
             continue
-        total = sum((line.amount.amount for line in group), start=Decimal("0"))
-        if total != 0:
+        total_minor = sum(line.amount.to_minor_units() for line in group)
+        if total_minor != 0:
             resolutions.append(_unresolved(group_key=group_key, lines=group, reason="source_group_is_not_zero_sum"))
             continue
 
@@ -367,7 +405,7 @@ def prepare_intercompany_eliminations(
                 entity_code=line.entity_code,
                 group_account_code=line.group_account_code,
                 account_type=line.account_type,
-                amount=Money.from_exact(-line.amount.amount, currency, strict_precision=True),
+                amount=Money.from_minor_units(-line.amount.to_minor_units(), currency),
                 source_reference=f"intercompany:{line.transaction_id}:source:{line.source_digest}",
                 source_digest=line.source_digest,
             )
@@ -445,3 +483,185 @@ def verify_intercompany_elimination_payload(
     ):
         raise ConsolidationError("Intercompany elimination result does not reproduce from its source lines.")
     return result
+
+
+@dataclass(frozen=True)
+class IntercompanyDiscrepancyDiagnostic:
+    """Machine-readable diagnostic explaining an unresolved intercompany reconciliation group."""
+
+    group_key: str
+    period_name: str
+    reference: str
+    currency: str
+    reason: str
+    discrepancy_minor: int
+    entity_balances_minor: dict[str, int]
+    missing_counterparties: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "currency": self.currency,
+            "discrepancy_minor": self.discrepancy_minor,
+            "entity_balances_minor": dict(self.entity_balances_minor),
+            "group_key": self.group_key,
+            "missing_counterparties": list(self.missing_counterparties),
+            "period_name": self.period_name,
+            "reason": self.reason,
+            "reference": self.reference,
+        }
+
+
+def diagnose_intercompany_discrepancies(
+    lines: tuple[IntercompanyEliminationInputLine, ...],
+    result: IntercompanyEliminationResult,
+) -> tuple[IntercompanyDiscrepancyDiagnostic, ...]:
+    """Produce machine-readable discrepancy diagnostics for all unresolved intercompany groups."""
+    lines_by_tx = {line.transaction_id: line for line in lines}
+    diagnostics: list[IntercompanyDiscrepancyDiagnostic] = []
+
+    for resolution in result.resolutions:
+        if resolution.status != "unresolved":
+            continue
+        group_lines = [lines_by_tx[tx_id] for tx_id in resolution.source_transaction_ids if tx_id in lines_by_tx]
+        if not group_lines:
+            continue
+        sample = group_lines[0]
+        entities = {item.entity_code for item in group_lines}
+        counterparties = {item.counterparty_code for item in group_lines}
+        missing = tuple(sorted((entities - counterparties) | (counterparties - entities)))
+
+        entity_balances: dict[str, int] = {}
+        for item in group_lines:
+            entity_balances[item.entity_code] = entity_balances.get(item.entity_code, 0) + item.amount.to_minor_units()
+
+        total_minor = sum(item.amount.to_minor_units() for item in group_lines)
+        discrepancy = abs(total_minor)
+
+        diagnostics.append(
+            IntercompanyDiscrepancyDiagnostic(
+                group_key=resolution.group_key,
+                period_name=sample.period_name,
+                reference=sample.reference,
+                currency=sample.amount.currency,
+                reason=resolution.reason,
+                discrepancy_minor=discrepancy,
+                entity_balances_minor=entity_balances,
+                missing_counterparties=missing,
+            )
+        )
+    return tuple(diagnostics)
+
+
+@dataclass(frozen=True)
+class IntercompanyProfitInStockRule:
+    """Governance rule for eliminating unrealized intercompany inventory profit (profit-in-stock)."""
+
+    rule_id: str
+    selling_entity: str
+    buying_entity: str
+    inventory_item_code: str
+    margin_basis_points: int  # Gross margin percentage in basis points (e.g. 2500 for 25.00%)
+    ending_inventory_cost_minor: int  # Carrying value of inventory held at buying entity
+    nci_share_basis_points: int  # Non-controlling interest percentage in basis points (0 for wholly-owned / downstream)
+    currency: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "rule_id", _identifier(self.rule_id, "Rule identifier"))
+        object.__setattr__(self, "selling_entity", _identifier(self.selling_entity, "Selling entity"))
+        object.__setattr__(self, "buying_entity", _identifier(self.buying_entity, "Buying entity"))
+        object.__setattr__(self, "inventory_item_code", _identifier(self.inventory_item_code, "Inventory item code"))
+        if self.selling_entity == self.buying_entity:
+            raise ConsolidationError("Intercompany selling and buying entities must differ.")
+        if not (0 <= self.margin_basis_points <= 10_000):
+            raise ConsolidationError("Margin basis points must be between 0 and 10000.")
+        if self.ending_inventory_cost_minor < 0:
+            raise ConsolidationError("Ending inventory cost must be non-negative.")
+        if not (0 <= self.nci_share_basis_points <= 10_000):
+            raise ConsolidationError("NCI share basis points must be between 0 and 10000.")
+        object.__setattr__(self, "currency", _identifier(self.currency, "Currency"))
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "buying_entity": self.buying_entity,
+            "currency": self.currency,
+            "ending_inventory_cost_minor": self.ending_inventory_cost_minor,
+            "inventory_item_code": self.inventory_item_code,
+            "margin_basis_points": self.margin_basis_points,
+            "nci_share_basis_points": self.nci_share_basis_points,
+            "rule_id": self.rule_id,
+            "selling_entity": self.selling_entity,
+        }
+
+
+@dataclass(frozen=True)
+class IntercompanyProfitInStockElimination:
+    """Exact elimination proposal for unrealized intercompany inventory profit."""
+
+    elimination_id: str
+    rule_id: str
+    unrealized_profit_minor: int
+    parent_share_minor: int
+    nci_share_minor: int
+    currency: str
+    debit_account: str
+    credit_account: str
+    rationale: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "elimination_id", _identifier(self.elimination_id, "Elimination identifier"))
+        object.__setattr__(self, "rule_id", _identifier(self.rule_id, "Rule identifier"))
+        if self.parent_share_minor + self.nci_share_minor != self.unrealized_profit_minor:
+            raise ConsolidationError("Parent and NCI shares must strictly conserve total unrealized profit.")
+        object.__setattr__(self, "currency", _identifier(self.currency, "Currency"))
+        object.__setattr__(self, "debit_account", _identifier(self.debit_account, "Debit account"))
+        object.__setattr__(self, "credit_account", _identifier(self.credit_account, "Credit account"))
+        object.__setattr__(self, "rationale", _bounded_text(self.rationale, "Rationale"))
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "credit_account": self.credit_account,
+            "currency": self.currency,
+            "debit_account": self.debit_account,
+            "elimination_id": self.elimination_id,
+            "nci_share_minor": self.nci_share_minor,
+            "parent_share_minor": self.parent_share_minor,
+            "rationale": self.rationale,
+            "rule_id": self.rule_id,
+            "unrealized_profit_minor": self.unrealized_profit_minor,
+        }
+
+
+def calculate_profit_in_stock_elimination(
+    rule: IntercompanyProfitInStockRule,
+    *,
+    debit_account: str = "COGS_ELIMINATION",
+    credit_account: str = "INVENTORY_VALUATION",
+) -> IntercompanyProfitInStockElimination:
+    """Compute exact, integer-conserved unrealized profit elimination with NCI allocation."""
+    # Profit in stock = Ending Inventory Cost * (Margin bps / 10000) using integer HALF_UP
+    product = rule.ending_inventory_cost_minor * rule.margin_basis_points
+    unrealized_profit = (product + 5_000) // 10_000
+
+    # NCI share allocation: for upstream sales (subsidiary with minority interest selling to parent)
+    nci_product = unrealized_profit * rule.nci_share_basis_points
+    nci_share = (nci_product + 5_000) // 10_000
+    parent_share = unrealized_profit - nci_share
+
+    elimination_id = f"PIS-ELIM-{rule.rule_id}-{_digest(rule.to_dict())[:16]}"
+    rationale = (
+        f"Elimination of unrealized profit in ending inventory for item {rule.inventory_item_code} "
+        f"sold by {rule.selling_entity} to {rule.buying_entity} with margin {rule.margin_basis_points} bps. "
+        f"Total unrealized profit {unrealized_profit} {rule.currency} (Parent: {parent_share}, NCI: {nci_share})."
+    )
+
+    return IntercompanyProfitInStockElimination(
+        elimination_id=elimination_id,
+        rule_id=rule.rule_id,
+        unrealized_profit_minor=unrealized_profit,
+        parent_share_minor=parent_share,
+        nci_share_minor=nci_share,
+        currency=rule.currency,
+        debit_account=debit_account,
+        credit_account=credit_account,
+        rationale=rationale,
+    )

@@ -1,0 +1,31 @@
+{
+  "reviewer": "Agent A independent automated QA; product fixes authored by lead/B/C",
+  "external_assessment": false,
+  "decision": "APPROVE bounded repairs and evidence integrity; global release NOT ACCEPTED",
+  "code_commit": "a91852a7b0e1f88bc77602a738556c059e8646a9",
+  "capsule_sha256": "9566ce7ca92bd2cf1c89d33bd507038ec15db25a772dda4cfe951cf17b36703d",
+  "verified_capsule_entries": 170,
+  "verified_changed_source_files": 23,
+  "verified_web_files": 333,
+  "runtime_diff_empty": true,
+  "final_independent_hcm_cases": 86,
+  "final_independent_hcm_skips": 0,
+  "scanner_findings": {
+    "low": 10,
+    "medium": 5,
+    "high": 0
+  },
+  "open_global_gates": [
+    "Q",
+    "S",
+    "U",
+    "P",
+    "I",
+    "R"
+  ],
+  "notes": [
+    "Restricted-role native HCM adapter proof is not Alembic-installed API qualification",
+    "Startup wrapper timeout and successful owned-cluster shutdown separately preserved",
+    "Original negative outcomes and one redacted public image CDN log preserved with raw/public hashes"
+  ]
+}

@@ -31,6 +31,18 @@ snapshot capture/readback requires SELECT and INSERT on
 grants, not object ownership, TRIGGER/TRUNCATE rights or a superuser exception.
 The nonowner Finance fixtures exercise this profile after migration to head.
 
+Revision 0154 installs invoker triggers that consult
+`reconforge.enterprise_finance_bindings` when Finance entries, lines and line
+dimensions change. A runtime role that performs those operations needs SELECT
+on that table even when it does not invoke the enterprise bridge. Missing
+SELECT makes otherwise authorized ledger writes fail with a database permission
+error. The table has FORCE RLS, with tenant, workspace, organization and legal
+entity predicates. Administrators should provision only the required read for
+the relevant runtime role and verify those predicates and the role's existing
+DML permissions separately. The read dependency does not require table ownership,
+BYPASSRLS, or new INSERT/UPDATE/DELETE privileges on the bindings table. Bridge
+commands have additional, separately authorized data access requirements.
+
 When a deployment fails admission after an upgrade:
 
 1. Use an administrative session to inspect the runtime role's effective object

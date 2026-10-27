@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "draft_publication": {
+    "number": 143,
+    "url": "https://github.com/amrzainmubarak/reconforge-erp/pull/143",
+    "draft_created": true,
+    "creation_command_exit_code": 0,
+    "publication_commit": "4ce24156522c416e36c63131bc25c65fba98eeac",
+    "live_state_recheck": "unavailable: GraphQL/REST TLS timeouts; optional check snapshot explicitly stopped; no CI conclusion inferred"
+  },
+  "runtime_source": "a91852a7b0e1f88bc77602a738556c059e8646a9",
+  "default_branch_snapshot": {
+    "name": "main",
+    "sha": "9fe77d7f8f68ece527b055208b14afc9d10e2b7b"
+  },
+  "default_branch_alert_counts": {
+    "critical": 6,
+    "high": 30,
+    "medium": 25,
+    "low": 8
+  },
+  "alerts_are_not_confirmed_exploits": true,
+  "dependency_locks_unchanged_in_repair": true,
+  "critical_package_lock_versions": {
+    "pillow": "12.3.0",
+    "certifi": "2026.7.22"
+  },
+  "critical_alerts": [
+    {
+      "dependency": {
+        "manifest": "uv.lock",
+        "package": "pillow"
+      },
+      "fixed": "13.0.0",
+      "ghsa": "GHSA-5x8w-8jj5-q52h",
+      "number": 82,
+      "severity": "critical",
+      "summary": "Pillow: Heap buffer overflow in FlashPix (FPX) JPEG decoding leads to code execution"
+    },
+    {
+      "dependency": {
+        "manifest": "uv.lock",
+        "package": "Pillow"
+      },
+      "fixed": "13.0.0",
+      "ghsa": "GHSA-v9pv-5gc8-w2m6",
+      "number": 70,
+      "severity": "critical",
+      "summary": "Pillow multi-frame loaders can reuse stale native image storage after mode transitions"
+    },
+    {
+      "dependency": {
+        "manifest": "uv.lock",
+        "package": "Pillow"
+      },
+      "fixed": "13.0.0",
+      "ghsa": "GHSA-332p-7hrc-92wf",
+      "number": 62,
+      "severity": "critical",
+      "summary": "Pillow: Heap buffer overflow in _tiffWriteProc when saving TIFF to BytesIO"
+    },
+    {
+      "dependency": {
+        "manifest": "uv.lock",
+        "package": "Pillow"
+      },
+      "fixed": "13.0.0",
+      "ghsa": "GHSA-w889-685w-c8fh",
+      "number": 45,
+      "severity": "critical",
+      "summary": "Pillow: Argument Injection in Ghostscript call, potentially leading into RCE"
+    },
+    {
+      "dependency": {
+        "manifest": "uv.lock",
+        "package": "certifi"
+      },
+      "fixed": "2026.10.19",
+      "ghsa": "GHSA-6q48-6c7w-9gw2",
+      "number": 43,
+      "severity": "critical",
+      "summary": "certifi bundles emSign root CAs with compromised intermediate CA keys"
+    },
+    {
+      "dependency": {
+        "manifest": "uv.lock",
+        "package": "Pillow"
+      },
+      "fixed": "13.0.0",
+      "ghsa": "GHSA-8g5g-8vmr-9782",
+      "number": 26,
+      "severity": "critical",
+      "summary": "Pillow: Heap buffer overflow in ImagingJpegDecode"
+    }
+  ],
+  "raw_alerts_sha256": "f879f4d5a54401e88379a240b0384cf07b981175b32dda32161b6e1d03b3f0fa",
+  "applicability": "Default-branch metadata; same locked package versions exist here. Supported profile applicability, advisory conditions and fixed versions require controlled authoritative review and locked update. No waiver or launch acceptance.",
+  "ci_accepted": false,
+  "protected_main_modified": false,
+  "production_deployed": false
+}

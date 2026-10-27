@@ -1,4 +1,28 @@
+## 2026-10-26 — CRM provenance and request result validity
+
+[ADR0871](../adr/0871-crm-quotation-provenance-and-workspace-lines.md) adds SQLite59
+and forward PostgreSQL155; immutable canonical creator provenance is never
+inferred for historical records. Legacy line ownership ambiguity refuses migration
+without data loss. Form edits invalidate previous verified results. Native tests
+are mandatory in the configured release browser job; no existing gate is removed.
+
 # ReconForge Execution Decisions Log
+
+## D870 — Close verified release blockers on PR143 (2026-10-25)
+
+[ADR0870](../adr/0870-close-verified-release-blockers.md) binds official migration
+registration, explicit HCM ownership, canonical source publication, immutable
+financial evidence, truthful authenticated UI, uniform transaction scope and
+version-specific dependency remediation. Release remains blocked pending all
+mandatory acceptance gates on one source. Existing evidence and data are retained.
+
+## D869 — Repair prerequisites and withdraw unsupported acceptance (2026-10-25)
+
+[ADR0869](../adr/0869-repair-assurance-prerequisites-before-optimization.md)
+records owner-only/atomic leave transitions, correct session transaction ownership,
+real ledger references, truthful browser error states, safe XML ingress, and the
+existing0152 registry correction. Current Q/S/U/P/I/R remain open. Preserve initial
+and intermediate failures; no protected-main change, worktree, release or deployment.
 
 ## Review and admit PR141 into main only after final checks (2026-10-18)
 
@@ -13930,3 +13954,45 @@ unknown callback retain the live wrapper. Existing Stock and shared quantity
 BEFORE gates/deferred checks remain unchanged. Both OLD/NEW affinity and all
 source/effect assertions still apply; source peers approve only that closed
 dispatch. Runtime, SQL security and concurrency acceptance remain mandatory.
+
+### 2026-10-26 — Primary Studio navigation and source-bound integration
+
+Preserve every existing destination in a grouped shared registry; consume existing authenticated `/auth/me` permission snapshot instead of role-name inference or a duplicate capabilities API. Server authorization remains authoritative. Three agents have exclusive backend/frontend/new-QA-test ownership; lead retains Git and shared registries. See ENTERPRISE_PROGRAM_2026-10-26.md.
+
+### 2026-10-26 — Preserve supported runtime and residual vulnerability findings
+
+Keep source-frozen implementationf3cfbad9 reviewable. Do not invent a digest for the unavailable official python:3.12.16-alpine3.24 tag, switch unsupported Python branches, add VEX exceptions or relabel9Medium/1Negligible findings as absent. Exact image policy passes0Critical/High, but release remains blocked and supported-runtime remediation awaits a qualified distribution. ADR0873 records the canonical capacity restriction invariant.
+
+### 2026-10-26 — ADR0876 canonical quality authority
+
+Bind canonical human creator/reviewer IDs through immutable audited authority;
+never infer historical identity from inspector names. SQLite60/PG157 atomic
+upgrade; populated authority rollback refuses. Native ME2 remains the existing
+quality-stock owner; legacy NCR record status does not imply quarantine or GL.
+Source refresh failure invalidates ME2 parent totals and dependent writes,
+preserving actual child ACK and exact retry. RELEASE BLOCKED.
+
+### 2026-10-27 — Guarded amount parser and recorded-policy compatibility
+
+Do not change previously recorded strict-v2 semantics in place. The opt-in
+`parse_guarded_amount_v3` is a separate experimental function, not a persisted
+policy or deployed financial workflow; see ADR0877. Promotion requires a new
+versioned ingress contract, migration, replay, evidence and cross-engine proof.
+
+### 2026-10-27 — Version exact grouped arithmetic before worker adoption
+
+The existing grouped evaluator depends on ambient Decimal context and can
+produce false matches. A separate experimental domain contract with immutable
+registry context, bounded arithmetic and independent content fingerprints is
+recorded in ADR0878. It does not relabel old outputs or alter the worker.
+No overall competitive superiority or completed ERP lifecycle is claimed.
+
+
+### 2026-10-27 — Browser test credential boundary
+
+Pass a fresh synthetic browser credential through the test process environment instead of retaining it in the JSON evidence fixture. Keep the identifier fixture constrained to declared keys. This is test infrastructure, does not change production authentication, and does not prove that all browser traces redact typed credentials. Historical fixture artifacts and GitHub CodeQL findings remain subject to review.
+
+
+### 2026-10-27 — Test fixture in memory and native runner version
+
+Synthetic browser fixture identifiers are now retrieved from a disposable TLS test server endpoint protected by a test-process key, instead of retaining a JSON fixture file. The endpoint exists only in test runtime. Browser trace content is not generally redacted. The PostgreSQL 16 server-boundary job pins Ubuntu 24.04 because the Ubuntu 26.04 runner apt sources did not provide its required matching client; the fail-closed client-version validator stays enabled. Neither change is accepted until the new hosted run completes.

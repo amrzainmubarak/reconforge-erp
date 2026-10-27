@@ -1,3 +1,4 @@
+import { openStudioDestination } from "./studio-navigation";
 import { readFile } from "node:fs/promises";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
@@ -21,7 +22,7 @@ async function login(page: Page, username: string) {
 }
 
 async function sales(page: Page) {
-  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Sales & revenue", exact: true }).click();
+  await openStudioDestination(page, "Sales & revenue");
   await page.getByRole("combobox", { name: "Workspace", exact: true }).selectOption("work");
   await page.getByRole("combobox", { name: "Organization", exact: true }).selectOption("org");
   await page.getByRole("combobox", { name: "Legal entity", exact: true }).selectOption("entity");
@@ -54,7 +55,7 @@ async function saleAction(page: Page, button: string, endpoint: string) {
 }
 
 async function procurement(page: Page) {
-  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Procurement & payments", exact: true }).click();
+  await openStudioDestination(page, "Procurement & payments");
   await page.getByRole("combobox", { name: "Workspace", exact: true }).selectOption("work");
   await page.getByRole("combobox", { name: "Organization and legal entity", exact: true }).selectOption("entity");
   await expect(page.getByRole("heading", { name: "Purchases", exact: true })).toBeVisible();
@@ -190,7 +191,7 @@ test("normal HTTPS ERP service revenue and stock purchase share exact reviewed G
     expect((await new AxeBuilder({ page: poster }).include("#main-content").analyze()).violations).toEqual([]);
     await poster.getByTestId("locale-toggle").click();
     await poster.setViewportSize({ width: 1440, height: 900 });
-    await poster.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Finance & reporting", exact: true }).click();
+    await openStudioDestination(poster, "Finance & reporting");
     await expect(poster.getByRole("heading", { name: "Enterprise finance", exact: true })).toBeVisible();
     const financeScope = poster.getByRole("form", { name: "Select financial scope", exact: true });
     for (const [label, value] of Object.entries({ Workspace: "work", Organization: "org", "Legal entity": "entity" })) await financeScope.getByLabel(label, { exact: true }).fill(value);

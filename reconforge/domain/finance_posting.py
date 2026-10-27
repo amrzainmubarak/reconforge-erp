@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import unicodedata
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
@@ -58,6 +59,10 @@ def text(value: object, field: str, *, maximum: int = 160) -> str:
     ):
         raise FinancePostingError(
             "posting_request_invalid", f"{field} must be nonempty printable text of at most {maximum} characters."
+        )
+    if any(unicodedata.category(c) in ("Cf", "Cc") for c in value):
+        raise FinancePostingError(
+            "posting_request_invalid", f"{field} contains invalid formatting characters."
         )
     return value.strip()
 

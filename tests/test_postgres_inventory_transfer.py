@@ -13,6 +13,7 @@ from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryC
 from reconforge.infrastructure.postgres_inventory_transfer import PostgresInventoryTransferRepository
 from reconforge.infrastructure.postgres_inventory_valuation import PostgresInventoryValuationRepository
 from reconforge.infrastructure.postgres_inventory_valuation_reversal import PostgresInventoryValuationReversalRepository
+from reconforge.infrastructure.postgres_operations import POSTGRES_MIGRATION_REVISIONS
 from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, create_receipt_runtime
 from tests.test_postgres_inventory_receipt_posting import receipt_database as baseline_receipt_database
@@ -26,7 +27,7 @@ def transfer_database(baseline_receipt_database: tuple[str, str]) -> Iterator[tu
     import psycopg
 
     with psycopg.connect(baseline_receipt_database[0]) as admin:
-        assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0150_pg_native_query_plans"
+        assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == POSTGRES_MIGRATION_REVISIONS[-1]
         assert admin.execute("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='reconforge' AND c.relname=ANY(%s) AND c.relrowsecurity AND c.relforcerowsecurity", (list(TABLES),)).fetchone()[0] == 5
     yield baseline_receipt_database
 

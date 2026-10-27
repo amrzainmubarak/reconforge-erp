@@ -14,6 +14,7 @@ import {
 
 import type { MessageKey } from "../i18n";
 import type { Locale, StudioPage, ThemePreference } from "../types";
+import { navigationGroupForPage } from "./Navigation";
 import { formatCount } from "../locale-format";
 
 export type OpenPanel = "notifications" | "quick" | "profile" | "accessibility" | null;
@@ -59,6 +60,15 @@ const pageLabels: Record<StudioPage, MessageKey> = {
   budgetControl: "budgetControl",
   inventoryReceipt: "inventoryReceipt",
   durableJobs: "durableJobs",
+  treasuryLiquidity: "treasuryLiquidity",
+  manufacturingBom: "manufacturingBom",
+  hcmLeave: "hcmLeave",
+  crmContracts: "crmContracts",
+  intercompanyEliminations: "intercompanyEliminations",
+  shopFloorTraceability: "shopFloorTraceability",
+  projectMilestoneBilling: "projectMilestoneBilling",
+  consolidatedStatements: "consolidatedStatements",
+  masterProductionSchedule: "masterProductionSchedule",
 };
 
 interface TopbarProps {
@@ -95,11 +105,11 @@ export function Topbar({
       <button className="icon-button mobile-menu-button" type="button" onClick={onMobileMenu} aria-label={translate("menu")}>
         <Menu size={20} />
       </button>
-      <div className="breadcrumbs" aria-label={translate("breadcrumb")}>
-        <span>{translate(activePage === "dashboard" ? "overview" : activePage === "inventory" || activePage === "manufacturingCost" || activePage === "inventoryReceipt" ? "operations" : activePage === "mapping" || activePage === "rules" || activePage === "live" || activePage === "adminAudit" || activePage === "notifications" || activePage === "durableJobs" ? "platform" : "finance")}</span>
+      <nav className="breadcrumbs" aria-label={translate("breadcrumb")}>
+        <span>{translate(navigationGroupForPage(activePage)?.label ?? "overview")}</span>
         <span aria-hidden="true">/</span>
-        <strong>{translate(pageLabels[activePage])}</strong>
-      </div>
+        <strong aria-current="page">{translate(pageLabels[activePage])}</strong>
+      </nav>
 
       <button className="global-search" type="button" onClick={onCommand} aria-haspopup="dialog" aria-label={translate("search")}>
         <Search size={17} aria-hidden="true" />

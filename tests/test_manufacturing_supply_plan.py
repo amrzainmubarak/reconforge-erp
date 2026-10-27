@@ -5,6 +5,8 @@ import pytest
 
 from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.manufacturing_supply_plan import (
+    MRPShortageRequisition,
+    generate_mrp_shortage_requisitions,
     plan_requirements,
     procurement_headroom,
     require_complete_handoff,
@@ -70,3 +72,62 @@ def test_posted_physical_quantity_cannot_claim_unvalued_or_already_allocated_fif
         available_scaled={"A": 12000, "B": 1500}, active_reserved_scaled={"A": 0, "B": 0}, fifo_free_scaled={"A": 7000, "B": 0})
     assert [row["onhand_reserved_scaled"] for row in actual] == [7000, 0]
     assert [row["shortage_quantity_scaled"] for row in actual] == [5000, 1500]
+
+
+def test_mrp_shortage_requisition_governance_and_headroom_deduplication() -> None:
+    actual = plan_requirements(
+        components(),
+        batch_output_scaled=10,
+        planned_output_scaled=10,
+        available_scaled={"A": 4000, "B": 700},
+        active_reserved_scaled={"A": 1000, "B": 200},
+        fifo_free_scaled={"A": 4000, "B": 700},
+    )
+    # Shortages: A = 9000, B = 1000
+
+    # First requisition generation
+    reqs = generate_mrp_shortage_requisitions(
+        plan_id="PLAN-MFG-900",
+        requirements=actual,
+        required_date="2026-12-01",
+        unit_prices_minor={"A": 1500, "B": 450},
+    )
+    assert len(reqs) == 2
+    req_a = next(r for r in reqs if r.item_id == "A")
+    assert req_a.shortage_quantity_scaled == 9000
+    assert req_a.planned_order_quantity_scaled == 9000
+    assert req_a.unit_price_minor == 1500
+    assert req_a.status == "approved"
+
+    # Re-running with existing claim for 9000 of A suppresses duplicate generation for A
+    claims = {"A": [9000]}
+    reqs_partial = generate_mrp_shortage_requisitions(
+        plan_id="PLAN-MFG-900",
+        requirements=actual,
+        existing_claims=claims,
+        required_date="2026-12-01",
+    )
+    assert len(reqs_partial) == 1
+    assert reqs_partial[0].item_id == "B"
+    assert reqs_partial[0].shortage_quantity_scaled == 1000
+
+    # Requisition with invalid date fails
+    with pytest.raises(FinancePostingError, match="Invalid required date"):
+        generate_mrp_shortage_requisitions(
+            plan_id="PLAN-MFG-900",
+            requirements=actual,
+            required_date="invalid-date",
+        )
+
+    # Direct constructor validation
+    with pytest.raises(FinancePostingError, match="nonnegative integer is required"):
+        MRPShortageRequisition(
+            requisition_id="REQ-01",
+            plan_id="P1",
+            item_id="A",
+            shortage_quantity_scaled=-5,
+            planned_order_quantity_scaled=10,
+            unit_price_minor=100,
+            required_date="2026-12-01",
+            idempotency_key="key",
+        )

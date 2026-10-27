@@ -434,6 +434,7 @@ class PostgresFinancePostingRepository:
             if entry["entry_number"].upper().startswith(("ME2W-", "ME2R-", "ME2P-", "ME2K-", "ME2X-", "MSP1-", "MSP1D-", "MSP1K-", "MSP1Q-")) or entry["id"].upper().startswith(("ME2W-", "ME2R-", "ME2P-", "ME2K-", "ME2X-", "MSP1-", "MSP1D-", "MSP1K-", "MSP1Q-")):
                 raise FinancePostingError("posting_source_unsupported", "Engineering definitions and held production cannot be posted as financial sources.")
             enterprise_sources: tuple[tuple[tuple[str, ...], ParticipantKind], ...] = (
+                (("PMI-", "PIS-", "PMI1-", "PIS1-", "PMIR1-", "PISR1-"), "enterprise-finance"),
                 (("ME2-", "ME2C-"), "manufacturing-v2-post"),
                 (("IC2-", "IC2S-", "IC2R-", "IC2E-"), "intercompany-fx"),
                 (("HC1-", "HC1P-"), "people-payroll"),
@@ -633,6 +634,46 @@ class PostgresFinancePostingRepository:
             self._receipt(entry, command_id, "post", actor, digest, result)
             return result
 
+    def post_batch(
+        self,
+        items: Sequence[dict[str, Any]],
+        *,
+        actor: PostingActor,
+        _source_owner: object | None = None,
+    ) -> list[dict[str, Any]]:
+        """Atomically post multiple validated entries in a single transaction.
+
+        Each dictionary in ``items`` must provide:
+        - ``entry_id``: Identifier of the draft entry to post.
+        - ``command_id``: Idempotency command identifier.
+        - ``expected_validation_digest``: Hash of the reviewed draft snapshot.
+        - ``reason``: Business explanation for posting.
+
+        All postings execute inside an atomic transaction. If any entry
+        violates review invariants, period lock, or authorization, the entire
+        batch is rolled back with zero partial effects.
+        """
+        actor.require("finance_core.post")
+        if not items:
+            return []
+        with self._transaction(write=True):
+            results: list[dict[str, Any]] = []
+            for item in items:
+                entry_id = text(item["entry_id"], "entry_id")
+                command_id = text(item["command_id"], "command_id")
+                expected_digest = text(item["expected_validation_digest"], "expected_validation_digest")
+                reason = text(item.get("reason", ""), "reason", maximum=500)
+                result = self.post(
+                    entry_id,
+                    command_id=command_id,
+                    expected_validation_digest=expected_digest,
+                    reason=reason,
+                    actor=actor,
+                    _source_owner=_source_owner,
+                )
+                results.append(result)
+            return results
+
     def prepare_reversal(
         self,
         effect_id: str,
@@ -655,6 +696,13 @@ class PostgresFinancePostingRepository:
             if original["source_kind"] not in {"Manual", "Reversal"}:
                 raise FinancePostingError("posting_source_unsupported", "Inventory postings require a reviewed full source inverse.")
             source = posting_entry(self.connection, self.tenant_id, original["entry_id"])
+            enterprise_prefixes = ("PMI-", "PIS-", "PMI1-", "PIS1-", "PMIR1-", "PISR1-")
+            if source["entry_number"].upper().startswith(enterprise_prefixes) or source["id"].upper().startswith(enterprise_prefixes):
+                participant_type = source_participant_type("enterprise-finance")
+                if participant_type is None or not isinstance(_source_owner, participant_type) or not _source_owner.admits_reversal(
+                    self.connection, self.tenant_id, source["id"], original["id"], number
+                ):
+                    raise FinancePostingError("posting_source_unsupported", "Enterprise financial sources require their exact reviewed native inverse.")
             partial_prefixes = ("CR2-", "CRF2-", "CR2R-", "CRF2R-")
             if source["entry_number"].upper().startswith(partial_prefixes) or source["id"].upper().startswith(partial_prefixes):
                 participant_type = source_participant_type("customer-partial-return")
@@ -815,11 +863,16 @@ class PostgresFinancePostingRepository:
                 raise FinancePostingError("posting_balance_limit", "The bounded balance report exceeds its effect limit.")
             for row in rows:
                 balance_window(str(row["start_date"]), str(row["end_date"]), str(row["posting_date"]))
+            effect_ids = [row["id"] for row in rows]
+            verified_effects: list[dict[str, Any]] = []
+            for i in range(0, len(effect_ids), 200):
+                chunk = effect_ids[i : i + 200]
+                verified_effects.extend(self.get_effects_batch(chunk, actor=actor))
             return build_posted_balances(
                 workspace_id=workspace_id, organization_code=organization_code, entity_code=entity_code,
                 organization_id=scope["organization_id"], legal_entity_id=scope["legal_entity_id"], period_id=period_id,
                 period_start=start, period_end=end, as_of_date=cutoff,
-                effects=collect_balance_effects(self._get_effect(row["id"]) for row in rows),
+                effects=collect_balance_effects(verified_effects),
             )
 
     def posted_trial_balance(
@@ -844,8 +897,12 @@ class PostgresFinancePostingRepository:
             )
             accounts: dict[str, dict[str, Any]] = {}
             policy = None
-            for row in rows:
-                effect = self._get_effect(row["id"])
+            effect_ids = [row["id"] for row in rows]
+            verified_effects: list[dict[str, Any]] = []
+            for i in range(0, len(effect_ids), 200):
+                chunk = effect_ids[i : i + 200]
+                verified_effects.extend(self.get_effects_batch(chunk, actor=actor))
+            for effect in verified_effects:
                 selected = {
                     key: effect[key]
                     for key in (

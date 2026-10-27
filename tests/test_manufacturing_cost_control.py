@@ -4,6 +4,7 @@ import hashlib
 import json
 from decimal import Decimal
 from pathlib import Path
+from typing import cast
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError
@@ -16,12 +17,14 @@ from reconforge.application.manufacturing_cost_control import (
 )
 from reconforge.cli import app
 from reconforge.domain.manufacturing_cost_control import (
+    ManufacturingConservationRecord,
     ManufacturingControlError,
     MaterialIssue,
     ProductionCompletion,
     ProductionOrder,
     ScrapEvent,
     run_manufacturing_cost_control,
+    verify_mass_and_cost_conservation,
 )
 from reconforge.utils.money import Money, Quantity
 
@@ -153,3 +156,147 @@ def test_manufacturing_cli_writes_replayable_artifact(tmp_path: Path) -> None:
     )
     assert result.exit_code == 0, result.stdout
     assert verify_manufacturing_report(output)["status_counts"] == {"exception": 1, "reconciled": 1, "unmatched": 1}
+
+
+def test_mass_and_cost_conservation_exact_balance() -> None:
+    # Inputs:
+    # Material: 100,000 minor ($1000.00)
+    # Labor:     50,000 minor ($500.00)
+    # Overhead:  25,000 minor ($250.00)
+    # Total Input Cost = 175,000 minor
+    #
+    # Outputs:
+    # FG:       140,000 minor ($1400.00)
+    # Scrap:     15,000 minor ($150.00)
+    # WIP:       20,000 minor ($200.00)
+    # Total Output Cost = 175,000 minor (Cost Leakage = 0)
+    #
+    # Mass:
+    # Material Qty: 10,000 scaled units
+    # FG Qty:        8,000 scaled units
+    # Scrap Qty:     1,500 scaled units
+    # WIP Qty:         500 scaled units
+    # Total Output Mass = 10,000 (Mass Leakage = 0)
+
+    record = ManufacturingConservationRecord(
+        order_id="WO-CONSERVE-01",
+        material_cost_minor=100_000,
+        labor_cost_minor=50_000,
+        overhead_cost_minor=25_000,
+        finished_goods_cost_minor=140_000,
+        scrap_cost_minor=15_000,
+        remaining_wip_cost_minor=20_000,
+        material_quantity_scaled=10_000,
+        finished_goods_quantity_scaled=8_000,
+        scrap_quantity_scaled=1_500,
+        remaining_wip_quantity_scaled=500,
+        currency="USD",
+    )
+
+    assert record.is_cost_conserved
+    assert record.cost_leakage_minor == 0
+    assert record.is_mass_conserved
+    assert record.mass_leakage_scaled == 0
+
+    # Formal invariant check passes without exception
+    verify_mass_and_cost_conservation(record)
+
+
+def test_cost_leakage_detection() -> None:
+    # Cost leakage: Input cost 175,000 != Output cost 174,999 (leakage = +1 minor unit)
+    record = ManufacturingConservationRecord(
+        order_id="WO-LEAK-COST",
+        material_cost_minor=100_000,
+        labor_cost_minor=50_000,
+        overhead_cost_minor=25_000,
+        finished_goods_cost_minor=140_000,
+        scrap_cost_minor=15_000,
+        remaining_wip_cost_minor=19_999,  # 1 minor unit missing!
+        material_quantity_scaled=10_000,
+        finished_goods_quantity_scaled=8_000,
+        scrap_quantity_scaled=1_500,
+        remaining_wip_quantity_scaled=500,
+        currency="USD",
+    )
+
+    assert not record.is_cost_conserved
+    assert record.cost_leakage_minor == 1
+    assert record.is_mass_conserved
+
+    with pytest.raises(ManufacturingControlError, match="Manufacturing cost conservation violation"):
+        verify_mass_and_cost_conservation(record)
+
+
+def test_mass_leakage_detection() -> None:
+    # Mass leakage: Input mass 10,000 != Output mass 9,990 (leakage = +10 scaled units)
+    record = ManufacturingConservationRecord(
+        order_id="WO-LEAK-MASS",
+        material_cost_minor=100_000,
+        labor_cost_minor=50_000,
+        overhead_cost_minor=25_000,
+        finished_goods_cost_minor=140_000,
+        scrap_cost_minor=15_000,
+        remaining_wip_cost_minor=20_000,
+        material_quantity_scaled=10_000,
+        finished_goods_quantity_scaled=8_000,
+        scrap_quantity_scaled=1_500,
+        remaining_wip_quantity_scaled=490,  # 10 units missing!
+        currency="EUR",
+    )
+
+    assert record.is_cost_conserved
+    assert not record.is_mass_conserved
+    assert record.mass_leakage_scaled == 10
+
+    with pytest.raises(ManufacturingControlError, match="Manufacturing mass conservation violation"):
+        verify_mass_and_cost_conservation(record)
+
+
+def test_conservation_record_type_and_value_invariants() -> None:
+    # Float rejection in cost field
+    with pytest.raises(ManufacturingControlError, match="material_cost_minor must be an exact non-negative integer"):
+        ManufacturingConservationRecord(
+            order_id="WO-ERR-FLOAT",
+            material_cost_minor=cast(int, 1000.50),
+            labor_cost_minor=0,
+            overhead_cost_minor=0,
+            finished_goods_cost_minor=0,
+            scrap_cost_minor=0,
+            remaining_wip_cost_minor=0,
+            material_quantity_scaled=0,
+            finished_goods_quantity_scaled=0,
+            scrap_quantity_scaled=0,
+            remaining_wip_quantity_scaled=0,
+        )
+
+    # Boolean rejection (which is a subclass of int in Python)
+    with pytest.raises(ManufacturingControlError, match="must be an exact non-negative integer"):
+        ManufacturingConservationRecord(
+            order_id="WO-ERR-BOOL",
+            material_cost_minor=cast(int, True),
+            labor_cost_minor=0,
+            overhead_cost_minor=0,
+            finished_goods_cost_minor=0,
+            scrap_cost_minor=0,
+            remaining_wip_cost_minor=0,
+            material_quantity_scaled=0,
+            finished_goods_quantity_scaled=0,
+            scrap_quantity_scaled=0,
+            remaining_wip_quantity_scaled=0,
+        )
+
+    # Negative integer rejection
+    with pytest.raises(ManufacturingControlError, match="must be an exact non-negative integer"):
+        ManufacturingConservationRecord(
+            order_id="WO-ERR-NEG",
+            material_cost_minor=-100,
+            labor_cost_minor=0,
+            overhead_cost_minor=0,
+            finished_goods_cost_minor=0,
+            scrap_cost_minor=0,
+            remaining_wip_cost_minor=0,
+            material_quantity_scaled=0,
+            finished_goods_quantity_scaled=0,
+            scrap_quantity_scaled=0,
+            remaining_wip_quantity_scaled=0,
+        )

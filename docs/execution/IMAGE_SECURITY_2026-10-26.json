@@ -1,0 +1,64 @@
+{
+  "$schema": "../schemas/container_security_evidence.schema.json",
+  "active_exception_count": 0,
+  "blockers": [],
+  "database": {
+    "age_seconds_at_scan": 39979,
+    "built_at": "2026-10-26T06:38:44Z",
+    "schema_version": "v6.1.10"
+  },
+  "evaluated_at": "2026-10-26T17:45:03Z",
+  "image": {
+    "config_digest": "sha256:bb63260400c8c4c2597f4c31bec5cd84ff57c96338ed108dbece7f938e58ed3a",
+    "distro": {
+      "id": "alpine",
+      "version": "3.24.2"
+    },
+    "local_manifest_digest": "sha256:ab0e5f43505dbec9b8b551f8ac0038c4a59cc4b68dd2bc876edce163bc3ce5ca",
+    "platform": "linux/amd64",
+    "source_name": "ghcr.io/amrzainmubarak/reconforge-erp",
+    "source_version": "0.7.1"
+  },
+  "license_inventory": {
+    "coverage_basis_points": 9411,
+    "legal_compatibility_assessed": false,
+    "licensed_packages": 64,
+    "minimum_coverage_basis_points": 9000,
+    "missing_license_packages": [
+      ".python-rundeps@20261001.214925",
+      "markdown-it-py@4.2.0",
+      "mdurl@0.1.2",
+      "python@3.12.15"
+    ],
+    "total_packages": 68
+  },
+  "policy_id": "reconforge-supply-chain",
+  "schema_version": 2,
+  "status": "passed",
+  "tools": {
+    "grype": "grype@0.117.0",
+    "syft": "syft@1.51.0"
+  },
+  "vex": {
+    "applied_fixed_findings": 0,
+    "author": "ReconForge automated security review",
+    "document_id": "https://reconforge.local/security/vex/container-runtime-2026-10-08",
+    "document_sha256": "dbaadf43e903aceb501b17a72bf67208d281a1c6a445d868ed865f1b7e3ea30e",
+    "last_updated": "2026-10-08T04:52:00Z",
+    "review_age_days": 18,
+    "reviewed_fixed_statements": 3
+  },
+  "vulnerabilities": {
+    "counts": {
+      "critical": 0,
+      "high": 0,
+      "low": 0,
+      "medium": 9,
+      "negligible": 1,
+      "unknown": 0
+    },
+    "critical_or_high_findings": [],
+    "grype_report_sha256": "21a2786cfd8ad4d888952fef79de2c72ae4f990b8a5a30156a09158b4cf06ba2",
+    "syft_inventory_sha256": "9d77011c9894118ad6712f963c5a4a772201911a12619ee2347a290d80cf85bf"
+  }
+}

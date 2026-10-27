@@ -132,8 +132,9 @@ def authenticate_token(connection: sqlite3.Connection, *, token: str) -> LocalUs
             threshold_text = (
                 (now - SESSION_LAST_USED_UPDATE_INTERVAL).replace(microsecond=0).isoformat().replace("+00:00", "Z")
             )
+            owns_transaction = not connection.in_transaction
             try:
-                cursor = connection.execute(
+                connection.execute(
                     """
                     UPDATE api_sessions
                     SET last_used_at = ?
@@ -141,9 +142,14 @@ def authenticate_token(connection: sqlite3.Connection, *, token: str) -> LocalUs
                     """,
                     (now_text, str(row["id"]), threshold_text),
                 )
-                if cursor.rowcount:
+                # A competing refresh can make this UPDATE affect zero rows.
+                # SQLite still opens a write transaction, which must release
+                # its lock before a route opens another database connection.
+                if owns_transaction:
                     connection.commit()
             except sqlite3.DatabaseError as exc:
+                if owns_transaction:
+                    connection.rollback()
                 raise SessionError("Unable to update local API session.") from exc
         return user
     return None

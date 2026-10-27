@@ -33,7 +33,10 @@ test("captures the real desktop workspace pages and Arabic RTL mode", async ({ p
   await expect(page.getByText(/EVD-SYN-/).first()).toBeVisible();
   await capture(page, "evidence-binder.png", true);
 
+  const navigationSearch = page.getByRole("searchbox", { name: "Find a workspace", exact: true });
+  await navigationSearch.fill("Inventory controls");
   await primaryNavigation.getByRole("button", { name: /Inventory controls/ }).click();
+  await navigationSearch.clear();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Inventory control center");
   await expect(page.getByText("SYN-PART-001")).toBeVisible();
   await capture(page, "inventory-control.png", true);
@@ -47,7 +50,9 @@ test("captures the real desktop workspace pages and Arabic RTL mode", async ({ p
   await expect(page.getByRole("cell", { name: /^IVR-IVR\/SYN\/0032/ })).toBeVisible();
   await capture(page, "inventory-valuation.png", true);
 
+  await navigationSearch.fill("Dashboard");
   await primaryNavigation.getByRole("button", { name: /^Dashboard/ }).click();
+  await navigationSearch.clear();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Control room");
 
   await page.getByTestId("locale-toggle").click();

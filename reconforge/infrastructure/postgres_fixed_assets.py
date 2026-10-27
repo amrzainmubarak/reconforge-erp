@@ -14,14 +14,47 @@ from reconforge.domain.finance_posting import (
 )
 from reconforge.domain.fixed_assets import (
     AssetAcquisition,
+    AssetRegister,
+    AssetRegisterState,
+    MultiRegisterAssetAcquisition,
     accounting_lines,
     cumulative_depreciation,
     eligible_months,
     exact_minor,
+    impairment_lines,
+    multi_register_disposal_lines,
+    recalibrate_post_impairment_depreciation,
 )
 from reconforge.domain.operational_finance import exact_minor_text
 from reconforge.infrastructure.postgres_finance_posting import posting_entry, posting_snapshot, records
 from reconforge.infrastructure.postgres_operational_finance import PostgresOperationalFinanceRepository
+
+POSTGRES_REGISTER_STATES_SCHEMA_SQL = r"""
+CREATE TABLE IF NOT EXISTS reconforge.fixed_asset_register_states (
+    tenant_id TEXT NOT NULL,
+    asset_id TEXT NOT NULL,
+    register_code TEXT NOT NULL,
+    workspace_id TEXT NOT NULL,
+    cost_minor BIGINT NOT NULL,
+    salvage_minor BIGINT NOT NULL,
+    useful_life_months INTEGER NOT NULL,
+    accumulated_depreciation_minor BIGINT NOT NULL DEFAULT 0,
+    accumulated_impairment_minor BIGINT NOT NULL DEFAULT 0,
+    months_depreciated INTEGER NOT NULL DEFAULT 0,
+    carrying_value_minor BIGINT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant_id, asset_id, register_code),
+    FOREIGN KEY (tenant_id, asset_id) REFERENCES reconforge.fixed_assets(tenant_id, id)
+);
+
+ALTER TABLE reconforge.fixed_asset_register_states ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reconforge.fixed_asset_register_states FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_scope ON reconforge.fixed_asset_register_states;
+CREATE POLICY tenant_scope ON reconforge.fixed_asset_register_states
+    USING (tenant_id = current_setting('app.tenant_id', true))
+    WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+"""
 
 
 class _AssetPostingParticipant:
@@ -358,3 +391,389 @@ class PostgresFixedAssetsRepository:
                 self.owner._actor(actor, "finance_core.read", {**row["payload"], "amount_minor": row["payload"]["cost_minor"]}, mutation=False)
             return {"assets": [{**row["payload"], **self._state(row["payload"])} for row in rows[:limit]],
                     "next_after": rows[limit-1]["id"] if len(rows) > limit else None}
+
+
+    def acquire_multi_register(self, request: MultiRegisterAssetAcquisition, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
+        """Refuse unsupported native ownership before creating any financial state.
+
+        The canonical v1 owner accepts a single-register asset and cannot verify
+        the inherited multi-register payload or command. A separate versioned
+        owner and migration are required before this operation can be enabled.
+        """
+        raise FinancePostingError(
+            "asset_multi_register_owner_required",
+            "Native multi-register acquisition requires a versioned financial source owner; "
+            "no asset or ledger state was changed.",
+        )
+
+    def get_register_states(self, asset_id: str, *, actor: PostingActor) -> dict[str, AssetRegisterState]:
+        """Return current carrying value, accumulated depreciation, and impairment per register."""
+        with self.owner._transaction():
+            asset = self._asset(asset_id)
+            self.owner._actor(actor, "finance_core.read", {**asset, "amount_minor": asset["cost_minor"]}, mutation=False)
+            states: dict[str, AssetRegisterState] = {}
+            if "register_states" in asset:
+                for code, data in asset["register_states"].items():
+                    states[code] = AssetRegisterState(
+                        register_code=code,
+                        accumulated_depreciation_minor=int(data["accumulated_depreciation_minor"]),
+                        accumulated_impairment_minor=int(data["accumulated_impairment_minor"]),
+                        months_depreciated=int(data["months_depreciated"]),
+                        carrying_value_minor=int(data["carrying_value_minor"]),
+                    )
+            else:
+                state = self._state(asset)
+                carrying = 0 if state["disposed"] else asset["cost_minor"] - state["accumulated_minor"] if state["acquired"] else 0
+                states["STATUTORY"] = AssetRegisterState(
+                    register_code="STATUTORY",
+                    accumulated_depreciation_minor=state["accumulated_minor"],
+                    accumulated_impairment_minor=0,
+                    months_depreciated=state["months"],
+                    carrying_value_minor=carrying,
+                )
+            return states
+
+    def post_impairment(
+        self,
+        asset_id: str,
+        register_code: str,
+        recoverable_amount_minor: int,
+        *,
+        period_id: str,
+        posting_date: str,
+        reason: str,
+        command_id: str,
+        actor: PostingActor,
+    ) -> dict[str, Any]:
+        """Post asset impairment (IAS 36 / ASC 360) generating balanced GL lines."""
+        exact_minor(recoverable_amount_minor, "recoverable_amount", zero=True)
+        text(command_id, "command_id", maximum=140)
+        text(reason, "reason", maximum=500)
+        from datetime import date
+        try:
+            date.fromisoformat(posting_date)
+        except ValueError as exc:
+            raise FinancePostingError("asset_date_invalid", "A valid posting date is required.") from exc
+
+        with self.owner._transaction():
+            asset = self._asset(asset_id)
+            state = self._state(asset)
+            if not state["acquired"] or state["disposed"]:
+                raise FinancePostingError("asset_state_invalid", "An acquired, undisposed asset is required.")
+            if posting_date < state["last_posting_date"]:
+                raise FinancePostingError("asset_date_invalid", "Asset accounting dates cannot regress.")
+
+            reg_dict: dict[str, Any] | None = None
+            if "registers" in asset:
+                for r in asset["registers"]:
+                    if r["register_code"] == register_code:
+                        reg_dict = r
+                        break
+            if reg_dict is None:
+                reg_dict = {
+                    "register_code": register_code,
+                    "cost_minor": asset["cost_minor"],
+                    "salvage_minor": asset["salvage_minor"],
+                    "useful_life_months": asset["useful_life_months"],
+                    "asset_account_code": asset["asset_account_code"],
+                    "accumulated_depreciation_account_code": asset["accumulated_account_code"],
+                    "accumulated_impairment_account_code": asset.get("accumulated_impairment_account_code", asset["accumulated_account_code"]),
+                    "depreciation_expense_account_code": asset["expense_account_code"],
+                    "impairment_loss_account_code": asset.get("loss_account_code", asset["loss_account_code"]),
+                    "gain_account_code": asset["gain_account_code"],
+                    "loss_account_code": asset["loss_account_code"],
+                }
+
+            register = AssetRegister(
+                register_code=reg_dict["register_code"],
+                cost_minor=int(reg_dict["cost_minor"]),
+                salvage_minor=int(reg_dict["salvage_minor"]),
+                useful_life_months=int(reg_dict["useful_life_months"]),
+                asset_account_code=reg_dict["asset_account_code"],
+                accumulated_depreciation_account_code=reg_dict["accumulated_depreciation_account_code"],
+                accumulated_impairment_account_code=reg_dict["accumulated_impairment_account_code"],
+                depreciation_expense_account_code=reg_dict["depreciation_expense_account_code"],
+                impairment_loss_account_code=reg_dict["impairment_loss_account_code"],
+                gain_account_code=reg_dict["gain_account_code"],
+                loss_account_code=reg_dict["loss_account_code"],
+            )
+
+            current_states = self.get_register_states(asset_id, actor=actor)
+            reg_state = current_states.get(register_code)
+            if reg_state is None:
+                reg_state = AssetRegisterState.create(register)
+
+            loss, lines = impairment_lines(register, reg_state, recoverable_amount_minor)
+            if loss == 0 or not lines:
+                return {
+                    "asset_id": asset_id,
+                    "register_code": register_code,
+                    "loss_minor": 0,
+                    "new_carrying_value_minor": reg_state.carrying_value_minor,
+                    "lines": [],
+                    "entry_id": None,
+                }
+
+            debit_total = sum(line["debit_minor"] for line in lines)
+            credit_total = sum(line["credit_minor"] for line in lines)
+            if debit_total != credit_total:
+                raise FinancePostingError("asset_balance_invalid", f"Impairment lines do not balance: {debit_total} != {credit_total}")
+
+            self.owner._actor(actor, "finance_core.manage", {**asset, "amount_minor": loss})
+
+            identifier = "FA-IMP-" + uuid4().hex
+            entry = self.owner.finance.create_entry(
+                entry_number=identifier.upper(),
+                organization_code=str(asset["organization_code"]),
+                entity_code=str(asset["entity_code"]),
+                period_id=period_id,
+                journal_code=str(asset["journal_code"]),
+                posting_date=posting_date,
+                description=reason,
+                workspace=str(asset["workspace_id"]),
+                external_reference=f"FA:{asset_id}:impair:{register_code}",
+                actor_label=actor.username,
+                lines=[
+                    {
+                        "account_code": row["account_code"],
+                        "debit": exact_minor_text(int(row["debit_minor"]), int(asset["currency_precision"])) if row["debit_minor"] else "0",
+                        "credit": exact_minor_text(int(row["credit_minor"]), int(asset["currency_precision"])) if row["credit_minor"] else "0",
+                        "description": reason,
+                    }
+                    for row in lines
+                ],
+            )
+
+            new_reg_state = reg_state.with_impairment(loss)
+            if "register_states" not in asset:
+                asset["register_states"] = {}
+            asset["register_states"][register_code] = {
+                "register_code": register_code,
+                "accumulated_depreciation_minor": new_reg_state.accumulated_depreciation_minor,
+                "accumulated_impairment_minor": new_reg_state.accumulated_impairment_minor,
+                "months_depreciated": new_reg_state.months_depreciated,
+                "carrying_value_minor": new_reg_state.carrying_value_minor,
+            }
+            asset["asset_digest"] = digest_payload({k: v for k, v in asset.items() if k != "asset_digest"})
+            self.connection.execute(
+                "UPDATE reconforge.fixed_assets SET payload=%s::jsonb WHERE tenant_id=%s AND id=%s",
+                (canonical_json(asset), self.tenant_id, asset_id),
+            )
+            self.connection.execute("""UPDATE reconforge.fixed_asset_register_states
+                SET accumulated_impairment_minor=%s, carrying_value_minor=%s, updated_at=now()
+                WHERE tenant_id=%s AND asset_id=%s AND register_code=%s""",
+                (new_reg_state.accumulated_impairment_minor, new_reg_state.carrying_value_minor,
+                 self.tenant_id, asset_id, register_code))
+
+            audit, outbox = self.owner._event(
+                {**asset, "loss_minor": loss, "register_code": register_code},
+                "fixed_asset_impaired",
+                actor,
+                {"loss_minor": loss, "register_code": register_code, "entry_id": entry["id"]},
+            )
+
+            return {
+                "asset_id": asset_id,
+                "register_code": register_code,
+                "loss_minor": loss,
+                "new_carrying_value_minor": new_reg_state.carrying_value_minor,
+                "lines": lines,
+                "entry_id": entry["id"],
+                "audit_event_id": audit,
+                "outbox_event_id": outbox,
+            }
+
+    def post_multi_register_disposal(
+        self,
+        asset_id: str,
+        proceeds_minor: int,
+        proceeds_cash_account: str,
+        *,
+        period_id: str,
+        posting_date: str,
+        reason: str,
+        command_id: str,
+        actor: PostingActor,
+        proceeds_allocation: dict[str, int] | None = None,
+    ) -> dict[str, Any]:
+        """Post multi-register asset disposal with exact balanced GL lines across registers."""
+        exact_minor(proceeds_minor, "proceeds_minor", zero=True)
+        text(command_id, "command_id", maximum=140)
+        text(reason, "reason", maximum=500)
+        text(proceeds_cash_account, "proceeds_cash_account", maximum=64)
+        from datetime import date
+        try:
+            date.fromisoformat(posting_date)
+        except ValueError as exc:
+            raise FinancePostingError("asset_date_invalid", "A valid posting date is required.") from exc
+
+        with self.owner._transaction():
+            asset = self._asset(asset_id)
+            state = self._state(asset)
+            if not state["acquired"] or state["disposed"]:
+                raise FinancePostingError("asset_state_invalid", "An acquired, undisposed asset is required.")
+            if posting_date < state["last_posting_date"]:
+                raise FinancePostingError("asset_date_invalid", "Asset accounting dates cannot regress.")
+
+            registers: list[AssetRegister] = []
+            if "registers" in asset:
+                for r in asset["registers"]:
+                    registers.append(AssetRegister(
+                        register_code=r["register_code"],
+                        cost_minor=int(r["cost_minor"]),
+                        salvage_minor=int(r["salvage_minor"]),
+                        useful_life_months=int(r["useful_life_months"]),
+                        asset_account_code=r["asset_account_code"],
+                        accumulated_depreciation_account_code=r["accumulated_depreciation_account_code"],
+                        accumulated_impairment_account_code=r["accumulated_impairment_account_code"],
+                        depreciation_expense_account_code=r["depreciation_expense_account_code"],
+                        impairment_loss_account_code=r["impairment_loss_account_code"],
+                        gain_account_code=r["gain_account_code"],
+                        loss_account_code=r["loss_account_code"],
+                    ))
+            else:
+                registers.append(AssetRegister(
+                    register_code="STATUTORY",
+                    cost_minor=int(asset["cost_minor"]),
+                    salvage_minor=int(asset["salvage_minor"]),
+                    useful_life_months=int(asset["useful_life_months"]),
+                    asset_account_code=asset["asset_account_code"],
+                    accumulated_depreciation_account_code=asset["accumulated_account_code"],
+                    accumulated_impairment_account_code=asset.get("accumulated_impairment_account_code", asset["accumulated_account_code"]),
+                    depreciation_expense_account_code=asset["expense_account_code"],
+                    impairment_loss_account_code=asset["loss_account_code"],
+                    gain_account_code=asset["gain_account_code"],
+                    loss_account_code=asset["loss_account_code"],
+                ))
+
+            acq = MultiRegisterAssetAcquisition(
+                workspace_id=asset["workspace_id"],
+                organization_id=asset["organization_id"],
+                legal_entity_id=asset["legal_entity_id"],
+                organization_code=asset["organization_code"],
+                entity_code=asset["entity_code"],
+                asset_number=asset["asset_number"],
+                name=asset["name"],
+                journal_code=asset["journal_code"],
+                period_id=period_id,
+                posting_date=posting_date,
+                in_service_date=asset["in_service_date"],
+                registers=tuple(registers),
+                cash_account_code=proceeds_cash_account,
+                reason=reason,
+            )
+
+            current_states = self.get_register_states(asset_id, actor=actor)
+            disposal_lines_by_reg = multi_register_disposal_lines(
+                acq, current_states, proceeds_minor, proceeds_cash_account,
+                proceeds_allocation=proceeds_allocation,
+            )
+
+            primary_code = asset.get("primary_register_code", registers[0].register_code)
+            primary_lines = disposal_lines_by_reg[primary_code]
+
+            self.owner._actor(actor, "finance_core.manage", {
+                **asset, "amount_minor": sum(line["debit_minor"] for line in primary_lines),
+            })
+
+            identifier = "FA-DISP-" + uuid4().hex
+            entry = self.owner.finance.create_entry(
+                entry_number=identifier.upper(),
+                organization_code=str(asset["organization_code"]),
+                entity_code=str(asset["entity_code"]),
+                period_id=period_id,
+                journal_code=str(asset["journal_code"]),
+                posting_date=posting_date,
+                description=reason,
+                workspace=str(asset["workspace_id"]),
+                external_reference=f"FA:{asset_id}:dispose:multi",
+                actor_label=actor.username,
+                lines=[
+                    {
+                        "account_code": row["account_code"],
+                        "debit": exact_minor_text(int(row["debit_minor"]), int(asset["currency_precision"])) if row["debit_minor"] else "0",
+                        "credit": exact_minor_text(int(row["credit_minor"]), int(asset["currency_precision"])) if row["credit_minor"] else "0",
+                        "description": reason,
+                    }
+                    for row in primary_lines
+                ],
+            )
+
+            if "register_states" in asset:
+                for _reg_code, r_state in asset["register_states"].items():
+                    r_state["carrying_value_minor"] = 0
+            asset["disposed"] = True
+            asset["asset_digest"] = digest_payload({k: v for k, v in asset.items() if k != "asset_digest"})
+            self.connection.execute(
+                "UPDATE reconforge.fixed_assets SET payload=%s::jsonb WHERE tenant_id=%s AND id=%s",
+                (canonical_json(asset), self.tenant_id, asset_id),
+            )
+            self.connection.execute("""UPDATE reconforge.fixed_asset_register_states
+                SET carrying_value_minor=0, updated_at=now()
+                WHERE tenant_id=%s AND asset_id=%s""", (self.tenant_id, asset_id))
+
+            audit, outbox = self.owner._event(
+                {**asset, "proceeds_minor": proceeds_minor},
+                "fixed_asset_multi_register_disposed",
+                actor,
+                {"proceeds_minor": proceeds_minor, "entry_id": entry["id"]},
+            )
+
+            return {
+                "asset_id": asset_id,
+                "disposed": True,
+                "proceeds_minor": proceeds_minor,
+                "entry_id": entry["id"],
+                "disposal_lines_by_register": disposal_lines_by_reg,
+                "audit_event_id": audit,
+                "outbox_event_id": outbox,
+            }
+
+    def recalibrate_depreciation(
+        self,
+        asset_id: str,
+        register_code: str,
+        elapsed_months_since_impairment: int,
+        *,
+        actor: PostingActor,
+    ) -> int:
+        """Calculate cumulative revised depreciation charge from post-impairment carrying basis."""
+        with self.owner._transaction():
+            asset = self._asset(asset_id)
+            self.owner._actor(actor, "finance_core.read", {**asset, "amount_minor": asset["cost_minor"]}, mutation=False)
+            current_states = self.get_register_states(asset_id, actor=actor)
+            reg_state = current_states[register_code]
+            reg_dict: dict[str, Any] | None = None
+            if "registers" in asset:
+                for r in asset["registers"]:
+                    if r["register_code"] == register_code:
+                        reg_dict = r
+                        break
+            if reg_dict is None:
+                reg_dict = {
+                    "register_code": register_code,
+                    "cost_minor": asset["cost_minor"],
+                    "salvage_minor": asset["salvage_minor"],
+                    "useful_life_months": asset["useful_life_months"],
+                    "asset_account_code": asset["asset_account_code"],
+                    "accumulated_depreciation_account_code": asset["accumulated_account_code"],
+                    "accumulated_impairment_account_code": asset.get("accumulated_impairment_account_code", asset["accumulated_account_code"]),
+                    "depreciation_expense_account_code": asset["expense_account_code"],
+                    "impairment_loss_account_code": asset.get("loss_account_code", asset["loss_account_code"]),
+                    "gain_account_code": asset["gain_account_code"],
+                    "loss_account_code": asset["loss_account_code"],
+                }
+            register = AssetRegister(
+                register_code=reg_dict["register_code"],
+                cost_minor=int(reg_dict["cost_minor"]),
+                salvage_minor=int(reg_dict["salvage_minor"]),
+                useful_life_months=int(reg_dict["useful_life_months"]),
+                asset_account_code=reg_dict["asset_account_code"],
+                accumulated_depreciation_account_code=reg_dict["accumulated_depreciation_account_code"],
+                accumulated_impairment_account_code=reg_dict["accumulated_impairment_account_code"],
+                depreciation_expense_account_code=reg_dict["depreciation_expense_account_code"],
+                impairment_loss_account_code=reg_dict["impairment_loss_account_code"],
+                gain_account_code=reg_dict["gain_account_code"],
+                loss_account_code=reg_dict["loss_account_code"],
+            )
+            return recalibrate_post_impairment_depreciation(register, reg_state, elapsed_months_since_impairment)

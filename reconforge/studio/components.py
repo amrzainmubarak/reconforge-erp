@@ -12,9 +12,40 @@ import pandas as pd
 from reconforge.review.state import ALLOWED_STATUSES
 
 
-def _layout(title: str, body: str, *, auth_nav: str = "") -> str:
-    nav = """
-    <nav>
+def _layout(title: str, body: str, *, auth_nav: str = "", locale: str = "en") -> str:
+    is_rtl = locale.strip().lower().startswith("ar")
+    direction = "rtl" if is_rtl else "ltr"
+    lang = escape(locale.strip()) or "en"
+
+    if is_rtl:
+        nav_html = """
+    <nav aria-label="التنقل الرئيسي">
+      <a href="/">نظرة عامة</a>
+      <a href="/health">سلامة البيانات</a>
+      <a href="/validation">التحقق</a>
+      <a href="/reconciliation">المطابقة</a>
+      <a href="/rule-results">نتائج القواعد</a>
+      <a href="/exceptions">الاستثناءات</a>
+      <a href="/close">الإقفال</a>
+      <a href="/variance">الفروقات</a>
+      <a href="/control-matrix">مصفوفة الرقابة</a>
+      <a href="/risk-matrix">مصفوفة المخاطر</a>
+      <a href="/wip">أعمار قيد التشغيل</a>
+      <a href="/control-packs">حزم الرقابة</a>
+      <a href="/evidence">الأدلة</a>
+      <a href="/db/accounts">حسابات DB</a>
+      <a href="/db/close">إقفال DB</a>
+      <a href="/db/evidence">أدلة DB</a>
+      <a href="/db/exceptions">استثناءات DB</a>
+      <a href="/db/metrics">مقاييس DB</a>
+      <a href="/downloads">التنزيلات</a>
+      <a href="/docs">التوثيق</a>
+      AUTH_NAV
+    </nav>
+    """
+    else:
+        nav_html = """
+    <nav aria-label="Main Navigation">
       <a href="/">Overview</a>
       <a href="/health">Dataset Health</a>
       <a href="/validation">Validation</a>
@@ -37,53 +68,61 @@ def _layout(title: str, body: str, *, auth_nav: str = "") -> str:
       <a href="/docs">Docs</a>
       AUTH_NAV
     </nav>
-    """.replace("AUTH_NAV", auth_nav)
+    """
+    nav = nav_html.replace("AUTH_NAV", auth_nav)
     return f"""<!doctype html>
-<html lang="en">
+<html lang="{lang}" dir="{direction}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{escape(title)}</title>
   <style>
-    body {{ margin: 0; font-family: Inter, Segoe UI, Arial, sans-serif; background: #f5f7fa; color: #182230; }}
-    header {{ background: #16324f; color: #fff; padding: 22px 32px; }}
-    header h1 {{ margin: 0; font-size: 24px; }}
-    nav {{ display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 32px; background: #e7edf4; border-bottom: 1px solid #d5dde8; }}
-    nav a {{ color: #16324f; text-decoration: none; padding: 6px 8px; border-radius: 6px; }}
+    body {{ margin: 0; font-family: Inter, Segoe UI, -apple-system, Arial, sans-serif; background: #f5f7fa; color: #182230; line-height: 1.5; }}
+    header {{ background: #16324f; color: #ffffff; padding-block: 22px; padding-inline: 32px; text-align: start; }}
+    header h1 {{ margin: 0; font-size: 24px; font-weight: 700; color: #ffffff; }}
+    nav {{ display: flex; flex-wrap: wrap; gap: 8px; padding-block: 12px; padding-inline: 32px; background: #e7edf4; border-block-end: 1px solid #d5dde8; text-align: start; }}
+    nav a {{ color: #16324f; text-decoration: none; padding-block: 6px; padding-inline: 10px; border-radius: 6px; font-weight: 500; font-size: 14px; }}
     nav a:hover {{ background: #d5dde8; }}
+    nav a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {{ outline: 2px solid #16324f; outline-offset: 2px; }}
     .nav-spacer {{ flex: 1 1 auto; }}
-    .nav-button {{ border: 0; border-radius: 6px; padding: 6px 8px; background: #16324f; color: #fff; cursor: pointer; }}
-    main {{ max-width: 1180px; margin: 0 auto; padding: 24px; }}
+    .nav-button {{ border: 0; border-radius: 6px; padding-block: 6px; padding-inline: 12px; background: #16324f; color: #ffffff; cursor: pointer; font-size: 14px; font-weight: 500; }}
+    main {{ max-width: 1180px; margin-inline: auto; padding-block: 24px; padding-inline: 24px; text-align: start; }}
     .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }}
-    .card {{ background: #fff; border: 1px solid #dce3ea; border-radius: 8px; padding: 14px; }}
-    .card span {{ display: block; color: #667085; font-size: 13px; }}
-    .card strong {{ display: block; margin-top: 6px; font-size: 23px; }}
-    .badge {{ border-radius: 999px; padding: 3px 8px; font-size: 12px; background: #e8eef5; }}
-    .high, .critical {{ background: #fee4e2; color: #912018; }}
-    .medium {{ background: #fff4cc; color: #7a4d00; }}
-    .filters {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: end; margin: 0 0 14px; }}
-    .review-action {{ background: #fff; border: 1px solid #dce3ea; border-radius: 8px; padding: 14px; margin: 0 0 16px; }}
+    .card {{ background: #ffffff; border: 1px solid #dce3ea; border-radius: 8px; padding-block: 14px; padding-inline: 14px; text-align: start; }}
+    .card span {{ display: block; color: #344054; font-size: 13px; font-weight: 500; }}
+    .card strong {{ display: block; margin-top: 6px; font-size: 23px; color: #182230; }}
+    .badge {{ border-radius: 999px; padding-block: 3px; padding-inline: 8px; font-size: 12px; font-weight: 600; background: #e8eef5; color: #16324f; }}
+    .high, .critical {{ background: #fee4e2; color: #7a1710; }}
+    .medium {{ background: #fff4cc; color: #593800; }}
+    .filters {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: end; margin-block-end: 14px; text-align: start; }}
+    .review-action {{ background: #ffffff; border: 1px solid #dce3ea; border-radius: 8px; padding-block: 14px; padding-inline: 14px; margin-block-end: 16px; text-align: start; }}
     .review-action summary {{ cursor: pointer; font-weight: 700; color: #16324f; }}
-    .review-form {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; align-items: end; margin-top: 12px; }}
-    .filters label, .review-form label {{ display: grid; gap: 4px; font-size: 12px; color: #475467; }}
-    .filters input, .filters select, .review-form input, .review-form select {{ min-height: 34px; border: 1px solid #ccd6e0; border-radius: 6px; padding: 6px 8px; background: #fff; }}
-    .filters button, .review-form button {{ min-height: 34px; border: 0; border-radius: 6px; padding: 6px 10px; background: #16324f; color: #fff; }}
-    .message {{ padding: 10px 12px; border-radius: 6px; margin: 0 0 14px; border: 1px solid; }}
-    .success {{ background: #ecfdf3; color: #067647; border-color: #abefc6; }}
-    .error {{ background: #fef3f2; color: #b42318; border-color: #fecdca; }}
-    .login-panel {{ max-width: 390px; background: #fff; border: 1px solid #dce3ea; border-radius: 8px; padding: 18px; }}
-    .login-form {{ display: grid; gap: 12px; }}
-    .login-form label {{ display: grid; gap: 5px; font-size: 13px; color: #475467; }}
-    .login-form input {{ min-height: 36px; border: 1px solid #ccd6e0; border-radius: 6px; padding: 6px 8px; background: #fff; }}
-    .login-form button {{ min-height: 36px; border: 0; border-radius: 6px; padding: 6px 10px; background: #16324f; color: #fff; }}
-    table {{ width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #dce3ea; }}
-    th, td {{ padding: 9px 10px; border-bottom: 1px solid #edf1f5; text-align: left; font-size: 13px; }}
-    th {{ background: #e8eef5; }}
-    h2 {{ margin-top: 0; }}
+    .review-form {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; align-items: end; margin-top: 12px; text-align: start; }}
+    .filters label, .review-form label {{ display: grid; gap: 4px; font-size: 12px; color: #344054; font-weight: 500; text-align: start; }}
+    .filters input, .filters select, .review-form input, .review-form select {{ min-height: 34px; border: 1px solid #ccd6e0; border-radius: 6px; padding-block: 6px; padding-inline: 8px; background: #ffffff; color: #182230; text-align: start; }}
+    .filters button, .review-form button {{ min-height: 34px; border: 0; border-radius: 6px; padding-block: 6px; padding-inline: 12px; background: #16324f; color: #ffffff; cursor: pointer; font-weight: 500; }}
+    .message {{ padding-block: 10px; padding-inline: 12px; border-radius: 6px; margin-block-end: 14px; border: 1px solid; text-align: start; }}
+    .success {{ background: #ecfdf3; color: #02542d; border-color: #abefc6; }}
+    .error {{ background: #fef3f2; color: #7a1710; border-color: #fecdca; }}
+    .login-panel {{ max-width: 390px; background: #ffffff; border: 1px solid #dce3ea; border-radius: 8px; padding-block: 18px; padding-inline: 18px; margin-inline: auto; text-align: start; }}
+    .login-form {{ display: grid; gap: 12px; text-align: start; }}
+    .login-form label {{ display: grid; gap: 5px; font-size: 13px; color: #344054; font-weight: 500; text-align: start; }}
+    .login-form input {{ min-height: 36px; border: 1px solid #ccd6e0; border-radius: 6px; padding-block: 6px; padding-inline: 8px; background: #ffffff; color: #182230; }}
+    .login-form button {{ min-height: 36px; border: 0; border-radius: 6px; padding-block: 6px; padding-inline: 12px; background: #16324f; color: #ffffff; cursor: pointer; font-weight: 600; }}
+    table {{ width: 100%; border-collapse: collapse; background: #ffffff; border: 1px solid #dce3ea; text-align: start; }}
+    th, td {{ padding-block: 9px; padding-inline: 10px; border-block-end: 1px solid #edf1f5; text-align: start; font-size: 13px; color: #182230; }}
+    th {{ background: #e8eef5; color: #16324f; font-weight: 700; text-align: start; }}
+    h2 {{ margin-top: 0; color: #16324f; text-align: start; }}
   </style>
 </head>
 <body>
-  <header><h1>ReconForge Studio</h1></header>
+  <header style="display: flex; justify-content: space-between; align-items: center;">
+    <h1>ReconForge Studio</h1>
+    <div class="lang-switcher" style="font-size: 14px; font-weight: 500;">
+      <a href="?lang=en" style="color: #ffffff; text-decoration: none; margin-inline-end: 8px;">English</a> |
+      <a href="?lang=ar" style="color: #ffffff; text-decoration: none; margin-inline-start: 8px;">العربية</a>
+    </div>
+  </header>
   {nav}
   <main>{body}</main>
 </body>
@@ -104,10 +143,10 @@ def _table(frame: pd.DataFrame, limit: int = 50) -> str:
 def _html_cell(value: object) -> str:
     if value is None:
         return ""
-    text = str(value)
-    if text.strip().lower() in {"nan", "nat", "none", "<na>"}:
+    text_val = str(value)
+    if text_val.strip().lower() in {"nan", "nat", "none", "<na>"}:
         return ""
-    return escape(text)
+    return escape(text_val)
 
 
 def _search_text(row: pd.Series) -> str:
@@ -128,13 +167,13 @@ def _review_update_form(csrf_token: str) -> str:
   <summary>Update Review Status</summary>
   <form class="review-form" method="post" action="/exceptions/update-review">
     <input type="hidden" name="csrf_token" value="{escape(csrf_token)}">
-    <label>Exception ID<input name="exception_id" required maxlength="80" placeholder="EXC-0001"></label>
-    <label>Status<select name="status" required>{statuses}</select></label>
-    <label>Reviewer<input name="reviewer" maxlength="120"></label>
-    <label>Note<input name="note" maxlength="500"></label>
-    <label>Decision reason<input name="decision_reason" maxlength="500"></label>
-    <label>Accepted-risk reason<input name="accepted_risk_reason" maxlength="500"></label>
-    <label>Escalation owner<input name="escalation_owner" maxlength="120"></label>
+    <label for="rev-exception-id">Exception ID<input id="rev-exception-id" name="exception_id" required maxlength="80" placeholder="EXC-0001"></label>
+    <label for="rev-status">Status<select id="rev-status" name="status" required>{statuses}</select></label>
+    <label for="rev-reviewer">Reviewer<input id="rev-reviewer" name="reviewer" maxlength="120"></label>
+    <label for="rev-note">Note<input id="rev-note" name="note" maxlength="500"></label>
+    <label for="rev-decision-reason">Decision reason<input id="rev-decision-reason" name="decision_reason" maxlength="500"></label>
+    <label for="rev-accepted-risk">Accepted-risk reason<input id="rev-accepted-risk" name="accepted_risk_reason" maxlength="500"></label>
+    <label for="rev-escalation-owner">Escalation owner<input id="rev-escalation-owner" name="escalation_owner" maxlength="120"></label>
     <button type="submit">Save Review Update</button>
   </form>
 </details>
@@ -155,8 +194,8 @@ def _login_form(csrf_token: str, *, message: str = "") -> str:
   {_message_html(message, "error")}
   <form class="login-form" method="post" action="/login">
     <input type="hidden" name="csrf_token" value="{escape(csrf_token)}">
-    <label>Username<input name="username" autocomplete="username" required maxlength="120"></label>
-    <label>Password<input name="password" type="password" autocomplete="current-password" required maxlength="512"></label>
+    <label for="login-username">Username<input id="login-username" name="username" autocomplete="username" required maxlength="120"></label>
+    <label for="login-password">Password<input id="login-password" name="password" type="password" autocomplete="current-password" required maxlength="512"></label>
     <button type="submit">Sign In</button>
   </form>
 </section>

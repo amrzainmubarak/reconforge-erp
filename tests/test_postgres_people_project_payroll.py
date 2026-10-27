@@ -100,9 +100,9 @@ def personnel_database(receipt_database: tuple[str, str]) -> Iterator[tuple[str,
 
 
 @pytest.fixture
-def people(personnel_database: tuple[str, str, str]) -> PeopleRuntime:
+def people(personnel_database: tuple[str, str, str], *, test_password: str | None = None) -> PeopleRuntime:
     admin, app, private = personnel_database
-    base = create_receipt_runtime((admin, app))
+    base = create_receipt_runtime((admin, app), test_password=test_password)
     with PostgresTenantBoundary(base.factory).transaction(base.tenant) as connection:
         identity = PostgresIdentityRepository(connection)
         for permission in sorted(PERMISSIONS):

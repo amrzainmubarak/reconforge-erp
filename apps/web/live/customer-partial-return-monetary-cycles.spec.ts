@@ -1,3 +1,4 @@
+import { openStudioDestination } from "./studio-navigation";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
@@ -48,7 +49,7 @@ async function fields(form: Locator, values: Partial<Record<MonetaryWord, string
   }
 }
 async function stockPage(page: Page, id?: string) {
-  await page.getByRole("navigation", { name: "Primary navigation", exact: true }).getByRole("button", { name: "Product sales", exact: true }).click();
+  await openStudioDestination(page, "Product sales");
   const scope = page.getByRole("group", { name: "Working scope", exact: true });
   for (const [label, value] of [["Workspace", "work"], ["Organization", "org"], ["Legal entity", "entity"]]) await scope.getByRole("combobox", { name: label, exact: true }).selectOption(value);
   const initial = page.waitForResponse(reply => new URL(reply.url()).pathname === "/api/v1/stock-sales/orders" && reply.request().method() === "GET");
@@ -65,7 +66,7 @@ async function stockPage(page: Page, id?: string) {
   return section;
 }
 async function partialPage(page: Page, plan?: MonetaryPartialPlan) {
-  await page.getByRole("navigation", { name: "Primary navigation", exact: true }).getByRole("button", { name: "Customer returns", exact: true }).click();
+  await openStudioDestination(page, "Customer returns");
   const scope = page.getByRole("form", { name: "Apply scope", exact: true });
   for (const [label, value] of [["Workspace ID", "work"], ["Organization ID", "org"], ["Legal entity ID", "entity"]]) await scope.getByLabel(label, { exact: true }).fill(value);
   const initial = page.waitForResponse(reply => new URL(reply.url()).pathname === "/api/v1/customer-returns/plans" && reply.request().method() === "GET");
@@ -219,7 +220,7 @@ async function child(page: Page, plan: MonetaryPartialPlan, kind: "refund" | "re
   return partialCommand(page, `${returnRoot}/plans/${plan.id}/${kind === "refund" ? "refunds" : "reversals"}`, () => form.getByRole("button", { name: text("en", label), exact: true }).click());
 }
 async function readAging(page: Page, plan: MonetaryPartialPlan) {
-  await page.getByRole("navigation", { name: "Primary navigation", exact: true }).getByRole("button", { name: "Receivables", exact: true }).click();
+  await openStudioDestination(page, "Receivables");
   const listed = page.waitForResponse(reply => new URL(reply.url()).pathname === "/api/v1/receivables/invoices" && reply.request().method() === "GET");
   await page.getByRole("combobox", { name: "Authorized workspace", exact: true }).selectOption("work");
   const result = await listed; expect(result.status()).toBe(200);

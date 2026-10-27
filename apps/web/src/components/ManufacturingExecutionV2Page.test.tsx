@@ -62,3 +62,88 @@ it("holds mutation admission while a real refresh is pending", async () => {
   await act(async () => resolve(new Response(JSON.stringify({ orders: [], definitions: [source] }))));
   await waitFor(() => expect(within(form).getByRole("button", { name: "Approve engineering revision" })).toBeEnabled());
 });
+
+it.each(["en", "ar"] as const)("does not turn missing parent quality evidence into zero totals in %s", async locale => {
+  const page = actualManufacturingV2Page(true);
+  delete page.orders[0].material; delete page.orders[0].wip_minor;
+  delete page.orders[0].held_quantity_scaled; delete page.orders[0].held_cost_minor;
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(page))));
+  const select = await enter(locale);
+  await waitFor(() => expect(select.querySelectorAll("option").length).toBeGreaterThan(3));
+  fireEvent.change(select, { target: { value: page.orders[0].id } });
+  expect(screen.queryByText(/WIP 0 · Quality hold 0 \/ 0/)).not.toBeInTheDocument();
+  expect(screen.getByText(locale === "en" ? "Current parent inventory and WIP totals are unverified. Refresh original manufacturing evidence before continuing." : "إجماليات مخزون الأمر الأصلي وتحت التشغيل غير موثقة حالياً. حدّث أدلة التصنيع الأصلية قبل المتابعة.")).toBeInTheDocument();
+  fireEvent.change(select, { target: { value: page.orders[0].productions[0].id } });
+  expect(screen.getByRole("button", { name: locale === "en" ? "Prepare complete held-tranche inspection" : "إعداد فحص الدفعة المحجوزة بالكامل" })).toBeDisabled();
+});
+
+it.each(["en", "ar"] as const)("preserves actual verified zero parent totals in %s", async locale => {
+  const page = actualManufacturingV2Page();
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(page))));
+  const select = await enter(locale);
+  await waitFor(() => expect(select.querySelectorAll("option").length).toBeGreaterThan(3));
+  fireEvent.change(select, { target: { value: page.orders[0].id } });
+  expect(screen.getByText(/WIP 0 · Quality hold 0 \/ 0 · Total 3800 USD/)).toBeInTheDocument();
+});
+
+it.each(["en", "ar"] as const)("stops presenting old quality totals as current after a failed refresh in %s", async locale => {
+  const page = actualManufacturingV2Page(true);
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response(JSON.stringify(page))).mockResolvedValueOnce(new Response("Unavailable", { status: 503 })).mockResolvedValueOnce(new Response(JSON.stringify(page))));
+  const select = await enter(locale);
+  await waitFor(() => expect(select.querySelectorAll("option").length).toBeGreaterThan(3));
+  fireEvent.change(select, { target: { value: page.orders[0].id } });
+  expect(await screen.findByText(/Quality hold 4 \/ 1520/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: locale === "en" ? "Refresh original manufacturing evidence" : "تحديث أدلة التصنيع الأصلية" }));
+  await screen.findByRole("alert");
+  expect(screen.queryByText(/Quality hold 4 \/ 1520/)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: locale === "en" ? "Refresh original manufacturing evidence" : "تحديث أدلة التصنيع الأصلية" }));
+  expect(await screen.findByText(/Quality hold 4 \/ 1520/)).toBeInTheDocument();
+});
+
+it("does not carry a different order's quality totals into an engineering source selection", async () => {
+  const page = actualManufacturingV2Page(true);
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(page))));
+  const select = await enter();
+  await waitFor(() => expect(select.querySelectorAll("option").length).toBeGreaterThan(3));
+  fireEvent.change(select, { target: { value: page.orders[0].id } });
+  expect(await screen.findByText(/Quality hold 4 \/ 1520/)).toBeInTheDocument();
+  fireEvent.change(select, { target: { value: page.definitions[0].id } });
+  expect(screen.queryByText(/Quality hold/)).not.toBeInTheDocument();
+});
+
+it.each(["en", "ar"] as const)("retains a posted inspection ACK without presenting an old parent hold after read failure in %s", async locale => {
+  const page = actualManufacturingV2Page(true), posted = actualManufacturingV2Page().orders[0].inspections[0];
+  page.orders[0].inspections = [{ ...posted, phase: 1, receipt_effect: null, loss_effect_id: null }];
+  vi.mocked(loadBudgetIdentity).mockResolvedValueOnce({ ...identity, id: "poster" });
+  let acknowledged = false;
+  vi.stubGlobal("fetch", vi.fn(async (_url: unknown, init?: RequestInit) => {
+    if (init?.method === "POST") { acknowledged = true; return new Response(JSON.stringify({ inspection: posted })); }
+    return acknowledged ? new Response("Unavailable", { status: 503 }) : new Response(JSON.stringify(page));
+  }));
+  const select = await enter(locale);
+  await waitFor(() => expect(select.querySelectorAll("option").length).toBeGreaterThan(3));
+  fireEvent.change(select, { target: { value: posted.id } });
+  const form = screen.getByRole("form", { name: locale === "en" ? "Post complete original effects" : "ترحيل الآثار الأصلية بالكامل" });
+  fireEvent.change(within(form).getByLabelText(locale === "en" ? "Reason" : "السبب"), { target: { value: "Independent native inspection posting" } });
+  fireEvent.click(within(form).getByRole("button", { name: locale === "en" ? "Post complete original effects" : "ترحيل الآثار الأصلية بالكامل" }));
+  await screen.findByText(locale === "en" ? "The command was acknowledged. Refresh native evidence before the next operation." : "وصل إقرار الأمر. حدّث الأدلة الأصلية قبل العملية التالية.");
+  expect(screen.queryByText(/Quality hold 4 \/ 1520/)).not.toBeInTheDocument();
+  expect(screen.getByText(/"receipt_effect": \{/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: locale === "en" ? "Retry the same retained command" : "إعادة الأمر المحفوظ نفسه" })).not.toBeInTheDocument();
+});
+
+it("does not present old parent totals after a different inspection is returned for the command", async () => {
+  const page = actualManufacturingV2Page(true), posted = actualManufacturingV2Page().orders[0].inspections[0];
+  const wrong = actualManufacturingV2Page().orders[0].inspections[1];
+  page.orders[0].inspections = [{ ...posted, phase: 1, receipt_effect: null, loss_effect_id: null }];
+  vi.mocked(loadBudgetIdentity).mockResolvedValueOnce({ ...identity, id: "poster" });
+  vi.stubGlobal("fetch", vi.fn(async (_url: unknown, init?: RequestInit) => new Response(JSON.stringify(init?.method === "POST" ? { inspection: wrong } : page))));
+  const select = await enter(); await waitFor(() => expect(select.querySelectorAll("option").length).toBeGreaterThan(3));
+  fireEvent.change(select, { target: { value: posted.id } });
+  const form = screen.getByRole("form", { name: "Post complete original effects" });
+  fireEvent.change(within(form).getByLabelText("Reason"), { target: { value: "Independent inspection" } });
+  fireEvent.click(within(form).getByRole("button", { name: "Post complete original effects" }));
+  await screen.findByRole("button", { name: "Retry the same retained command" });
+  expect(screen.queryByText(/Quality hold 4 \/ 1520/)).not.toBeInTheDocument();
+  expect(screen.queryByText(new RegExp(wrong.id))).not.toBeInTheDocument();
+});

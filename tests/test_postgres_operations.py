@@ -54,8 +54,15 @@ def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None
         "0148_pg_partial_return_rounding",
         "0149_pg_monetary_partial_returns",
         "0150_pg_native_query_plans",
+        "0151_pg_enterprise_erp_v1_tables",
+        "0152_pg_performance_indexes",
+        "0153_pg_enterprise_modules",
+        "0154_pg_enterprise_finance",
+        "0155_pg_crm_authority",
+        "0156_pg_hcm_leave_entity",
+        "0157_pg_quality_actor_authority",
     )
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 149
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 156
 
 
 def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:

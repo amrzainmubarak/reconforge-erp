@@ -85,6 +85,27 @@ MONETARY_REQUIRED = (
     'tests/test_postgres_monetary_customer_return_security.py',
 )
 
+STUDIO_REQUIRED = (
+    "apps/web/live/studio-navigation.ts",
+    "apps/web/e2e/release-product-harness.html",
+    "apps/web/e2e/release-product-harness.tsx",
+    "apps/web/e2e/release-product-live.acceptance.ts",
+    "apps/web/e2e/release-product.playwright.config.ts",
+    "apps/web/e2e/release-product.vite.config.ts",
+    "apps/web/e2e/studio-shell.acceptance.ts",
+    "apps/web/e2e/studio-shell.playwright.config.ts",
+    "apps/web/e2e/studio-shell.vite.config.ts",
+    "apps/web/e2e/studio-shell.manifest.mjs",
+    "apps/web/src/studio-routes.ts",
+    "apps/web/src/navigation-access.ts",
+    "apps/web/src/studio-foundations.css",
+    "apps/web/src/components/StudioFoundations.tsx",
+    "apps/web/src/components/StudioSessionControls.tsx",
+    "tests/test_studio_shell_browser_runtime.py",
+    "tests/test_studio_publication_contract.py",
+    "docs/execution/STUDIO_NAVIGATION_2026-10-26.md",
+)
+
 HELPERS = (
     "customer_partial_return_monetary_browser", "customer_partial_return_monetary_browser_reader",
     "customer_partial_return_monetary_posted_oracle", "customer_partial_return_monetary_oracle",
@@ -531,7 +552,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
     require(sha(json.dumps(index["entries"][:20], sort_keys=True, separators=(",", ":")).encode("utf-8")) == PREFIX20_SHA, "Twenty retained index entries changed")
     pair = ("docs/execution/benchmarks/" + args.baseline_wrapper, "docs/execution/benchmarks/" + args.candidate_wrapper)
     required = {
-        *MONETARY_REQUIRED, *DIAGNOSTIC_HELPERS, "tests/test_wave5_profile_diagnostics.py", "tests/test_wave5_large_journal_oracle.py",
+        *MONETARY_REQUIRED, *STUDIO_REQUIRED, *DIAGNOSTIC_HELPERS, "tests/test_wave5_profile_diagnostics.py", "tests/test_wave5_large_journal_oracle.py",
         "tests/test_publication_diagnostic_dependencies.py",
         "docs/execution/WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md",
         "docs/execution/ENTERPRISE_COMPLETION_INVENTORY_WAVE5_V2.json",
@@ -906,8 +927,8 @@ def main() -> int:
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--index-count", type=int, default=22)
-    parser.add_argument("--migration-count", type=int, default=149)
-    parser.add_argument("--migration-head", default="0150_pg_native_query_plans")
+    parser.add_argument("--migration-count", type=int, default=156)
+    parser.add_argument("--migration-head", default="0157_pg_quality_actor_authority")
     parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
     parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
     parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")

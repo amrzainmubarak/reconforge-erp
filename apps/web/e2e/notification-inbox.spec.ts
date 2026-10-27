@@ -26,6 +26,11 @@ test("notification inbox signs in, reads a retained item, and remains accessible
       body: JSON.stringify({ csrf_token: "csrf-proof", expires_at: "2029-01-01T00:00:00Z" }),
     });
   });
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ id: "reviewer", username: "reviewer", permissions: ["notifications.read"], authorized_scopes: { workspaces: ["default"], organizations: [], legal_entities: [] } }),
+  }));
   await page.route("**/api/v1/notifications/workspaces", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -56,7 +61,7 @@ test("notification inbox signs in, reads a retained item, and remains accessible
   await page.getByLabel("Tenant").fill("local");
   await page.getByLabel("Username").fill("reviewer");
   await page.getByLabel("Password").fill("Synthetic-123");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
 
   await expect(page.locator(".inbox-results [role=status]")).toHaveText("Notifications: 1 · Unread: 1");
   await expect(page.getByText("APR-1", { exact: true })).toBeVisible();

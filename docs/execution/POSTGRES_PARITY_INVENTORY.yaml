@@ -1,10 +1,10 @@
 schema_version: 1
-updated_at: "2026-10-14"
+updated_at: "2026-10-25"
 claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0146_pg_inventory_transfer"
+current_source_migration_head: "0157_pg_quality_actor_authority"
 native_sourcing_partition:
   claim_boundary: Complete existing native sourcing files have independent required CI owners; this mapping adds no service or parity claim.
   complete_file_owners:
@@ -362,7 +362,7 @@ boundaries:
   - {file: evidence.py, service: EvidenceRegistryApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_evidence_application.PostgresEvidenceRegistryRepository, test: tests/test_postgres_evidence_application.py, risk: integrity_high}
   - {file: exceptions.py, service: ExceptionQueueApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_exceptions.PostgresExceptionQueueRepository, test: tests/test_postgres_exceptions.py, risk: workflow_high}
   - {file: exception_review.py, service: ExceptionReviewApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_exceptions.PostgresExceptionQueueRepository, test: tests/test_api_server_exception_review.py, risk: workspace_scoped_assignment_and_terminal_transition_workflow_with_immutable_audit_outbox_history}
-  - {file: finance_core.py, service: FinanceCoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_finance_core.PostgresFinanceCoreRepository, test: tests/test_postgres_finance_core.py, additional_tests: [tests/test_api_server_finance_core_live.py], risk: financial_critical}
+  - {file: finance_core.py, service: FinanceCoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_finance_core.PostgresFinanceCoreRepository, test: tests/test_postgres_finance_core.py, additional_tests: [tests/test_api_server_finance_core_live.py, tests/test_postgres_enterprise_finance_bridge.py, tests/test_release_finance_bridge_security.py, tests/test_release_authorization_postgres.py, tests/test_release_product_scope.py], risk: financial_critical}
   - {file: finance_posting.py, service: FinancePostingApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_finance_posting.PostgresFinancePostingRepository, test: tests/test_postgres_finance_posting.py, additional_tests: [tests/test_postgres_finance_posting_batches.py], ci_shard: finance-posting, risk: native_posting_batch_verifies_original_source_audit_outbox_no_new_posting_policy}
   - {file: master_data.py, service: MasterDataApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_master_data_application.PostgresMasterDataApplicationRepository, test: tests/test_postgres_master_data_application.py, risk: scope_high}
   - {file: inventory_core.py, service: InventoryCoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_core.PostgresInventoryCoreRepository, test: tests/test_postgres_inventory_core.py, risk: financial_high}

@@ -47,6 +47,7 @@ from reconforge.api.routes import (
     close,
     commercial_collections,
     connectors,
+    consolidated_financial_statements,
     consolidation_close,
     consolidation_deferred_tax,
     consolidation_impairment,
@@ -54,6 +55,7 @@ from reconforge.api.routes import (
     consolidation_ownership,
     consolidation_ownership_change,
     consolidation_ppa,
+    crm_contracts,
     customer_partial_returns,
     customer_partial_returns_v2,
     customer_partial_returns_v3,
@@ -67,10 +69,13 @@ from reconforge.api.routes import (
     financial_installments,
     financial_reporting,
     fixed_assets,
+    governed_assistant,
+    hcm_leave,
     health,
     identity_administration,
     individual_cashflow,
     intercompany_cashflow,
+    intercompany_elimination,
     intercompany_fx,
     intercompany_group_diagnostic,
     intercompany_operations,
@@ -81,11 +86,15 @@ from reconforge.api.routes import (
     inventory_valuation,
     inventory_valuation_reversal,
     landed_cost,
+    manufacturing_bom,
+    manufacturing_capacity,
     manufacturing_cost_control,
     manufacturing_execution,
     manufacturing_execution_v2,
+    manufacturing_quality,
     manufacturing_supply_plan,
     master_data,
+    master_production_schedule,
     metrics,
     notification_inbox,
     operational_finance,
@@ -98,6 +107,7 @@ from reconforge.api.routes import (
     procurement_partial,
     procurement_sourcing,
     professional_invoice_payment,
+    project_milestone_billing,
     project_source_reconciliation,
     project_time_billing,
     receivables,
@@ -110,9 +120,11 @@ from reconforge.api.routes import (
     scoped_exports,
     security_center,
     security_governance,
+    shop_floor_traceability,
     stock_sales,
     stock_sales_v2,
     supplier_returns,
+    treasury_liquidity,
     users,
     webauthn,
     workflow,
@@ -328,7 +340,33 @@ def create_api_app(
                 raise
             cache = getattr(request.app.state, "policy_decision_cache", None)
             if cache is not None and method not in {"GET", "HEAD", "OPTIONS", "TRACE"}:
-                cache.invalidate()
+                tenant_id: str | None = (
+                    getattr(request.state, "tenant_id", None)
+                    or request.headers.get("x-tenant-id")
+                    or request.query_params.get("tenant_id")
+                )
+                if not tenant_id:
+                    principal = getattr(request.state, "server_principal", None)
+                    if principal is not None and len(principal.authorized_tenant_ids) == 1:
+                        tenant_id = next(iter(principal.authorized_tenant_ids))
+                organization_id: str | None = (
+                    getattr(request.state, "organization_id", None)
+                    or request.headers.get("x-organization-id")
+                    or request.query_params.get("organization_id")
+                )
+                workspace_id: str | None = (
+                    getattr(request.state, "workspace_id", None)
+                    or request.headers.get("x-workspace-id")
+                    or request.query_params.get("workspace_id")
+                )
+                if tenant_id:
+                    cache.invalidate(
+                        tenant_id=tenant_id,
+                        organization_id=organization_id,
+                        workspace_id=workspace_id,
+                    )
+                else:
+                    cache.invalidate()
             route = request.scope.get("route")
             local_template = str(getattr(route, "path", ""))
             candidate = local_template if local_template.startswith("/scim/v2") else "/api/v1" + local_template
@@ -499,6 +537,18 @@ def create_api_app(
     app.include_router(inventory_transfer.router, prefix="/api/v1")
     app.include_router(inventory_valuation.router, prefix="/api/v1")
     app.include_router(inventory_valuation_reversal.router, prefix="/api/v1")
+    app.include_router(treasury_liquidity.router, prefix="/api/v1")
+    app.include_router(manufacturing_bom.router, prefix="/api/v1")
+    app.include_router(manufacturing_capacity.router, prefix="/api/v1")
+    app.include_router(manufacturing_quality.router, prefix="/api/v1")
+    app.include_router(governed_assistant.router, prefix="/api/v1")
+    app.include_router(hcm_leave.router, prefix="/api/v1")
+    app.include_router(crm_contracts.router, prefix="/api/v1")
+    app.include_router(intercompany_elimination.router, prefix="/api/v1")
+    app.include_router(shop_floor_traceability.router, prefix="/api/v1")
+    app.include_router(project_milestone_billing.router, prefix="/api/v1")
+    app.include_router(consolidated_financial_statements.router, prefix="/api/v1")
+    app.include_router(master_production_schedule.router, prefix="/api/v1")
     app.include_router(scim.router)
     if resolved_web_root is not None:
         # The catch-all SPA must follow every API router in dispatch order.
@@ -579,6 +629,18 @@ def create_api_app(
         inventory_transfer.router,
         inventory_valuation.router,
         inventory_valuation_reversal.router,
+        treasury_liquidity.router,
+        manufacturing_bom.router,
+        manufacturing_capacity.router,
+        manufacturing_quality.router,
+        governed_assistant.router,
+        hcm_leave.router,
+        crm_contracts.router,
+        intercompany_elimination.router,
+        shop_floor_traceability.router,
+        project_milestone_billing.router,
+        consolidated_financial_statements.router,
+        master_production_schedule.router,
     )
     core_contracts = build_route_authorization_inventory(
         authorization_routers,

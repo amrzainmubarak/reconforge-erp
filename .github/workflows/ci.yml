@@ -88,6 +88,16 @@ jobs:
           --ignore=tests/test_postgres_people_project_payroll_api.py
           --ignore=tests/test_postgres_people_project_payroll_restore.py --ignore=tests/test_postgres_people_project_dimension_pins.py --ignore=tests/test_postgres_people_project_read_authority.py --ignore=tests/test_postgres_financial_source_roles.py
           --ignore=tests/test_postgres_enterprise_migrations.py
+          --ignore=tests/test_postgres_enterprise_finance_bridge.py
+          --ignore=tests/test_release_product_scope.py
+          --ignore=tests/test_crm_authority_postgres_20261026.py
+          --ignore=tests/test_enterprise_program_stock_to_cash.py
+          --ignore=tests/test_enterprise_program_asset_authority.py
+          --ignore=tests/test_enterprise_program_hcm_migration.py
+          --ignore=tests/test_enterprise_program_capacity_quality.py
+          --ignore=tests/test_enterprise_program_quality_authority.py
+          --ignore=tests/test_postgres_grouped_matching_guard_20261027.py
+          --ignore=tests/test_release_authorization_postgres.py
           --ignore=tests/test_postgres_accrual_deferral.py
           --ignore=tests/test_postgres_accrual_deferral_api.py
           --ignore=tests/test_postgres_accrual_deferral_guards.py
@@ -223,6 +233,102 @@ jobs:
         env:
           RECONFORGE_WEB_PORT: "4173"
         run: npm --prefix apps/web run e2e
+
+  release-product-browser:
+    runs-on: ubuntu-24.04
+    needs: [web]
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16.15-alpine@sha256:1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RECONFORGE_TEST_POSTGRES_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
+      RECONFORGE_TEST_POSTGRES_DSN: postgresql://reconforge_app:reconforge_app@localhost:5432/postgres
+      RECONFORGE_TEST_POSTGRES_APP_USER: reconforge_app
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+      - name: Install PostgreSQL 16 native client tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y libpq-dev postgresql-client-16
+          export PATH="/usr/lib/postgresql/16/bin:$PATH"
+          native_bindir="$(python .github/scripts/verify_postgres_native_tools.py --expected-major 16 --print-bindir)"
+          pg_dump --version
+          pg_restore --version
+          printf '%s\n' "$native_bindir" >> "$GITHUB_PATH"
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install locked server dependencies
+        run: uv sync --locked --all-extras --no-editable --python 3.12
+      - name: Create restricted synthetic application role
+        run: >-
+          uv run --no-sync python -c
+          "import psycopg; c=psycopg.connect('postgresql://postgres:postgres@localhost:5432/postgres',autocommit=True);
+          c.execute(\"CREATE ROLE reconforge_app LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE PASSWORD 'reconforge_app'\"); c.close()"
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Build the real application component harness
+        working-directory: apps/web
+        run: |
+          npm ci
+          node node_modules/vite/bin/vite.js build --config e2e/release-product.vite.config.ts
+          node node_modules/vite/bin/vite.js build --outDir ../../output/assurance-20261026/studio-shell/web
+          npx playwright install --with-deps chromium
+      - name: Verify native CRM authority and canonical bridge recovery
+        env:
+          PYTEST_ADDOPTS: "-p tests.mandatory_native_gate"
+        run: >-
+          uv run --no-sync pytest tests/test_postgres_enterprise_finance_bridge.py
+          tests/test_release_product_scope.py tests/test_crm_authority_postgres_20261026.py
+          tests/test_enterprise_program_stock_to_cash.py tests/test_enterprise_program_asset_authority.py
+          tests/test_enterprise_program_hcm_migration.py tests/test_release_authorization_postgres.py -q
+          tests/test_enterprise_program_capacity_quality.py tests/test_enterprise_program_quality_authority.py
+      - name: Execute authenticated HCM CRM and canonical posting journeys
+        run: |
+          export RECONFORGE_RELEASE_PRODUCT_PYTHON="${GITHUB_WORKSPACE}/.venv/bin/python"
+          node apps/web/node_modules/@playwright/test/cli.js test --config apps/web/e2e/release-product.playwright.config.ts
+      - name: Verify authenticated primary Studio shell and responsive access
+        env:
+          RECONFORGE_RELEASE_PRODUCT_PYTHON: ${{ github.workspace }}/.venv/bin/python
+        run: |
+          node apps/web/node_modules/@playwright/test/cli.js test --config apps/web/e2e/studio-shell.playwright.config.ts
+          node apps/web/e2e/studio-shell.manifest.mjs
+      - name: Retain primary Studio accessibility and visual evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: primary-studio-${{ github.sha }}
+          path: |
+            output/assurance-20261026/studio-shell/measurements.json
+            output/assurance-20261026/studio-shell/screenshot-manifest.json
+            output/assurance-20261026/studio-shell/axe-*.json
+            output/assurance-20261026/studio-shell/authenticated-*.png
+          if-no-files-found: error
 
   erp-browser-recovery:
     runs-on: ubuntu-latest
@@ -426,7 +532,8 @@ jobs:
             reconforge:ci-baseline reconforge doctor
 
   server-boundaries:
-    runs-on: ubuntu-latest
+    # Ubuntu 26.04's runner image does not provide the required PostgreSQL 16 client.
+    runs-on: ubuntu-24.04
     name: server-boundaries (${{ matrix.shard }})
     # Independent services per shard bound cumulative live verification time.
     # No shared test/web artifact is consumed; retain native evidence on their failure.
@@ -705,6 +812,7 @@ jobs:
               uv run --no-sync pytest tests/test_postgres_durable_jobs.py -k 'test_live_postgres_durable_job_10k_multi_worker_scale_profile or test_live_postgres_durable_job_100k_multi_worker_scale_profile or test_live_postgres_durable_job_backpressure_profile or test_live_postgres_durable_job_soak_profile' -q
               ;;
             matching-runtime)
+              uv run --no-sync pytest tests/test_postgres_grouped_matching_guard_20261027.py -q
               uv run --no-sync pytest tests/test_postgres_grouped_matching_scale.py -k 'test_live_postgres_grouped_matching_500_partition_scale_profile or test_live_postgres_grouped_matching_10k_partition_scale_profile or test_live_postgres_grouped_matching_10k_domain_diverse_profile' -q
               uv run --no-sync pytest tests/test_postgres_grouped_matching_runtime.py -k 'test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_tenant_scoped' -q
               uv run --no-sync pytest tests/test_postgres_durable_jobs.py -k 'test_live_postgres_job_application_contract_and_rls or test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic or test_live_postgres_persistent_scheduler_coordinates_spawned_processes or test_live_postgres_worker_crash_after_checkpoint_resumes_without_duplicate_effect or test_live_postgres_worker_database_fault_after_checkpoint_resumes_without_duplicate_effect' -q

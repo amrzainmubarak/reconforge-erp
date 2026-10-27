@@ -32,6 +32,7 @@ include docs/security/nist-ssdf-mapping.md
 include docs/security/slsa-provenance-plan.v1.yaml
 include docs/security/slsa-provenance-plan.md
 include docs/security/supply-chain-policy.v1.json
+include docs/security/supply-chain-policy.retained-8629e9c6.v1.json
 include docs/security/supply-chain-exceptions.v1.json
 include docs/security/supply-chain-policy.md
 include docs/maintainers/signed-release-candidates.md
@@ -1313,7 +1314,7 @@ include tests/test_postgres_procurement_operations.py
 recursive-include apps/web/src *.ts *.tsx *.css *.svg
 recursive-include apps/web/public *
 recursive-include apps/web/live *.ts *.tsx *.html
-recursive-include apps/web/e2e *.ts
+recursive-include apps/web/e2e *.ts *.tsx *.html *.mjs
 include apps/web/package.json
 include apps/web/package-lock.json
 include apps/web/index.html
@@ -1323,6 +1324,20 @@ include apps/web/playwright.config.ts
 include apps/web/tsconfig.json
 include apps/web/tsconfig.app.json
 include apps/web/tsconfig.node.json
+
+# Current Studio and safety decisions must accompany the reproducible clients.
+include docs/adr/0870-close-verified-release-blockers.md
+include docs/adr/0871-crm-quotation-provenance-and-workspace-lines.md
+include docs/adr/0872-enterprise-identity-and-native-source-containment.md
+include docs/adr/0873-reject-ambiguous-capacity-calendar-storage.md
+include docs/adr/0874-preserve-primary-studio-publication-closure.md
+include docs/execution/ASSURANCE_2026-10-26.md
+include docs/execution/ENTERPRISE_PROGRAM_2026-10-26.md
+include docs/execution/ENTERPRISE_CYCLES_2026-10-26.md
+include docs/execution/STUDIO_NAVIGATION_2026-10-26.md
+include docs/execution/IMAGE_RESIDUAL_TRIAGE_2026-10-26.md
+include docs/execution/IMAGE_SECURITY_2026-10-26.json
+include docs/execution/RELEASE_BLOCKERS_2026-10-25.yaml
 
 # Source-bound ERP expansion cycles and populated recovery helpers.
 include tests/test_financial_installments.py
@@ -1459,6 +1474,9 @@ include tests/test_stable_power_environment_verifier.py
 include docs/security/gitleaks-public-source-digests-wave4.v1.json
 include docs/security/gitleaks-public-source-digests-wave5.v1.json
 include docs/security/gitleaks-synthetic-diagnostics-m2.v1.json
+include docs/security/gitleaks-assurance-source-digest-20261025.v1.json
+include docs/adr/0875-review-historical-assurance-source-digest.md
+include docs/execution/ASSURANCE_2026-10-25.json
 include .gitleaks.toml
 include .gitleaksignore
 include .github/scripts/validate_supply_chain_policy.py
@@ -1687,3 +1705,11 @@ include tests/test_monetary_valuation_contract.py
 include tests/test_postgres_monetary_customer_partial_returns.py
 include tests/test_postgres_monetary_customer_return_migration.py
 include tests/test_postgres_monetary_customer_return_security.py
+
+include docs/adr/0876-canonical-quality-review-authority.md
+include docs/execution/QUALITY_AUTHORITY_HARDENING_2026-10-26.md
+
+include docs/adr/0877-opt-in-guarded-amount-parser.md
+
+include docs/adr/0878-exact-grouped-matching-experiment.md
+include docs/execution/COMPETITOR_REFERENCE_2026-10-27.md

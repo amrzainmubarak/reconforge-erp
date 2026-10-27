@@ -1,4 +1,251 @@
+## Reconciliation and Studio continuation — 2026-10-27
+
+**RELEASE BLOCKED.** Hosted CI on entry `6a69280b122f764fcdadb6f1a47ed750716a6e4c` completed with 82 successes and four failures: both Python suites rejected a division AST in the experimental FX domain, and two monetary browser/restore jobs rejected the current 0157/384-table catalog as an old 0156/383 contract. Exact fraction reciprocal multiplication preserves the arithmetic; the restore contract now verifies the current revision and the named quality authority table without relaxing other financial checks. Independent review compared both actual failed CI restore reports against the old and corrected contract; the quality table was empty in those reports. Both complete monetary gates and hosted CI must be rerun on the integrated SHA.
+
+The current grouped adapter fails closed on rounding modes other than HALF_EVEN for new partitions. This is a partial guard, not a replay guarantee: historical attempts with another rounding mode may now fail, completed checkpoints are not revalidated, and independent tests show digest drift across Decimal precision even in HALF_EVEN when Rounded occurs without Inexact. Nested FX context remains outside the outer guard. A blanket Rounded ban rejected valid high-value USD inputs in testing, so it was not introduced. A version-bound precision/replay policy and native verification remain mandatory.
+
+Studio command-palette upward navigation and bilingual navigation search were corrected. Permission filtering remains upstream of search; tests cover both locales and preserve the earlier 16 viewport regressions. Preview browser tests do not prove API authorization. All quality entity/source ownership and five complete business-cycle blockers remain open.
+
+## Quality entity and source ownership blockers — 2026-10-27
+
+**RELEASE BLOCKED.** On source `b8374025fde8100613e81ce10a37945c67dcbb1a`, an authenticated PostgreSQL API probe showed a user denied access to entity A could disposition an NCR created by A when using an authorized entity B in the same workspace. The current NCR contract is explicitly workspace-scoped, so this demonstrates an enterprise entity-isolation gap, not proof of misattributed historical ownership. Current NCRs lack immutable entity bindings; old owners must not be inferred. Inspection plans and rework also require review before claiming end-to-end entity isolation.
+
+A separate synthetic native receipt plus advisory NCR probe retained quantity 10, value 12000 minor units and one GL effect after NCR disposition. Its synthetic lot/work-order was not proven related to the receipt, so this documents lack of a demonstrated quality-to-inventory source link, not a verified defect in a linked posting. Quality API responses correctly say effects are not posted.
+
+A proposed transactional entity-binding migration remains unimplemented: legacy ownership, direct repository access, RLS policies, plans, rework, restore and compatibility require a coherent design and tests. An automated review flagged an agent's security-audit task as possible cybersecurity risk and stopped that agent; the notification gave no finer reason. Do not mark the issue resolved.
+
+## FX and responsive navigation continuation — 2026-10-27
+
+**RELEASE BLOCKED.** GitHub on entry `8942e56f53c470a937a6995a3c9f0b05661ef99d` passed CodeQL but exposed a missing backlog dependency and product restore/client-version mismatch; the dependency is restored and the product native job now installs and verifies PostgreSQL 16 client tools. Hosted qualification of those corrections is pending.
+
+Independent verification reproduced an inverse-FX refusal in the existing grouped adapter and signed-zero drift in v1. ADR0879 introduces an independent, bounded, one-to-one experimental FX domain path. The original runtime, saved data and v1/v2 replay are unchanged; worker integration, persistence, PostgreSQL recovery and end-to-end finance remain open. Adversarial review rejected an initial collision-prone draft; a later revision fails closed if rounding changes candidate eligibility or ranking and binds source, policy and rate evidence.
+
+The real Studio shell closes the mobile drawer on desktop transition, restores scrolling and moves focus to a visible permitted control when needed. Entering mobile transfers focus from an inert sidebar to the menu; hidden search filters are cleared when the sidebar becomes a rail. Bilingual browser tests and independent focused review passed before integration; source-frozen verification and hosted CI are required.
+
+## Hosted environment and synthetic fixture follow-up — 2026-10-27
+
+**RELEASE BLOCKED.** On `a1e73b1b9a0b8997bee917f44cb7fb2a5975936c`, native PostgreSQL nine tests and authenticated ERP (one browser) and customer returns (three browsers) plus native restore passed on source-frozen runs. That SHA is a checkpoint, not the current release candidate. New hosted server-boundary shards failed before tests because ubuntu-latest selected Ubuntu 26.04 without postgresql-client-16; the job is now pinned to ubuntu-24.04 while preserving the major-version verifier. Hosted qualification is pending.
+
+A subsequent CodeQL alert classified the synthetic employee identifier as private. The test-only TLS server now provides allowed fixture identifiers from memory via a local-only access key, with no fixture file. The endpoint is absent from production app code. Local product and shell browsers each passed two tests; rerun hosted CodeQL and CI. Playwright traces can contain temporary test passwords and synthetic identifiers; the endpoint key was absent in the two inspected traces. Existing historical evidence is not retroactively sanitized. Five enterprise cycles and v1 financial replay remain unqualified.
+
+## Hosted failure repair continuation — 2026-10-27
+
+**RELEASE BLOCKED.** Entry PR head `80cc14ad6423288db819abf473264df00103f569` had failing Python 3.11/3.12 quality API tests, customer-return browser recovery, ERP browser recovery, and a CodeQL alert. The quality test now uses persisted distinct users and checks the current `not_posted` contract; quality-to-inventory/GL remains absent and blocked. Recovery tests open the real grouped navigation and continue asserting interrupted-load recovery. The ERP browser failure was not independently reproduced as a cause; its local authenticated journey passed, but hosted verification remains required.
+
+Browser fixtures no longer persist generated synthetic passwords; Playwright passes them in the process environment and the fixture writer permits explicit non-secret keys only. Independent review notes retained traces could contain typed test credentials, and older evidence was not sanitized. During the first local run the existing synthetic `browser-fixture.json` in the prior default evidence directory was overwritten; subsequent runs used separate directories. No claim about production credentials or CodeQL success is made until hosted analysis completes.
+
+Real PostgreSQL partial cycles and browser tests passed in development, but concurrent edits prevented source-frozen acceptance. Repeat them on the committed source. Five complete enterprise cycles, source-bound full CI, v1 matching determinism and UI acceptance remain unqualified.
+
+## Exact matching and navigation hardening — 2026-10-27
+
+**RELEASE BLOCKED.** Entry source `c085dbd114734f9577c26b4ae96f13c5857cc5dc`.
+The existing grouped v1 strategy produces a false match under Decimal precision;
+the PostgreSQL worker now fails closed when it detects outer-context Inexact.
+Native proof covers one new failed attempt without partial outputs; nested FX,
+signed-zero digest drift and prior checkpoints remain outside that proof. ADR0878 adds a separate exact experimental domain path with a required
+currency registry context and version-bound content evidence. This path is not
+registered in the worker/API; old results remain unchanged and the existing v1
+runtime blocker remains open. Independent tests and oracle receipts are in
+`output/enterprise-program-20261026/qa-exact-grouped-final.json`.
+
+The existing Studio sidebar now resets destination search after navigation and
+retains the selected section. Real local preview browser and component results
+are bounded to that interaction; they do not prove authenticated PostgreSQL
+business cycles. The CRM populated-downgrade test now checks the actual recorded
+Alembic head before/after refusal; original data and refusal checks remain.
+Five complete enterprise cycles, v1 safety, role provisioning and final CI
+remain unqualified. [Competitor reference](COMPETITOR_REFERENCE_2026-10-27.md)
+compares documented capabilities without a superiority claim.
+
+## Financial input hardening — 2026-10-27
+
+**RELEASE BLOCKED.** Source entry `790757dabb6852c2ed6dacc7a25310d48094a32c`.
+Malformed grouped financial inputs and context-sensitive negation were reproduced
+in the existing v2 reader. ADR0877 introduces an experimental opt-in guarded
+parser; recorded v1/v2 semantics remain unchanged. Production use, versioned
+policy/evidence migration, end-to-end data-quality integration and independent
+source-frozen qualification remain OPEN. No universal financial fix is claimed.
+CI on entry790757da identified a missing SELECT prerequisite for the invoker
+Finance trigger. Restricted test fixtures now restore only that read under FORCE
+RLS, including after table recreation: native50/0skip and2/0skip pass with
+source-bound receipts. Operator grants are documented; production provisioning
+and final hosted CI are not qualified. Legacy quality-to-stock and all five full
+business cycles remain BLOCKED.
+
+## Active institutional hardening — 2026-10-26
+
+RELEASE BLOCKED. Continue from81c5b57f with stable quality actor authority and
+truthful native ME2 source-evidence refresh. Three exclusive workstreams and
+independent verification are recorded in
+[the active slice](QUALITY_AUTHORITY_HARDENING_2026-10-26.md). Legacy NCR-to-stock
+integration and all five complete enterprise cycles remain unqualified.
+
+## Hosted corrections committed — 2026-10-26
+
+**RELEASE BLOCKED.** Successor runtime2bfbdcd2 corrects real active-navigation
+contrast;17 affected browser cases and1257 frontend cases pass. c2020a80 closes
+the proven assurance-digest false positive with two exact fingerprints and
+immutable report-byte guards; independent83 policy cases and actual current-tree
+Gitleaks pass. These successor commits await hosted qualification. Earlier heads
+below are historical checkpoints, not the current PR head. Five full cycles and
+quality-to-stock remain blocked; no merge/deployment.
+
+## Current published checkpoint — 2026-10-26
+
+**RELEASE BLOCKED.** Draft PR143 now contains published head
+`d5c6a1a6ec2726a3755161300f44965aaf47d725`; older head references below are
+historical records. Runtime source remains `f3cfbad9` with51 native/0skip,1257
+frontend and2 authenticated primary-Studio browser cases passing. Actual D5
+source-archive inspection passed. Hosted Docker, CodeQL, locked Python3.11/3.12
+audit and exact-image policy passed on D5; full CI is pending. Hosted secret scan
+found one historical Windows-checkout source hash, independently reproduced;
+its precise reviewed correction is in progress. No final hosted pass inferred.
+All five complete cycles and the current quality-to-stock regression remain
+blocked. [Current program and evidence](ENTERPRISE_PROGRAM_2026-10-26.md).
+
+## Bounded prerequisite repairs — 2026-10-26
+
+**RELEASE BLOCKED.** Current source is not an accepted Enterprise release.
+Three independent workstreams repaired stale verified UI results, transactional
+rescheduling, CRM provenance/workspace persistence and migration atomicity.
+[Current evidence and remaining gates](ASSURANCE_2026-10-26.md) governs this slice.
+All Q/S/U/P/I/R gates stay OPEN; PR143 still targets the older ff8a45cb source.
+No new worktree, main mutation, merge, deployment or competitive claim.
+
 # Execution State
+
+## Verified release-blocker closure in progress — 2026-10-25
+
+**RELEASE BLOCKED.** Continue PR143 on the existing branch and primary checkout.
+The [single blocker register](RELEASE_BLOCKERS_2026-10-25.yaml) governs this run;
+[ADR0870](../adr/0870-close-verified-release-blockers.md) records bounded repairs.
+Entry HEAD `ff8a45cb0c2b3f9f6f7c657f65728b9c2dfb3b25` and live Draft PR143
+match. Preserve the55 preexisting changed files in the ignored recovery capsule
+`output/release-blocker-20261025/preexisting-*`. No new worktree, merge or release.
+Current implementation and development evidence do not qualify a final source.
+
+## Draft delivery and dependency triage — 2026-10-25
+
+[Draft PR143](https://github.com/amrzainmubarak/reconforge-erp/pull/143) contains
+the bounded repair and170-entry independently verified evidence packet.
+Runtime sourcea91852a7; all6 global gates OPEN. Creation/push succeeded;
+subsequent live status reads hit TLS failures. No merge/release/deployment.
+Default-branch metadata reports69 alerts (6critical/30high/25medium/8low);
+controlled locked applicability review/update is P0, with no exploitability
+conclusion or waiver. See [delivery receipt](ASSURANCE_DELIVERY_2026-10-25.json).
+
+## Current assurance checkpoint — 2026-10-25
+
+**The current release is not accepted.** [Prerequisite repairs, measured results
+and remaining gates](ASSURANCE_2026-10-25.md) supersede broad completion,
+certification, performance and comparative claims below. Earlier snapshots
+retain their original source/scope and do not qualify the current source.
+
+## Historical unaccepted global assurance assertion — 2026-10-19
+
+Completed all 6 Enterprise Acceptance Gates (Q, S, U, P, I, R) under the Global Engineering Assurance & Competitive Superiority Command on branch `amr/enterprise-erp-v1-execution-20261018`:
+- Single-workspace policy strictly maintained in `F:\reconforge-erp` with exactly 1 Git worktree.
+- **Gate Q (Quality & Financial Correctness)**:
+  - AST static analysis verified across 96 domain files, 13 statutory packs, and 94 financial infrastructure files: zero `float` literals, zero `from_float` calls, zero float division. All calculations strictly use MinorMoney integer minor units.
+  - Double-entry ledger invariant verified: fuzzed 1,000 multi-register asset disposal property trials across 5 books (`IFRS`, `TAX`, `LOCAL_STATUTORY`, `INSURANCE`, `MANAGEMENT`); 100% balanced with `Debit == Credit`.
+  - Zero penny leakage: fuzzed 5,810 Hare-Niemeyer odd/prime distributions with 100% integer conservation.
+  - Additive FIFO restitution verified under high concurrency (100 workers, 1,000 attempts) with exact original cost recovery.
+  - Independent rational-fraction (`Fraction`) and `Decimal` oracle validated 50 multi-tier group consolidation scenarios with 0 minor-unit divergence.
+- **Gate S (Security & Multi-Tenant Isolation)**:
+  - PostgreSQL FORCE RLS: 168 hostile injection payloads across all 4 scope validators rejected fail-closed with `PostgresConfigurationError`.
+  - OWASP ASVS 5.0 V5.1.4: 26 adversarial spreadsheet formula injection triggers (`=, +, -, @, \t, \r`) neutralized with single-quote prefix.
+  - OWASP API Top 10: SSRF connector IP blocklist rejects private, loopback, and cloud metadata (169.254.169.254) fail-closed; BOLA cross-tenant access denied with `PermissionError`; sliding-window rate limiter active.
+  - Cryptographic SHA-256 audit chaining: 14 adversarial tamper drills altering genesis, intermediate, terminating rows, sequence numbers, and hash pointers 100% detected.
+- **Gate U (Enterprise UX & Accessibility)**:
+  - WCAG 2.2 Level AA: All 4 enterprise workspaces (`HcmLeaveWorkspace`, `CrmSubscriptionWorkspace`, `GovernedAssistantWorkspace`, `ProjectMilestoneWorkspace`) and 3 reporting pages implement accessible screen-reader live regions (`role="status"`, `aria-live="polite"`).
+  - Bidirectional RTL/LTR: Zero layout clipping in Arabic (RTL) or English (LTR); explicit Arabic typography stack (`"Noto Sans Arabic", "Segoe UI Arabic", "Tahoma"`) and logical CSS margins.
+  - 1,152 Vitest component tests passed across 111 test files (38 new component tests); 0 TypeScript errors; Vite production build passes in 942ms.
+- **Gate P (Performance & Concurrency)**:
+  - Deadlock Freedom: Canonical sort ordering (`sorted(unique_layer_ids)`) in FIFO returns eliminates deadlocks (0 deadlocks under canonical sorting vs 99% deadlock failure under unsorted locking).
+  - Worker Crash Resilience: Injected process crash mid-partition survives with active lease fencing; successor resumes seamlessly from checkpoint with zero record loss and 100% hash parity.
+  - Progressive 1K-100K Benchmarks (`reconforge/benchmark/progressive_enterprise_suite.py`): Sub-millisecond p50 latencies across 4 ERP workloads; bit-for-bit SHA-256 suite signature reproducibility (`e2ce3b18de1db092f3e7768e6f25e9eef186f5ff3073980594809985ca88fc05` on 1K).
+  - Database Optimizations: Migration 0152 (16 secondary and partial indexes), single-query multi-GUC initialization in `postgres.py` (80% latency reduction), chunked batching in `postgres_finance_posting.py` and `postgres_reconciliation.py`, and tenant-scoped cache invalidation in `api/app.py`.
+- **Gate I (Innovation & Competitive Validation)**:
+  - Sourced Competitive Matrix published at `docs/strategy/official-source-competitive-matrix-enterprise.md` comparing ReconForge against SAP S/4HANA, Oracle Fusion Cloud, Dynamics 365, NetSuite, and Odoo across 8 dimensions.
+  - Verified technical differentiators: Evidence-Native ERP (SHA-256 audit graph linking every GL number back to source documents), deterministic explainable reconciliation, and human-governed enterprise AI with zero autonomous GL postings.
+- **Gate R (Release & Supply-Chain Integrity)**:
+  - Single workspace strictly preserved in `F:\reconforge-erp` with 1 Git worktree.
+  - Clean baselines: Ruff: 0 errors; MyPy: 0 issues across 886 source files; TypeScript: 0 errors; SLSA v1.2 provenance plans verified.
+- **Independent Swarm Consensus & Victory Audit**:
+  - `reviewer_arch_3`: APPROVE
+  - `reviewer_qa_ux_3`: APPROVE
+  - `challenger_concurrency_3`: APPROVE
+  - `challenger_security_invariants_3`: APPROVE
+  - `auditor_integrity_3`: CLEAN
+  - `victory_auditor_3`: VICTORY CONFIRMED
+
+## Enterprise ERP v1.0 Functional Scope Full Qualification & Prerequisite Gate Verification — 2026-10-19
+
+Verified 100% completion of the declared prerequisite Enterprise ERP v1.0 functional scope across all domains on branch `amr/enterprise-erp-v1-execution-20261018`:
+- Single-workspace policy strictly maintained in `F:\reconforge-erp` with zero secondary worktrees.
+- **R1 Global Finance, Tax, Treasury & Fixed Assets**:
+  - Implemented multi-register fixed asset depreciation, impairment, and disposal accounting with exact minor-unit GL line generation (`reconforge/infrastructure/postgres_fixed_assets.py`).
+  - Completed treasury liquidity forecasting and cashflow reporting (`reconforge/infrastructure/postgres_treasury.py`, `tests/test_api_treasury_liquidity.py`).
+  - Country coverage expansion: Saudi Arabia (ZATCA Phase 2 TLV QR base64 encoding & VAT calculation) and Egypt (ETA e-invoice schema and tax calculation rules) with strict MinorMoney integer minor units (`reconforge/packs/country/sa.py`, `reconforge/packs/country/eg.py`, `tests/test_country_registry.py`).
+  - Completed M7.7 customer partial returns and additive FIFO restitution integration with zero-cost resale and native multi-table proofs.
+- **R2 Advanced Manufacturing, SCM & Industrial Operations**:
+  - Work Center finite capacity planning with atomic booking, conflict rejection, and reschedule operations with TOCTOU lock protection (`reconforge/domain/manufacturing_capacity_scheduling.py`, `reconforge/infrastructure/postgres_manufacturing_capacity.py`).
+  - Multi-level BOM explosion, revision management, and component substitution logic (`reconforge/domain/manufacturing_bom_explosion.py`, `reconforge/infrastructure/postgres_manufacturing_bom.py`).
+  - Manufacturing equipment maintenance and quality rework management (`reconforge/domain/manufacturing_maintenance.py`, `reconforge/domain/manufacturing_quality_rework.py`).
+- **R3 Enterprise Applications, HCM, CRM, UX & Governed AI**:
+  - HCM Employee Leave & Absence Management with exact minor-unit accruals, submission/cancellation lifecycle, and normalized Segregation of Duties (SoD) maker-checker approval (`reconforge/domain/hcm_leave.py`, `reconforge/infrastructure/postgres_hcm_leave.py`, `apps/web/src/components/HcmLeaveWorkspace.tsx`).
+  - CRM Opportunity pipeline, customer contract lifecycle, and subscription prorated billing (`reconforge/domain/crm_contracts.py`, `reconforge/infrastructure/postgres_crm_contracts.py`, `reconforge/infrastructure/sqlite_crm_contracts.py`, `apps/web/src/components/CrmSubscriptionWorkspace.tsx`).
+  - Governed Enterprise AI Assistant: read-only boundary checks, confidence thresholds, source citation graphs, and strict human maker-checker envelopes with zero autonomous GL postings (`reconforge/ai/governed_assistant.py`, `apps/web/src/components/GovernedAssistantWorkspace.tsx`).
+  - Bilingual English (LTR) and Arabic (RTL) Studio UX conforming to WCAG 2.1 AA accessibility standards (`apps/web/src/i18n.ts`, `reconforge/studio/components.py`).
+- **Mathematical & Security Invariants**:
+  - 100% of monetary, tax, and inventory calculations use integer minor units or scaled decimals; verified ZERO float instances in financial effect paths via AST analysis.
+  - PostgreSQL FORCE RLS confirmed across tenant-partitioned entities.
+- **Test Verification**:
+  - 170 Python unit, capability, API, and adversarial tests passed in 12.82s.
+  - 104 Web test files, 1,114 Vitest component tests passed in 74.94s.
+  - Ruff check 0 errors, Mypy check 0 issues, git diff whitespace check 0 issues.
+
+## Critical Enterprise Integration Acceptance Directive Completion — 2026-10-19
+
+Completed all four acceptance gates under the Critical Enterprise Integration Acceptance Directive on branch `amr/enterprise-erp-v1-execution-20261018`:
+- Single-workspace policy strictly maintained in `F:\reconforge-erp` with zero worktrees.
+- **Gate 1: Live PostgreSQL Security & Adversarial RLS Verification**:
+  - Live PostgreSQL test `test_live_postgres_enterprise_security_force_rls_and_canonical_gl` verified against restricted application role (`rolsuper=False`, `rolbypassrls=False`).
+  - Strict FORCE RLS enforced across all 15 enterprise tables; verified cross-tenant SELECT, UPDATE, and DELETE operations affect 0 rows.
+  - Verified adversarial cross-tenant INSERT is rejected by PostgreSQL `WITH CHECK` security policy violation (`psycopg.Error`).
+  - Cryptographic SHA-256 audit hash chaining (`domain_audit_events`) verified across 8 sequential operations without breaks.
+- **Gate 2: Versioned Migrations & Recovery Parity**:
+  - Formalized official Alembic revision `0151_pg_enterprise_erp_v1_tables` (`reconforge/infrastructure/postgres_enterprise_erp_v1_schema.py`) defining 15 enterprise tables with `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY`, and `tenant_scope` policies. Registered in `POSTGRES_MIGRATION_REVISIONS` (150 revisions).
+  - Verified clean migration downgrade to `0136_pg_inventory_scope` (all 15 tables completely removed from catalog) and clean re-upgrade to head (`0151_pg_enterprise_erp_v1_tables`) with unprivileged application roles in `tests/test_postgres_enterprise_migrations.py` (2/2 passed in 17.44s).
+  - Added SQLite migration 57 (`reconforge/db/migration_57_enterprise_erp_v1.py`) with `DEFAULT 'default'` tenant columns, registered in `reconforge/db/migrations.py`. Verified in `tests/test_enterprise_db.py` (7/7 passed).
+- **Gate 3: Authoritative Canonical Financial Integration**:
+  - Project milestone billing invoices emit balanced double-entry vouchers to Finance Core GL (`finance_entries` and `finance_entry_lines`) debiting `ACCOUNTS_RECEIVABLE` and crediting `PROJECT_SERVICE_REVENUE` with exact integer minor units.
+  - Intercompany profit-in-stock eliminations emit balanced double-entry vouchers to Finance Core GL debiting `COGS_ELIMINATION` and crediting `INVENTORY_VALUATION` with exact mathematical conservation.
+  - No competing financial truth: both Postgres and SQLite repositories link to canonical `finance_entry_id`.
+- **Gate 4: Explicit Fail-Closed Database Modes**:
+  - In enterprise production server mode (`server_mode=True`), all 5 API endpoints fail closed with HTTP 503 `server_postgres_unavailable` if PostgreSQL is down or unconfigured. Verified in `test_enterprise_routes_fail_closed_mode`.
+- **Full Test Verification**:
+  - Level 2 PostgreSQL integration suite: 6/6 passed in 10.84s (`tests/test_postgres_enterprise_integration.py`).
+  - SQLite enterprise database suite: 7/7 passed in 5.79s (`tests/test_enterprise_db.py`).
+  - Enterprise capabilities test suite: 27/27 passed in 38.71s (`tests/test_consolidated_financial_statements.py`, `tests/test_master_production_schedule.py`, `tests/test_api_consolidated_financial_statements.py`, `tests/test_api_master_production_schedule.py`, `tests/test_api_v1_enterprise_integration_v3.py`, `tests/test_enterprise_db.py`, `tests/test_postgres_enterprise_integration.py`, `tests/test_postgres_enterprise_migrations.py`).
+  - Web UI test suite: 104/104 files passed, 1,114 tests passed in 69.74s (`npm --prefix apps/web run test:run`).
+  - Zero float operations across all financial, tax, or inventory code verified via AST parsing.
+
+## Enterprise ERP v1.0 Level 2 PostgreSQL & Multi-Agent Vertical Integration — 2026-10-19
+
+Completed Level 2 enterprise architecture integration under commit `f37a6ab4` on branch `amr/enterprise-erp-v1-execution-20261018`:
+- Single-workspace policy strictly maintained in `F:\reconforge-erp` with zero worktrees.
+- Level 2 PostgreSQL persistence adapters implemented with FORCE RLS, tenant isolation, and cryptographic audit logging:
+  - `PostgresShopFloorRepository` (lots, genealogy, dispatches, operation steps)
+  - `PostgresProjectMilestoneBillingRepository` (WBS tasks, rate cards, milestones, invoices, time logs)
+  - `PostgresMPSRepository` (production schedules, shortage procurement requisitions)
+  - `PostgresConsolidatedStatementsRepository` (multi-entity consolidated statements, balance sheet, cash flows)
+  - `PostgresIntercompanyEliminationRepository` (profit-in-stock elimination, NCI allocation, reciprocal run ledger)
+- Dual-engine FastAPI routing connected across all 5 modules with automatic fallback between PostgreSQL and SQLite.
+- Dedicated Studio pages built and mounted: `ConsolidatedStatementsPage`, `MasterProductionSchedulePage`, `ShopFloorTraceabilityPage`.
+- Level 2 Native PostgreSQL Verification Suite (`tests/test_postgres_enterprise_integration.py`): 4/4 passed (0.56s).
+- Full enterprise test suite: 26/26 Python integration tests passed; 104/104 Web test files passed (1,114 tests, 71.38s); Web typecheck 0 errors.
+- Strict financial arithmetic invariants: zero float instances in financial, tax, or inventory effect paths.
 
 ## PR141 integration policy — 2026-10-18
 
@@ -13106,3 +13353,13 @@ found independently: actual layers remain0, but synthetic coherent layer1/missin
 rows passed36cc. Narrowbb806 checks strict integer layer precision0 with67 pure
 cases and new actual unchanged-original isolated readers. Root's corrected final
 source, genuine unposted proposal capture and hosted M7 gates remain required.
+
+### 2026-10-26 — Enterprise integration and Studio transformation started
+
+RELEASE BLOCKED. Current program and exclusive ownership: [execution](ENTERPRISE_PROGRAM_2026-10-26.md). Entry four HCM rename/reviewer authorization failures reproduced; backend repairs, independent PostgreSQL cycles and real Studio redesign run concurrently in the primary directory. Historical green cohorts do not qualify current source.
+
+### 2026-10-26 — Source-bound integration checkpoint f3cfbad9
+
+RELEASE BLOCKED. Primary Studio53destinations/eightsections implemented. Exact-source native51/0skip, frontend1257, primarybrowser2, strictCI/history137 pass. Image source1054file binding/doctor and scannerpolicy pass with0Critical/High,9Medium,1Negligible; no exception. Python3.12.16 selected officialAlpine tag notfound; runtime remediation open. All five complete business cycles, quality-to-stock, globalworkspace/live-role dashboards and final hosted/signature/provenance qualification remain open. See ENTERPRISE_PROGRAM_2026-10-26.md. Only preserved untracked.serena metadata is intentionally excluded from Git.
+
+Publication checkpoint: ADR0874 repairs real source-archive omissions and stale migration defaults;20 focused/independent QA cases pass. Runtimecode remains f3cfbad9. Actual rebuilt archive dispositions are immutable publication-source-inspection*.json under output/enterprise-program-20261026; full release remains blocked.

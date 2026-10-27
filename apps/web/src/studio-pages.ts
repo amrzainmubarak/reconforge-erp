@@ -30,6 +30,15 @@ const operationalLabels: Partial<Record<StudioPage, MessageKey>> = {
   inventoryTransfer: "inventoryTransfer",
   durableJobs: "durableJobs",
   exceptions: "exceptions",
+  treasuryLiquidity: "treasuryLiquidity",
+  manufacturingBom: "manufacturingBom",
+  hcmLeave: "hcmLeave",
+  crmContracts: "crmContracts",
+  intercompanyEliminations: "intercompanyEliminations",
+  shopFloorTraceability: "shopFloorTraceability",
+  projectMilestoneBilling: "projectMilestoneBilling",
+  consolidatedStatements: "consolidatedStatements",
+  masterProductionSchedule: "masterProductionSchedule",
 };
 
 /** Live pages share browser identity and never display bundled demo totals. */

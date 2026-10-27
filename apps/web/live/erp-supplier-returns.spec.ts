@@ -1,3 +1,4 @@
+import { openStudioDestination } from "./studio-navigation";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type Response } from "@playwright/test";
 
@@ -18,7 +19,7 @@ async function login(page: Page, username: string) {
   const elevated = page.waitForResponse(reply => reply.url().endsWith("/auth/step-up"));
   await page.getByRole("button", { name: "Confirm and continue", exact: true }).click();
   await acknowledgement(await elevated);
-  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Partial procurement", exact: true }).click();
+  await openStudioDestination(page, "Partial procurement");
   await page.getByRole("combobox", { name: "Workspace", exact: true }).selectOption("work");
   await page.getByRole("combobox", { name: "Organization and legal entity", exact: true }).selectOption("entity");
 }

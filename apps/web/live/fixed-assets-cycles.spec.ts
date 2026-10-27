@@ -1,3 +1,4 @@
+import { openStudioDestination } from "./studio-navigation";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -15,7 +16,7 @@ async function login(page: Page, username: string) {
   expect((await response).status()).toBe(200);
 }
 async function enter(page: Page, assetId = "") {
-  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Fixed assets", exact: true }).click();
+  await openStudioDestination(page, "Fixed assets");
   await expect(page.getByRole("heading", { name: "Fixed assets", exact: true })).toBeVisible();
   const form = page.getByRole("form", { name: "Apply scope", exact: true });
   for (const [label, value] of Object.entries({ Workspace: "work", Organization: "org", "Legal entity": "entity" })) await form.getByLabel(label, { exact: true }).fill(value);

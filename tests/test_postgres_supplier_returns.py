@@ -15,6 +15,7 @@ from reconforge.infrastructure.postgres_identity import PostgresIdentityReposito
 from reconforge.infrastructure.postgres_procurement_partial import PostgresProcurementPartialRepository
 from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 from reconforge.infrastructure.postgres_supplier_returns import PostgresSupplierReturnsRepository
+from tests.postgres_test_hygiene import grant_native_owner_reads
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime
 from tests.test_postgres_procurement_multiline import (
     accrue_invoice,
@@ -504,6 +505,11 @@ def test_actual_ordered_empty_rollback_and_populated_refusal_keep_original_nativ
             assert result.returncode == 0, result.stderr[-3000:]
         role = psycopg.conninfo.conninfo_to_dict(database[1])["user"]
         with psycopg.connect(database[0]) as admin:
+            assert admin.execute(
+                "SELECT has_table_privilege(%s,'reconforge.enterprise_finance_bindings','SELECT')",
+                (role,),
+            ).fetchone()[0] is False
+            grant_native_owner_reads(admin, role, ("enterprise_finance_bindings",))
             for table in ("supplier_return_plans", "supplier_return_events", "supplier_return_commands", "ap_supplier_invoice_credits"):
                 admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(role)))
             # Later empty migrations recreate Finance Core's non-personnel

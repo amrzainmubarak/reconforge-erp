@@ -402,9 +402,109 @@ def verify_manufacturing_payload(payload: dict[str, object]) -> None:
         raise ManufacturingControlError("manufacturing report replay verification failed.") from exc
 
 
+@dataclass(frozen=True)
+class ManufacturingConservationRecord:
+    """Immutable audit record establishing formal mass and cost conservation for a production order."""
+
+    order_id: str
+    material_cost_minor: int
+    labor_cost_minor: int
+    overhead_cost_minor: int
+    finished_goods_cost_minor: int
+    scrap_cost_minor: int
+    remaining_wip_cost_minor: int
+    material_quantity_scaled: int
+    finished_goods_quantity_scaled: int
+    scrap_quantity_scaled: int
+    remaining_wip_quantity_scaled: int
+    currency: str = "USD"
+
+    def __post_init__(self) -> None:
+        _identifier(self.order_id, "conservation order ID")
+        if not isinstance(self.currency, str) or not self.currency.strip():
+            raise ManufacturingControlError("currency is invalid.")
+        object.__setattr__(self, "currency", self.currency.strip().upper())
+
+        fields_to_validate = (
+            ("material_cost_minor", self.material_cost_minor),
+            ("labor_cost_minor", self.labor_cost_minor),
+            ("overhead_cost_minor", self.overhead_cost_minor),
+            ("finished_goods_cost_minor", self.finished_goods_cost_minor),
+            ("scrap_cost_minor", self.scrap_cost_minor),
+            ("remaining_wip_cost_minor", self.remaining_wip_cost_minor),
+            ("material_quantity_scaled", self.material_quantity_scaled),
+            ("finished_goods_quantity_scaled", self.finished_goods_quantity_scaled),
+            ("scrap_quantity_scaled", self.scrap_quantity_scaled),
+            ("remaining_wip_quantity_scaled", self.remaining_wip_quantity_scaled),
+        )
+        for name, value in fields_to_validate:
+            if type(value) is not int or value < 0:
+                raise ManufacturingControlError(f"{name} must be an exact non-negative integer, got {value!r}.")
+
+    @property
+    def total_input_cost_minor(self) -> int:
+        return self.material_cost_minor + self.labor_cost_minor + self.overhead_cost_minor
+
+    @property
+    def total_output_cost_minor(self) -> int:
+        return self.finished_goods_cost_minor + self.scrap_cost_minor + self.remaining_wip_cost_minor
+
+    @property
+    def cost_leakage_minor(self) -> int:
+        return self.total_input_cost_minor - self.total_output_cost_minor
+
+    @property
+    def is_cost_conserved(self) -> bool:
+        return self.cost_leakage_minor == 0
+
+    @property
+    def total_input_mass_scaled(self) -> int:
+        return self.material_quantity_scaled
+
+    @property
+    def total_output_mass_scaled(self) -> int:
+        return self.finished_goods_quantity_scaled + self.scrap_quantity_scaled + self.remaining_wip_quantity_scaled
+
+    @property
+    def mass_leakage_scaled(self) -> int:
+        return self.total_input_mass_scaled - self.total_output_mass_scaled
+
+    @property
+    def is_mass_conserved(self) -> bool:
+        return self.mass_leakage_scaled == 0
+
+
+def verify_mass_and_cost_conservation(record: ManufacturingConservationRecord) -> None:
+    """Formally verifies exact mass and cost conservation with zero integer leakage.
+
+    Enforces:
+    1. Material + Labor + Overhead == Finished Goods + Scrap + Remaining WIP
+    2. Material Quantity == FG Quantity + Scrap Quantity + WIP Quantity
+    """
+    if not isinstance(record, ManufacturingConservationRecord):
+        raise ManufacturingControlError("record must be a ManufacturingConservationRecord instance.")
+
+    if not record.is_cost_conserved:
+        raise ManufacturingControlError(
+            f"Manufacturing cost conservation violation for order '{record.order_id}': "
+            f"input cost ({record.total_input_cost_minor} {record.currency}) != "
+            f"output cost ({record.total_output_cost_minor} {record.currency}), "
+            f"cost leakage = {record.cost_leakage_minor} minor units."
+        )
+
+    if not record.is_mass_conserved:
+        raise ManufacturingControlError(
+            f"Manufacturing mass conservation violation for order '{record.order_id}': "
+            f"input material quantity ({record.total_input_mass_scaled}) != "
+            f"output quantity ({record.total_output_mass_scaled}), "
+            f"mass leakage = {record.mass_leakage_scaled} scaled units."
+        )
+
+
 __all__ = [
     "MANUFACTURING_CONTROL_ALGORITHM_VERSION",
     "MANUFACTURING_CONTROL_SCHEMA_VERSION",
+    "ManufacturingConservationRecord",
     "ManufacturingControlError",
     "ManufacturingControlRun",
     "ManufacturingDecision",
@@ -414,4 +514,5 @@ __all__ = [
     "ScrapEvent",
     "run_manufacturing_cost_control",
     "verify_manufacturing_payload",
+    "verify_mass_and_cost_conservation",
 ]

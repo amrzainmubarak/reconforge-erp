@@ -1,4 +1,99 @@
+## 2026-10-26 — Independent prerequisite defect repairs
+
+See [bounded results, raw command receipts and retained failures](ASSURANCE_2026-10-26.md).
+Independent QA reproduced missing CRM author persistence and workspace line
+contamination; engineering reproduced transaction-skipped capacity writes and
+partial migration persistence; product reproduced stale verified results.
+Native/recovery/browser and focused oracles qualify only their recorded source.
+All global acceptance gates remain open.
+
 # ReconForge Execution Evidence Log
+
+## E-RELEASE-BLOCKERS-20261025 — Active source-bound closure
+
+[Blocker register](RELEASE_BLOCKERS_2026-10-25.yaml) and per-agent security,
+authorization and integration records retain original failures and successor
+results. Local receipts under `output/release-blocker-20261025/` include command,
+UTC start, elapsed time, exit, HEAD, before/after source fingerprints and log hash.
+Moving-source development runs are not a frozen-release pass. Original remote
+CI40192323104 and Security40192323115 failures remain negative evidence.
+
+## E-ASSURANCE-20261025 — Bounded repair, no program acceptance
+
+[Assurance record](ASSURANCE_2026-10-25.md) and
+[portable source/log/hash index](ASSURANCE_2026-10-25.json) bind baseline negatives,
+independently reproduced defects, narrow repairs and remaining release gates.
+The final serialized web run passed1205 cases/111 files. HCM/auth43 passed;
+native migration2 passed and explicitly-installed HCM adapter checks passed on
+PostgreSQL16.15. These overlapping/narrow cohorts are not a whole-release total.
+Current authorization-inventory failures and unavailable browser/container/remote
+qualification remain visible. Historical broad certification claims below are
+not accepted as current release evidence.
+
+## Critical Enterprise Integration Acceptance Directive Evidence — 2026-10-19
+
+Verified on branch `amr/enterprise-erp-v1-execution-20261018`:
+- **Real PostgreSQL Security & FORCE RLS Proof**:
+  - Live PostgreSQL integration (`tests/test_postgres_enterprise_integration.py::test_live_postgres_enterprise_security_force_rls_and_canonical_gl`):
+    - Configured unprivileged application role (`rolsuper=False`, `rolbypassrls=False`).
+    - Multi-tenant boundary isolation between `tenant_alpha_...` and `tenant_beta_...`.
+    - Under Tenant Beta context:
+      - `SELECT * FROM reconforge.shop_floor_lots WHERE lot_id='LOT_LIVE_001'` -> 0 rows returned.
+      - `SELECT * FROM reconforge.project_milestone_invoices WHERE invoice_id='INV_LIVE_001'` -> 0 rows returned.
+      - `SELECT * FROM reconforge.intercompany_profit_in_stock_eliminations WHERE rule_id='RULE_LIVE_PIS_01'` -> 0 rows returned.
+      - `SELECT * FROM reconforge.shop_floor_lots WHERE tenant_id='tenant_alpha_...'` -> 0 rows returned (predicates filtered by FORCE RLS).
+      - `UPDATE reconforge.shop_floor_lots SET status='tampered' WHERE lot_id='LOT_LIVE_001'` -> rowcount == 0.
+      - `DELETE FROM reconforge.shop_floor_lots WHERE lot_id='LOT_LIVE_001'` -> rowcount == 0.
+      - `INSERT INTO reconforge.shop_floor_lots (tenant_id='tenant_alpha_...')` -> Exception raised: PostgreSQL RLS `WITH CHECK` policy violation (`psycopg.Error`).
+    - Cryptographic SHA-256 audit hash chaining (`domain_audit_events`): 8 sequential events verified with `previous_hash == audit_events[i-1][2]`.
+- **Migrations & Recovery Proof**:
+  - Alembic migration `0151_pg_enterprise_erp_v1_tables` verified in `tests/test_postgres_enterprise_migrations.py`:
+    - Clean downgrade down to `0136_pg_inventory_scope` drops all 15 enterprise tables cleanly (`to_regclass` returns `None`).
+    - Re-upgrade to head (`0151_pg_enterprise_erp_v1_tables`) applies without warnings, reinstating `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` across all 15 tables.
+    - Verified `reconforge_personnel_runtime` role has all 7 privilege flags set to `False` (`rolcanlogin`, `rolsuper`, `rolbypassrls`, `rolcreaterole`, `rolcreatedb`, `rolinherit`, `rolreplication`).
+    - 2/2 tests passed in 17.44s.
+  - SQLite migration 57 verified in `tests/test_enterprise_db.py`: 7/7 tests passed in 5.79s.
+- **Authoritative Canonical Financial Integration Proof**:
+  - `PostgresProjectMilestoneBillingRepository.post_milestone_invoice_to_finance_core`:
+    - Posted milestone invoice to Finance Core GL (`finance_entries` and `finance_entry_lines`).
+    - Debit `ACCOUNTS_RECEIVABLE`: 1,000,000 minor units ($10,000.00).
+    - Credit `PROJECT_SERVICE_REVENUE`: 1,000,000 minor units ($10,000.00).
+    - Balanced double-entry verified: `sum(debit_minor) == sum(credit_minor) == 1_000_000`.
+  - `PostgresIntercompanyEliminationRepository.post_profit_in_stock_to_finance_core`:
+    - Posted profit-in-stock elimination to Finance Core GL.
+    - Debit `COGS_ELIMINATION`: 100,000 minor units ($1,000.00, representing 20% margin on 500,000 inventory cost).
+    - Credit `INVENTORY_VALUATION`: 100,000 minor units ($1,000.00).
+    - Balanced double-entry verified: `sum(debit_minor) == sum(credit_minor) == 100_000`.
+- **Explicit Fail-Closed Database Modes Proof**:
+  - `test_enterprise_routes_fail_closed_mode`:
+    - `server_mode=True` with no PostgreSQL factory raises `APIError` with status code 503 and code `server_postgres_unavailable` across all 5 endpoints.
+    - `server_mode=False` allows local SQLite repository resolution cleanly.
+- **Test Matrix Summary**:
+  - 8 test files, 27 tests passed in 38.71s across Python enterprise test suite.
+  - 104 test files, 1,114 tests passed in 69.74s across Web test suite.
+  - Zero float operations confirmed across all financial modules.
+
+## Enterprise ERP v1.0 Level 2 PostgreSQL & Multi-Agent Verification Evidence — 2026-10-19
+
+Verified on branch `amr/enterprise-erp-v1-execution-20261018` at commit `f37a6ab4`:
+- Native PostgreSQL verification suite: `tests/test_postgres_enterprise_integration.py` passes 4/4 cases in 0.56s.
+  - Test 1: `test_postgres_shop_floor_multi_tenant_isolation_and_genealogy` (Tenant A vs Tenant B isolation, forward/backward lot recall, quantity conservation).
+  - Test 2: `test_postgres_project_milestone_billing_gl_and_financial_posture` (WBS task, rate card, maker-checker milestone verification, ACCOUNTS_RECEIVABLE / PROJECT_SERVICE_REVENUE GL entries, exact margin basis points).
+  - Test 3: `test_postgres_consolidated_statements_and_mps_isolation` (Multi-entity balance sheet, P&L, cash flows, MPS shortage procurement requisitions, tenant isolation).
+  - Test 4: `test_postgres_intercompany_profit_in_stock_zero_leakage_and_isolation` (Parent + NCI exact mathematical conservation, COGS_ELIMINATION / INVENTORY_VALUATION GL entries).
+- Full Python Enterprise test suite passes 26/26 cases in 8.74s:
+  - `tests/test_consolidated_financial_statements.py` (3 passed)
+  - `tests/test_api_consolidated_financial_statements.py` (2 passed)
+  - `tests/test_master_production_schedule.py` (3 passed)
+  - `tests/test_api_master_production_schedule.py` (2 passed)
+  - `tests/test_api_shop_floor_traceability.py` (4 passed)
+  - `tests/test_manufacturing_shop_floor_genealogy.py` (6 passed)
+  - `tests/test_api_project_milestone_billing.py` (4 passed)
+  - `tests/test_project_milestone_billing.py` (4 passed)
+  - `tests/test_api_v1_enterprise_integration_v3.py` (2 passed)
+- Full Web test suite (`npm --prefix apps/web run test:run`) passes 104/104 files, 1,114 tests in 71.38s.
+- Web typecheck (`npm --prefix apps/web run typecheck`) passes with 0 errors.
+- Python AST verification confirms 0 float operations across all newly added financial, tax, and inventory code.
 
 ## PR141 pre-merge review and component focus race — 2026-10-18
 
@@ -24335,3 +24430,182 @@ actual -I/-I -O target/full unchanged input custody and byte-equal mode proofs;
 closure3d96c2bdb695b8a4d41837fc9bebc4156f533db08defa8f6833b1a145a06a43c.
 The synthetic earlier-reader layer1/missing counterexample is retained separately;
 no actual native source/input was modified, and the mapper production is unchanged.
+
+### 2026-10-26 — Enterprise program entry
+
+Recovery: output/enterprise-program-20261026/entry-recovery.zip and entry-manifest.json. Entry auth failure: output/assurance-20261026/program-entry-auth.log; current full Bandit pass and npm audit0 reports retained as program-entry-bandit/program-npm-audit receipts. PR143 historical seven failed jobs remain unaccepted. See ENTERPRISE_PROGRAM_2026-10-26.md.
+
+### 2026-10-26 — Frozen implementation f3cfbad9
+
+output/assurance-20261026/program-native-frozen.json:51pass/0skip,824.297s; program-web-frozen.json:1257pass,103.891s; program-studio-source-frozen.json:2pass,130.594s; all source digests unchanged0729d8ce. Docker source-f3cfbad9 build/doctor/Syft/Grype/policy receipts bind configbb632604. output/enterprise-program-20261026/image-code-binding.json and package-code-binding.json match1054Python/Alembic files to Git, canonical EOL only.9Medium/1Negligible remain visible,0Critical/High; no security closure inferred. quality-unresolved.xml preserves current red integration test. owned-cluster-shutdown.json verifies exclusive cleanup with data retained.
+
+Publication negative: publication-omissions-before.json hashes the actual f3cfbad9 archive with three missing client files. program-studio-publication-red and corrected-red retain failures; program-publication-fixed and qa-studio-publication-review retain20-pass successors. No extraction/source-byte guard was weakened. Final artifact inspection is separate.
+
+### 2026-10-26 — Actual hosted failures and bounded successors
+
+Hosted Security40377476239: exact-image and Python3.11/3.12 pass, sole assurance
+digest finding red; hosted CI40377041698 web E2E red. Original logs retained.
+program-web-hosted-repair-cmd:1257pass/115files,113.719s (whole-source drift from
+concurrent security metadata explicit). hosted-web-reproduction-red/green:
+4fail13pass→17pass; active badge11.16:1; no skips/assertion removal.
+program-publication-policy-followup:86pass; independent qa-gitleaks-paired-policy
+83pass, registry/report LF/CRLF proofs. Official scanner archiveSHA
+d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e verified;
+gitleaks/current.json red→current-green.json zero. Local unrelated branchfinding
+remains unsuppressed; scanner-custody.json explains scope. c2020a80security and
+2bfbdcd2Studio successors require new hosted acceptance, not reuse of D5 passes.
+
+Hosted successor40381062021 failed before scanning because the newly pinned
+registry used Windows CRLF bytes while Git publishes LF. This is a real
+publication defect, not a scanner false positive. The original log is retained
+as hosted-security-f3b0b98f-failure.log. ADR0875 follow-up writes canonical LF
+registry bytes, pins the actual Git-export hash, tests that exact export, and
+refuses CRLF reencoding of this registry. The unchanged assurance capture itself
+continues to accept only its separately reviewed full LF or CRLF representations.
+Earlier local archive pass qualified the built bytes and did not prove Linux Git
+checkout validation; new archive/hosted receipts must bind the corrected head.
+
+### 2026-10-26 — Institutional quality hardening
+
+qa-quality-entry retains original unmetquarantinefailure; qa-quality-authority-before
+proves renamedcreator selfreview200. Independent strictqa-quality-native-accepted
+8pass0skip validates canonicalauthority/migrations/rollback/concurrency. Root
+hardening-native-final39pass0skip and hardening-web-final1267pass are component
+checkpoints with explicit testhelper-only whole-source drift. Ruff/mypy899/Bandit
+and webbuild pass with stable own snapshots. Actual frozen successor and real
+browser gates remain separate; see QUALITY_AUTHORITY_HARDENING_2026-10-26.md.
+
+### 2026-10-27 — Financial ingress negative evidence
+
+`output/enterprise-program-20261026/financial-integrity-before.log` retains13
+failures reproduced against entry source. Existing v2 accepted malformed groups
+and context-rounded parentheses. ADR0877 preserves v2 replay behavior and adds
+an isolated opt-in parser; successor tests and review receipts are kept separately.
+No production data-quality route or whole-release acceptance is inferred.
+
+Guarded parser successor: `output/enterprise-program-20261026/guarded-amount-focused-20261027.json`
+records 86 passing tests and stable hashes for the two tested owned files.
+An independent adversarial review found changing `__str__` bypass; the successor
+rejects arbitrary objects before conversion. Another review is required on the
+final changed bytes. GitHub CI40390219358 at entry790757da failed, including the
+legacy quality case and restricted native finance role; Security/Docker/CodeQL
+workflow runs passed on that entry. None of those runs qualifies future commits.
+
+CI40390219358 at790757da: Python3.11 had10236 passed,1 failed,665 skipped;
+3.12 also failed the legacy NCR API fixture. Five native server shards recorded
+47 failures with the shared missing `enterprise_finance_bindings` SELECT at an
+invoker trigger (7 finance-integrity,10 parity,28 finance-posting,1 supply,
+1 returns). Synthetic direct job logs are retained as engineering-ci-*.log.
+An absent archive artifact followed the pytest failure; it is not an archive
+inspection pass. Current-source successor qualification is separate.
+
+Independent parser review: `output/assurance-20261026/qa-guarded-money-review.json`
+records 130 passed, zero skipped, stable whole-source digest in its review run.
+It confirms v1/v2 function bodies unchanged and v3 unused by production. Currency
+precision, persisted policy migration and end-to-end adoption remain unqualified.
+
+Native restricted-role Finance successor: `output/assurance-20261026/engineering-ci-finance-owner-read.json`
+and XML record 50 passed, zero skipped, 705.735s process at entry790757da with
+unchanged whole-source digest a561c6bc21799e4d74771eb8ed132fef6dea8667c252a089accf7f21a51e0005.
+The test fixture grants SELECT on existing source-owner directories with DML
+privileges preserved and verifies FORCE RLS and nonowner/non-BYPASSRLS. This
+does not change or qualify a deployed production role; separately review its
+required SELECT per docs/security/postgres-runtime-grants.md. Ordered re-upgrade
+cases and final hosted checks are separate.
+
+Ordered recreated-table successor: `output/assurance-20261026/engineering-ci-recreated-owner-read.json`
+records 2 passed, zero skipped, 84.531s with unchanged source digest ac65f904.
+The tests prove SELECT absent after drop/recreate, then restore only source-index
+read under the existing scoped helper before retaining their original migration
+and rollback assertions. Owned PostgreSQL test data was preserved after the
+agent verified its directory and no other clients and stopped that cluster.
+No deployed database grant was changed.
+
+### 2026-10-27 — Grouped matching, Studio search and CRM test repair
+
+`output/enterprise-program-20261026/grouped-decimal-context-negative-20261027.log`
+reproduces v1 false match under precision3 and unmatched under precision28.
+`qa-exact-grouped-final.json` binds source hashes to independent 3000 integer
+comparisons, 10000 Fraction precision checks and 29 focused tests. The new v2
+contract is opt-in and no worker, stored replay, FX or production integration
+is qualified.
+`navigation-search-browser-final-20261027.log` records4 local preview browser
+passes (desktop and Arabic360/390/768); component/accessibility scope is in the
+source tests. No PostgreSQL browser or user-time claim follows.
+`backend-crm-head-red-20261027.json` and `backend-crm-head-green-20261027.json`
+retain native failure and successor 1 pass/0 skip, 15.515s, unchanged successor
+source digest. The actual populated downgrade remains refused and source rows
+remain unchanged. No production migration or ACL changed.
+
+`qa-exact-grouped-final-default-context.json` independently confirms false
+match in v1 at standard Decimal precision28 for distinct 29-digit amounts, and
+30 v1/v2 tests pass on fixed code/test hashes. The independent 3000 integer and
+10000 Fraction checks remain tied to the unchanged v2 engine hash. This is not
+production worker, FX, tenant-isolation or stored-replay qualification.
+
+The worker Inexact guard was independently compared with entry HEAD for three
+exact cases (`qa-worker-conservation-final.json`). Native fail-closed verification
+`output/assurance-20261026/principal-grouped-guard-native-20261027.json` passed
+1/0skip with an unchanged whole-source digest; synthetic inputs remained intact
+and the new attempt wrote no results/checkpoints. Initial harness failures remain
+in `backend-grouped-guard-native-20261027.json`. This does not inspect checkpoints
+from prior attempts, nested FX rounding, or signed-zero v1 digest drift.
+
+`qa-exact-grouped-final-rounding.json` records 31 grouped tests with stable
+source hashes and links the independent 13000-case arithmetic oracle; the
+current guarded v1 worker still has signed-zero and nested FX limitations.
+`grouped-native-ci-gate-before-20261027.log` preserves the CI contract's red
+state; the successor adds the whole native guard module to the mandatory
+matching-runtime shard and passes9 CI contract tests. The generic Python shard
+excludes that native module because it has no database; the mandatory shard
+uses mandatory_native_gate and does not accept skips.
+
+`navigation-search-browser-final-20261027.log`:4 actual local preview browser
+tests, including RTL drawer widths360/390/768. QA component tests pass6 and
+typecheck passes. This is neither authenticated PostgreSQL workflow evidence
+nor whole-product accessibility acceptance. A separate test invocation from
+the repository root failed because it omitted the web test environment; the
+correct working-directory rerun passed11.
+
+
+## Hosted failure continuation — 2026-10-27
+
+Entry PR head `80cc14ad6423288db819abf473264df00103f569` has seven failed checks: Python 3.11/3.12, ERP browser, three customer-return browser jobs and CodeQL. Actual browser diagnostics were downloaded to `output/enterprise-program-20261026/github-erp-browser-80cc14ad/`. The original CodeQL finding concerns a synthetic credential written to a fixture file.
+
+- Local quality authority: `output/assurance-20261026/integration-quality-native-20261027.json`, 5 native tests, no skips.
+- Local partial enterprise cycles: `output/assurance-20261026/integration-global-cycles-20261027.json`, 2 native tests, no skips, source changed during run; not a release receipt.
+- Authenticated product and shell browser tests: `output/enterprise-program-20261026/security-product-browser-20261027.log` and `security-shell-browser-20261027.log`, 2 each.
+- Return recovery: `output/enterprise-program-20261026/customer-returns-local-green/report.json`, 3 browser tests and restore passed, publication gate failed because tracked files were modified.
+- ERP browser: `output/enterprise-program-20261026/erp-browser-local-cached/report.json`, 1 browser test and restore passed on local PostgreSQL 17.10 with uncommitted source; GitHub root cause remains unresolved.
+
+Local results above are development evidence, not a source-frozen final acceptance. Earlier synthetic browser fixture evidence in `output/release-blocker-20261025/agent-c/browser-fixture.json` was overwritten in the first verification run.
+
+
+## Source-frozen checkpoint and hosted environment — 2026-10-27
+
+Checkpoint `a1e73b1b9a0b8997bee917f44cb7fb2a5975936c`: `output/assurance-20261026/continuation-native-a1e73b1b.json` records 9 native tests without skips; `output/enterprise-program-20261026/erp-browser-a1e73b1b-frozen/report.json` records one authenticated ERP browser and native restore; `output/enterprise-program-20261026/customer-returns-a1e73b1b-frozen/report.json` records three browser cases and native restore. Tracked source remained stable, and report flags should be reviewed with the receipts. This checkpoint predates the CI runner and fixture-endpoint changes.
+
+GitHub on that checkpoint moved ubuntu-latest to 26.04 and server-boundaries failed to install postgresql-client-16 before tests. Runner pinning keeps the native validator; future hosted results are required. CodeQL still reported the prior synthetic employee identifier file; later test-only in-memory endpoint browser logs are `security-memory-product-v3-run.log` and `security-memory-shell-v3-run.log` under `output/enterprise-program-20261026`. An intermediate failed Host configuration is preserved. `security-memory-trace-inspection-20261027.json` found synthetic login credentials and identifiers in traces, but not the endpoint key in the two traces examined. No general trace redaction is claimed.
+
+
+## FX and responsive navigation continuation — 2026-10-27
+
+Exact-head `8942e56f`: nine native tests without skips in `output/assurance-20261026/continuation-native-8942e56f.json`; ERP and customer-return browser plus restore receipts in `output/enterprise-program-20261026/{erp-browser,customer-returns}-8942e56f-frozen/report.json`; product/shell authenticated receipts in `output/assurance-20261026/frozen-8942e56f-{product,shell}.json`. Frontend suite: 1273 passed. CodeQL passed, but Python 3.11 failed on the missing backlog dependency and product browser failed native restore with an unsupported PostgreSQL configuration statement. The later fixes require hosted verification.
+
+Independent adapter-level inverse FX evidence: `output/assurance-20261026/fx-inverse-guard-proof-20261027.json`. Experimental FX review: initial collision reproduced in `output/enterprise-program-20261026/qa-fx-independent-adversarial-20261027.json`; revised path checked against 2000 Fraction cases in `qa-fx-independent-randomized-20261027.json` and focused tests in `output/assurance-20261026/grouped-fx-v2-candidate-proof-20261027.json`. These do not establish production wiring or native persistence.
+
+Responsive navigation pre-fix evidence includes `resize-open-drawer-8942e56f.cjs` and `qa-navigation-focus-resize-20261027.json`; independent recheck is `qa-navigation-recheck-20261027.log`, agent browser suite `desktop-mobile-focus-final.log`, all under `output/enterprise-program-20261026`. Full accessibility and authenticated final-source UI verification remain required.
+
+
+## Quality isolation and source ownership — 2026-10-27
+
+Source-bound PostgreSQL/API probe `output/assurance-20261026/quality-cross-entity-probe-20261027.json` and matching script/log: identity B receives 403 for A scope, but can disposition an A-created workspace-scoped NCR under B scope. This is an observed enterprise isolation gap; historical NCR entity ownership is not established. `quality-advisory-stock-proof-20261027.json` and matching script/log demonstrate an advisory NCR did not change a separate posted receipt's quantity/value/GL effects; no association between the synthetic NCR and receipt was established. Direct-SQL bypass, plan isolation and all migration approaches remain hypotheses requiring verification.
+
+
+## Reconciliation and Studio continuation — 2026-10-27
+
+Entry GitHub 6a69280b: Python 3.11/3.12 each reported 1 failed, 10315 passed, 665 skipped; both failures were the financial AST guard. The monetary identity/foreign browser cases completed browser and native restore but the old acceptance contract rejected the 0157 catalog. Independent actual-artifact comparison: `output/enterprise-program-20261026/independent-monetary-restore-review-20261027.json`; the quality authority table had no rows. FX reciprocal equality review: `qa-fx-reciprocal-equivalence-20261027.log` in that directory.
+
+Worker guard review and unresolved precision examples: `qa-worker-precision-guard-20261027.json` and `qa-worker-default-precision-20261027.json`. The latter tests NUMERIC storage limits with eight fractional digits and is not a valid USD currency-policy example. `output/assurance-20261026/worker-rounding-native-20261027.json` records 12 tests without skips on the then-current tree, one native PostgreSQL test plus eleven adapter tests; it was run before the worker commit.
+
+Studio locale-search proof: `output/enterprise-program-20261026/navigation-locale-evidence-20261027.json` and `navigation-locale-browser-all-20261027.log` (19 browser cases, including 16 pre-existing). Command palette checks cover 5 component cases and 2 preview browser cases. These are development evidence; execute full release gates and authenticated journeys on the integrated SHA.

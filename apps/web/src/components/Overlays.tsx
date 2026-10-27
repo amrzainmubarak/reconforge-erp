@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { MessageKey } from "../i18n";
 import type { AccessibilityPreferences, Density, StudioPage, ThemePreference } from "../types";
-import { navigationGroups } from "./Navigation";
+import { navigationGroups, type NavStudioPage } from "./Navigation";
 
 interface AccessibilityPanelProps {
   translate: (key: MessageKey) => string;
@@ -94,21 +94,22 @@ interface CommandPaletteProps {
   translate: (key: MessageKey) => string;
   onClose: () => void;
   onNavigate: (page: StudioPage) => void;
+  canView?: (page: NavStudioPage) => boolean;
 }
 
-export function CommandPalette({ translate, onClose, onNavigate }: CommandPaletteProps) {
+export function CommandPalette({ translate, onClose, onNavigate, canView = () => true }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const dialogRef = useRef<HTMLElement>(null);
   const commands = useMemo(
     () =>
       navigationGroups.flatMap((group) =>
-        group.items.map((item) => ({
+        group.items.filter(item => !item.page || canView(item.page)).map((item) => ({
           ...item,
           group: translate(group.label),
           translatedLabel: translate(item.label),
         })),
       ),
-    [translate],
+    [translate, canView],
   );
   const filtered = commands.filter((command) =>
     `${command.translatedLabel} ${command.group}`.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
@@ -120,6 +121,19 @@ export function CommandPalette({ translate, onClose, onNavigate }: CommandPalett
   }, []);
 
   const trapFocus = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key === "Escape") { event.preventDefault(); onClose(); return; }
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      const rows = [...(dialogRef.current?.querySelectorAll<HTMLElement>(".command-row:not([aria-disabled])") ?? [])];
+      if (rows.length) {
+        event.preventDefault();
+        const index = rows.indexOf(document.activeElement as HTMLElement);
+        const next = index < 0
+          ? event.key === "ArrowDown" ? 0 : rows.length - 1
+          : (index + (event.key === "ArrowDown" ? 1 : -1) + rows.length) % rows.length;
+        rows[next]?.focus();
+      }
+      return;
+    }
     if (event.key !== "Tab") return;
     const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? [])];
     if (!focusable.length) return;

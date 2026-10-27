@@ -10,14 +10,15 @@ import pytest
 from typer.testing import CliRunner
 
 from reconforge.cli import app
-from reconforge.domain.consolidation import ConsolidationError
+from reconforge.domain.consolidation import ConsolidationBalance, ConsolidationError
 from reconforge.domain.intercompany_elimination import (
     IntercompanyEliminationInputLine,
+    diagnose_intercompany_discrepancies,
     intercompany_elimination_input_line_from_dict,
     prepare_intercompany_eliminations,
     verify_intercompany_elimination_payload,
 )
-from reconforge.utils.money import Money
+from reconforge.utils.money import CurrencyRegistryContext, MinorMoney, Money
 
 runner = CliRunner()
 
@@ -186,3 +187,77 @@ def test_cli_emits_replayable_digest_bound_result(tmp_path: Path) -> None:
     assert '"algorithm_version": "intercompany-elimination-v1"' in result.output
     assert '"status": "proposed"' in result.output
     assert '"result_digest":' in result.output
+
+
+def test_minor_money_integration_in_consolidation_and_elimination() -> None:
+    context = CurrencyRegistryContext.from_installed()
+    minor_val = MinorMoney(minor_units=15050, currency="USD", registry_context=context)
+
+    # 1. IntercompanyEliminationInputLine from MinorMoney
+    ic_line = IntercompanyEliminationInputLine.from_minor_money(
+        transaction_id="TX-MM-1",
+        period_name="2026-08",
+        entity_code="ENTITY-A",
+        counterparty_code="ENTITY-B",
+        reference="IC-REF-MM",
+        group_account_code="IC-REC",
+        account_type="Asset",
+        amount=minor_val,
+        source_reference="ledger:TX-MM-1",
+        source_digest=_digest("source:TX-MM-1"),
+    )
+    assert ic_line.amount.amount == Decimal("150.50")
+    exported_minor = ic_line.to_minor_money(context)
+    assert exported_minor.minor_units == 15050
+    assert exported_minor.currency == "USD"
+
+    # 2. ConsolidationBalance from MinorMoney
+    cb = ConsolidationBalance.from_minor_money(
+        source_line_id="SRC-LINE-01",
+        source_trial_balance_digest=_digest("tb-digest-01"),
+        entity_code="ENTITY-A",
+        source_account_code="1100",
+        group_account_code="1100-GRP",
+        account_type="Asset",
+        period_id="2026-08",
+        amount=minor_val,
+        rate_type="closing",
+        rate_bucket="spot",
+    )
+    assert cb.amount == Decimal("150.50")
+    cb_minor = cb.to_minor_money(context)
+    assert cb_minor.minor_units == 15050
+    assert cb_minor.currency == "USD"
+
+
+def test_machine_readable_discrepancy_diagnostics() -> None:
+    imbal_lines = (
+        _line("TX-IMBAL-A", "ENTITY-A", "ENTITY-B", "500.00", reference="IC-REF-DIFF"),
+        _line("TX-IMBAL-B", "ENTITY-B", "ENTITY-A", "-499.00", reference="IC-REF-DIFF"),
+        _line("TX-LONE-A", "ENTITY-C", "ENTITY-D", "250.00", reference="IC-REF-LONE"),
+    )
+    result = prepare_intercompany_eliminations(
+        imbal_lines,
+        reporting_currency="USD",
+        prepared_by="auditor",
+        prepared_at="2026-08-31T22:00:00Z",
+    )
+    assert all(r.status == "unresolved" for r in result.resolutions)
+
+    diagnostics = diagnose_intercompany_discrepancies(imbal_lines, result)
+    assert len(diagnostics) == 2
+
+    # Diagnostic for IC-REF-DIFF
+    diff_diag = next(d for d in diagnostics if d.reference == "IC-REF-DIFF")
+    assert diff_diag.reason == "source_group_is_not_zero_sum"
+    assert diff_diag.discrepancy_minor == 100  # 1.00 USD discrepancy = 100 minor units
+    assert diff_diag.currency == "USD"
+    assert diff_diag.entity_balances_minor == {"ENTITY-A": 50000, "ENTITY-B": -49900}
+    assert diff_diag.missing_counterparties == ()
+
+    # Diagnostic for IC-REF-LONE (missing reciprocal counterparty line)
+    lone_diag = next(d for d in diagnostics if d.reference == "IC-REF-LONE")
+    assert lone_diag.reason == "insufficient_reciprocal_lines"
+    assert lone_diag.discrepancy_minor == 25000
+    assert "ENTITY-C" in lone_diag.entity_balances_minor
+

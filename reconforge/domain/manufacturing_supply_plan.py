@@ -1,8 +1,10 @@
 """Exact pre-stock manufacturing demand and exclusive native supply claims."""
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 from reconforge.domain.finance_posting import text
@@ -163,3 +165,112 @@ def coverage_payload(requirement: Mapping[str, Any], observations: Mapping[str, 
         fail("Original on-hand claim must reproduce physical and unallocated FIFO observations.", "manufacturing_supply_capacity_invalid")
     return {"schema_version": "manufacturing-supply-coverage-v1", "requirement_id": requirement["id"],
             "requirement_digest": requirement["source_digest"], "gross_quantity_scaled": gross, **values}
+
+
+@dataclass(frozen=True)
+class MRPShortageRequisition:
+    """A governed purchase requisition generated from net MRP shortage."""
+
+    requisition_id: str
+    plan_id: str
+    item_id: str
+    shortage_quantity_scaled: int
+    planned_order_quantity_scaled: int
+    unit_price_minor: int
+    required_date: str
+    idempotency_key: str
+    currency: str = "USD"
+    status: str = "approved"
+
+    def __post_init__(self) -> None:
+        text(self.requisition_id, "requisition_id", maximum=64)
+        text(self.plan_id, "plan_id", maximum=64)
+        text(self.item_id, "item_id", maximum=64)
+        exact_integer(self.shortage_quantity_scaled, positive=False)
+        if self.shortage_quantity_scaled < 0:
+            fail("Shortage quantity must be non-negative.", "mrp_requisition_invalid")
+        exact_integer(self.planned_order_quantity_scaled, positive=True)
+        exact_integer(self.unit_price_minor, positive=False)
+        if self.unit_price_minor < 0:
+            fail("Unit price minor must be non-negative.", "mrp_requisition_invalid")
+        try:
+            date.fromisoformat(self.required_date)
+        except ValueError:
+            fail(f"Invalid required date: {self.required_date}", "mrp_requisition_date_invalid")
+        text(self.idempotency_key, "idempotency_key", maximum=128)
+        text(self.currency, "currency", maximum=8)
+        text(self.status, "status", maximum=32)
+
+
+def generate_mrp_shortage_requisitions(
+    plan_id: str,
+    requirements: Sequence[Any],
+    *,
+    existing_claims: Mapping[str, Sequence[int]] | None = None,
+    unit_prices_minor: Mapping[str, int] | None = None,
+    required_date: str,
+    currency: str = "USD",
+) -> list[MRPShortageRequisition]:
+    """Generates governed purchase requisitions for net shortages with headroom deduplication.
+
+    Enforces procurement_headroom() to suppress duplicate supply generation when
+    prior active claims already cover the shortage. Produces deterministic idempotency keys.
+    """
+    text(plan_id, "plan_id", maximum=64)
+    try:
+        date.fromisoformat(required_date)
+    except ValueError:
+        fail(f"Invalid required date: {required_date}", "mrp_requisition_date_invalid")
+    claims_map = existing_claims or {}
+    prices_map = unit_prices_minor or {}
+
+    requisitions: list[MRPShortageRequisition] = []
+
+    for req in requirements:
+        if isinstance(req, Mapping):
+            item_id = str(req.get("item_id", ""))
+            shortage = exact_integer(req.get("shortage_quantity_scaled", req.get("shortage", 0)))
+            planned_qty = exact_integer(req.get("planned_order_quantity_scaled", req.get("planned_order_quantity", shortage)))
+        elif hasattr(req, "item_id"):
+            item_id = str(req.item_id)
+            shortage = exact_integer(getattr(req, "net_shortage", getattr(req, "shortage_quantity_scaled", 0)))
+            planned_qty = exact_integer(getattr(req, "planned_order_quantity", getattr(req, "planned_order_quantity_scaled", shortage)))
+        else:
+            fail("Invalid requirement record structure.", "mrp_requisition_invalid")
+
+        text(item_id, "item_id", maximum=64)
+        if shortage <= 0:
+            continue
+
+        item_claims = claims_map.get(item_id, ())
+        headroom = procurement_headroom(shortage, item_claims)
+
+        if headroom <= 0:
+            # Shortage is already fully covered by active claims; suppress duplicate requisition!
+            continue
+
+        # Planned quantity capped by headroom
+        actual_req_qty = min(planned_qty, headroom) if planned_qty > 0 else headroom
+        unit_price = prices_map.get(item_id, 0)
+        exact_integer(unit_price, positive=False)
+
+        raw_key = f"{plan_id}:{item_id}:{headroom}:{required_date}:{currency}"
+        idempotency_key = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+        req_id = f"REQ-{item_id}-{idempotency_key[:8].upper()}"
+
+        requisitions.append(
+            MRPShortageRequisition(
+                requisition_id=req_id,
+                plan_id=plan_id,
+                item_id=item_id,
+                shortage_quantity_scaled=headroom,
+                planned_order_quantity_scaled=actual_req_qty,
+                unit_price_minor=unit_price,
+                required_date=required_date,
+                idempotency_key=idempotency_key,
+                currency=currency,
+                status="approved",
+            )
+        )
+
+    return sorted(requisitions, key=lambda r: (r.required_date, r.item_id, r.requisition_id))

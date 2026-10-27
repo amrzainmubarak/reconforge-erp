@@ -13,11 +13,17 @@ ADD --checksum=sha256:05e3393fb95aa5751ca2f9d242f659f6cff82c1cc7767cc2df4a086f7a
     https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libssl3-3.5.9-r0.apk /tmp/libssl3.apk
 ADD --checksum=sha256:63aeea03c15a2f9018f81805cfc8aa926bdf5cd68921f22149c2fbb5d0ee9f47 \
     https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/zlib-1.3.2-r1.apk /tmp/zlib.apk
+# Alpine's official v3.24 secdb fixes CVE-2026-107891 in musl1.2.6-r3.
+# Keep libc and its signed utility package on the same reviewed revision.
+ADD --checksum=sha256:e142255d0fa397f14318996bc10378093dcc069dc3dd1b6818c8f28a789c21da \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/musl-1.2.6-r3.apk /tmp/musl.apk
+ADD --checksum=sha256:47263d05842c5e12d01e0369e5b5bea51733323501c00ca21968a5102de137ca \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/musl-utils-1.2.6-r3.apk /tmp/musl-utils.apk
 RUN apk add --no-cache --upgrade \
     /tmp/libcrypto3.apk \
     /tmp/libssl3.apk \
-    /tmp/zlib.apk \
-    && rm -f /tmp/libcrypto3.apk /tmp/libssl3.apk /tmp/zlib.apk
+    /tmp/zlib.apk /tmp/musl.apk /tmp/musl-utils.apk \
+    && rm -f /tmp/libcrypto3.apk /tmp/libssl3.apk /tmp/zlib.apk /tmp/musl.apk /tmp/musl-utils.apk
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -54,11 +60,15 @@ ADD --checksum=sha256:05e3393fb95aa5751ca2f9d242f659f6cff82c1cc7767cc2df4a086f7a
     https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libssl3-3.5.9-r0.apk /tmp/libssl3.apk
 ADD --checksum=sha256:63aeea03c15a2f9018f81805cfc8aa926bdf5cd68921f22149c2fbb5d0ee9f47 \
     https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/zlib-1.3.2-r1.apk /tmp/zlib.apk
+ADD --checksum=sha256:e142255d0fa397f14318996bc10378093dcc069dc3dd1b6818c8f28a789c21da \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/musl-1.2.6-r3.apk /tmp/musl.apk
+ADD --checksum=sha256:47263d05842c5e12d01e0369e5b5bea51733323501c00ca21968a5102de137ca \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/musl-utils-1.2.6-r3.apk /tmp/musl-utils.apk
 RUN apk add --no-cache --upgrade \
     /tmp/libcrypto3.apk \
     /tmp/libssl3.apk \
-    /tmp/zlib.apk \
-    && rm -f /tmp/libcrypto3.apk /tmp/libssl3.apk /tmp/zlib.apk
+    /tmp/zlib.apk /tmp/musl.apk /tmp/musl-utils.apk \
+    && rm -f /tmp/libcrypto3.apk /tmp/libssl3.apk /tmp/zlib.apk /tmp/musl.apk /tmp/musl-utils.apk
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

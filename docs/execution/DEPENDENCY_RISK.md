@@ -1,5 +1,12 @@
 # Dependency Risk
 
+## Current assurance checkpoint — 2026-10-25
+
+**The current release is not accepted.** [Prerequisite repairs, measured results
+and remaining gates](ASSURANCE_2026-10-25.md) supersede broad completion,
+certification, performance and comparative claims below. Earlier snapshots
+retain their original source/scope and do not qualify the current source.
+
 ## Source-bound successor refresh (2026-10-10)
 
 The [Wave3 acceptance packet and limits](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md)
@@ -51,3 +58,7 @@ The isolated locked Python 3.11/3.12 all-extra graph and current npm lock report
 ## Final October8 bounded acceptance
 
 Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.
+
+## 2026-10-26 current audit boundary
+
+Fresh npm audit0known findings; current lockedPython3.12 audit0known findings, no activeexception. Historical reports retain old policy digests and are not reassigned to the refreshed policy. These audits do not substitute final image, provenance, signature, installation or hosted qualification. See program-python-audit/program-npm-audit receipts and ENTERPRISE_PROGRAM_2026-10-26.md.

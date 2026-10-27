@@ -176,8 +176,9 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 79  # Keep prior commands and the newly configured fixture/AR regressions.
+    assert len(commands) == 80  # The grouped-worker native guard has its own mandatory command.
     assert all(count == 1 for count in Counter(commands).values())
+    assert "uv run --no-sync pytest tests/test_postgres_grouped_matching_guard_20261027.py -q" in groups["matching-runtime"]
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
     for script, owner in PROOF_OWNERS.items():
@@ -198,6 +199,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert receipt in groups["inventory-payables"]
     for filename, owner in (
         ("tests/test_postgres_sales_owner_closure.py", "inventory-payables"),
+        ("tests/test_postgres_grouped_matching_guard_20261027.py", "matching-runtime"),
         ("tests/test_postgres_operational_finance_api.py", "finance-posting"),
         ("tests/test_postgres_financial_installments.py", "finance-reporting"),
         ("tests/test_postgres_financial_reporting.py", "finance-reporting"),
@@ -243,7 +245,19 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
     workflow = _workflow()
     unit = next(step for step in workflow["jobs"]["test"]["steps"] if step["name"] == "Pytest")
     assert "if" not in unit and "continue-on-error" not in unit
+    release_files = {
+        "tests/test_postgres_enterprise_finance_bridge.py",
+        "tests/test_release_product_scope.py",
+        "tests/test_crm_authority_postgres_20261026.py",
+        "tests/test_enterprise_program_stock_to_cash.py",
+        "tests/test_enterprise_program_asset_authority.py",
+        "tests/test_enterprise_program_hcm_migration.py",
+        "tests/test_enterprise_program_capacity_quality.py",
+        "tests/test_enterprise_program_quality_authority.py",
+        "tests/test_release_authorization_postgres.py",
+    }
     ignored = {
+        "tests/test_postgres_grouped_matching_guard_20261027.py",
         "tests/test_postgres_financial_source_roles.py",
         "tests/test_postgres_stock_sales.py", "tests/test_postgres_stock_sales_api.py",
         "tests/test_postgres_stock_sales_read_authority.py",
@@ -255,11 +269,18 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
     }
     tokens = shlex.split(unit["run"])
     assert tokens[:4] == ["uv", "run", "--no-sync", "pytest"]
-    assert Counter(tokens[4:]) == Counter(f"--ignore={path}" for path in ignored)
+    assert Counter(tokens[4:]) == Counter(f"--ignore={path}" for path in ignored | release_files)
+    release = next(step for step in workflow["jobs"]["release-product-browser"]["steps"]
+                   if step["name"] == "Verify native CRM authority and canonical bridge recovery")
+    assert "if" not in release and "continue-on-error" not in release
+    assert release["env"]["PYTEST_ADDOPTS"] == "-p tests.mandatory_native_gate"
+    assert shlex.split(release["run"])[:4] == ["uv", "run", "--no-sync", "pytest"]
+    assert Counter(shlex.split(release["run"])[4:]) == Counter([*release_files, "-q"])
     native = next(step for step in workflow["jobs"]["server-boundaries"]["steps"]
                   if step["name"] == "Run live server-boundary tests")
     groups = _partition(native["run"])
     owners = {path: owner for owner, paths in INTEGRITY_FILES.items() for path in paths}
+    owners["tests/test_postgres_grouped_matching_guard_20261027.py"] = "matching-runtime"
     for path in ignored:
         assert [owner for owner, commands in groups.items()
                 for command in commands if path in shlex.split(command)] == [
@@ -285,6 +306,44 @@ def test_integrity_owners_execute_complete_files_once_without_filtered_admission
     assert "postgres" in job["services"]
     # Legacy commerce/procurement and their migration coverage remain separate.
     assert len(groups["erp-expansion"]) == 2
+
+
+def test_primary_studio_shell_is_a_required_real_browser_gate_with_public_evidence() -> None:
+    job = _workflow()["jobs"]["release-product-browser"]
+    build = next(step for step in job["steps"] if step["name"] == "Build the real application component harness")
+    assert "build --outDir ../../output/assurance-20261026/studio-shell/web" in build["run"]
+    gate = next(step for step in job["steps"] if step["name"] == "Verify authenticated primary Studio shell and responsive access")
+    assert "if" not in gate and "continue-on-error" not in gate
+    assert [shlex.split(command) for command in gate["run"].strip().splitlines()] == [
+        ["node", "apps/web/node_modules/@playwright/test/cli.js", "test", "--config", "apps/web/e2e/studio-shell.playwright.config.ts"],
+        ["node", "apps/web/e2e/studio-shell.manifest.mjs"],
+    ]
+    assert gate["env"]["RECONFORGE_RELEASE_PRODUCT_PYTHON"] == "${{ github.workspace }}/.venv/bin/python"
+    upload = next(step for step in job["steps"] if step["name"] == "Retain primary Studio accessibility and visual evidence")
+    assert upload["if"] == "always()" and upload["with"]["if-no-files-found"] == "error"
+    assert set(upload["with"]["path"].splitlines()) == {
+        "output/assurance-20261026/studio-shell/measurements.json",
+        "output/assurance-20261026/studio-shell/screenshot-manifest.json",
+        "output/assurance-20261026/studio-shell/axe-*.json",
+        "output/assurance-20261026/studio-shell/authenticated-*.png",
+    }
+
+
+def test_release_product_browser_uses_postgres_16_native_tools_before_restore() -> None:
+    job = _workflow()["jobs"]["release-product-browser"]
+    assert job["runs-on"] == "ubuntu-24.04"
+    assert job["services"]["postgres"]["image"].startswith("postgres:16.")
+    steps = job["steps"]
+    install = next(step for step in steps if step["name"] == "Install PostgreSQL 16 native client tools")
+    gate = next(step for step in steps if step["name"] == "Verify native CRM authority and canonical bridge recovery")
+    assert steps.index(install) < steps.index(gate)
+    assert "if" not in install and "continue-on-error" not in install
+    assert "sudo apt-get install --no-install-recommends -y libpq-dev postgresql-client-16" in install["run"]
+    assert 'export PATH="/usr/lib/postgresql/16/bin:$PATH"' in install["run"]
+    assert "verify_postgres_native_tools.py --expected-major 16 --print-bindir" in install["run"]
+    assert "pg_dump --version" in install["run"]
+    assert "pg_restore --version" in install["run"]
+    assert 'printf \'%s\\n\' "$native_bindir" >> "$GITHUB_PATH"' in install["run"]
 
 
 def test_enterprise_browser_matrix_requires_every_real_https_and_populated_restore_owner() -> None:
@@ -337,6 +396,19 @@ def test_both_python_versions_inspect_built_publication_archives_and_retain_fail
         "path": "${{ runner.temp }}/publication-source-closure-${{ matrix.python-version }}.json",
         "if-no-files-found": "error",
     }
+
+
+def test_server_boundaries_pins_runner_and_postgres_16_client() -> None:
+    job = _workflow()["jobs"]["server-boundaries"]
+    # ubuntu-latest moved to 26.04, where the runner's apt sources did not
+    # provide the client version required by the PostgreSQL 16 service.
+    assert job["runs-on"] == "ubuntu-24.04"
+    assert job["services"]["postgres"]["image"].startswith("postgres:16.")
+    install = next(step for step in job["steps"] if step["name"] == "Install PostgreSQL native client tools")
+    assert "if" not in install and "continue-on-error" not in install
+    assert "sudo apt-get install --no-install-recommends -y libpq-dev postgresql-client-16" in install["run"]
+    assert "verify_postgres_native_tools.py --expected-major 16 --print-bindir" in install["run"]
+    assert 'printf \'%s\\n\' "$native_bindir" >> "$GITHUB_PATH"' in install["run"]
 
 
 def test_native_services_and_unconditional_report_retention_survive_partition() -> None:

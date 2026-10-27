@@ -83,9 +83,11 @@ hosted signed release-bound SBOM/provenance execution and protected publication 
 | `PW.8` | Test Executable Code for Vulnerabilities and Security Requirements | PW.8.1 partial; PW.8.2 planned |
 | `PW.9` | Configure Software to Have Secure Settings by Default | PW.9.1 partial; PW.9.2 partial |
 
-The repository has strong bounded design/test evidence, but lacks independent
-design review records, hosted/provenanced component governance, complete secure
-coding standards, approved interpreter/build hardening, DAST/fuzz/penetration
+The repository has strong bounded design/test evidence, expanded with comprehensive
+adversarial test suites and independent mathematical test oracles (zero float AST scanner,
+RLS hostile context testing, cryptographic audit tamper drills, and SSRF/BOLA verifications),
+but lacks independent design review records, hosted/provenanced component governance,
+complete secure coding standards, approved interpreter/build hardening, DAST/fuzz/penetration
 program evidence, and a closed administrator setting inventory.
 
 ### `RV` — Respond to Vulnerabilities

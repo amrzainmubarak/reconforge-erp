@@ -1,5 +1,18 @@
 ﻿# Claims Evidence Matrix
 
+## Current bounded assurance — 2026-10-25
+
+Current program acceptance is OPEN; [source-bound record](ASSURANCE_2026-10-25.md).
+
+| Claim | Code evidence | Test evidence | Runtime evidence | Maturity | Allowed wording |
+| --- | --- | --- | --- | --- | --- |
+| Leave owner/atomic transitions | HCM API + SQLite/PG HCM adapters; session transaction ownership |15 new authenticated HTTP/session regressions; legacy HCM/auth compatibility |43 local Python passes; separate restricted-role PG adapter proof | Experimental bounded repair | Tested leave transitions reject unauthorized/duplicate changes and conserve entitlement in tested races/failures |
+| Canonical ledger reference required | Project/IC Finance Core guard | independent recording adapter tests | candidate-focused-finance record | Experimental boundary | Missing/malformed canonical IDs fail closed; API posting/validation atomicity remains unqualified |
+| Truthful server failure UX | Assistant/statements/MPS/genealogy components | EN/AR denial, stale-session and invalid-response tests |1205 component cases,111 files; no browser conformance result | Experimental read/advice | Does not invent financial results on server failure; source-less generation unavailable |
+| XML declaration rejection | country/sa.py defused parser |8 ingress regressions; country compatibility tests | independent qa-sa-xml record | Tested parser boundary | Rejects DTD/entities/external declarations; no legal/statutory certification |
+| Existing migration0152 head | runtime registry + unchanged0152 SQL | native down/up tests |2 live PostgreSQL16.15 passes +16 catalog indexes | Local native fixture | Existing0152 head upgrades/downgrades in tested fixture;13 newer module schemas still absent |
+| Complete ERP, all6 assurance gates, global superiority | insufficient integration evidence | current authorization gate failures | no coherent current release qualification | planned / NOT ACCEPTED | No complete ERP, production, certification or competitive advantage claim |
+
 ## Governed operating integrity (2026-10-10 publication snapshot)
 
 | Claim | Code evidence | Test evidence | Runtime evidence | Maturity | Allowed wording |
@@ -497,3 +510,12 @@ This matrix governs public wording for the evidence-bounded Phase 0 implementati
 ## Final October8 bounded acceptance
 
 Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.
+
+## 2026-10-26 Studio and enterprise program claims
+
+|Claim|Code evidence|Test evidence|Runtime evidence|Maturity|Allowed wording|
+|---|---|---|---|---|---|
+|Grouped Studio navigation|Navigation.tsx, studio-routes.ts, navigation-access.ts|Navigation.redesign and permission tests|Actual authenticated mainApp29captures/20breakpoint observations|experimental|53destinations preserved in8sections; bounded tested access/navigation|
+|Entity-bound leave|postgres_hcm_leave_scope_schema.py revision0156|Existing authorization regression and new migration tests|Independent native15case cohort|experimental|Tested selected-scope RLS and stable ownership; no universal isolation claim|
+|Whole five-cycle ERP integration|Existing native owners and API modules|Partial independent stock/GL oracle|No complete coherent five-cycle evidence|planned|BLOCKED; do not claim complete integrated ERP|
+|Global cross-page workspace switching|Informational authorized-workspace list only|No switching acceptance|Not implemented|planned|Select scope in each existing page; no global switch claim|

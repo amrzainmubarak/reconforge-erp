@@ -9,7 +9,7 @@ records suitable for the existing worker contract.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from decimal import Decimal
+from decimal import ROUND_HALF_EVEN, Decimal, Inexact, localcontext
 from typing import Any, cast
 
 from reconforge.application.matching_strategies import MatchingStrategyRequest, replay_result_envelope
@@ -292,15 +292,29 @@ class PostgresGroupedMatchingAdapter:
             context.raise_if_cancelled()
             if partition.partition_key in completed_partition_keys:
                 continue
-            request = _request(context, partition.partition_key, partition.left_inputs, partition.right_inputs)
-            try:
-                output = replay_result_envelope(
-                    self._strategy.execute(request),
-                    request,
-                    manifest=self._strategy.manifest,
-                )
-            except Exception as exc:
-                raise PostgresGroupedMatchingAdapterError("Grouped PostgreSQL matching failed closed.") from exc
+            # Preserve v1 arithmetic and evidence, but never persist results
+            # produced after implicit context rounding. Flags in independently
+            # nested contexts (for example FX conversion) are outside this guard.
+            with localcontext() as decimal_context:
+                # v1 hashes formatted decimal values, including signed zero;
+                # different rounding modes can therefore alter its evidence even
+                # when no arithmetic raises Inexact. Reject rather than rewrite
+                # historical v1 outputs or silently change the caller's policy.
+                if decimal_context.rounding != ROUND_HALF_EVEN:
+                    raise PostgresGroupedMatchingAdapterError("Grouped PostgreSQL matching requires the default rounding context.")
+                decimal_context.clear_flags()
+                decimal_context.traps[Inexact] = False
+                request = _request(context, partition.partition_key, partition.left_inputs, partition.right_inputs)
+                try:
+                    output = replay_result_envelope(
+                        self._strategy.execute(request),
+                        request,
+                        manifest=self._strategy.manifest,
+                    )
+                except Exception as exc:
+                    raise PostgresGroupedMatchingAdapterError("Grouped PostgreSQL matching failed closed.") from exc
+                if decimal_context.flags[Inexact]:
+                    raise PostgresGroupedMatchingAdapterError("Grouped PostgreSQL matching requires exact arithmetic.")
             projected_results: list[Mapping[str, object]] = []
             projected_exceptions: list[Mapping[str, object]] = []
             all_left_ids = tuple(sorted(str(item.get("id", "")) for item in request.left_records))

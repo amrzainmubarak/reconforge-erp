@@ -245,3 +245,218 @@ def settlement_equation(source: dict[str, Any], *, foreign_minor: int, foreign_b
             "historical_after_minor": historical + released, "functional_cash_minor": cash,
             "realized_fx_minor": difference, "settlement_rate": settlement_rate.payload(posting_date),
             "amount_minor": turnover, "lines": lines}
+
+
+@dataclass(frozen=True)
+class ReturnCreditPreparation:
+    """Inputs to compute a foreign tax-inclusive return credit memo and inventory restitution."""
+
+    invoice_source: dict[str, Any]
+    returned_quantity: int
+    total_quantity: int
+    fifo_layers: tuple[tuple[int, int], ...]  # (quantity, layer_cost_minor)
+    ar_foreign_minor: int
+    ar_historical_functional_minor: int
+    posting_date: str
+    credit_memo_number: str
+    refund_liability_account_code: str
+    inventory_account_code: str
+    cogs_account_code: str
+    sales_returns_account_code: str | None = None
+
+
+def return_credit_memo_equation(
+    prep: ReturnCreditPreparation,
+    context: CurrencyRegistryContext,
+) -> dict[str, Any]:
+    """Calculate return credit memo, historical tax reversal, AR release, and additive FIFO restitution.
+
+    Invariants:
+      1. Reverses tax liability at historical rate and component structure.
+      2. Releases AR at historical carrying exchange rate.
+      3. Overcollections become Customer Refund Liability.
+      4. Restores consumed FIFO inventory layers additively without historical layer repricing.
+      5. Strict integer minor units with zero float; Debit == Credit strictly.
+    """
+    returned_q = exact_minor(prep.returned_quantity, "returned_quantity")
+    total_q = exact_minor(prep.total_quantity, "total_quantity")
+    if returned_q > total_q:
+        fail("Returned quantity cannot exceed total quantity.", "fx_state_invalid")
+    canonical_day(prep.posting_date, "return posting date")
+
+    source = prep.invoice_source
+    foreign_net = source["foreign_net_minor"]
+    functional_net = source["functional_net_minor"]
+
+    cut_foreign_net = (2 * foreign_net * returned_q + total_q) // (2 * total_q)
+    cut_functional_net = (2 * functional_net * returned_q + total_q) // (2 * total_q)
+
+    tax_components_reversed = []
+    cut_foreign_tax_total = 0
+    cut_functional_tax_total = 0
+
+    for comp in source["tax_components"]:
+        cf = (2 * comp["foreign_tax_minor"] * returned_q + total_q) // (2 * total_q)
+        cv = (2 * comp["functional_tax_minor"] * returned_q + total_q) // (2 * total_q)
+        cut_foreign_tax_total += cf
+        cut_functional_tax_total += cv
+        tax_components_reversed.append({
+            **comp,
+            "foreign_tax_reversed_minor": cf,
+            "functional_tax_reversed_minor": cv,
+        })
+
+    total_foreign_credit = cut_foreign_net + cut_foreign_tax_total
+    total_functional_credit = cut_functional_net + cut_functional_tax_total
+
+    ar_foreign = exact_minor(prep.ar_foreign_minor, "ar_foreign_minor", zero=True)
+    ar_functional = exact_minor(prep.ar_historical_functional_minor, "ar_historical_functional_minor", zero=True)
+
+    af = min(total_foreign_credit, ar_foreign)
+    al = (2 * ar_functional * af + ar_foreign) // (2 * ar_foreign) if ar_foreign > 0 else 0
+    ef = total_foreign_credit - af
+    el = (2 * total_functional_credit * ef + total_foreign_credit) // (2 * total_foreign_credit) if (total_foreign_credit > 0 and ef > 0) else 0
+
+    diff = total_functional_credit - al - el
+    alignment_gain = max(diff, 0)
+    alignment_loss = max(-diff, 0)
+
+    # Additive FIFO restitution without historical layer repricing
+    pending = returned_q
+    restored_cost = 0
+    fifo_cuts: list[tuple[int, int, int]] = []
+    for idx, (layer_q, layer_cost) in enumerate(prep.fifo_layers):
+        take = min(layer_q, pending)
+        if take > 0:
+            restored_layer_cost = (2 * layer_cost * take + layer_q) // (2 * layer_q) if layer_q > 0 else 0
+            restored_cost += restored_layer_cost
+            fifo_cuts.append((idx, take, restored_layer_cost))
+            pending -= take
+    if pending > 0:
+        fail("Returned quantity exceeds available FIFO layers.", "fifo_depleted")
+
+    # Construct financial journal lines for credit memo
+    credit_memo_lines: list[dict[str, Any]] = []
+    return_acc = prep.sales_returns_account_code or source["request"]["revenue_account_code"]
+
+    # 1. Debit Sales Returns / Revenue
+    credit_memo_lines.append({"account_code": return_acc, "debit_minor": cut_functional_net, "credit_minor": 0})
+
+    # 2. Debit Tax Liability components (reversing liability at historical functional rates)
+    for comp in tax_components_reversed:
+        if comp["functional_tax_reversed_minor"] > 0:
+            credit_memo_lines.append({"account_code": comp["account_code"], "debit_minor": comp["functional_tax_reversed_minor"], "credit_minor": 0})
+
+    # 3. Alignment loss if any
+    if alignment_loss > 0:
+        credit_memo_lines.append({"account_code": source["request"]["loss_account_code"], "debit_minor": alignment_loss, "credit_minor": 0})
+
+    # 4. Credit Accounts Receivable (historical AR released)
+    if al > 0:
+        credit_memo_lines.append({"account_code": source["request"]["receivable_account_code"], "debit_minor": 0, "credit_minor": al})
+
+    # 5. Credit Customer Refund Liability (overcollection to be refunded)
+    if el > 0:
+        credit_memo_lines.append({"account_code": prep.refund_liability_account_code, "debit_minor": 0, "credit_minor": el})
+
+    # 6. Alignment gain if any
+    if alignment_gain > 0:
+        credit_memo_lines.append({"account_code": source["request"]["gain_account_code"], "debit_minor": 0, "credit_minor": alignment_gain})
+
+    cm_debit_total = sum(line["debit_minor"] for line in credit_memo_lines)
+    cm_credit_total = sum(line["credit_minor"] for line in credit_memo_lines)
+    if cm_debit_total != cm_credit_total:
+        fail(f"Credit memo lines out of balance: Debit {cm_debit_total} != Credit {cm_credit_total}", "fx_balance_invalid")
+
+
+    # Inventory restitution journal lines
+    inventory_lines: list[dict[str, Any]] = []
+    if restored_cost > 0:
+        inventory_lines.append({"account_code": prep.inventory_account_code, "debit_minor": restored_cost, "credit_minor": 0})
+        inventory_lines.append({"account_code": prep.cogs_account_code, "debit_minor": 0, "credit_minor": restored_cost})
+
+    return {
+        "credit_memo_number": prep.credit_memo_number,
+        "returned_quantity": returned_q,
+        "cut_foreign_net_minor": cut_foreign_net,
+        "cut_functional_net_minor": cut_functional_net,
+        "tax_components_reversed": tax_components_reversed,
+        "total_foreign_credit_minor": total_foreign_credit,
+        "total_functional_credit_minor": total_functional_credit,
+        "foreign_ar_released_minor": af,
+        "functional_ar_released_minor": al,
+        "foreign_liability_minor": ef,
+        "functional_liability_minor": el,
+        "alignment_gain_minor": alignment_gain,
+        "alignment_loss_minor": alignment_loss,
+        "restored_cost_minor": restored_cost,
+        "fifo_cuts": fifo_cuts,
+        "credit_memo_lines": credit_memo_lines,
+        "inventory_lines": inventory_lines,
+    }
+
+
+def customer_refund_equation(
+    *,
+    foreign_refund_minor: int,
+    historical_liability_functional_minor: int,
+    total_foreign_liability_minor: int,
+    refund_rate: HistoricalRate,
+    foreign_currency: str,
+    functional_currency: str,
+    posting_date: str,
+    refund_liability_account_code: str,
+    cash_account_code: str,
+    gain_account_code: str,
+    loss_account_code: str,
+    context: CurrencyRegistryContext,
+) -> dict[str, Any]:
+    """Calculate realized FX gain/loss when customer refund liability is paid out in cash at current spot rate.
+
+    Invariants:
+      1. Liability is released at historical carrying amount.
+      2. Cash is disbursed at current spot rate.
+      3. Realized FX difference balances exactly: Debit == Credit.
+    """
+    refund_f = exact_minor(foreign_refund_minor, "foreign_refund_minor")
+    exact_minor(historical_liability_functional_minor, "historical_liability_functional_minor")
+    exact_minor(total_foreign_liability_minor, "total_foreign_liability_minor")
+    canonical_day(posting_date, "refund posting date")
+
+    exchange = refund_rate.resolve(foreign_currency, functional_currency, context, posting_date)
+    functional_cash = convert_minor(refund_f, exchange, context)
+
+    historical_released = (
+        (2 * historical_liability_functional_minor * refund_f + total_foreign_liability_minor)
+        // (2 * total_foreign_liability_minor)
+        if total_foreign_liability_minor > 0
+        else 0
+    )
+
+    difference = functional_cash - historical_released
+
+    lines: list[dict[str, Any]] = [
+        {"account_code": refund_liability_account_code, "debit_minor": historical_released, "credit_minor": 0},
+        {"account_code": cash_account_code, "debit_minor": 0, "credit_minor": functional_cash},
+    ]
+
+    if difference > 0:
+        lines.append({"account_code": loss_account_code, "debit_minor": difference, "credit_minor": 0})
+    elif difference < 0:
+        lines.append({"account_code": gain_account_code, "debit_minor": 0, "credit_minor": -difference})
+
+    debit_total = sum(line["debit_minor"] for line in lines)
+    credit_total = sum(line["credit_minor"] for line in lines)
+    if debit_total != credit_total:
+        fail(f"Refund lines out of balance: Debit {debit_total} != Credit {credit_total}", "fx_balance_invalid")
+
+
+    return {
+        "foreign_refund_minor": refund_f,
+        "historical_released_minor": historical_released,
+        "functional_cash_minor": functional_cash,
+        "realized_fx_minor": difference,
+        "refund_rate": refund_rate.payload(posting_date),
+        "lines": lines,
+    }
+

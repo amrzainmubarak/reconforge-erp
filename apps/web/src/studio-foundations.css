@@ -1,0 +1,87 @@
+/* Shared operational surfaces: one rhythm for source records, forms and evidence. */
+:root { --sidebar-width: 292px; --page-gutter: 28px; --radius-lg: 14px; --radius-xl: 16px; --focus-ring: var(--brand-strong); }
+html { scrollbar-color: var(--text-secondary) var(--surface-muted); scroll-padding-block: 90px; }
+::selection { background: var(--brand-soft); color: var(--text); }
+input, textarea { caret-color: var(--brand-strong); }
+:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
+.sidebar { background: var(--sidebar); }
+.brand-copy span { letter-spacing: .02em; text-transform: none; }
+.navigation-search { margin: 12px 14px 20px; display: grid; gap: 7px; color: var(--sidebar-text); font-size: 12px; }
+.navigation-search input { min-width: 0; width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid #607d77; border-radius: 7px; background: var(--sidebar-raised); color: var(--sidebar-text); font: inherit; }
+.navigation-search input::placeholder { color: #c3d5d1; }
+.navigation-search > span { font-weight: 650; }
+.nav-group { margin-block-end: 7px; }
+.nav-group-label { display: flex; align-items: center; justify-content: space-between; min-height: 42px; margin: 0; padding: 10px; font-size: 12px; letter-spacing: 0; text-transform: none; color: #c3d5d1; cursor: pointer; list-style: none; border-radius: 6px; }
+.nav-group-label::-webkit-details-marker { display: none; }
+.nav-group-label:hover { background: var(--sidebar-raised); color: white; }
+.nav-group[open] > .nav-group-label { color: white; }
+.nav-group[open] > .nav-group-label svg { transform: rotate(180deg); }
+.nav-item { min-height: 42px; border-radius: 6px; }
+.nav-item-label { font-size: 12px; font-weight: 550; }
+.nav-item--active { box-shadow: none !important; background: #245a50; color: #fff; }
+.nav-item--active .nav-item-label { font-weight: 750; }
+.nav-item--active .nav-status--foundation { background: #103d34; color: #eff8f5; }
+.nav-status { text-transform: none; letter-spacing: 0; font-size: 9px; }
+.navigation-empty { padding: 12px; color: var(--sidebar-text); line-height: 1.6; font-size: 13px; }
+.sidebar--collapsed .navigation-search { display: none; }
+.sidebar--collapsed .nav-group-label { display: none; }
+.studio-access-state { margin: 24px; padding: 24px; border: 1px solid var(--border); background: var(--surface-raised); border-radius: 12px; }
+.studio-access-state h1 { font-size: 1.35rem; }
+.breadcrumbs { min-width: 0; }
+.breadcrumbs strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workspace-area :is(main, .financial-reporting) { min-width: 0; }
+.workspace-area :is(.enterprise-finance, .financial-reporting) { max-width: 1500px; margin-inline: auto; padding: 28px; gap: 20px; }
+.workspace-area :is(.enterprise-finance, .financial-reporting) h1 { margin-block: 0 10px; font-size: 1.7rem; letter-spacing: -.025em; line-height: 1.3; }
+.workspace-area :is(.enterprise-finance, .financial-reporting) h2 { margin-block: 4px 12px; font-size: 1.12rem; line-height: 1.5; }
+.workspace-area :is(.enterprise-finance, .financial-reporting) p { max-inline-size: 75ch; line-height: 1.65; color: var(--text-secondary); }
+.workspace-area :is(.enterprise-finance, .financial-reporting) .panel { padding: 24px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 12px; box-shadow: none; }
+.workspace-area :is(.enterprise-finance, .financial-reporting) label { font-size: .875rem; line-height: 1.5; font-weight: 600; }
+.workspace-area :is(.enterprise-finance, .financial-reporting) :is(input, select, textarea) { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; min-height: 42px; padding: 9px 11px; }
+.workspace-area :is(.enterprise-finance, .financial-reporting) input::placeholder { color: var(--text-secondary); }
+.workspace-area :is(.enterprise-finance, .financial-reporting) button { font: inherit; font-size: .875rem; font-weight: 650; min-height: 42px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-raised); color: var(--text); padding: 9px 14px; cursor: pointer; }
+.workspace-area :is(.enterprise-finance, .financial-reporting) button:hover:not(:disabled) { border-color: var(--brand); background: var(--brand-soft); }
+.workspace-area :is(.enterprise-finance, .financial-reporting) button:disabled { opacity: .6; cursor: not-allowed; }
+.workspace-area :is(.enterprise-finance, .financial-reporting) button[type=submit] { background: var(--brand-strong); color: var(--surface-raised); }
+.workspace-area :is(.enterprise-finance, .financial-reporting) :is(th, td) { text-align: start; padding: 12px 14px; border-block-end: 1px solid var(--border); font-size: .875rem; font-variant-numeric: tabular-nums; }
+.workspace-area :is(.enterprise-finance, .financial-reporting) th { background: var(--surface-muted); font-weight: 650; color: var(--text-secondary); }
+.workspace-area :is(.enterprise-finance, .financial-reporting) tr:hover td { background: var(--surface-hover); }
+.workspace-area :is(.enterprise-finance, .financial-reporting) :is(code, dd) { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.workspace-area :is(.enterprise-finance, .financial-reporting) [role=alert] { color: var(--critical); border: 1px solid var(--critical); background: var(--critical-soft); padding: 16px; }
+[dir=rtl] .nav-group-label { letter-spacing: 0; }
+@media (max-width: 1060px) and (min-width: 841px) { .navigation-search { display: none; } .nav-group-label { font-size: 10px; padding-inline: 2px; } .nav-group-label > svg { display: none; } }
+@media (max-width: 840px) {
+  .sidebar--mobile-open { width: min(340px, 90vw); z-index: 100; }
+  .sidebar--mobile-open .navigation-search { display: grid; }
+  .sidebar--mobile-open .nav-group-label { display: flex; }
+  .sidebar--mobile-open .brand-copy, .sidebar--mobile-open .nav-item-label, .sidebar--mobile-open .nav-status { display: initial; }
+  .sidebar--mobile-open .collapse-button { display: none; }
+  .workspace-area :is(.enterprise-finance, .financial-reporting) { padding: 16px 12px 110px; gap: 16px; }
+  .workspace-area :is(.enterprise-finance, .financial-reporting) .panel { padding: 16px; }
+  .workspace-area :is(.enterprise-finance, .financial-reporting) h1 { font-size: 1.4rem; }
+  .breadcrumbs { max-width: 45vw; font-size: 11px; }
+  .breadcrumbs > span:first-child { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+
+.studio-session { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; min-height: 52px; padding: 10px 28px; border-block-end: 1px solid var(--border); background: var(--surface-raised); color: var(--text-secondary); font-size: 12px; }
+.studio-session-identity { display: flex; flex-wrap: wrap; gap: 5px 16px; min-width: 0; }
+.studio-session bdi { overflow-wrap: anywhere; }
+.studio-session button, .studio-scope-details summary { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; cursor: pointer; }
+.studio-session button { margin-inline-start: auto; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); padding: 8px 12px; font: inherit; }
+.studio-scope-details { position: relative; }
+.studio-scope-details > div { position: absolute; z-index: 30; inset-inline-start: 0; inline-size: min(320px, 80vw); max-height: 240px; overflow: auto; background: var(--surface-raised); border: 1px solid var(--border); padding: 16px; border-radius: 8px; }
+.studio-session-identity strong { color: var(--text); }
+@media(max-width:840px) { .studio-session { padding-inline: 12px; gap: 8px; } .studio-session button { font-size: 11px; } }
+
+.studio-page-frame { min-width: 0; }
+.studio-page-header { margin-block-end: 8px; }
+.studio-table-viewport { overflow: auto; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; scrollbar-gutter: stable; }
+.studio-table-viewport caption { padding: 12px 14px; text-align: start; font-weight: 650; }
+.workspace-area :where(input, select, textarea) { color: var(--text); background-color: var(--surface); border: 1px solid var(--border); font: inherit; accent-color: var(--brand); }
+.workspace-area :where(table) { font-variant-numeric: tabular-nums; text-align: start; }
+.workspace-area :where(th) { text-align: start; }
+
+.workspace-area .enterprise-finance .panel > button { justify-self: start; }
+.workspace-area .enterprise-finance .panel > button:only-child { justify-self: start; }
+
+@media(max-width:840px) { .mobile-dock { display: flex; } .mobile-dock > * { flex: 1; min-width: 0; } }

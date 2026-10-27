@@ -1,6 +1,7 @@
 """Exact paired FX ownership, cumulative carry and explained translation."""
 
 from dataclasses import replace
+from typing import Any
 
 import pytest
 
@@ -17,7 +18,7 @@ from reconforge.domain.intercompany_fx import (
 from tests.intercompany_fx_fixture import preparation, rate, source_fixture
 
 
-def equations():
+def equations() -> tuple[Any, ...]:
     source, context = source_fixture()
     recognition = recognition_equation(source["request"], context)
     cash_rates = {"seller": rate("1.3", "2026-10-04").payload("2026-10-04"),
@@ -31,7 +32,7 @@ def equations():
     return source, context, recognition, settlement, closing, cash_rates, closing_rates
 
 
-def translations():
+def translations() -> tuple[Any, ...]:
     source, context, initial, cash, closing, cash_rates, closing_rates = equations()
     result = {}
     for book in ("seller", "buyer"):

@@ -38,6 +38,213 @@ WAVE4_PREFIXES = (
     "/api/v1/customer-returns/", "/api/v1/procurement-commitments/",
     "/api/v1/operational-fx-tax/", "/api/v1/supplier-returns/",
 )
+# Exact new enterprise cohort, independent of runtime enumeration. Historical
+# counts and digests below remain untouched; an unlisted route is not excluded.
+def _enterprise_contracts() -> tuple[RouteAuthorizationContract, ...]:
+    rows: list[RouteAuthorizationContract] = []
+
+    def group(prefix: str, mode: str, permissions: tuple[str, ...], routes: tuple[tuple[str, str], ...]) -> None:
+        rows.extend(
+            RouteAuthorizationContract(method, "/api/v1" + prefix + path, mode, tuple(sorted(permissions)))
+            for method, path in routes
+        )
+
+    group(
+        "/crm/contracts",
+        "all",
+        ("sales.manage",),
+        (
+            ("GET", "/contracts/{contract_id}"),
+            ("GET", "/opportunities/{opportunity_id}"),
+            ("GET", "/quotations/{quote_id}"),
+            ("GET", "/subscriptions"),
+            ("GET", "/subscriptions/plans"),
+            ("GET", "/subscriptions/plans/{plan_id}"),
+            ("GET", "/subscriptions/{subscription_id}"),
+            ("POST", "/contracts/{contract_id}/resume"),
+            ("POST", "/contracts/{contract_id}/suspend"),
+            ("POST", "/contracts/{contract_id}/terminate"),
+            ("POST", "/opportunities"),
+            ("POST", "/quotations"),
+            ("POST", "/quotations/{quote_id}/convert"),
+            ("POST", "/subscriptions"),
+            ("POST", "/subscriptions/plans"),
+            ("POST", "/subscriptions/proration"),
+            ("POST", "/subscriptions/{subscription_id}/cancel"),
+        ),
+    )
+    group(
+        "/crm/contracts",
+        "all",
+        ("sales.approve",),
+        (("POST", "/contracts/{contract_id}/renew"), ("POST", "/quotations/{quote_id}/approve")),
+    )
+    group(
+        "/finance/consolidated-statements",
+        "any",
+        ("finance_core.manage", "finance_core.read"),
+        (("GET", "/runs"), ("GET", "/runs/{run_id}")),
+    )
+    group("/finance/consolidated-statements", "all", ("finance_core.manage",), (("POST", "/generate"),))
+    group(
+        "/hcm/leave",
+        "all",
+        ("people_project_payroll.personnel",),
+        (
+            ("GET", "/balances/{employee_id}/{leave_type}"),
+            ("GET", "/requests/{request_id}"),
+            ("POST", "/requests"),
+            ("POST", "/requests/{request_id}/unpaid-deduction"),
+            ("POST", "/requests/{request_id}/withdraw"),
+        ),
+    )
+    group(
+        "/hcm/leave",
+        "all",
+        ("people_project_payroll.manage",),
+        (
+            ("POST", "/balances"),
+            ("POST", "/balances/{employee_id}/{leave_type}/accrue-prorated"),
+            ("POST", "/balances/{employee_id}/{leave_type}/rollover"),
+            ("POST", "/requests/{request_id}/cancel"),
+        ),
+    )
+    group(
+        "/hcm/leave",
+        "all",
+        ("people_project_payroll.approve_time",),
+        (("POST", "/requests/{request_id}/approve"), ("POST", "/requests/{request_id}/reject")),
+    )
+    group(
+        "/intercompany/eliminations",
+        "any",
+        ("finance_core.manage", "finance_core.read"),
+        (("GET", "/profit-in-stock"), ("GET", "/runs"), ("GET", "/runs/{run_id}")),
+    )
+    group(
+        "/intercompany/eliminations",
+        "all",
+        ("finance_core.manage",),
+        (("POST", "/profit-in-stock"), ("POST", "/propose")),
+    )
+    group(
+        "/manufacturing/bom",
+        "all",
+        ("manufacturing_execution.read",),
+        (("GET", "/{item_id}"), ("POST", "/explode"), ("POST", "/net-requirements")),
+    )
+    group("/manufacturing/bom", "all", ("manufacturing_execution.manage",), (("POST", ""),))
+    group(
+        "/manufacturing/capacity",
+        "all",
+        ("manufacturing_execution.read",),
+        (("GET", "/calendars"), ("GET", "/calendars/{workcenter_id}"), ("GET", "/reservations")),
+    )
+    group(
+        "/manufacturing/capacity",
+        "all",
+        ("manufacturing_execution.manage",),
+        (
+            ("POST", "/calendars"),
+            ("POST", "/reservations"),
+            ("POST", "/reservations/reschedule"),
+            ("DELETE", "/reservations/{work_order_id}/{operation_sequence}"),
+        ),
+    )
+    group(
+        "/manufacturing/quality",
+        "all",
+        ("manufacturing_execution.read",),
+        (("GET", "/inspection-plans/{item_id}"), ("POST", "/evaluate")),
+    )
+    group(
+        "/manufacturing/quality",
+        "all",
+        ("manufacturing_execution.manage",),
+        (
+            ("POST", "/inspection-plans"),
+            ("POST", "/ncrs"),
+            ("POST", "/ncrs/{ncr_id}/disposition"),
+            ("POST", "/rework-orders"),
+            ("POST", "/rework-orders/{rework_order_id}/log-step"),
+            ("POST", "/rework-orders/{rework_order_id}/complete"),
+        ),
+    )
+    group(
+        "/manufacturing/mps",
+        "any",
+        ("manufacturing_supply_plan.manage", "manufacturing_supply_plan.read"),
+        (("GET", "/plans"), ("GET", "/plans/{plan_id}/{revision}"), ("GET", "/requisitions")),
+    )
+    group("/manufacturing/mps", "all", ("manufacturing_supply_plan.manage",), (("POST", "/compute"),))
+    group(
+        "/manufacturing/traceability",
+        "any",
+        ("manufacturing_execution.manage", "manufacturing_execution.read"),
+        (
+            ("GET", "/dispatches/{dispatch_id}"),
+            ("GET", "/genealogy/backward/{lot_id}"),
+            ("GET", "/genealogy/forward/{lot_id}"),
+            ("GET", "/lots/{lot_id}"),
+        ),
+    )
+    group(
+        "/manufacturing/traceability",
+        "all",
+        ("manufacturing_execution.manage",),
+        (("POST", "/dispatch"), ("POST", "/lots"), ("POST", "/steps/progress")),
+    )
+    group(
+        "/projects/billing",
+        "any",
+        ("project_time_billing.manage", "project_time_billing.read"),
+        (("GET", "/milestones/{milestone_id}"), ("GET", "/summary/{project_id}"), ("GET", "/tasks/{project_id}")),
+    )
+    group(
+        "/projects/billing",
+        "all",
+        ("project_time_billing.manage",),
+        (
+            ("POST", "/milestones"),
+            ("POST", "/milestones/{milestone_id}/verify"),
+            ("POST", "/rate-cards"),
+            ("POST", "/tasks"),
+            ("POST", "/time-logs"),
+        ),
+    )
+    group("/projects/billing", "all", ("project_time_billing.manage", "finance_core.manage"), (("POST", "/milestones/{milestone_id}/bill"),))
+    group("/projects/billing", "all", ("project_time_billing.read", "finance_core.read"), (("GET", "/finance/{binding_id}"),))
+    group("/projects/billing", "all", ("project_time_billing.review", "finance_core.validate"), (("POST", "/finance/{binding_id}/review"),))
+    group("/projects/billing", "all", ("project_time_billing.post", "finance_core.post"), (("POST", "/finance/{binding_id}/post"),))
+    group("/projects/billing", "all", ("project_time_billing.manage", "finance_core.manage", "finance_core.reverse"), (("POST", "/finance/{binding_id}/reversal"),))
+    group("/intercompany/eliminations", "all", ("finance_core.read",), (("GET", "/finance/{binding_id}"),))
+    group("/intercompany/eliminations", "all", ("finance_core.validate",), (("POST", "/finance/{binding_id}/review"),))
+    group("/intercompany/eliminations", "all", ("finance_core.post",), (("POST", "/finance/{binding_id}/post"),))
+    group("/intercompany/eliminations", "all", ("finance_core.manage", "finance_core.reverse"), (("POST", "/finance/{binding_id}/reversal"),))
+    group("/treasury", "all", ("finance_core.read",), (("GET", "/positions/{bank_account_id}"), ("POST", "/forecast")))
+    group("/treasury", "all", ("finance_core.manage",), (("POST", "/flows"), ("POST", "/positions")))
+    group("/ai/assistant", "any", ("ai.query", "finance_core.read"), (("POST", "/query"),))
+    return tuple(sorted(rows))
+
+
+ENTERPRISE_V1_CONTRACTS = _enterprise_contracts()
+ENTERPRISE_V1_KEYS = frozenset((row.method, row.path) for row in ENTERPRISE_V1_CONTRACTS)
+
+
+def _retained_before_enterprise(
+    contracts: tuple[RouteAuthorizationContract, ...],
+) -> tuple[RouteAuthorizationContract, ...]:
+    return tuple(row for row in contracts if (row.method, row.path) not in ENTERPRISE_V1_KEYS)
+
+
+def test_enterprise_v1_additions_have_exact_reviewed_permissions(tmp_path: Path) -> None:
+    contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
+    actual = tuple(row for row in contracts if (row.method, row.path) in ENTERPRISE_V1_KEYS)
+    assert len(ENTERPRISE_V1_KEYS) == len(ENTERPRISE_V1_CONTRACTS) == 90
+    assert actual == ENTERPRISE_V1_CONTRACTS
+
+
+
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -54,6 +261,19 @@ SERVER_BOUNDARY_MARKERS = (
     "server_identity_enabled",
 )
 HANDLER_BOUNDARY_HELPERS = {
+    "consolidated_financial_statements.py": frozenset({"_get_repository"}),
+    "crm_contracts.py": frozenset({"_repo"}),
+    "governed_assistant.py": frozenset({"enterprise_transaction"}),
+    "hcm_leave.py": frozenset({"_repo"}),
+    "intercompany_elimination.py": frozenset({"_get_repository"}),
+    "manufacturing_bom.py": frozenset({"_get_repository"}),
+    "manufacturing_capacity.py": frozenset({"_get_repository"}),
+    "manufacturing_quality.py": frozenset({"_repository"}),
+    "master_production_schedule.py": frozenset({"_get_repository"}),
+    "project_milestone_billing.py": frozenset({"_get_repo"}),
+    "shop_floor_traceability.py": frozenset({"_get_repo"}),
+    "treasury_liquidity.py": frozenset({"_repo"}),
+
     "access_administration.py": frozenset({"_service"}),
     "accounts.py": frozenset({"_server_scope"}),
     "consolidation_deferred_tax.py": frozenset({"_enforce_server_policy"}),
@@ -129,12 +349,14 @@ HANDLER_BOUNDARY_HELPERS = {
 def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Path) -> None:
     app = create_api_app(tmp_path / "unused.db")
     contracts = app.state.authorization_contracts
+    contracts = _retained_before_enterprise(contracts)
 
     retained = tuple(contract for contract in contracts if not contract.path.startswith(ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES + ENTERPRISE_M4_PREFIXES + ENTERPRISE_M7_PREFIXES))
     assert len(retained) == EXPECTED_ROUTE_COUNT
     assert authorization_inventory_digest(retained) == EXPECTED_DIGEST
     assert len(contracts) == EXPECTED_ROUTE_COUNT + EXPECTED_ENTERPRISE_M1_ROUTE_COUNT + EXPECTED_ENTERPRISE_M2_ROUTE_COUNT + EXPECTED_ENTERPRISE_M3_ROUTE_COUNT + EXPECTED_ENTERPRISE_M4_ROUTE_COUNT + EXPECTED_ENTERPRISE_M7_ROUTE_COUNT
-    assert app.state.authorization_contract_digest == authorization_inventory_digest(contracts)
+    assert app.state.authorization_contract_digest == authorization_inventory_digest(app.state.authorization_contracts)
+    assert len(app.state.authorization_contracts) == len(contracts) + len(ENTERPRISE_V1_CONTRACTS)
     assert {contract.mode for contract in contracts} == {"all", "any", "dynamic", "identity", "public", "scim"}
     assert [contract for contract in contracts if contract.mode == "dynamic"] == [
         next(
@@ -149,6 +371,7 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
 
 def test_enterprise_route_cohorts_retain_historical_m1_and_classify_exact_m3_addition(tmp_path: Path) -> None:
     contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
+    contracts = _retained_before_enterprise(contracts)
     m1 = tuple(contract for contract in contracts if contract.path.startswith(ENTERPRISE_M1_PREFIXES)
                and (contract.method, contract.path) not in ENTERPRISE_M3_EXACT_ROUTES)
     m3 = tuple(contract for contract in contracts if contract.path.startswith(ENTERPRISE_M3_PREFIXES)
@@ -218,6 +441,7 @@ def test_enterprise_route_cohorts_retain_historical_m1_and_classify_exact_m3_add
 
 def test_fixed_monetary_routes_preserve_all_620_retained_contracts(tmp_path: Path) -> None:
     contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
+    contracts = _retained_before_enterprise(contracts)
     retained = tuple(item for item in contracts if not item.path.startswith(MONETARY_M7_PREFIXES))
     assert len(retained) == 620
     assert authorization_inventory_digest(retained) == "9ef5a1c3f1289de6e1a85fbbaa42b784e1dfe95f17cec3c6ad060c7f67830dfe"
@@ -255,6 +479,7 @@ def test_wave3_routes_require_exact_authority_and_preserve_all_accepted_route_co
     """Bind the three added dependencies without weakening the retained 429 routes."""
     contracts = tuple(contract for contract in create_api_app(tmp_path / "unused.db").state.authorization_contracts
                       if not contract.path.startswith(WAVE4_PREFIXES + WAVE5_PREFIXES))
+    contracts = _retained_before_enterprise(contracts)
     expected = (
         RouteAuthorizationContract(
             "GET", "/api/v1/fixed-assets/plans/{plan_id}/evidence", "all", ("finance_core.read",),
@@ -282,6 +507,7 @@ def test_wave3_routes_require_exact_authority_and_preserve_all_accepted_route_co
 
 def test_wave4_source_routes_preserve_accepted_authority_and_require_exact_permissions(tmp_path: Path) -> None:
     contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
+    contracts = _retained_before_enterprise(contracts)
     retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE4_PREFIXES + WAVE5_PREFIXES + ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES + ENTERPRISE_M4_PREFIXES + ENTERPRISE_M7_PREFIXES))
     assert len(retained) == 432
     assert authorization_inventory_digest(retained) == "1444692a691300fa3bd63fef6ab70f1c02d195a0b1b9b15b7673b58c847beb76"
@@ -398,6 +624,7 @@ def test_enterprise_sensitive_contract_refuses_adjacent_authority(
     from dataclasses import replace
 
     contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
+    contracts = _retained_before_enterprise(contracts)
     changed = tuple(replace(item, permissions=tuple(permission for permission in item.permissions if permission != required))
                     if (item.method, item.path) == (method, path) else item for item in contracts)
     assert changed != contracts
@@ -407,6 +634,7 @@ def test_enterprise_sensitive_contract_refuses_adjacent_authority(
 
 def test_wave5_additions_preserve_every_accepted_wave4_route(tmp_path: Path) -> None:
     contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
+    contracts = _retained_before_enterprise(contracts)
     retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE5_PREFIXES + ENTERPRISE_M1_PREFIXES + ENTERPRISE_M2_PREFIXES + ENTERPRISE_M3_PREFIXES + ENTERPRISE_M4_PREFIXES + ENTERPRISE_M7_PREFIXES))
     assert len(retained) == 459
     assert authorization_inventory_digest(retained) == "f41b3007bbcc9cc1285cc836be0cb2e81d2e2c4e03713f83f6d245db27fccc9a"

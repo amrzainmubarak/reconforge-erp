@@ -1,3 +1,11 @@
+## FX and responsive navigation continuation — 2026-10-27
+
+**RELEASE BLOCKED.** GitHub on entry `8942e56f53c470a937a6995a3c9f0b05661ef99d` passed CodeQL but exposed a missing backlog dependency and product restore/client-version mismatch; the dependency is restored and the product native job now installs and verifies PostgreSQL 16 client tools. Hosted qualification of those corrections is pending.
+
+Independent verification reproduced an inverse-FX refusal in the existing grouped adapter and signed-zero drift in v1. ADR0879 introduces an independent, bounded, one-to-one experimental FX domain path. The original runtime, saved data and v1/v2 replay are unchanged; worker integration, persistence, PostgreSQL recovery and end-to-end finance remain open. Adversarial review rejected an initial collision-prone draft; a later revision fails closed if rounding changes candidate eligibility or ranking and binds source, policy and rate evidence.
+
+The real Studio shell closes the mobile drawer on desktop transition, restores scrolling and moves focus to a visible permitted control when needed. Entering mobile transfers focus from an inert sidebar to the menu; hidden search filters are cleared when the sidebar becomes a rail. Bilingual browser tests and independent focused review passed before integration; source-frozen verification and hosted CI are required.
+
 ## Hosted environment and synthetic fixture follow-up — 2026-10-27
 
 **RELEASE BLOCKED.** On `a1e73b1b9a0b8997bee917f44cb7fb2a5975936c`, native PostgreSQL nine tests and authenticated ERP (one browser) and customer returns (three browsers) plus native restore passed on source-frozen runs. That SHA is a checkpoint, not the current release candidate. New hosted server-boundary shards failed before tests because ubuntu-latest selected Ubuntu 26.04 without postgresql-client-16; the job is now pinned to ubuntu-24.04 while preserving the major-version verifier. Hosted qualification is pending.

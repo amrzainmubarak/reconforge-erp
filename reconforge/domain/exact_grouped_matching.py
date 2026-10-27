@@ -501,8 +501,11 @@ def match_exact_groups_fx_v2(
                 inverse = selected.quote_currency == record.currency
                 direction = "inverse" if inverse else "direct"
                 exact_rate = Fraction(selected.rate)
-                exact_amount = exact_amount / exact_rate if inverse else exact_amount * exact_rate
-                exact_fee = exact_fee / exact_rate if inverse else exact_fee * exact_rate
+                # Build the exact reciprocal from integer components; no float or
+                # context-rounded Decimal division is involved.
+                factor = Fraction(exact_rate.denominator, exact_rate.numerator) if inverse else exact_rate
+                exact_amount *= factor
+                exact_fee *= factor
                 amount = _fx_amount(record.amount, selected.rate, inverse=inverse,
                                     precision=target.spec.minor_units, rounding=target.spec.rounding_policy)
                 fee = _fx_amount(record.fee, selected.rate, inverse=inverse,

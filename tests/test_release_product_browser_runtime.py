@@ -31,7 +31,7 @@ from tests.test_postgres_enterprise_finance_bridge import bridge_runtime
 from tests.test_postgres_inventory_receipt_posting import receipt_database
 from tests.test_postgres_people_project_payroll import people, personnel_database
 
-OUT = Path("output/release-blocker-20261025/agent-c")
+OUT = Path(os.environ.get("RECONFORGE_RELEASE_PRODUCT_OUT", "output/release-blocker-20261025/agent-c"))
 
 
 def seed(runtime: Any) -> dict[str, str]:
@@ -55,7 +55,15 @@ def seed(runtime: Any) -> dict[str, str]:
         crm.save_quotation(approved)
         crm.save_contract(convert_quote_to_contract(approved, contract_id="C-BROWSER", organization_id="org", start_date="2026-10-01", end_date="2026-12-31", billing_frequency="monthly", as_of_date="2026-10-25"))
         PostgresProjectMilestoneBillingRepository(connection, runtime.base.tenant).save_milestone(ProjectMilestone("work", "MS-BROWSER", "PROJECT", "CONTRACT-LINE", "Synthetic browser deliverable", 3001, "USD", "2026-10-25"), actor_label=actor.username, origin=runtime.scope)
-    return {"tenant": runtime.base.tenant, "password": runtime.base.password, "employee_id": employee["id"], "workspace": "work", "organization": "org", "entity": "entity"}
+    return {"tenant": runtime.base.tenant, "employee_id": employee["id"], "workspace": "work", "organization": "org", "entity": "entity"}
+
+
+def write_public_fixture(directory: Path, fixture: dict[str, str]) -> None:
+    """Persist only non-secret identifiers needed by the browser tests."""
+    allowed = {"tenant", "employee_id", "workspace", "organization", "entity", "restricted_username"}
+    if not fixture.keys() <= allowed:
+        raise ValueError("browser fixture contains unexpected fields")
+    (directory / "browser-fixture.json").write_text(json.dumps(fixture, indent=2), encoding="utf-8")
 
 
 def main() -> None:
@@ -71,9 +79,12 @@ def main() -> None:
     personnel = personnel_database.__wrapped__(native)
     try:
         private = next(personnel)
-        runtime = bridge_runtime.__wrapped__(people.__wrapped__(private))
+        password = os.environ.get("RECONFORGE_RELEASE_PRODUCT_TEST_PASSWORD")
+        if not password or not password.startswith("Synthetic-browser-") or len(password) < 50:
+            raise RuntimeError("a fresh synthetic browser test password is required")
+        runtime = bridge_runtime.__wrapped__(people.__wrapped__(private, test_password=password))
         fixture = seed(runtime)
-        (OUT / "browser-fixture.json").write_text(json.dumps(fixture, indent=2), encoding="utf-8")
+        write_public_fixture(OUT, fixture)
         with tempfile.TemporaryDirectory(prefix="reconforge-release-product-tls-") as raw:
             directory = Path(raw)
             certificate, key = create_localhost_certificate(directory)

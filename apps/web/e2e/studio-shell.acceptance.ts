@@ -5,13 +5,15 @@ import { fileURLToPath } from "node:url";
 import { translate } from "../src/i18n";
 
 const evidence = process.env.RECONFORGE_STUDIO_SHELL_OUT ?? fileURLToPath(new URL("../../../output/assurance-20261026/studio-shell/", import.meta.url));
-const fixture = () => JSON.parse(readFileSync(`${evidence}/browser-fixture.json`, "utf8")) as { tenant: string; password: string; restricted_username: string };
+const fixture = () => JSON.parse(readFileSync(`${evidence}/browser-fixture.json`, "utf8")) as { tenant: string; restricted_username: string };
+const testPassword = process.env.RECONFORGE_RELEASE_PRODUCT_TEST_PASSWORD;
+if (!testPassword) throw new Error("Missing synthetic browser test password");
 async function login(page: Page, username: string) {
   await page.goto("/enterprise-finance");
   const form = page.getByRole("form", { name: "Sign in", exact: true });
   await form.getByLabel("Tenant", { exact: true }).fill(fixture().tenant);
   await form.getByLabel("Username", { exact: true }).fill(username);
-  await form.getByLabel("Password", { exact: true }).fill(fixture().password);
+  await form.getByLabel("Password", { exact: true }).fill(testPassword);
   const response = page.waitForResponse(value => new URL(value.url()).pathname === "/api/v1/auth/browser/login");
   await form.getByRole("button", { name: "Sign in", exact: true }).click();
   expect((await response).status()).toBe(200);
@@ -23,7 +25,7 @@ test("actual authenticated App financial table, responsive navigation, themes, R
   test.setTimeout(180000); mkdirSync(evidence, { recursive: true });
   await login(page, "maker");
   const stepUp = page.getByRole("form", { name: "Confirm identity for financial commands" });
-  await stepUp.getByLabel("Password", { exact: true }).fill(fixture().password);
+  await stepUp.getByLabel("Password", { exact: true }).fill(testPassword);
   const reauthenticated = page.waitForResponse(value => new URL(value.url()).pathname === "/api/v1/auth/step-up");
   await stepUp.getByRole("button", { name: "Confirm identity", exact: true }).click(); expect((await reauthenticated).status()).toBe(200);
   const scope = page.getByRole("form", { name: "Select financial scope" });

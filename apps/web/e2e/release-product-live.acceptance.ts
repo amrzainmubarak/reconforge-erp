@@ -2,11 +2,14 @@ import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-interface Fixture { tenant: string; password: string; employee_id: string }
-const fixture = (): Fixture => JSON.parse(readFileSync(fileURLToPath(new URL("../../../output/release-blocker-20261025/agent-c/browser-fixture.json", import.meta.url)), "utf8"));
+interface Fixture { tenant: string; employee_id: string }
+const testPassword = process.env.RECONFORGE_RELEASE_PRODUCT_TEST_PASSWORD;
+if (!testPassword) throw new Error("Missing synthetic browser test password");
+const evidence = process.env.RECONFORGE_RELEASE_PRODUCT_OUT ?? fileURLToPath(new URL("../../../output/release-blocker-20261025/agent-c", import.meta.url));
+const fixture = (): Fixture => JSON.parse(readFileSync(`${evidence}/browser-fixture.json`, "utf8"));
 async function login(page: Page, user: string) {
   const source = fixture();
-  await page.getByLabel("Tenant ID", { exact: true }).fill(source.tenant); await page.getByLabel("Username", { exact: true }).fill(user); await page.getByLabel("Password", { exact: true }).fill(source.password);
+  await page.getByLabel("Tenant ID", { exact: true }).fill(source.tenant); await page.getByLabel("Username", { exact: true }).fill(user); await page.getByLabel("Password", { exact: true }).fill(testPassword);
   const response = page.waitForResponse(value => new URL(value.url()).pathname === "/api/v1/auth/browser/login");
   await page.getByRole("button", { name: "Sign in", exact: true }).click(); expect((await response).status()).toBe(200);
   const step = page.waitForResponse(value => new URL(value.url()).pathname === "/api/v1/auth/step-up"); await page.getByRole("button", { name: "Confirm privileged access" }).click(); expect((await step).status()).toBe(200);

@@ -90,10 +90,11 @@ def receipt_database() -> Iterator[tuple[str, str]]:
             assert control.execute("SELECT 1 FROM pg_database WHERE datname=%s", (database,)).fetchone() is None
 
 
-def create_receipt_runtime(receipt_database: tuple[str, str]) -> ReceiptRuntime:
+def create_receipt_runtime(receipt_database: tuple[str, str], *, test_password: str | None = None) -> ReceiptRuntime:
     import psycopg
     admin_dsn, app_dsn = receipt_database
-    tenant, password = "irp-" + uuid4().hex[:12], "Synthetic-IRP-" + uuid4().hex
+    tenant = "irp-" + uuid4().hex[:12]
+    password = test_password if test_password is not None else "Synthetic-IRP-" + uuid4().hex
     with psycopg.connect(admin_dsn) as admin:
         admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES(%s,'Synthetic IRP')", (tenant,))
     factory = PostgresConnectionFactory(PostgresSettings(dsn=app_dsn, require_tls=False))

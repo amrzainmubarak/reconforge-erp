@@ -101,3 +101,30 @@ test("resizing to mobile does not move focus from a visible header control", asy
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(language).toBeFocused();
 });
+
+for (const [initial, next] of [["en", "ar"], ["ar", "en"]] as const) {
+  test(`desktop keeps search results after ${initial} to ${next} language change`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    if (initial === "ar") await page.getByTestId("locale-toggle").click();
+    const search = page.getByRole("searchbox", { name: translate(initial, "navFilter") });
+    await search.fill(translate(initial, "enterpriseFinance"));
+    await expect(page.getByRole("navigation", { name: translate(initial, "primaryNavigation") }).getByRole("button", { name: translate(initial, "enterpriseFinance") })).toBeVisible();
+    await page.getByTestId("locale-toggle").click();
+    await expect(page.getByRole("searchbox", { name: translate(next, "navFilter") })).toHaveValue(translate(initial, "enterpriseFinance"));
+    await expect(page.getByRole("navigation", { name: translate(next, "primaryNavigation") }).getByRole("button", { name: translate(next, "enterpriseFinance") })).toBeVisible();
+  });
+}
+
+test("mobile drawer keeps an English search useful after switching to Arabic", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.getByRole("banner").getByRole("button", { name: translate("en", "menu") }).click();
+  await page.getByRole("searchbox", { name: translate("en", "navFilter") }).fill(translate("en", "enterpriseFinance"));
+  await page.getByRole("dialog", { name: translate("en", "primaryNavigation") }).getByRole("button", { name: translate("en", "closeDialog") }).click();
+  await page.getByTestId("locale-toggle").click();
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await page.getByRole("banner").getByRole("button", { name: translate("ar", "menu") }).click();
+  await expect(page.getByRole("searchbox", { name: translate("ar", "navFilter") })).toHaveValue(translate("en", "enterpriseFinance"));
+  await expect(page.getByRole("navigation", { name: translate("ar", "primaryNavigation") }).getByRole("button", { name: translate("ar", "enterpriseFinance") })).toBeVisible();
+});

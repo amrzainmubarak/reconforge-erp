@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from "react";
 
-import type { MessageKey } from "../i18n";
+import { translate as translateLocale, type MessageKey } from "../i18n";
 import type { StudioPage } from "../types";
 import { isLiveOperationalPage, operationalPageLabel } from "../studio-pages";
 
@@ -186,7 +186,16 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
   }
-  const filteredGroups = navigationGroups.map(group => ({ ...group, items: group.items.filter(item => (!item.page || canView(item.page)) && `${translate(item.label)} ${translate(group.label)} ${item.key}`.toLocaleLowerCase().includes(query.toLocaleLowerCase().trim())) })).filter(group => group.items.length);
+  const searchQuery = query.toLocaleLowerCase().trim();
+  const filteredGroups = navigationGroups.map(group => {
+    const permitted = group.items.filter(item => !item.page || canView(item.page));
+    if (!permitted.length) return { ...group, items: permitted };
+    const groupNames = `${translate(group.label)} ${translateLocale("en", group.label)} ${translateLocale("ar", group.label)}`;
+    return { ...group, items: permitted.filter(item => {
+      const labels = `${translate(item.label)} ${translateLocale("en", item.label)} ${translateLocale("ar", item.label)} ${groupNames} ${item.key}`;
+      return labels.toLocaleLowerCase().includes(searchQuery);
+    }) };
+  }).filter(group => group.items.length);
   const liveOperationalPage = isLiveOperationalPage(activePage as StudioPage) || ["crmSubscriptions", "projectMilestones", "governedAssistant"].includes(activePage);
   return (
     <aside inert={viewport.mobile && !mobileOpen} ref={drawer} role={mobileOpen ? "dialog" : undefined} aria-modal={mobileOpen ? true : undefined} aria-label={translate("primaryNavigation")} onKeyDown={trapDrawer} className={`sidebar ${rail ? "sidebar--collapsed" : ""} ${mobileOpen ? "sidebar--mobile-open" : ""}`}>

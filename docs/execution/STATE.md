@@ -1,3 +1,7 @@
+## 2026-10-28 — worker and source-chain investigation
+
+**RELEASE BLOCKED.** [Unknown worker amount](WORKER_UNKNOWN_AMOUNT_2026-10-28.md) has focused synthetic policy and restricted PostgreSQL coverage; known caller-supplied amounts, historical exposure and `process_once` denial isolation remain open. [Claim authority](RECONCILIATION_CLAIM_AUTHORITY_GAPS_2026-10-28.md), [exposure replay](RECONCILIATION_EXPOSURE_REPLAY_2026-10-28.md), and [sales source gaps](SALES_CYCLE_SOURCE_GAPS_2026-10-28.md) retain observed limits. Hosted Python 3.12 on `c44a7111` failed on missing backlog `depends_on`; fields are corrected and five focused contract checks pass locally, with full hosted requalification required.
+
 ## 2026-10-28 — bounded quality direct-update repair
 
 **RELEASE BLOCKED.** [ADR0881](../adr/0881-postgres-quality-direct-update-authority.md) and [the evidence](QUALITY_DIRECT_AUTHORITY_2026-10-28.md) describe a restricted PostgreSQL direct-update guard, replay and rollback tests. This does not bind repository callers to authenticated identities, isolate entities, or post inventory/GL effects. The full cycle and release gates remain open.

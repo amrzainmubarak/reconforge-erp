@@ -95,3 +95,30 @@ print("unrounded difference:", (Fraction("1.01") - Fraction("1.00")) * Fraction(
 
 This illustrates the effect of conversion rounding, not a claim that unrounded
 comparison is automatically the correct business policy for every FX workflow.
+
+## Continuation observations
+
+On the later worktree based on `dfc9ad97`, a task-owned synthetic demo output
+completed in 7.57 s with Python 3.14.6. Python 3.12.13 and setuptools 84.1.0
+were already available in a retained environment; `python -m build
+--no-isolation --outdir output/erp-vision-20261028/package-312` passed in
+49.15 s. The build backend regenerated ignored egg-info and removed the
+`build/bdist.win-amd64/wheel` intermediate; its prior contents were not
+captured. The selected package output directory was new.
+
+The local Docker build with tag `reconforge:baseline-erp-20261028-dfc9ad97`
+completed in 617.48 s, followed by `docker run --rm --network none ...
+reconforge doctor` in 11.79 s with 0 validation errors and 10 warnings. The
+build context had the `dfc9ad97` runtime and an uncommitted msgpack lock update;
+it is not a build of the later financial/quality changes or a release artifact.
+The local build and doctor logs are retained in `output/erp-vision-20261028/`.
+A separate local 3.11 install stalled during network download and was
+interrupted; hosted 3.11 audit success on `35edcd2f` is a separate result.
+
+Hosted `test (3.12)` on `c44a7111` completed with 10,325 passed, 665 skipped
+and one failure: `test_backlog_dependencies_are_closed_and_phase_ordered`
+raised `KeyError: depends_on` on tasks added in this continuation. The missing
+fields are corrected in the successor; the unchanged contract test subsequently
+passed locally on Python 3.12 (5 passed, 2.28 s). The hosted failure and missing
+publication artifact remain historical evidence; rerun the complete hosted
+suite on the successor rather than treating the focused test as a replacement.

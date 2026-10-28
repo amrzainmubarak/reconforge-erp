@@ -21,13 +21,29 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-WORKER-UNKNOWN-AMOUNT-20261028
+    depends_on: [AMR-RECONCILIATION-EXPOSURE-20261028]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/WORKER_UNKNOWN_AMOUNT_2026-10-28.md
+    note: "Explicit unknown guard has bounded local and native tests; bind known caller amounts to authoritative claim snapshot, isolate denied jobs, prove production grants and final-source CI."
+  - id: AMR-RECONCILIATION-EXPOSURE-20261028
+    depends_on: [AMR-EXACT-GROUPED-MATCHING-20261027]
+    status: blocked
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_EXPOSURE_REPLAY_2026-10-28.md
+    note: "Exact exposure under Decimal context reproduced. Preserve legacy idempotency through full canonical input comparison and versioned currency policy; worker currently trusts stored legacy exposure. Native concurrent and restore proofs remain open."
   - id: AMR-MSGPACK-AUDIT-20261028
+    depends_on: []
     status: in_progress
     priority: P0
     release_requirement: required
     report: docs/execution/SECURITY_CONTINUATION_2026-10-28.md
     note: "Upgrade locked msgpack 1.2.1 to 1.2.3 after CVE-2026-114613; 3.12 local audit passed; verify 3.11 and hosted successor without advisory exceptions."
   - id: AMR-ERP-VISION-BASELINE-20261028
+    depends_on: []
     status: in_progress
     priority: P0
     release_requirement: required

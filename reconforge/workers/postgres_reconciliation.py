@@ -39,7 +39,11 @@ from reconforge.utils.money import (
     InvalidAmountError,
     parse_exact_amount,
 )
-from reconforge.workers.policy import WorkerPolicyContextSupplier, require_service_worker_policy
+from reconforge.workers.policy import (
+    UnknownWorkerPolicyAmount,
+    WorkerPolicyContextSupplier,
+    require_service_worker_policy,
+)
 
 
 def _stable_partition_key(values: Sequence[object]) -> str:
@@ -828,7 +832,7 @@ class PostgresReconciliationWorker:
         workspace_id: str | None = None,
         entity_id: str | None = None,
         request_id: str = "",
-        amount: Decimal | None = None,
+        amount: Decimal | None | UnknownWorkerPolicyAmount = None,
         policy_permission: str | None = None,
         error_factory: Callable[[str], Exception] = PostgresReconciliationWorkerError,
     ) -> None:
@@ -891,7 +895,7 @@ class PostgresReconciliationWorker:
         tenant_id: str,
         *,
         request_id: str = "",
-        amount: Decimal | None = None,
+        amount: Decimal | None | UnknownWorkerPolicyAmount = None,
         policy_permission: str | None = None,
     ) -> None:
         """Backward-compatible tenant-lane policy entry point."""
@@ -1155,7 +1159,8 @@ class PostgresReconciliationWorker:
     ) -> ReconciliationProcessResult:
         """Claim and execute one run using fresh connections for each phase."""
 
-        self._authorize_tenant(tenant_id, request_id=request_id, amount=policy_amount)
+        operation_amount = UnknownWorkerPolicyAmount.TOKEN if policy_amount is None else policy_amount
+        self._authorize_tenant(tenant_id, request_id=request_id, amount=operation_amount)
         requested_workspace = str(workspace_id).strip() if workspace_id is not None else None
         requested_workspace = requested_workspace or None
         requested_entity = str(entity_id).strip() if entity_id is not None else None
@@ -1190,7 +1195,7 @@ class PostgresReconciliationWorker:
                     workspace_id=workspace_scope,
                     entity_id=entity_scope,
                     request_id=request_id,
-                    amount=policy_amount,
+                    amount=operation_amount,
                     error_factory=PostgresReconciliationPolicyDenied,
                 )
                 repository = PostgresReconciliationRepository(connection)

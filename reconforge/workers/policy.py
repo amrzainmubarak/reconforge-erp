@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import replace
 from decimal import Decimal
+from enum import Enum
 
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext, audit_policy_decision
 
@@ -18,6 +19,12 @@ WorkerPolicyContextSupplier = Callable[[str, str | None, str | None], PolicyEval
 WorkerPolicyHierarchyContextSupplier = Callable[
     [str, str | None, str | None, str | None], PolicyEvaluationContext
 ]
+
+
+class UnknownWorkerPolicyAmount(Enum):
+    """Operation amount is unknown and must not inherit a supplier's amount."""
+
+    TOKEN = "unknown"
 
 
 def require_service_worker_policy(
@@ -36,13 +43,15 @@ def require_service_worker_policy(
     error_factory: Callable[[str], Exception],
     policy: CentralPolicyEngine | None = None,
     request_id: str = "",
-    amount: Decimal | None = None,
+    amount: Decimal | None | UnknownWorkerPolicyAmount = None,
 ) -> None:
     """Require a non-human central-policy decision for an exact worker scope.
 
     The one-argument supplier remains supported for legacy tenant-only workers.
     A workspace/entity scope requires the explicit three-argument supplier so a
     tenant-wide identity cannot accidentally process a narrower lane.
+    Omitted and None amounts preserve the existing supplier contract; use the
+    explicit unknown sentinel when a specific operation has no known amount.
     """
 
     if policy_context_supplier is None and policy_context_scope_supplier is None and policy_context_hierarchy_supplier is None:
@@ -73,7 +82,7 @@ def require_service_worker_policy(
         raise error_factory("Unable to resolve worker policy context safely.") from exc
     if amount is not None:
         try:
-            context = replace(context, amount=amount)
+            context = replace(context, amount=None if isinstance(amount, UnknownWorkerPolicyAmount) else amount)
         except (TypeError, ValueError) as exc:
             raise error_factory("Worker policy amount is invalid.") from exc
     if context.principal_type != "service_account":
@@ -116,5 +125,6 @@ def require_service_worker_policy(
 __all__ = [
     "WorkerPolicyContextSupplier",
     "WorkerPolicyHierarchyContextSupplier",
+    "UnknownWorkerPolicyAmount",
     "require_service_worker_policy",
 ]

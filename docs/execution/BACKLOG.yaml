@@ -21,6 +21,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-ERP-VISION-BASELINE-20261028
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/BASELINE_REFRESH_2026-10-28.md
+    note: "Proposed ADR0880 and initial scorecard; full snapshot baseline, supported local environments, native restore, independent cycles and final-source CI remain open."
+  - id: AMR-GROUPED-FX-CONTAINMENT-20261028
+    depends_on: [AMR-EXACT-GROUPED-MATCHING-20261027]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/STATE.md
+    note: "Synthetic nested-context rounding collision reproduced; draft worker fail-closed guard breaks existing v1 FX test. Versioned migration, historical checkpoint handling, direct paths and native validation remain unresolved."
   - id: AMR-QUALITY-ENTITY-SOURCE-20261027
     depends_on: [AMR-ENTERPRISE-INTEGRATION-STUDIO-20261026]
     status: blocked

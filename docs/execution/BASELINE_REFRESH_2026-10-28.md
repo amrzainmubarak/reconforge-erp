@@ -1,0 +1,97 @@
+# Source-bound baseline refresh — 2026-10-28
+
+Entry: `b1ae1b5e7aad0cc9893bfda65ff44b422aaa279b`, branch
+`amr/assurance-prerequisite-repair-20261025`. On entry the untracked `.serena/`,
+`node_modules/`, `ERP_WORLD_CLASS_EXECUTION_MASTER_PROMPT_AR.md` and
+`INDEPENDENT_COMPETITIVE_REVIEW_AND_AGENT_PROMPT_2026-10-28.md` were preserved.
+Working branch: `amr/erp-vision-safety-baseline-20261028`. This is a partial
+baseline, not a clean release qualification. Existing evidence and recovery
+files remain in place. Output and ignored build metadata can be affected by
+the tools themselves; `build` regenerated ignored egg-info.
+
+Environment: Windows, Python 3.14.6, Node 26.3.0, npm 11.16.0, Docker CLI
+29.9.2. CI specifies Python 3.11/3.12 and Node 22; local results do not replace
+those environments. Entry tracked inventory: 901 files under `reconforge/`,
+990 under `tests/`, 156 under `alembic/versions/`, 441 under `apps/web/`, and
+10 workflow files. Counts include non-Python files and are not test counts.
+The architecture includes domain, application, infrastructure, API, worker,
+connector, auth, rules, evidence, DB and Studio areas. Existing detailed
+inventory and migration evidence remain historical snapshots, not exhaustive
+fresh validation of all 156 revisions or generated contracts.
+
+| Command | Observed result | Duration / limitation |
+| --- | --- | --- |
+| `python -m ruff check . --no-cache` | pass | 2.10 s; no cache variant |
+| `python -m mypy reconforge` | pass, 900 source files | 2.61 s |
+| `python -m bandit -q -r reconforge` | exit 0; nosec parsing warnings | Static scan only |
+| `git diff --check` | pass | 2.06 s at entry; untracked files excluded |
+| `npm --prefix apps/web run typecheck` | pass | 8.38 s |
+| `npm --prefix apps/web run test:run` | fail: 110 suites failed before collection with temporary `client` path ENOENT; 8 suites / 118 tests passed | 90.67 s; 110 suites' behavior unknown |
+| `python -m build --no-isolation` | fail: missing `setuptools>=84.1.0`; installed 83.0.0 | 6.00 s; retry in a separately prepared locked build environment |
+| `python -m pip_audit` | incomplete: HTTPS read timeout reaching PyPI | No vulnerability-free conclusion; retry with accessible index |
+| `reconforge doctor` | pass | Local environment only |
+| `reconforge validate examples/sample_data` | pass, 0 errors and 10 warnings | Synthetic sample only |
+| `python -m pytest` | interrupted at 4% after about 3m18s | Source changed during execution; no full-suite result established; services required by skipped tests remain separate |
+| `npm --prefix apps/web ci` | not run | Existing dependencies preserved; run in an isolated prepared environment |
+| Web build, E2E; CLI demo; Docker build/run | not yet run | Run in a safe isolated output location and supported runtime; do not infer success |
+| Real PostgreSQL migration/restore and restricted-role probe | not run locally | Test DSN and owned service required; do not use unrelated existing containers |
+
+Hosted [draft PR 143](https://github.com/amrzainmubarak/reconforge-erp/pull/143)
+reported successful Python 3.11/3.12, web, native shards, Docker and CodeQL
+checks on exactly the entry SHA when queried on 2026-10-28; some checks were
+skipped, including the exact-image SBOM/vulnerability/license gate. These
+results do not apply to a changed source tree or prove release acceptance.
+
+The current NCR repository and RLS are workspace-scoped and unchanged since the
+historical cross-entity PostgreSQL probe at `b8374025`; that probe was not rerun
+on this HEAD. Existing five-cycle evidence is partial. No current benchmark,
+external review, legal claim, or production approval is inferred.
+
+Command output was observed in tool sessions, not retained as raw log files;
+durations above are measured where available and estimated where explicitly
+stated. Bandit, audit, doctor and validate each took over 10 seconds; more
+precise timing was not captured. The initially attempted mypy variant using
+`--cache-dir NUL` failed internally; the unmodified command then passed.
+
+An adapter-level synthetic EUR/USD FX scenario gave `Matched` after rounding
+both conversions to USD 0.10 although exact converted inputs differ by 0.001
+USD. Whether that is an acceptable business decision depends on the explicit
+rounding policy, which v1 does not bind for replay. The local draft guard
+refused FX and passed 31 focused cases, but an existing domain-diverse scale
+test failed because it expects FX success; four native scale cases were skipped
+without PostgreSQL. Independent review identified the compatibility break,
+unverified legacy checkpoints and direct strategy entry points. The draft patch
+and tests are retained under `output/erp-vision-20261028/` and are not applied
+to runtime source. Resolve the versioned policy and migration before integration.
+After removing that draft, the original source's grouped scale, worker
+conservation and adapter tests returned 36 passed and 4 PostgreSQL prerequisite
+skips (`python -m pytest -o addopts='' tests/test_postgres_grouped_matching_scale.py
+tests/test_grouped_worker_conservation_20261027.py tests/test_postgres_grouped_matching.py -q`,
+1.00 s reported by pytest). This confirms neither FX correctness nor native
+worker recovery. Ruff passed again on the restored runtime source.
+
+Reproduce the adapter observation from the repository root (synthetic data):
+
+```python
+from decimal import Decimal
+from fractions import Fraction
+from reconforge.workers.postgres_grouped_matching import PostgresGroupedMatchingAdapter
+from reconforge.workers.postgres_reconciliation import ReconciliationExecutionContext
+
+def record(identity, amount):
+    return {"source_id": identity, "amount_decimal": Decimal(amount),
+            "attributes_json": {"date": "2026-08-06", "currency": "EUR"}}
+
+context = ReconciliationExecutionContext(
+    run={"rule_json": {"grouped_matching_mode": "portfolio", "date_window_days": 0,
+        "amount_tolerance": "0", "target_currency": "USD", "fx_rates": [{
+            "base_currency": "EUR", "quote_currency": "USD", "rate": "0.1",
+            "rate_type": "spot", "source": "synthetic", "effective_at": "2026-08-01"}]}},
+    left_inputs=(record("L", "1.00"),), right_inputs=(record("R", "1.01"),),
+    heartbeat=lambda _: {}, cancellation_requested=lambda: False)
+print(PostgresGroupedMatchingAdapter()(context).results)
+print("unrounded difference:", (Fraction("1.01") - Fraction("1.00")) * Fraction("0.1"))
+```
+
+This illustrates the effect of conversion rounding, not a claim that unrounded
+comparison is automatically the correct business policy for every FX workflow.

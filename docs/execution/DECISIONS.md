@@ -1,3 +1,7 @@
+## 2026-10-28 — ERP vision proposed, positioning unchanged
+
+[ADR0880](../adr/0880-integrated-erp-vision-proposal.md) documents a long-term integrated ERP direction, dependency order and compatibility obligations. It is proposed, not an approved public positioning change. Worker FX containment is a draft investigation, not an accepted compatibility decision.
+
 ## 2026-10-26 — CRM provenance and request result validity
 
 [ADR0871](../adr/0871-crm-quotation-provenance-and-workspace-lines.md) adds SQLite59

@@ -256,6 +256,16 @@ class PostgresReconciliationRepository:
 
     connection: Any
 
+    @staticmethod
+    def _validate_batch_chunk_size(value: object) -> int:
+        """Bound bind parameters for nonempty inserts and reject silent empty ranges."""
+        # An insert uses 13 parameters per item, so 5,000 rows use 65,000,
+        # below PostgreSQL's 65,535 parameter ceiling. The content check uses
+        # 12 per item plus one tenant parameter.
+        if type(value) is not int or not 1 <= value <= 5_000:
+            raise PostgresReconciliationValidationError("chunk_size must be an integer between 1 and 5000.")
+        return value
+
     _RUN_COLUMNS = (
         "tenant_id",
         "id",
@@ -1271,6 +1281,7 @@ class PostgresReconciliationRepository:
             return existing
         return self._record(row, self._INPUT_COLUMNS)
 
+    @_atomic_exception_write
     def append_result(
         self,
         *,
@@ -1369,6 +1380,13 @@ class PostgresReconciliationRepository:
         )
         row = cursor.fetchone()
         if row is None:
+            expected = {
+                "id": result_id, "left_id": left, "right_id": right, "match_type": selected_type,
+                "confidence": confidence_text, "explanation": explanation_text, "amount_difference": difference,
+                "date_difference_days": day_difference, "status": selected_status, "reason_code": reason,
+                "lineage_json": lineage_json,
+            }
+            self._verify_result_contents(tenant, run, [expected])
             row = self.connection.execute(
                 """
                 SELECT tenant_id, id, run_id, left_id, right_id, match_type, confidence, explanation,
@@ -1379,6 +1397,46 @@ class PostgresReconciliationRepository:
                 (tenant, result_id),
             ).fetchone()
         return self._record(row, self._RESULT_COLUMNS)
+
+    def _verify_result_contents(self, tenant: str, run: str, expected: Sequence[dict[str, Any]]) -> None:
+        """Refuse a missing or changed result with PostgreSQL NUMERIC/JSONB equality.
+
+        The caller owns the locked parent and surrounding transaction. Result
+        identity remains unchanged; timestamps are not part of requested content.
+        """
+        if not expected:
+            return
+        values = ", ".join(
+            ["(%s, %s, %s, %s, %s, CAST(%s AS NUMERIC), %s, CAST(%s AS NUMERIC), "
+             "CAST(%s AS INTEGER), %s, %s, CAST(%s AS JSONB))"] * len(expected)
+        )
+        params: list[object] = []
+        for item in expected:
+            params.extend((item["id"], run, item["left_id"], item["right_id"], item["match_type"],
+                           item["confidence"], item["explanation"], item["amount_difference"],
+                           item["date_difference_days"], item["status"], item["reason_code"], item["lineage_json"]))
+        params.append(tenant)
+        query = "".join(("""
+            WITH expected (id, run_id, left_id, right_id, match_type, confidence, explanation,
+                           amount_difference, date_difference_days, status, reason_code, lineage_json) AS (VALUES
+        """, values, """)
+            SELECT EXISTS (
+                SELECT 1 FROM expected AS wanted
+                LEFT JOIN reconforge.reconciliation_results AS stored
+                    ON stored.tenant_id = %s AND stored.id = wanted.id
+                WHERE stored.id IS NULL OR
+                    ROW(stored.run_id, stored.left_id, stored.right_id, stored.match_type, stored.confidence,
+                        stored.explanation, stored.amount_difference, stored.date_difference_days,
+                        stored.status, stored.reason_code, stored.lineage_json)
+                    IS DISTINCT FROM
+                    ROW(wanted.run_id, wanted.left_id, wanted.right_id, wanted.match_type, wanted.confidence,
+                        wanted.explanation, wanted.amount_difference, wanted.date_difference_days,
+                        wanted.status, wanted.reason_code, wanted.lineage_json)
+            ) AS different_content
+        """))
+        row = self.connection.execute(query, tuple(params)).fetchone()
+        if row is None or self._row_value(row, "different_content", 0) is not False:
+            raise PostgresReconciliationIntegrityError("Reconciliation result has different content or is missing.")
 
     def append_results_batch(
         self,
@@ -1391,6 +1449,21 @@ class PostgresReconciliationRepository:
         """Batch append results with set-based input existence verification and chunked inserts."""
         if not items:
             return []
+        self._validate_batch_chunk_size(chunk_size)
+        return self._append_nonempty_results_batch(
+            tenant_id=tenant_id, run_id=run_id, items=items, chunk_size=chunk_size,
+        )
+
+    @_atomic_exception_write
+    def _append_nonempty_results_batch(
+        self,
+        *,
+        tenant_id: str,
+        run_id: str,
+        items: Sequence[dict[str, Any]],
+        chunk_size: int,
+    ) -> list[dict[str, Any]]:
+        """Persist a non-empty result batch inside the caller's transaction."""
         tenant = self._tenant(tenant_id)
         run = self._id(run_id, "run_id")
         self._run_row(tenant, run, lock=True)
@@ -1457,6 +1530,10 @@ class PostgresReconciliationRepository:
                 }
             )
 
+        identities = [item["id"] for item in prepared]
+        if len(set(identities)) != len(identities):
+            raise PostgresReconciliationIntegrityError("Duplicate reconciliation result identity in one batch.")
+
         if left_ids:
             left_list = list(left_ids)
             found_left: set[str] = set()
@@ -1518,6 +1595,8 @@ class PostgresReconciliationRepository:
             fetched = cursor.fetchall() if hasattr(cursor, "fetchall") else ()
             returned_by_id = {self._row_value(r, "id", 1): r for r in fetched}
 
+            self._verify_result_contents(tenant, run, chunk)
+
             missing_ids = [p["id"] for p in chunk if p["id"] not in returned_by_id]
             if missing_ids:
                 existing_rows = self.connection.execute(
@@ -1534,8 +1613,9 @@ class PostgresReconciliationRepository:
 
             for p in chunk:
                 r = returned_by_id.get(p["id"])
-                if r is not None:
-                    results.append(self._record(r, self._RESULT_COLUMNS))
+                if r is None:
+                    raise PostgresReconciliationIntegrityError("Reconciliation result is missing after persistence.")
+                results.append(self._record(r, self._RESULT_COLUMNS))
         return results
 
     def append_exception(
@@ -1682,6 +1762,7 @@ class PostgresReconciliationRepository:
         """Batch append explainable exceptions with chunked multi-row inserts."""
         if not items:
             return []
+        self._validate_batch_chunk_size(chunk_size)
         return self._append_nonempty_exceptions_batch(
             tenant_id=tenant_id, run_id=run_id, items=items, chunk_size=chunk_size,
         )

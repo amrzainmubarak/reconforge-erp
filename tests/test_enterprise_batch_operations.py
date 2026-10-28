@@ -136,6 +136,9 @@ def test_reconciliation_append_results_batch_set_validation_and_chunking() -> No
             )
             cursor.fetchall.return_value = [returned_row]
             return cursor
+        if "WITH expected" in sql:
+            cursor.fetchone.return_value = (False,)
+            return cursor
         return cursor
 
     conn.execute = MagicMock(side_effect=mock_execute)  # type: ignore[method-assign]

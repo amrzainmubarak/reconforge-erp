@@ -24,24 +24,29 @@ async function expectNoWcagViolations(page: Page) {
   expect(results.violations.flatMap((violation) => violation.nodes.map((node) => `${violation.id}: ${node.target.join(" ")}`))).toEqual([]);
 }
 
-test("critical English and Arabic Studio routes pass the automated WCAG regression gate", async ({ page }) => {
-  await mockLiveContract(page);
-  const criticalRoutes = ["/", "/exceptions", "/evidence", "/inventory", "/retail-settlement", "/bank-statement", "/manufacturing-cost", "/professional-invoice-payment", "/individual-cashflow", "/mapping", "/rules", "/live", "/admin-audit"];
-  for (const path of criticalRoutes) {
-    await page.goto(path);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expectNoWcagViolations(page);
-  }
+const criticalRoutes = ["/", "/exceptions", "/evidence", "/inventory", "/retail-settlement", "/bank-statement", "/manufacturing-cost", "/professional-invoice-payment", "/individual-cashflow", "/mapping", "/rules", "/live", "/admin-audit"];
 
-  await page.evaluate(() => window.localStorage.setItem("reconforge.locale", "ar"));
-  for (const path of criticalRoutes) {
-    await page.goto(path);
-    await expect(page.locator("html")).toHaveAttribute("lang", "ar");
-    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expectNoWcagViolations(page);
-  }
-});
+for (const locale of ["en", "ar"] as const) {
+  test(`critical ${locale} Studio routes pass the automated WCAG regression gate`, async ({ page }) => {
+    await mockLiveContract(page);
+    if (locale === "ar") {
+      await page.goto("/");
+      await page.evaluate(() => window.localStorage.setItem("reconforge.locale", "ar"));
+    }
+    for (const path of criticalRoutes) {
+      await page.goto(path);
+      if (locale === "ar") {
+        await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+        await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+      } else {
+        await expect(page.locator("html")).toHaveAttribute("lang", "en");
+        await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
+      }
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expectNoWcagViolations(page);
+    }
+  });
+}
 
 test("keyboard focus is visible, trapped in the command dialog, and restored", async ({ page }) => {
   await page.goto("/");

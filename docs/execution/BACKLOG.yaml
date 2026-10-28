@@ -21,6 +21,13 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-MUTATION-ISOLATION-20261028
+    depends_on: []
+    status: in_progress
+    priority: P1
+    release_requirement: required
+    report: docs/execution/BASELINE_REFRESH_2026-10-28.md
+    note: "Targeted mutation campaign isolates pytest and checks expected failures; focused tests and pytest 8.2.2/9.1.1 campaign pass. Commit-bound hosted verification and the full baseline remain open."
   - id: AMR-WORKER-DENIAL-FAIRNESS-20261028
     depends_on: [AMR-WORKER-UNKNOWN-AMOUNT-20261028]
     status: blocked
@@ -68,8 +75,8 @@ tasks:
     status: blocked
     priority: P0
     release_requirement: required
-    report: docs/execution/STATE.md
-    note: "Observed PostgreSQL/API cross-entity disposition in workspace-scoped NCR; bind new source ownership without inferring legacy owners, cover plans/rework/RLS and migration/restore, and establish genuine inventory/GL linkage before acceptance."
+    report: docs/execution/QUALITY_ENTITY_SCOPE_DESIGN_2026-10-28.md
+    note: "Observed cross-entity quality access. Proposed record-scope design is not implemented and does not prove source ownership. Design authorized legacy access before any restrictive migration; plans, rework, RLS, restore, and genuine inventory/GL linkage remain open."
   - id: AMR-HOSTED-FAILURES-20261027
     depends_on: [AMR-ENTERPRISE-INTEGRATION-STUDIO-20261026]
     status: in_progress

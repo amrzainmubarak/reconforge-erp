@@ -39,6 +39,18 @@ durable ledger event. Counting a denial as `skipped` would conflate it with a
 busy lease. The existing durable-job scheduler cursor tracks round-robin lane
 indices and does not by itself provide a reconciliation keyset cursor.
 
+A repository keyset draft was separately tested on a newly created synthetic
+database migrated to head, using PostgreSQL 16.14 and an application role with
+neither superuser nor BYPASSRLS. The combined focused suite reported 46 passed,
+one skipped and one warning; this is not a worker fairness test. The draft is
+not being integrated now: it is not wired to the worker, its cursor binds only
+the tenant and can omit records if reused across workspace or entity scopes,
+and it establishes neither progress persistence nor fairness across pages. The
+retained [patch](../../output/erp-vision-20261028/draft-keyset-discovery.patch),
+[tests](../../output/erp-vision-20261028/draft-test-postgres-reconciliation-keyset.py)
+and [verification log](../../output/erp-vision-20261028/keyset-owned-migrated-verification-final.log)
+are historical evidence for that experiment, not an enabled feature.
+
 ## Candidate contract
 
 1. Distinguish a genuine central-policy denial from supplier, manifest,

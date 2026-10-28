@@ -122,3 +122,33 @@ fields are corrected in the successor; the unchanged contract test subsequently
 passed locally on Python 3.12 (5 passed, 2.28 s). The hosted failure and missing
 publication artifact remain historical evidence; rerun the complete hosted
 suite on the successor rather than treating the focused test as a replacement.
+
+The complete local `python -m pytest` run on `24d8862e` (Windows, Python
+3.12.13, new task-owned temp/base directories) exited 1 after 1,470.13 s of
+pytest time: 10,427 passed, 930 skipped, 4 failed, 567 errors, 26 warnings.
+All 567 errors and three migration-test failures trace to the unset
+`RECONFORGE_TEST_POSTGRES_ADMIN_DSN` in the native fixture; they are not
+PostgreSQL test successes or evidence of product failure. The fourth failure,
+`test_targeted_grouped_matching_source_mutations_are_killed`, reported three
+surviving mutants and needs separate investigation. The raw log SHA-256 is
+`fddaf78645517f6f251ecd208a561974e5ead1331b66f9fd3f2ab0946f66043c` at
+`output/erp-vision-20261028/pytest-full-24d8862e.log`. Hosted tests use separately
+configured services and shards; neither result substitutes for the other.
+
+Follow-up on the mutation failure: pytest inherited an ancestor configuration
+when its temporary child was created inside this checkout, placing the original
+package before the isolated mutated package on the import path. The repaired
+campaign uses an isolated configuration, verifies the imported file and the
+baseline, and accepts only the expected assertion failures for each mutation.
+At parent HEAD `24d8862e` with the changed files identified below, Windows
+Python 3.12.13 and pytest 9.1.1 ran six focused cases in 11.08 s, exit 0,
+including inherited configuration and injected RuntimeError cases; log
+`output/erp-vision-20261028/mutation-focused-20261028.log` SHA-256
+`45bfa02eb2bcc205181c91eac5bc5d585a911d72bcfda4459f29db25af6b48c9`.
+The campaign alone also killed 3/3 targeted mutations with pytest 8.2.2 in an
+isolated Python 3.12 environment (3.60 s), with `TEMP` inside this checkout.
+The source and test SHA-256 at the focused run were respectively
+`3839df72c6f6c60fa0ba23bd05fd0644c9085b9f3545a82131479e33013c3496` and
+`2b9c2af37677eaaf8af2ab3feec4bf7adf34c62429f7369fd7ab9eac3df591ed`.
+This is a narrow test
+infrastructure repair, not a full-suite rerun or proof of production matching.

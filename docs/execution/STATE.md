@@ -13383,3 +13383,15 @@ RELEASE BLOCKED. Current program and exclusive ownership: [execution](ENTERPRISE
 RELEASE BLOCKED. Primary Studio53destinations/eightsections implemented. Exact-source native51/0skip, frontend1257, primarybrowser2, strictCI/history137 pass. Image source1054file binding/doctor and scannerpolicy pass with0Critical/High,9Medium,1Negligible; no exception. Python3.12.16 selected officialAlpine tag notfound; runtime remediation open. All five complete business cycles, quality-to-stock, globalworkspace/live-role dashboards and final hosted/signature/provenance qualification remain open. See ENTERPRISE_PROGRAM_2026-10-26.md. Only preserved untracked.serena metadata is intentionally excluded from Git.
 
 Publication checkpoint: ADR0874 repairs real source-archive omissions and stale migration defaults;20 focused/independent QA cases pass. Runtimecode remains f3cfbad9. Actual rebuilt archive dispositions are immutable publication-source-inspection*.json under output/enterprise-program-20261026; full release remains blocked.
+
+### 2026-10-28 — Mutation baseline follow-up and quality design
+
+RELEASE BLOCKED. The full local run at `24d8862e` remains negative as recorded
+in [baseline refresh](BASELINE_REFRESH_2026-10-28.md). The targeted mutation
+campaign now isolates its child pytest configuration and rejects unexpected
+failure modes; six focused cases passed on the changed source, and its three
+targeted mutants were killed with both pytest 9.1.1 and 8.2.2. This does not
+replace a full-suite run. [Quality entity scope](QUALITY_ENTITY_SCOPE_DESIGN_2026-10-28.md)
+is a proposed design only: entity isolation, authorized legacy access and the
+release gate remain open. The experimental keyset is retained as a draft, not
+wired into worker discovery; see [fairness](WORKER_DENIAL_FAIRNESS_2026-10-28.md).

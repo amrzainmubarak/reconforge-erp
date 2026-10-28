@@ -175,8 +175,8 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
             "rule": {"amount_field": "amount", "date_field": "date"},
             "input_hash": "manifest-hash",
             "inputs": [
-                {"side": "Left", "source_id": "bank-1", "record_hash": "left-hash", "amount": "10.00"},
-                {"side": "Right", "source_id": "gl-1", "record_hash": "right-hash", "amount": "10.00"},
+                {"side": "Left", "source_id": "bank-1", "record_hash": "left-hash", "amount": "10.00", "currency_code": "USD"},
+                {"side": "Right", "source_id": "gl-1", "record_hash": "right-hash", "amount": "10.00", "currency_code": "USD"},
             ],
         },
     )
@@ -191,8 +191,8 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
             "rule": {"financial_input_policy": "legacy-financial-input-v1"},
             "input_hash": "legacy-policy-manifest",
             "inputs": [
-                {"side": "Left", "source_id": "bank-1", "record_hash": "left-hash", "amount": "10.00"},
-                {"side": "Right", "source_id": "gl-1", "record_hash": "right-hash", "amount": "10.00"},
+                {"side": "Left", "source_id": "bank-1", "record_hash": "left-hash", "amount": "10.00", "currency_code": "USD"},
+                {"side": "Right", "source_id": "gl-1", "record_hash": "right-hash", "amount": "10.00", "currency_code": "USD"},
             ],
         },
     )
@@ -207,8 +207,8 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
             "rule": {"amount_tolerance": 0.1},
             "input_hash": "binary-tolerance-manifest",
             "inputs": [
-                {"side": "Left", "source_id": "bank-1", "record_hash": "left-hash", "amount": "10.00"},
-                {"side": "Right", "source_id": "gl-1", "record_hash": "right-hash", "amount": "10.00"},
+                {"side": "Left", "source_id": "bank-1", "record_hash": "left-hash", "amount": "10.00", "currency_code": "USD"},
+                {"side": "Right", "source_id": "gl-1", "record_hash": "right-hash", "amount": "10.00", "currency_code": "USD"},
             ],
         },
     )
@@ -223,8 +223,8 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
             "rule": {"record_identity_policy": "row-order-occurrence-legacy-v0"},
             "input_hash": "legacy-identity-policy-manifest",
             "inputs": [
-                {"side": "Left", "source_id": "bank-1", "record_hash": "left-hash", "amount": "10.00"},
-                {"side": "Right", "source_id": "gl-1", "record_hash": "right-hash", "amount": "10.00"},
+                {"side": "Left", "source_id": "bank-1", "record_hash": "left-hash", "amount": "10.00", "currency_code": "USD"},
+                {"side": "Right", "source_id": "gl-1", "record_hash": "right-hash", "amount": "10.00", "currency_code": "USD"},
             ],
         },
     )

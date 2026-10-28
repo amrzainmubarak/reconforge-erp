@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from decimal import Decimal
+from decimal import Context, Decimal, DecimalException, Inexact, InvalidOperation, Overflow, localcontext
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, Query, Request
@@ -21,7 +21,12 @@ from reconforge.auth.field_access import (
 )
 from reconforge.auth.models import LocalUser
 from reconforge.reconciliation.matching import RECORD_IDENTITY_POLICY
-from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY, InvalidAmountError, parse_exact_amount
+from reconforge.utils.money import (
+    STRICT_FINANCIAL_INPUT_POLICY,
+    CurrencyRegistry,
+    InvalidAmountError,
+    parse_exact_amount,
+)
 
 router = APIRouter(prefix="/reconciliations", tags=["reconciliations"])
 MAX_LIMIT = 1_000
@@ -92,7 +97,7 @@ def _server_only(request: Request) -> None:
 
 
 def _policy_amount(inputs: list[CanonicalInputRequest]) -> Decimal | None:
-    """Return gross exact exposure when every supplied input has an amount."""
+    """Preserve the historical amount stored in the submission rule."""
 
     if not inputs or any(item.amount is None for item in inputs):
         return None
@@ -107,6 +112,31 @@ def _policy_amount(inputs: list[CanonicalInputRequest]) -> Decimal | None:
                 message="input amounts must be finite exact decimal values.",
             ) from exc
     return gross
+
+
+def _authorization_amount(inputs: list[CanonicalInputRequest]) -> Decimal | None:
+    """Compute a context-independent single-currency amount for policy checks.
+
+    Inputs are limited to 5,000 strings of at most 64 characters. Even with
+    the largest integral and smallest fractional values together, their exact
+    sum fits within 160 decimal digits. Trap an unexpected loss of precision
+    rather than authorize against a rounded result.
+    """
+
+    if not inputs or any(item.amount is None for item in inputs):
+        return None
+    currencies = {item.currency_code.strip().upper() for item in inputs}
+    if len(currencies) != 1 or not CurrencyRegistry.contains(next(iter(currencies))):
+        return None
+    try:
+        with localcontext(Context(prec=160, traps=[InvalidOperation, Overflow, Inexact])):
+            return sum((abs(parse_exact_amount(item.amount)) for item in inputs), Decimal("0"))
+    except (InvalidAmountError, DecimalException) as exc:
+        raise APIError(
+            status_code=400,
+            code="reconciliation_input_amount_invalid",
+            message="input amounts must be finite exact decimal values.",
+        ) from exc
 
 
 def _enforce_server_run_scope(request: Request, *, amount: Decimal | None = None) -> None:
@@ -167,14 +197,15 @@ def submit_run(
     """Create a queued run and register its canonical inputs atomically."""
 
     _server_only(request)
-    policy_amount = _policy_amount(payload.inputs)
-    _enforce_server_run_scope(request, amount=policy_amount)
     if len(payload.model_dump_json().encode("utf-8")) > MAX_SUBMISSION_BYTES:
         raise APIError(
             status_code=413,
             code="reconciliation_request_too_large",
             message="The reconciliation submission exceeds the bounded request size.",
         )
+    policy_amount = _policy_amount(payload.inputs)
+    authorization_amount = _authorization_amount(payload.inputs)
+    _enforce_server_run_scope(request, amount=authorization_amount)
     sides = {item.side.casefold() for item in payload.inputs}
     if sides != {"left", "right"}:
         raise APIError(

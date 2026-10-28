@@ -97,6 +97,8 @@ jobs:
           --ignore=tests/test_enterprise_program_capacity_quality.py
           --ignore=tests/test_enterprise_program_quality_authority.py
           --ignore=tests/test_postgres_grouped_matching_guard_20261027.py
+          --ignore=tests/test_worker_policy_amount_postgres_20261028.py
+          --ignore=tests/test_quality_direct_update_authority_20261028.py
           --ignore=tests/test_release_authorization_postgres.py
           --ignore=tests/test_postgres_accrual_deferral.py
           --ignore=tests/test_postgres_accrual_deferral_api.py
@@ -576,6 +578,8 @@ jobs:
           - parity
           - durable-scale
           - matching-runtime
+          - worker-amount-safety
+          - quality-direct-safety
           - industry-close
           - receivables
           - finance-posting
@@ -654,6 +658,55 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           uv run --no-sync alembic -c alembic.ini upgrade head
+
+      # These two tests intentionally use the shard's freshly migrated service
+      # database, rather than a fixture that creates and grants a second DB.
+      # Grants are test-only, limited to named objects and omit DELETE; they do
+      # not constitute an operator least-privilege profile.
+      - name: Grant synthetic safety fixture table access
+        if: matrix.shard == 'worker-amount-safety' || matrix.shard == 'quality-direct-safety'
+        env:
+          PGPASSWORD: postgres
+          SAFETY_FIXTURE_SHARD: ${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          psql --host localhost --username postgres --dbname postgres --set ON_ERROR_STOP=1 <<'SQL'
+          GRANT USAGE ON SCHEMA reconforge TO reconforge_app;
+          SQL
+          if [ "$SAFETY_FIXTURE_SHARD" = worker-amount-safety ]; then
+            psql --host localhost --username postgres --dbname postgres --set ON_ERROR_STOP=1 <<'SQL'
+          GRANT SELECT, INSERT ON TABLE reconforge.audit_events, reconforge.outbox_events TO reconforge_app;
+          GRANT SELECT, INSERT, UPDATE ON TABLE
+            reconforge.reconciliation_runs, reconforge.reconciliation_inputs,
+            reconforge.reconciliation_results, reconforge.reconciliation_exceptions,
+            reconforge.reconciliation_execution_checkpoints TO reconforge_app;
+          SQL
+          else
+            psql --host localhost --username postgres --dbname postgres --set ON_ERROR_STOP=1 <<'SQL'
+          GRANT SELECT ON TABLE
+            reconforge.emergency_access_permissions, reconforge.finance_dimensions,
+            reconforge.finance_entries, reconforge.finance_entry_lines,
+            reconforge.inventory_movement_lines, reconforge.inventory_movements,
+            reconforge.service_accounts TO reconforge_app;
+          GRANT SELECT, INSERT ON TABLE
+            reconforge.audit_events, reconforge.domain_audit_events,
+            reconforge.identity_step_up_assertions, reconforge.outbox_events TO reconforge_app;
+          GRANT SELECT, INSERT, UPDATE ON TABLE
+            reconforge.currencies, reconforge.domain_audit_ledger_state, reconforge.domain_workspaces,
+            reconforge.emergency_access_requests,
+            reconforge.finance_accounts, reconforge.finance_charts, reconforge.finance_journals,
+            reconforge.fiscal_periods, reconforge.identity_permissions, reconforge.identity_role_permissions,
+            reconforge.identity_roles, reconforge.identity_sessions,
+            reconforge.identity_user_roles, reconforge.identity_users, reconforge.inventory_items,
+            reconforge.inventory_locations,
+            reconforge.inventory_units_of_measure, reconforge.inventory_valuation_policies,
+            reconforge.inventory_warehouses, reconforge.legal_entities,
+            reconforge.master_data_workspace_organizations, reconforge.master_data_workspace_periods,
+            reconforge.organizations, reconforge.principal_scope_grants,
+            reconforge.quality_ncr_actor_authorities, reconforge.quality_ncrs
+            TO reconforge_app;
+          SQL
+          fi
 
       - name: Run PostgreSQL write-back migration version matrix
         if: matrix.shard == 'writeback'
@@ -816,6 +869,12 @@ jobs:
               uv run --no-sync pytest tests/test_postgres_grouped_matching_scale.py -k 'test_live_postgres_grouped_matching_500_partition_scale_profile or test_live_postgres_grouped_matching_10k_partition_scale_profile or test_live_postgres_grouped_matching_10k_domain_diverse_profile' -q
               uv run --no-sync pytest tests/test_postgres_grouped_matching_runtime.py -k 'test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_tenant_scoped' -q
               uv run --no-sync pytest tests/test_postgres_durable_jobs.py -k 'test_live_postgres_job_application_contract_and_rls or test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic or test_live_postgres_persistent_scheduler_coordinates_spawned_processes or test_live_postgres_worker_crash_after_checkpoint_resumes_without_duplicate_effect or test_live_postgres_worker_database_fault_after_checkpoint_resumes_without_duplicate_effect' -q
+              ;;
+            worker-amount-safety)
+              uv run --no-sync pytest tests/test_worker_policy_amount_postgres_20261028.py -q
+              ;;
+            quality-direct-safety)
+              uv run --no-sync pytest tests/test_quality_direct_update_authority_20261028.py -q
               ;;
             industry-close)
               uv run --no-sync pytest tests/test_postgres_close_scope_bootstrap.py -q

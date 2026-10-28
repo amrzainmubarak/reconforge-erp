@@ -21,6 +21,13 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-WORKER-DENIAL-FAIRNESS-20261028
+    depends_on: [AMR-WORKER-UNKNOWN-AMOUNT-20261028]
+    status: blocked
+    priority: P1
+    release_requirement: required
+    report: docs/execution/WORKER_DENIAL_FAIRNESS_2026-10-28.md
+    note: "Bounded policy denial may stop the polling loop and starve other work. Require explicit denied outcome, durable fair discovery, audit, concurrency/restart and native restore proof."
   - id: AMR-WORKER-UNKNOWN-AMOUNT-20261028
     depends_on: [AMR-RECONCILIATION-EXPOSURE-20261028]
     status: in_progress

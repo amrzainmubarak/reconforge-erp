@@ -1,3 +1,7 @@
+## 2026-10-28 — dependency and quality continuation
+
+[Record](SECURITY_CONTINUATION_2026-10-28.md) distinguishes the failing hosted entry jobs, local 3.12 lock audit and the live restricted-role quality probe. Neither is a release acceptance result.
+
 ## 2026-10-28 — partial baseline and FX investigation
 
 [Source, environment, commands and limitations](BASELINE_REFRESH_2026-10-28.md); [scenario and reference scorecard](ERP_VISION_SCORECARD_2026-10-28.md). Entry hosted checks and local results are separately scoped. Grouped FX reproduction uses synthetic inputs and an adapter, not a live PostgreSQL or posting test; selected draft containment tests passed but the existing FX scale compatibility test fails. No source-frozen release result is claimed.

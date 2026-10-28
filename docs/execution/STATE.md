@@ -1,3 +1,7 @@
+## 2026-10-28 — locked dependency and native quality continuation
+
+**RELEASE BLOCKED.** On entry `dfc9ad97649b4d458de5d56d8cd514da03168e54`, a restricted-role PostgreSQL 16 probe reproduced cross-entity NCR disposition. Hosted Python audits rejected msgpack 1.2.1 for CVE-2026-114613; the lock-only upgrade to 1.2.3 passed a local Python 3.12 locked audit and 92 related tests. Hosted final-source and Python 3.11 checks remain required. The rejected cancellation draft and the quality probe remain documented in [the continuation record](SECURITY_CONTINUATION_2026-10-28.md). FX replay, quality ownership/migration and five full cycles are open.
+
 ## 2026-10-28 — vision and financial safety investigation
 
 **RELEASE BLOCKED.** Entry `b1ae1b5e7aad0cc9893bfda65ff44b422aaa279b`; branch `amr/erp-vision-safety-baseline-20261028`. [Partial baseline](BASELINE_REFRESH_2026-10-28.md), [scorecard](ERP_VISION_SCORECARD_2026-10-28.md) and [proposed ADR0880](../adr/0880-integrated-erp-vision-proposal.md) do not change public positioning. A synthetic grouped FX adapter collision was reproduced; a fail-closed draft breaks an existing FX compatibility test and is retained under `output/erp-vision-20261028/`, not applied. It is not accepted or release-qualified. Entity binding, five full cycles, checkpoint/replay semantics, native PostgreSQL, recovery and final-source CI remain open. Hosted PR143 entry checks succeeded except skipped checks; they do not apply to modified source.

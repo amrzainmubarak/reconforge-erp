@@ -21,6 +21,12 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-MSGPACK-AUDIT-20261028
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/SECURITY_CONTINUATION_2026-10-28.md
+    note: "Upgrade locked msgpack 1.2.1 to 1.2.3 after CVE-2026-114613; 3.12 local audit passed; verify 3.11 and hosted successor without advisory exceptions."
   - id: AMR-ERP-VISION-BASELINE-20261028
     status: in_progress
     priority: P0

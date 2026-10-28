@@ -98,3 +98,13 @@ because the matcher emitted an `exception_id` field rejected by the worker;
 the negative log is `output/erp-vision-20261028/worker-org-native-exception-id-failure-20261028.log`.
 This is an independent open data-quality path and is not repaired by the
 complete-input success. Final-source, hosted CI and full recovery gates remain.
+
+The native case was also run on a fresh owned PostgreSQL 16.15 service with
+`tests.mandatory_native_gate`: 1 collected, 1 passed, no skips or xfails,
+12.719 s. The log SHA-256 is
+`e1b5a237fdca0aa1231a09652f81346b53effc9707d9f4d78c91da02c61b82af` at
+`output/erp-vision-20261028/worker-org-native-mandatory-20261028.log`.
+CI now invokes this case in a step confined to the existing
+`worker-amount-safety` shard with dedicated test DSNs and a new disposable
+database. Twelve CI configuration contract tests passed locally; hosted CI
+must still verify this change and its exact source.

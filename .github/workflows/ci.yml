@@ -66,6 +66,7 @@ jobs:
         run: >-
           uv run --no-sync pytest
           --ignore=tests/test_reconciliation_worker_organization_native.py
+          --ignore=tests/test_reconciliation_zero_retry.py
           --ignore=tests/test_postgres_manufacturing_execution.py
           --ignore=tests/test_postgres_manufacturing_execution_v2.py
           --ignore=tests/test_postgres_intercompany_fx.py
@@ -661,7 +662,7 @@ jobs:
           uv run --no-sync alembic -c alembic.ini upgrade head
 
       # The existing safety tests use the shard's freshly migrated service DB.
-      # The organization test below creates a separate, disposable database.
+      # The organization and numeric retry tests create disposable databases.
       # Grants are test-only, limited to named objects and omit DELETE; they do
       # not constitute an operator least-privilege profile.
       - name: Grant synthetic safety fixture table access
@@ -1010,14 +1011,14 @@ jobs:
             *) echo "Unknown server-boundary shard" >&2; exit 2 ;;
           esac
 
-      - name: Verify worker organization authority with a dedicated database
+      - name: Verify worker organization authority and numeric retry
         if: matrix.shard == 'worker-amount-safety'
         env:
           PYTHONPATH: ${{ github.workspace }}
           PYTEST_ADDOPTS: -p tests.mandatory_native_gate
           RECONFORGE_OWNED_TEST_POSTGRES_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
           RECONFORGE_OWNED_TEST_POSTGRES_DSN: postgresql://reconforge_app:reconforge_app@localhost:5432/postgres
-        run: uv run --no-sync pytest tests/test_reconciliation_worker_organization_native.py -q
+        run: uv run --no-sync pytest tests/test_reconciliation_worker_organization_native.py tests/test_reconciliation_zero_retry.py -q
 
       - name: Upload live Redis report
         if: always()

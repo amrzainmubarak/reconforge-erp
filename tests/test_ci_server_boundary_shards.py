@@ -168,15 +168,19 @@ def test_recent_safety_regressions_run_in_mandatory_native_shards() -> None:
     generic = next(step for step in workflow["jobs"]["test"]["steps"] if step["name"] == "Pytest")
     assert all(f"--ignore={path}" in shlex.split(generic["run"]) for path in required)
     organization_test = "tests/test_reconciliation_worker_organization_native.py"
+    zero_retry_test = "tests/test_reconciliation_zero_retry.py"
     assert f"--ignore={organization_test}" in shlex.split(generic["run"])
+    assert f"--ignore={zero_retry_test}" in shlex.split(generic["run"])
     organization = next(step for step in steps
-                        if step["name"] == "Verify worker organization authority with a dedicated database")
+                        if step["name"] == "Verify worker organization authority and numeric retry")
     assert organization["if"] == "matrix.shard == 'worker-amount-safety'"
     assert "continue-on-error" not in organization
     assert organization["env"]["PYTEST_ADDOPTS"] == "-p tests.mandatory_native_gate"
     assert organization["env"]["RECONFORGE_OWNED_TEST_POSTGRES_ADMIN_DSN"] == "postgresql://postgres:postgres@localhost:5432/postgres"
     assert organization["env"]["RECONFORGE_OWNED_TEST_POSTGRES_DSN"] == "postgresql://reconforge_app:reconforge_app@localhost:5432/postgres"
-    assert shlex.split(organization["run"]) == ["uv", "run", "--no-sync", "pytest", organization_test, "-q"]
+    assert shlex.split(organization["run"]) == [
+        "uv", "run", "--no-sync", "pytest", organization_test, zero_retry_test, "-q"
+    ]
     assert steps.index(live) < steps.index(organization)
     assert all(not any(key.startswith("RECONFORGE_OWNED_TEST_POSTGRES_") for key in step.get("env", {}))
                for step in steps if step is not organization)
@@ -304,6 +308,7 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
     }
     ignored = {
         "tests/test_reconciliation_worker_organization_native.py",
+        "tests/test_reconciliation_zero_retry.py",
         "tests/test_postgres_grouped_matching_guard_20261027.py",
         "tests/test_worker_policy_amount_postgres_20261028.py",
         "tests/test_quality_direct_update_authority_20261028.py",
@@ -332,9 +337,10 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
     owners["tests/test_postgres_grouped_matching_guard_20261027.py"] = "matching-runtime"
     owners["tests/test_worker_policy_amount_postgres_20261028.py"] = "worker-amount-safety"
     owners["tests/test_quality_direct_update_authority_20261028.py"] = "quality-direct-safety"
-    # The organization regression has a separate conditional step with its
-    # own process-scoped DSNs and is checked above; all others use the case map.
-    for path in ignored - {"tests/test_reconciliation_worker_organization_native.py"}:
+    # These regressions share a separate conditional step with its own
+    # process-scoped DSNs and are checked above; all others use the case map.
+    separately_owned = {"tests/test_reconciliation_worker_organization_native.py", "tests/test_reconciliation_zero_retry.py"}
+    for path in ignored - separately_owned:
         assert [owner for owner, commands in groups.items()
                 for command in commands if path in shlex.split(command)] == [
                     owners.get(path, "finance-posting" if path == "tests/test_postgres_financial_source_roles.py"

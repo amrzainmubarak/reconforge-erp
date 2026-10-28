@@ -399,6 +399,27 @@ class PostgresReconciliationRepository:
         return canonical or "0"
 
     @classmethod
+    def _stored_input_amount(cls, value: object) -> str | None:
+        """Canonicalize a typed database NUMERIC without broadening input syntax."""
+
+        if isinstance(value, Decimal):
+            if not value.is_finite():
+                raise PostgresReconciliationValidationError("amount must be finite.")
+            parts = value.as_tuple()
+            exponent = parts.exponent
+            if not isinstance(exponent, int):
+                raise PostgresReconciliationValidationError("amount must be a finite decimal.")
+            scale = max(0, -exponent)
+            integer_digits = max(1, len(parts.digits) + exponent) if exponent >= 0 else max(1, len(parts.digits) - scale)
+            if scale > 18 or integer_digits > 20:
+                raise PostgresReconciliationValidationError("amount exceeds the supported decimal precision.")
+            # Bounds are checked before formatting, so a hostile exponent cannot
+            # allocate an unbounded fixed-point string. This is for the typed
+            # value read from PostgreSQL, never the external request.
+            value = format(value, "f")
+        return cls._decimal(value, "amount", allow_negative=True, allow_blank=True)
+
+    @classmethod
     def _currency(cls, value: object) -> str:
         normalized = cls._text(value, "currency_code", maximum=3, allow_blank=True).upper()
         if normalized and not _CURRENCY_PATTERN.fullmatch(normalized):
@@ -1192,9 +1213,7 @@ class PostgresReconciliationRepository:
             # requests use canonical decimal text. Compare finite values exactly
             # and bind every source field; a caller-supplied hash alone cannot
             # authenticate changed currency, date, original text, or attributes.
-            stored_amount = self._decimal(
-                existing["amount_decimal"], "amount", allow_negative=True, allow_blank=True
-            )
+            stored_amount = self._stored_input_amount(existing["amount_decimal"])
             amount_equal = (
                 stored_amount is None and amount_decimal is None
             ) or (

@@ -890,7 +890,9 @@ def test_postgres_reconciliation_worker_propagates_entity_scope_and_rejects_miss
     connection.run["organization_id"] = "org-a"
     connection.run["legal_entity_id"] = "entity-a"
 
-    def policy_context(tenant: str, workspace: str | None, entity: str | None) -> PolicyEvaluationContext:
+    def policy_context(
+        tenant: str, workspace: str | None, organization: str | None, entity: str | None
+    ) -> PolicyEvaluationContext:
         return PolicyEvaluationContext(
             user_id="entity-worker",
             username="entity-worker",
@@ -898,9 +900,11 @@ def test_postgres_reconciliation_worker_propagates_entity_scope_and_rejects_miss
             principal_type="service_account",
             tenant_id=tenant,
             workspace_id=workspace,
+            organization_id=organization,
             entity_id=entity,
             authorized_tenant_ids=frozenset({tenant}),
             authorized_workspace_ids=frozenset({workspace}) if workspace else frozenset(),
+            authorized_organization_ids=frozenset({organization}) if organization else frozenset(),
             authorized_entity_ids=frozenset({entity}) if entity else frozenset(),
         )
 
@@ -912,7 +916,7 @@ def test_postgres_reconciliation_worker_propagates_entity_scope_and_rejects_miss
             worker_id="entity-worker",
             permission_manifest=_worker_manifest("entity-worker"),
             discovery_policy_permission="match.discover",
-            policy_context_scope_supplier=policy_context,
+            policy_context_hierarchy_supplier=policy_context,
             poll_interval_seconds=0,
         ),
     )

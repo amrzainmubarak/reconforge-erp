@@ -43,6 +43,7 @@ from reconforge.utils.money import (
 from reconforge.workers.policy import (
     UnknownWorkerPolicyAmount,
     WorkerPolicyContextSupplier,
+    WorkerPolicyHierarchyContextSupplier,
     require_service_worker_policy,
 )
 
@@ -543,6 +544,7 @@ class PostgresReconciliationWorkerSettings:
     discovery_policy_permission: str | None = None
     permission_manifest: WorkerPermissionManifest | None = None
     allow_unbound_hosted_policy: bool = False
+    policy_context_hierarchy_supplier: WorkerPolicyHierarchyContextSupplier | None = None
 
     def __post_init__(self) -> None:
         if not self.worker_id.strip() or len(self.worker_id.strip()) > 160:
@@ -845,6 +847,7 @@ class PostgresReconciliationWorker:
         tenant_id: str,
         *,
         workspace_id: str | None = None,
+        organization_id: str | None = None,
         entity_id: str | None = None,
         request_id: str = "",
         amount: Decimal | None | UnknownWorkerPolicyAmount = None,
@@ -857,6 +860,7 @@ class PostgresReconciliationWorker:
         if (
             self.settings.policy_context_supplier is None
             and self.settings.policy_context_scope_supplier is None
+            and self.settings.policy_context_hierarchy_supplier is None
             and not self.settings.allow_unbound_hosted_policy
         ):
             raise error_factory(
@@ -865,6 +869,7 @@ class PostgresReconciliationWorker:
         if (
             self.settings.policy_context_supplier is not None
             or self.settings.policy_context_scope_supplier is not None
+            or self.settings.policy_context_hierarchy_supplier is not None
         ) and self.settings.permission_manifest is None:
             raise error_factory(
                 "PostgreSQL reconciliation worker requires a verified worker permission manifest."
@@ -877,7 +882,9 @@ class PostgresReconciliationWorker:
             actor_id=self.settings.audit_actor_id,
             policy_context_supplier=self.settings.policy_context_supplier,
             policy_context_scope_supplier=self.settings.policy_context_scope_supplier,
+            policy_context_hierarchy_supplier=self.settings.policy_context_hierarchy_supplier,
             workspace_id=workspace_id,
+            organization_id=organization_id,
             entity_id=entity_id,
             policy_permission=requested_permission,
             surface="postgres-reconciliation.worker.claim",
@@ -1199,6 +1206,7 @@ class PostgresReconciliationWorker:
             self._authorize_scope(
                 tenant_id,
                 workspace_id=requested_workspace,
+                organization_id=requested_organization,
                 entity_id=requested_entity,
                 request_id=request_id,
                 denial_error_factory=PostgresReconciliationPolicyDenied,
@@ -1217,6 +1225,7 @@ class PostgresReconciliationWorker:
                 self._authorize_scope(
                     tenant_id,
                     workspace_id=workspace_scope,
+                    organization_id=organization_scope,
                     entity_id=entity_scope,
                     request_id=request_id,
                     amount=operation_amount,

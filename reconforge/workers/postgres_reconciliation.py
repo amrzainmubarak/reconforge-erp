@@ -1159,7 +1159,7 @@ class PostgresReconciliationWorker:
     ) -> ReconciliationProcessResult:
         """Claim and execute one run using fresh connections for each phase."""
 
-        operation_amount = UnknownWorkerPolicyAmount.TOKEN if policy_amount is None else policy_amount
+        operation_amount = UnknownWorkerPolicyAmount.UNKNOWN if policy_amount is None else policy_amount
         self._authorize_tenant(tenant_id, request_id=request_id, amount=operation_amount)
         requested_workspace = str(workspace_id).strip() if workspace_id is not None else None
         requested_workspace = requested_workspace or None

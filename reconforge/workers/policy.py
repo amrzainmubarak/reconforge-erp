@@ -24,7 +24,7 @@ WorkerPolicyHierarchyContextSupplier = Callable[
 class UnknownWorkerPolicyAmount(Enum):
     """Operation amount is unknown and must not inherit a supplier's amount."""
 
-    TOKEN = "unknown"
+    UNKNOWN = "unknown"
 
 
 def require_service_worker_policy(

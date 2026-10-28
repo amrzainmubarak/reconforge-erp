@@ -60,7 +60,7 @@ def test_omitted_amount_preserves_supplier_contract() -> None:
 
 def test_explicit_unknown_amount_does_not_reuse_supplier_amount() -> None:
     with pytest.raises(ValueError, match="amount_missing_for_bounded_policy"):
-        _require(amount=UnknownWorkerPolicyAmount.TOKEN)
+        _require(amount=UnknownWorkerPolicyAmount.UNKNOWN)
 
 
 def test_explicit_amount_is_evaluated_instead_of_supplier_amount() -> None:
@@ -89,7 +89,7 @@ def test_worker_discovery_omits_amount_but_unknown_run_is_denied() -> None:
     )
     worker._authorize_tenant("tenant", policy_permission="match.discover")
     with pytest.raises(PostgresReconciliationWorkerError, match="amount_missing_for_bounded_policy"):
-        worker._authorize_tenant("tenant", amount=UnknownWorkerPolicyAmount.TOKEN)
+        worker._authorize_tenant("tenant", amount=UnknownWorkerPolicyAmount.UNKNOWN)
     with pytest.raises(PostgresReconciliationWorkerError, match="amount_missing_for_bounded_policy"):
         worker.process_run(tenant_id="tenant", run_id="unknown-amount")
 

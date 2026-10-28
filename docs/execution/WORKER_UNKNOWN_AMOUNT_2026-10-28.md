@@ -27,6 +27,16 @@ the worker did not calculate them; the test does not prove exposure derivation.
 Snapshots cover the run, inputs, results, exceptions and checkpoints, not all
 audit or outbox records.
 
+The hosted security scan on successor `5c41ec91` rejected the original enum
+member `TOKEN = "unknown"` as Bandit B105 (hardcoded password). The enum is a
+non-secret marker; it was renamed rather than suppressing the scanner. Bandit
+subsequently passed locally on Python 3.12, and the worker/backlog focused set
+reported 44 passed, one prerequisite skip and one legacy input warning. The
+renamed worker passed all five native cases on PostgreSQL 16 without skips
+(`output/worker-amount-native-b317139a1baf/result.json`, 17.5 s including
+setup); hosted checks remain required. The 5c41 local full pytest was
+interrupted at 3% before the rename and is not a full-suite result.
+
 The change does not bind a caller-provided known amount to the persisted run,
 validate historic derived amounts or define cross-currency limits. A fake
 repository reproduction showed a direct caller can supply a smaller amount

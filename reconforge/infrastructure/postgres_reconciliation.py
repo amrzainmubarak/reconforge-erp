@@ -11,11 +11,12 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any, cast
+from functools import wraps
+from typing import Any, Concatenate, ParamSpec, TypeVar, cast
 
 from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id, validate_tenant_id
 from reconforge.io.persisted import (
@@ -37,6 +38,34 @@ from reconforge.utils.money import (
     validate_financial_input_policy,
 )
 from reconforge.utils.time import utc_now_text
+
+_P = ParamSpec("_P")
+_T = TypeVar("_T")
+
+
+def _atomic_exception_write(
+    method: Callable[Concatenate[PostgresReconciliationRepository, _P], _T],
+) -> Callable[Concatenate[PostgresReconciliationRepository, _P], _T]:
+    """Roll back this operation on failure without committing the caller's transaction.
+
+    PostgreSQL savepoints nest even when their names repeat. An autocommit
+    connection without a transaction fails on SAVEPOINT before any writes.
+    """
+
+    @wraps(method)
+    def wrapped(self: PostgresReconciliationRepository, *args: _P.args, **kwargs: _P.kwargs) -> _T:
+        self.connection.execute("SAVEPOINT reconforge_exception_write")
+        try:
+            result = method(self, *args, **kwargs)
+        except BaseException:
+            self.connection.execute("ROLLBACK TO SAVEPOINT reconforge_exception_write")
+            self.connection.execute("RELEASE SAVEPOINT reconforge_exception_write")
+            raise
+        self.connection.execute("RELEASE SAVEPOINT reconforge_exception_write")
+        return result
+
+    return wrapped
+
 
 _ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 _DECIMAL_PATTERN = re.compile(r"^-?(0|[0-9]+)(\.[0-9]+)?$")
@@ -1582,7 +1611,65 @@ class PostgresReconciliationRepository:
                 evidence_json,
             ),
         )
-        return self._record(cursor.fetchone(), self._EXCEPTION_COLUMNS)
+        row = cursor.fetchone()
+        if row is None:
+            expected = {
+                "id": exception_id, "exception_type": selected_type, "source_side": side, "source_id": source,
+                "title": selected_title, "explanation": details, "severity": selected_severity,
+                "risk_score": score, "owner_id": owner, "reason_code": reason, "evidence_json": evidence_json,
+            }
+            self._verify_exception_contents(tenant, run, [expected])
+            row = self.connection.execute(
+                """
+                SELECT tenant_id, id, run_id, exception_type, source_side, source_id, title, explanation,
+                       severity, risk_score, workflow_status, owner_id, reason_code, evidence_json,
+                       created_at, updated_at
+                FROM reconforge.reconciliation_exceptions WHERE tenant_id = %s AND id = %s
+                """,
+                (tenant, exception_id),
+            ).fetchone()
+        return self._record(row, self._EXCEPTION_COLUMNS)
+
+    def _verify_exception_contents(self, tenant: str, run: str, expected: Sequence[dict[str, Any]]) -> None:
+        """Reject a missing or different row using PostgreSQL JSONB/NUMERIC equality.
+
+        The caller owns the locked parent run and the surrounding transaction.
+        Workflow status and timestamps are excluded because they may change;
+        owner remains part of the requested content and is compared conservatively.
+        """
+        if not expected:
+            return
+        values = ", ".join(
+            ["(%s, %s, %s, %s, %s, %s, %s, %s, CAST(%s AS NUMERIC), %s, %s, CAST(%s AS JSONB))"]
+            * len(expected)
+        )
+        params: list[object] = []
+        for item in expected:
+            params.extend((item["id"], run, item["exception_type"], item["source_side"], item["source_id"],
+                           item["title"], item["explanation"], item["severity"], item["risk_score"],
+                           item["owner_id"], item["reason_code"], item["evidence_json"]))
+        params.append(tenant)
+        query = "".join(("""
+            WITH expected (id, run_id, exception_type, source_side, source_id, title, explanation,
+                           severity, risk_score, owner_id, reason_code, evidence_json) AS (VALUES
+        """, values, """)
+            SELECT EXISTS (
+                SELECT 1 FROM expected AS wanted
+                LEFT JOIN reconforge.reconciliation_exceptions AS stored
+                    ON stored.tenant_id = %s AND stored.id = wanted.id
+                WHERE stored.id IS NULL OR
+                    ROW(stored.run_id, stored.exception_type, stored.source_side, stored.source_id,
+                        stored.title, stored.explanation, stored.severity, stored.risk_score,
+                        stored.owner_id, stored.reason_code, stored.evidence_json)
+                    IS DISTINCT FROM
+                    ROW(wanted.run_id, wanted.exception_type, wanted.source_side, wanted.source_id,
+                        wanted.title, wanted.explanation, wanted.severity, wanted.risk_score,
+                        wanted.owner_id, wanted.reason_code, wanted.evidence_json)
+            ) AS different_content
+        """))
+        row = self.connection.execute(query, tuple(params)).fetchone()
+        if row is None or self._row_value(row, "different_content", 0) is not False:
+            raise PostgresReconciliationIntegrityError("Reconciliation exception has different content or is missing.")
 
     def append_exceptions_batch(
         self,
@@ -1595,6 +1682,20 @@ class PostgresReconciliationRepository:
         """Batch append explainable exceptions with chunked multi-row inserts."""
         if not items:
             return []
+        return self._append_nonempty_exceptions_batch(
+            tenant_id=tenant_id, run_id=run_id, items=items, chunk_size=chunk_size,
+        )
+
+    @_atomic_exception_write
+    def _append_nonempty_exceptions_batch(
+        self,
+        *,
+        tenant_id: str,
+        run_id: str,
+        items: Sequence[dict[str, Any]],
+        chunk_size: int,
+    ) -> list[dict[str, Any]]:
+        """Persist a non-empty exception batch inside the caller's transaction."""
         tenant = self._tenant(tenant_id)
         run = self._id(run_id, "run_id")
         self._run_row(tenant, run, lock=True)
@@ -1642,6 +1743,10 @@ class PostgresReconciliationRepository:
                 }
             )
 
+        identities = [item["id"] for item in prepared]
+        if len(set(identities)) != len(identities):
+            raise PostgresReconciliationIntegrityError("Duplicate reconciliation exception identity in one batch.")
+
         results: list[dict[str, Any]] = []
         for i in range(0, len(prepared), chunk_size):
             chunk = prepared[i : i + chunk_size]
@@ -1678,6 +1783,8 @@ class PostgresReconciliationRepository:
             fetched = cursor.fetchall() if hasattr(cursor, "fetchall") else ()
             returned_by_id = {self._row_value(r, "id", 1): r for r in fetched}
 
+            self._verify_exception_contents(tenant, run, chunk)
+
             missing_ids = [p["id"] for p in chunk if p["id"] not in returned_by_id]
             if missing_ids:
                 existing_rows = self.connection.execute(
@@ -1695,8 +1802,9 @@ class PostgresReconciliationRepository:
 
             for p in chunk:
                 r = returned_by_id.get(p["id"])
-                if r is not None:
-                    results.append(self._record(r, self._EXCEPTION_COLUMNS))
+                if r is None:
+                    raise PostgresReconciliationIntegrityError("Reconciliation exception is missing after persistence.")
+                results.append(self._record(r, self._EXCEPTION_COLUMNS))
         return results
 
     def list_checkpoints(self, *, tenant_id: str, run_id: str) -> list[dict[str, Any]]:
@@ -1791,6 +1899,28 @@ class PostgresReconciliationRepository:
             "exceptions": exception_values,
         }
         output_hash = self._hash_payload(output_payload)
+        return self._append_validated_partition(
+            tenant=tenant, run=run, partition=partition, worker=worker, input_count=input_count,
+            result_values=result_values, exception_values=exception_values, output_hash=output_hash,
+            request_id=request_id, reason=reason,
+        )
+
+    @_atomic_exception_write
+    def _append_validated_partition(
+        self,
+        *,
+        tenant: str,
+        run: str,
+        partition: str,
+        worker: str,
+        input_count: int,
+        result_values: list[dict[str, Any]],
+        exception_values: list[dict[str, Any]],
+        output_hash: str,
+        request_id: str,
+        reason: str,
+    ) -> dict[str, Any]:
+        """Persist already validated output inside the caller's transaction."""
         before = self._run_row(tenant, run, lock=True)
         if str(before.get("status")) != "Running" or str(before.get("execution_status") or "Queued") not in {
             "Queued",
@@ -1817,8 +1947,8 @@ class PostgresReconciliationRepository:
             if (
                 str(existing.get("output_hash")) != output_hash
                 or int(existing.get("input_count") or 0) != int(input_count)
-                or int(existing.get("result_count") or 0) != len(results)
-                or int(existing.get("exception_count") or 0) != len(exceptions)
+                or int(existing.get("result_count") or 0) != len(result_values)
+                or int(existing.get("exception_count") or 0) != len(exception_values)
             ):
                 raise PostgresReconciliationIntegrityError("Partition checkpoint already contains different output.")
             return existing
@@ -1843,7 +1973,7 @@ class PostgresReconciliationRepository:
                       result_count, exception_count, output_hash, worker_id,
                       created_at, completed_at
             """,
-            (tenant, run, partition, int(input_count), len(results), len(exceptions), output_hash, worker),
+            (tenant, run, partition, int(input_count), len(result_values), len(exception_values), output_hash, worker),
         )
         row = cursor.fetchone()
         if row is None:
@@ -1874,8 +2004,8 @@ class PostgresReconciliationRepository:
                 "run_id": run,
                 "partition_key": partition,
                 "input_count": int(input_count),
-                "result_count": len(results),
-                "exception_count": len(exceptions),
+                "result_count": len(result_values),
+                "exception_count": len(exception_values),
             },
             payload={"run_id": run, "partition_key": partition, "output_hash": output_hash},
         )

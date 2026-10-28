@@ -85,9 +85,24 @@ def test_reconciliation_batches_bind_hostile_text(kind: str, batch_size: int, mo
                       amount_difference="0", status="Matched", lineage={"raw": HOSTILE})] * batch_size
         repo.append_results_batch(tenant_id="tenant_a", run_id="run-a", items=items)
     else:
-        items = [dict(exception_type="missing", source_side="Left", source_id="source-a", title=HOSTILE,
+        items = [dict(exception_type="missing", source_side="Left", source_id=f"source-{index}", title=HOSTILE,
                       explanation=HOSTILE, severity="High", risk_score="1", reason_code="missing",
-                      evidence={"raw": HOSTILE})] * batch_size
+                      evidence={"raw": HOSTILE}) for index in range(batch_size)]
+
+        def exception_execute(sql: str, params: tuple[object, ...] | None = None) -> MagicMock:
+            cursor = MagicMock()
+            if "INSERT INTO reconforge.reconciliation_exceptions" in sql:
+                assert params is not None
+                returned = []
+                for index in range(batch_size):
+                    value = params[index * 13 : (index + 1) * 13]
+                    returned.append((*value[:10], "Open", *value[10:], "synthetic", "synthetic"))
+                cursor.fetchall.return_value = returned
+            elif "WITH expected" in sql:
+                cursor.fetchone.return_value = (False,)
+            return cursor
+
+        connection.execute.side_effect = exception_execute
         repo.append_exceptions_batch(tenant_id="tenant_a", run_id="run-a", items=items)
     inserts = [call.args for call in connection.execute.call_args_list
                if call.args[0].lstrip().startswith("INSERT INTO reconforge.reconciliation_")]
@@ -97,3 +112,9 @@ def test_reconciliation_batches_bind_hostile_text(kind: str, batch_size: int, mo
     assert HOSTILE in params
     assert sql.count("%s") == len(params) == 13 * batch_size
     assert "ON CONFLICT (tenant_id, id) DO NOTHING" in sql
+    if kind == "exceptions":
+        checks = [call.args for call in connection.execute.call_args_list if "WITH expected" in call.args[0]]
+        assert len(checks) == 1
+        check_sql, check_params = checks[0]
+        assert HOSTILE not in check_sql and HOSTILE in check_params
+        assert check_sql.count("%s") == len(check_params) == 12 * batch_size + 1

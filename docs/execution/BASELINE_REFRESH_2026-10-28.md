@@ -152,3 +152,11 @@ The source and test SHA-256 at the focused run were respectively
 `2b9c2af37677eaaf8af2ab3feec4bf7adf34c62429f7369fd7ab9eac3df591ed`.
 This is a narrow test
 infrastructure repair, not a full-suite rerun or proof of production matching.
+
+The hosted PR check rollup for exact head `24d8862eb172eb7621a6749af1ea48efe163b727`
+completed with 89 successful checks and three skipped checks. The skipped checks
+were two branch-name gates and the exact-image SBOM/vulnerability/license gate;
+the latter is configured for scheduled or manual events, not this PR event.
+The rollup snapshot is `output/erp-vision-20261028/hosted-checks-24d8862e.json`,
+SHA-256 `9b80844dd49a92d8bf5469eceeab883200347bceaf8062a99ddd5c9e046e6b3b`.
+It does not certify the successor commit, a release artifact, or the skipped gate.

@@ -6,7 +6,8 @@ owned by the corresponding native posting contracts, never direct SQL here.
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
+from datetime import datetime
 from typing import Any
 
 from reconforge.domain.finance_posting import digest_payload
@@ -105,6 +106,24 @@ CREATE INDEX IF NOT EXISTS idx_quality_ncr_scope_lot
 CREATE INDEX IF NOT EXISTS idx_quality_rework_scope_ncr
     ON reconforge.quality_rework_orders(tenant_id,workspace_id,ncr_id,status);
 """
+
+
+def _same_persisted_decision(left: NonConformanceReport, right: NonConformanceReport) -> bool:
+    """Compare every field, interpreting timestamp offsets as the same instant."""
+    left_values, right_values = asdict(left), asdict(right)
+    for field in ("created_at", "disposition_at"):
+        first, second = left_values.pop(field), right_values.pop(field)
+        if first is None or second is None:
+            if first != second:
+                return False
+            continue
+        try:
+            a, b = datetime.fromisoformat(first), datetime.fromisoformat(second)
+            if a.utcoffset() is None or b.utcoffset() is None or a != b:
+                return False
+        except (TypeError, ValueError, OverflowError):
+            return False
+    return left_values == right_values
 
 
 class PostgresManufacturingQualityRepository:
@@ -223,8 +242,8 @@ class PostgresManufacturingQualityRepository:
                 raise QualityReworkError("quality_ncr_not_found", "NCR not found in the selected workspace.")
             require_independent_quality_actor(self.ncr_actor_id(workspace, ncr_id, "creator"), actor_user_id)
             updated = ncr.disposition_ncr(disposition=disposition, notes=notes, actor=actor_label)
-            self.update_ncr(workspace, updated)
             self._append_authority(workspace, updated, "reviewer", actor_user_id, actor_label)
+            self.update_ncr(workspace, updated)
             return updated
 
     def get_ncr(self, workspace: str, identifier: str, *, for_update: bool = False) -> NonConformanceReport | None:
@@ -237,7 +256,50 @@ class PostgresManufacturingQualityRepository:
         return ncr_from_row(row) if row else None
 
     def update_ncr(self, workspace: str, ncr: NonConformanceReport) -> None:
-        self._scoped_execute(
+        # A committed identical decision is a read-only replay. Lock the row
+        # first, and do not recompute or replace its historical audit hash.
+        current = self.get_ncr(workspace, ncr.ncr_id, for_update=True)
+        if current is not None and current.status == "dispositioned" and _same_persisted_decision(current, ncr):
+            return
+        if current is None:
+            raise QualityReworkError("quality_ncr_not_found", "NCR not found in the selected workspace.")
+        candidate = replace(
+            current, status=ncr.status, disposition=ncr.disposition,
+            disposition_notes=ncr.disposition_notes, disposition_by=ncr.disposition_by,
+            disposition_at=ncr.disposition_at,
+        )
+        if (
+            current.status not in ("open", "under_review")
+            or ncr.status != "dispositioned"
+            or not _same_persisted_decision(candidate, ncr)
+        ):
+            raise QualityReworkError("quality_ncr_transition_invalid", "The NCR decision is not a valid current transition.")
+        # An NCR decision must be backed by its immutable independent reviewer
+        # and the audit hash of this exact decision. The normal disposition
+        # path stages both in the same transaction before reaching this method.
+        payload = asdict(ncr)
+        hashes = {digest_payload(payload)}
+        if ncr.disposition_at and ncr.disposition_at.endswith("+00:00"):
+            hashes.add(digest_payload({**payload, "disposition_at": ncr.disposition_at[:-6] + "Z"}))
+        authority = self._scoped_execute(
+            """SELECT 1 FROM reconforge.quality_ncr_actor_authorities reviewer
+            JOIN reconforge.quality_ncr_actor_authorities creator
+              ON creator.tenant_id=reviewer.tenant_id AND creator.workspace_id=reviewer.workspace_id
+             AND creator.ncr_id=reviewer.ncr_id AND creator.authority_kind='creator'
+            JOIN reconforge.domain_audit_events event
+              ON event.tenant_id=reviewer.tenant_id AND event.id=reviewer.audit_event_id
+            WHERE reviewer.tenant_id=%s AND reviewer.workspace_id=%s AND reviewer.ncr_id=%s
+              AND reviewer.authority_kind='reviewer' AND reviewer.user_id<>creator.user_id
+              AND reviewer.actor_label=%s AND event.actor_user_id=reviewer.user_id
+              AND event.actor_label=reviewer.actor_label AND event.object_type='quality.ncr'
+              AND event.object_id=reviewer.ncr_id AND event.action='quality_ncr_dispositioned'
+              AND event.metadata_json->>'workspace_id'=reviewer.workspace_id
+              AND event.after_hash=ANY(%s)""",
+            (self.tenant_id, workspace, ncr.ncr_id, ncr.disposition_by, list(hashes)),
+        ).fetchone()
+        if authority is None:
+            raise QualityReworkError("quality_actor_authority_missing", "An independently audited NCR decision is required.")
+        cursor = self._scoped_execute(
             """UPDATE reconforge.quality_ncrs SET status=%s,disposition=%s,disposition_notes=%s,disposition_by=%s,disposition_at=%s
             WHERE workspace_id=%s AND ncr_id=%s""",
             (
@@ -250,6 +312,8 @@ class PostgresManufacturingQualityRepository:
                 ncr.ncr_id,
             ),
         )
+        if cursor.rowcount != 1:
+            raise QualityReworkError("quality_ncr_not_found", "NCR not found in the selected workspace.")
 
     def ncr_rework_quantity(self, workspace: str, ncr_id: str) -> int:
         return int(

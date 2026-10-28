@@ -1,3 +1,7 @@
+## 2026-10-28 — bounded quality direct-update repair
+
+**RELEASE BLOCKED.** [ADR0881](../adr/0881-postgres-quality-direct-update-authority.md) and [the evidence](QUALITY_DIRECT_AUTHORITY_2026-10-28.md) describe a restricted PostgreSQL direct-update guard, replay and rollback tests. This does not bind repository callers to authenticated identities, isolate entities, or post inventory/GL effects. The full cycle and release gates remain open.
+
 ## 2026-10-28 — locked dependency and native quality continuation
 
 **RELEASE BLOCKED.** On entry `dfc9ad97649b4d458de5d56d8cd514da03168e54`, a restricted-role PostgreSQL 16 probe reproduced cross-entity NCR disposition. Hosted Python audits rejected msgpack 1.2.1 for CVE-2026-114613; the lock-only upgrade to 1.2.3 passed a local Python 3.12 locked audit and 92 related tests. Hosted final-source and Python 3.11 checks remain required. The rejected cancellation draft and the quality probe remain documented in [the continuation record](SECURITY_CONTINUATION_2026-10-28.md). FX replay, quality ownership/migration and five full cycles are open.

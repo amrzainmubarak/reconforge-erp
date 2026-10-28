@@ -108,8 +108,8 @@ def test_unknown_discovered_amount_is_denied_before_claim_without_mutation() -> 
             discovery_policy_permission="match.discover", policy_context_supplier=_supplier,
         ),
     )
-    with pytest.raises(PostgresReconciliationWorkerError, match="amount_missing_for_bounded_policy"):
-        worker.process_once()
+    summary = worker.process_once()
+    assert (summary.denied, summary.completed, summary.failed, summary.skipped) == (1, 0, 0, 0)
     assert connection.run == before
     assert connection.results == []
     assert connection.exceptions == []

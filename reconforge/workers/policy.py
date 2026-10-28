@@ -41,6 +41,7 @@ def require_service_worker_policy(
     policy_permission: str,
     surface: str,
     error_factory: Callable[[str], Exception],
+    denial_error_factory: Callable[[str], Exception] | None = None,
     policy: CentralPolicyEngine | None = None,
     request_id: str = "",
     amount: Decimal | None | UnknownWorkerPolicyAmount = None,
@@ -103,23 +104,33 @@ def require_service_worker_policy(
     permission = policy_permission.strip()
     if not permission:
         raise error_factory("Worker policy permission must be non-empty.")
-    decision = (policy or CentralPolicyEngine()).evaluate(
-        context,
-        required_permission=permission,
-        enforce_sod=False,
-        enforce_ownership=False,
-    )
-    audit_policy_decision(
-        decision,
-        actor_id=normalized_actor,
-        required_permissions=frozenset({permission}),
-        surface=surface,
-        request_id=request_id,
-        principal_type=context.principal_type,
-        context=context,
-    )
+    try:
+        decision = (policy or CentralPolicyEngine()).evaluate(
+            context,
+            required_permission=permission,
+            enforce_sod=False,
+            enforce_ownership=False,
+        )
+    except Exception as exc:  # noqa: BLE001 - evaluator failures are not authorization denials.
+        if denial_error_factory is None:
+            raise
+        raise error_factory("Unable to evaluate worker policy safely.") from exc
+    try:
+        audit_policy_decision(
+            decision,
+            actor_id=normalized_actor,
+            required_permissions=frozenset({permission}),
+            surface=surface,
+            request_id=request_id,
+            principal_type=context.principal_type,
+            context=context,
+        )
+    except Exception as exc:  # noqa: BLE001 - evidence failures must never masquerade as a policy denial.
+        if denial_error_factory is None:
+            raise
+        raise error_factory("Unable to record worker policy decision safely.") from exc
     if not decision.allowed:
-        raise error_factory(f"Worker policy denied: {decision.reason_code}")
+        raise (denial_error_factory or error_factory)(f"Worker policy denied: {decision.reason_code}")
 
 
 __all__ = [

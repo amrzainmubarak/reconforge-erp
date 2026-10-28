@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -45,6 +46,8 @@ from reconforge.workers.policy import (
     require_service_worker_policy,
 )
 
+_LOGGER = logging.getLogger(__name__)
+
 
 def _stable_partition_key(values: Sequence[object]) -> str:
     """Hash ordered hard-key values with one shared canonical encoding."""
@@ -84,7 +87,11 @@ def _validated_partition_limit(rule: Mapping[str, Any]) -> int:
 
 
 class PostgresReconciliationPolicyDenied(PostgresReconciliationWorkerError):
-    """Raised when a last-point policy recheck denies a run before claiming it."""
+    """Raised when a policy decision denies a run before claiming it."""
+
+
+class PostgresReconciliationAuthorizationError(PostgresReconciliationWorkerError):
+    """Raised when an authorization check cannot be completed safely."""
 
 
 class ReconciliationCancellationRequested(PostgresReconciliationWorkerError):
@@ -602,13 +609,14 @@ class ReconciliationWorkerRunSummary:
     failed: int
     cancelled: int
     skipped: int
+    denied: int = 0
 
     @classmethod
     def empty(cls) -> ReconciliationWorkerRunSummary:
         return cls(cycles=0, discovered=0, completed=0, failed=0, cancelled=0, skipped=0)
 
     def add(
-        self, *, discovered: int, results: Sequence[ReconciliationProcessResult], skipped: int
+        self, *, discovered: int, results: Sequence[ReconciliationProcessResult], skipped: int, denied: int = 0
     ) -> ReconciliationWorkerRunSummary:
         return ReconciliationWorkerRunSummary(
             cycles=self.cycles + 1,
@@ -617,6 +625,7 @@ class ReconciliationWorkerRunSummary:
             failed=self.failed + sum(result.status == "Failed" for result in results),
             cancelled=self.cancelled + sum(result.status == "Cancelled" for result in results),
             skipped=self.skipped + skipped,
+            denied=self.denied + denied,
         )
 
 
@@ -723,6 +732,7 @@ class PostgresReconciliationScheduler:
             failed=sum(item.failed for item in cycles),
             cancelled=sum(item.cancelled for item in cycles),
             skipped=sum(item.skipped for item in cycles),
+            denied=sum(item.denied for item in cycles),
         )
 
     def _run_worker(self, worker_id: str) -> ReconciliationWorkerRunSummary:
@@ -738,7 +748,11 @@ class PostgresReconciliationScheduler:
             except Exception:
                 self.observability.record_job({**attributes, "job.status": "failed", "reconforge.result": "error"})
                 raise
-        self.observability.record_job({**attributes, "job.status": "completed", "reconforge.result": "success"})
+        self.observability.record_job({
+            **attributes,
+            "job.status": "completed",
+            "reconforge.result": "policy_denied" if summary.denied else "success",
+        })
         return summary
 
     def run(self, *, stop_event: Event | None = None, max_cycles: int | None = None) -> ReconciliationWorkerRunSummary:
@@ -757,6 +771,7 @@ class PostgresReconciliationScheduler:
                 failed=summary.failed + cycle.failed,
                 cancelled=summary.cancelled + cycle.cancelled,
                 skipped=summary.skipped + cycle.skipped,
+                denied=summary.denied + cycle.denied,
             )
             if max_cycles is not None and summary.cycles >= max_cycles * len(self.worker_ids):
                 break
@@ -835,6 +850,7 @@ class PostgresReconciliationWorker:
         amount: Decimal | None | UnknownWorkerPolicyAmount = None,
         policy_permission: str | None = None,
         error_factory: Callable[[str], Exception] = PostgresReconciliationWorkerError,
+        denial_error_factory: Callable[[str], Exception] | None = None,
     ) -> None:
         """Require a central service-account decision for one exact lane."""
 
@@ -866,6 +882,7 @@ class PostgresReconciliationWorker:
             policy_permission=requested_permission,
             surface="postgres-reconciliation.worker.claim",
             error_factory=error_factory,
+            denial_error_factory=denial_error_factory,
             request_id=request_id,
             amount=amount,
         )
@@ -897,6 +914,7 @@ class PostgresReconciliationWorker:
         request_id: str = "",
         amount: Decimal | None | UnknownWorkerPolicyAmount = None,
         policy_permission: str | None = None,
+        denial_error_factory: Callable[[str], Exception] | None = None,
     ) -> None:
         """Backward-compatible tenant-lane policy entry point."""
 
@@ -905,6 +923,7 @@ class PostgresReconciliationWorker:
             request_id=request_id,
             amount=amount,
             policy_permission=policy_permission,
+            denial_error_factory=denial_error_factory,
         )
 
     @staticmethod
@@ -1160,7 +1179,10 @@ class PostgresReconciliationWorker:
         """Claim and execute one run using fresh connections for each phase."""
 
         operation_amount = UnknownWorkerPolicyAmount.UNKNOWN if policy_amount is None else policy_amount
-        self._authorize_tenant(tenant_id, request_id=request_id, amount=operation_amount)
+        self._authorize_tenant(
+            tenant_id, request_id=request_id, amount=operation_amount,
+            denial_error_factory=PostgresReconciliationPolicyDenied,
+        )
         requested_workspace = str(workspace_id).strip() if workspace_id is not None else None
         requested_workspace = requested_workspace or None
         requested_entity = str(entity_id).strip() if entity_id is not None else None
@@ -1179,10 +1201,12 @@ class PostgresReconciliationWorker:
                 workspace_id=requested_workspace,
                 entity_id=requested_entity,
                 request_id=request_id,
+                denial_error_factory=PostgresReconciliationPolicyDenied,
             )
         workspace_scope = requested_workspace
         entity_scope = requested_entity
         organization_scope = requested_organization
+        claim_committed = False
         try:
             with self._transaction().transaction(
                 tenant_id,
@@ -1196,7 +1220,8 @@ class PostgresReconciliationWorker:
                     entity_id=entity_scope,
                     request_id=request_id,
                     amount=operation_amount,
-                    error_factory=PostgresReconciliationPolicyDenied,
+                    error_factory=PostgresReconciliationAuthorizationError,
+                    denial_error_factory=PostgresReconciliationPolicyDenied,
                 )
                 repository = PostgresReconciliationRepository(connection)
                 claimed = repository.claim_run(
@@ -1217,6 +1242,7 @@ class PostgresReconciliationWorker:
                     inputs = repository.list_inputs(tenant_id=tenant_id, run_id=run_id)
                     left_inputs = tuple(record for record in inputs if str(record.get("side", "")) == "Left")
                     right_inputs = tuple(record for record in inputs if str(record.get("side", "")) == "Right")
+            claim_committed = True
             partition_supplier = (
                 self._stream_input_supplier(
                     tenant_id=tenant_id,
@@ -1318,13 +1344,18 @@ class PostgresReconciliationWorker:
                     reason="Matcher observed cooperative cancellation.",
                 )
             return ReconciliationProcessResult(tenant_id, run_id, str(cancelled.get("execution_status", "Cancelled")))
-        except PostgresReconciliationBusyError:
-            raise
-        except PostgresReconciliationPolicyDenied:
-            # A revocation before claim is a no-effect authorization denial,
-            # not a matcher failure that should mark the queued run Failed.
-            raise
         except Exception as exc:  # noqa: BLE001 - failure is persisted and surfaced as a retryable run state.
+            if not claim_committed and isinstance(
+                exc, (
+                    PostgresReconciliationBusyError,
+                    PostgresReconciliationPolicyDenied,
+                    PostgresReconciliationAuthorizationError,
+                ),
+            ):
+                # Only claim conflicts and authority failures before the claim
+                # transaction commits are skip/denial/infrastructure outcomes.
+                # Identically typed failures after claim use the retryable path.
+                raise
             try:
                 return self._fail(
                     tenant_id,
@@ -1349,6 +1380,7 @@ class PostgresReconciliationWorker:
             raise PostgresReconciliationWorkerError("Unable to enumerate reconciliation tenants.") from exc
         outcomes: list[ReconciliationProcessResult] = []
         skipped = 0
+        denied = 0
         discovered = 0
         for tenant_id in tenants:
             self._authorize_tenant(
@@ -1394,10 +1426,18 @@ class PostgresReconciliationWorker:
                     )
                 except PostgresReconciliationBusyError:
                     skipped += 1
+                except PostgresReconciliationPolicyDenied:
+                    denied += 1
+        if denied:
+            # Deliberately avoid tenant, run IDs and financial values here.
+            # Without a durable keyset cursor, denied rows can still hide later
+            # pages. The warning must remain visible until that gap is closed.
+            _LOGGER.warning("reconciliation_policy_denials: %s; later pages may be delayed", denied)
         return ReconciliationWorkerRunSummary.empty().add(
             discovered=discovered,
             results=outcomes,
             skipped=skipped,
+            denied=denied,
         )
 
     def run(self, *, stop_event: Event | None = None, max_cycles: int | None = None) -> ReconciliationWorkerRunSummary:
@@ -1416,6 +1456,7 @@ class PostgresReconciliationWorker:
                 failed=summary.failed + cycle.failed,
                 cancelled=summary.cancelled + cycle.cancelled,
                 skipped=summary.skipped + cycle.skipped,
+                denied=summary.denied + cycle.denied,
             )
             if max_cycles is not None and summary.cycles >= max_cycles:
                 break

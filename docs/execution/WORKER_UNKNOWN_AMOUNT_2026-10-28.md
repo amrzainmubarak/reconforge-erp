@@ -40,8 +40,9 @@ interrupted at 3% before the rename and is not a full-suite result.
 The change does not bind a caller-provided known amount to the persisted run,
 validate historic derived amounts or define cross-currency limits. A fake
 repository reproduction showed a direct caller can supply a smaller amount
-than the stored value; its live reachability is not established. A denial can
-stop `process_once`, so fault isolation remains an operational gate. See
+than the stored value; its live reachability is not established. The later
+per-page isolation change counts denials and continues other runs on that page,
+but durable audit and fairness across pages and restarts remain open. See
 `RECONCILIATION_CLAIM_AUTHORITY_GAPS_2026-10-28.md` and
 `RECONCILIATION_EXPOSURE_REPLAY_2026-10-28.md`; hosted final-source checks,
 native restoration and restricted production grants are still required.

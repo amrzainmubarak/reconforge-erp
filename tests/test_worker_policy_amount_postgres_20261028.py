@@ -75,6 +75,16 @@ def _snapshot(tenant: str, factory: PostgresConnectionFactory, run_id: str) -> t
         )
 
 
+def _audit_and_outbox_counts(tenant: str) -> tuple[int, int]:
+    import psycopg
+
+    with psycopg.connect(os.environ["RECONFORGE_TEST_POSTGRES_ADMIN_DSN"]) as conn:
+        audit_count = conn.execute("SELECT count(*) FROM reconforge.audit_events WHERE tenant_id=%s", (tenant,)).fetchone()
+        outbox_count = conn.execute("SELECT count(*) FROM reconforge.outbox_events WHERE tenant_id=%s", (tenant,)).fetchone()
+        assert audit_count is not None and outbox_count is not None
+        return int(audit_count[0]), int(outbox_count[0])
+
+
 def _context(tenant: str) -> PolicyEvaluationContext:
     return PolicyEvaluationContext(
         user_id="worker", username="worker", user_permissions={"match.discover", "match.run"},
@@ -105,15 +115,18 @@ def test_unknown_discovered_exposure_is_rejected_before_claim_without_changes(wo
     tenant, factory = worker_database
     _create_run(tenant, factory, "unknown", None)
     before = _snapshot(tenant, factory, "unknown")
-    with pytest.raises(PostgresReconciliationWorkerError, match="amount_missing_for_bounded_policy"):
-        _worker(tenant, factory, _context).process_once()
+    events_before = _audit_and_outbox_counts(tenant)
+    summary = _worker(tenant, factory, _context).process_once()
+    assert (summary.denied, summary.completed, summary.failed, summary.skipped) == (1, 0, 0, 0)
     assert _snapshot(tenant, factory, "unknown") == before
+    assert _audit_and_outbox_counts(tenant) == events_before
 
 
 def test_unknown_exposure_is_rechecked_inside_transaction_before_claim(worker_database) -> None:
     tenant, factory = worker_database
     _create_run(tenant, factory, "recheck", None)
     before = _snapshot(tenant, factory, "recheck")
+    events_before = _audit_and_outbox_counts(tenant)
     calls = 0
 
     def changed_policy(scope: str) -> PolicyEvaluationContext:
@@ -125,6 +138,7 @@ def test_unknown_exposure_is_rechecked_inside_transaction_before_claim(worker_da
         _worker(tenant, factory, changed_policy).process_run(tenant_id=tenant, run_id="recheck")
     assert calls == 2
     assert _snapshot(tenant, factory, "recheck") == before
+    assert _audit_and_outbox_counts(tenant) == events_before
 
 
 def test_known_exposure_allowed_and_above_limit_rejected(worker_database) -> None:
@@ -164,6 +178,8 @@ def test_process_once_rejects_stored_above_limit_before_claim(worker_database) -
     tenant, factory = worker_database
     _create_run(tenant, factory, "discovered-denied", "11.00")
     before = _snapshot(tenant, factory, "discovered-denied")
-    with pytest.raises(PostgresReconciliationWorkerError, match="amount_above_ceiling"):
-        _worker(tenant, factory, _context).process_once()
+    events_before = _audit_and_outbox_counts(tenant)
+    summary = _worker(tenant, factory, _context).process_once()
+    assert (summary.denied, summary.completed, summary.failed, summary.skipped) == (1, 0, 0, 0)
     assert _snapshot(tenant, factory, "discovered-denied") == before
+    assert _audit_and_outbox_counts(tenant) == events_before

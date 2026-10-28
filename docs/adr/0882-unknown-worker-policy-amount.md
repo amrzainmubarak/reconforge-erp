@@ -1,6 +1,6 @@
 # ADR 0882: Explicit unknown reconciliation worker exposure
 
-Status: proposed. Date: 2026-10-28.
+Status: proposed; per-page denial handling is extended by ADR0883. Date: 2026-10-28.
 
 ## Context
 

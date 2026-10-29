@@ -13395,3 +13395,55 @@ replace a full-suite run. [Quality entity scope](QUALITY_ENTITY_SCOPE_DESIGN_202
 is a proposed design only: entity isolation, authorized legacy access and the
 release gate remain open. The experimental keyset is retained as a draft, not
 wired into worker discovery; see [fairness](WORKER_DENIAL_FAIRNESS_2026-10-28.md).
+
+Follow-up slices enforce organization authorization before a worker claim,
+preserve exact PostgreSQL NUMERIC retries, and compute submission authorization
+amounts in an isolated Decimal context. See [organization](RECONCILIATION_WORKER_ORGANIZATION_2026-10-28.md),
+[numeric retry](RECONCILIATION_ZERO_RETRY_2026-10-28.md), and
+[API precision](RECONCILIATION_API_AUTH_PRECISION_2026-10-28.md) for synthetic
+native evidence and compatibility limits. The API policy still lacks a proven
+currency-aware ceiling and the worker still relies on historical exposure.
+[Matcher exception collision](RECONCILIATION_MATCHER_EXCEPTION_CONTRACT_2026-10-28.md)
+is an independently reproduced open defect; historical checkpoint safety,
+entity isolation, complete cycles and the release remain unqualified.
+
+P0: independent synthetic adapter probes on worker SHA-256
+`4eeec1a59c044b373bf5fdb5a2ca6592139017b8a0ce43a4b214cea284c18ce0`
+show that attributes can override stored source fields. For example, a left
+stored amount of 1 and right stored amount of 999 produced a match when the
+left attributes supplied amount 999; without the override both were unmatched.
+The source-verified probe and log are
+`output/erp-vision-20261028/adapter-attribute-override-probe.py` and `.log`.
+Separate synthetic cases indicate analogous ID, currency, date and reference
+overrides. A separate restricted-role PostgreSQL 16.14 synthetic test persisted
+`Matched left-b → right-r` with difference zero although the stored left-b
+amount was 77 and the right amount was 10; the actual matching data came from
+left-a with an overridden attributes ID. FORCE RLS was enabled and the worker
+and repository file hashes were stable before and after, but the checkout was
+not committed. The native test and log are in
+`output/result-collision-probe-20261028/`, with log SHA-256
+`5fb3ec7b9537656e2405b9d217875e84825a4c627c887cb15b12fd822eaf689f`.
+This is an observed persisted reconciliation match, not a GL posting or proof
+of all deployment modes. A subsequent guard rejects conflicting source fields
+before matching; its restricted PostgreSQL test passed 18 cases on a modified
+tree. Final hosted checks, legacy checkpoints and a durable data-quality
+exception for rejected records remain open; see
+[source guard](RECONCILIATION_CANONICAL_SOURCE_GUARD_2026-10-28.md).
+
+A separate restricted-role PostgreSQL 16.14 test used synthetic repository
+outputs with one result identity but differing amount difference and lineage:
+a second partition checkpoint described the new output while the stored result
+remained the first. The experiment directly called the repository; it did not
+establish that the engine generates that collision. See
+[source and result evidence](RECONCILIATION_SOURCE_AND_RESULT_EVIDENCE_2026-10-28.md).
+Result-content containment now has restricted PostgreSQL tests; see
+[result collision](RECONCILIATION_RESULT_COLLISION_2026-10-29.md). Exception
+and result content checks do not qualify historical checkpoints or prove
+unique partition lineage.
+
+An additional PostgreSQL 16.15 synthetic probe observed a completed result
+after an organization grant was withdrawn by the test matcher following
+claim, and a streaming worker failure with a one-connection pool. The grant
+provider was simulated, not an external identity system; the pool failure was
+a bounded timeout, not proof of an indefinite deadlock. See
+[post-claim authorization](RECONCILIATION_POSTCLAIM_AUTHORIZATION_2026-10-28.md).

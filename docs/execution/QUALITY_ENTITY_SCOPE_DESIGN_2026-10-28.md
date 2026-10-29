@@ -18,6 +18,11 @@ The API requires a selected hierarchy for NCR creation and disposition, and
 checks the actor, but the NCR record has no durable entity binding against which
 to compare that selection. Plans and rework have their own workspace-scoped
 routes; see [quality routes](../../reconforge/api/routes/manufacturing_quality.py).
+The rework creation, step, and completion routes do not currently require the
+same hierarchy as NCR creation and disposition. A parent-scoped RLS change
+would also require compatible authorization and scope propagation there. No
+current `apps/web/src` caller for these NCR/rework routes was found in the
+source review; a different manufacturing screen is not evidence of their UI.
 
 Earlier synthetic restricted-role PostgreSQL probes observed an actor authorized
 for entity B disposing an NCR created in the same workspace under entity A, and
@@ -81,6 +86,10 @@ or the currently selected entity.
   entity-bound record. Prevent ordinary updates to a record's scope, including
   attempts to convert old NULL rows to a guessed entity. Repository identity
   binding remains a separate requirement unless independently implemented.
+  The current direct PostgreSQL `create_ncr` also permits a missing creator;
+  the in-repository API supplies its authenticated user, but external direct
+  callers cannot be ruled out. Rejecting that existing input is a contract
+  change, and a new method alone would not secure the old path.
 - Add restrictive PostgreSQL row policies with exact nonempty tenant,
   workspace, organization and entity equality for new NCRs; NULL and missing
   context fail closed. PostgreSQL permissive policies can combine with OR, so

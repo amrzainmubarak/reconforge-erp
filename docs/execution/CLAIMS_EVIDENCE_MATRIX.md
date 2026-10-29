@@ -1,3 +1,11 @@
+## 2026-10-29 bounded safety continuation
+
+| Claim | Code evidence | Test evidence | Runtime evidence | Maturity | Allowed wording |
+| --- | --- | --- | --- | --- | --- |
+| Canonical reconciliation input | `LocalDeterministicMatcherAdapter`; [guard](RECONCILIATION_CANONICAL_SOURCE_GUARD_2026-10-28.md) | Focused conflict, missing-value, mapping and partition tests | Synthetic restricted PostgreSQL: 18 cases on modified source | experimental | Conflicting source fields are rejected in the tested worker path; legacy checkpoints, complete recovery and durable data-quality exceptions remain open |
+| Exception and result conflict handling | PostgreSQL repository; [exception](RECONCILIATION_MATCHER_EXCEPTION_CONTRACT_2026-10-28.md) and [result](RECONCILIATION_RESULT_COLLISION_2026-10-29.md) | Content, concurrent-write, savepoint and rollback tests | Synthetic PostgreSQL restricted-role tests, source-bound but initially uncommitted | experimental | Tested new writes reject differing content under the same identity; historical checkpoints and cross-partition lineage remain unqualified |
+| Missing values and monetary precision | Result validation and [evidence](RECONCILIATION_RESULT_VALUES_2026-10-29.md) | Synthetic invalid values and no-binary-float tests | Restricted PostgreSQL tests; no deployed ceiling proof | in progress | Explicit invalid result inputs are rejected in tested paths; omitted historical amount defaults and long Decimal resource bounds remain open |
+
 ## 2026-10-28 source refresh
 
 | Claim | Code evidence | Test evidence | Runtime evidence | Maturity | Allowed wording |

@@ -160,3 +160,25 @@ the latter is configured for scheduled or manual events, not this PR event.
 The rollup snapshot is `output/erp-vision-20261028/hosted-checks-24d8862e.json`,
 SHA-256 `9b80844dd49a92d8bf5469eceeab883200347bceaf8062a99ddd5c9e046e6b3b`.
 It does not certify the successor commit, a release artifact, or the skipped gate.
+
+The later hosted PR rollup for head `43d8d051` also completed with 89
+successful checks and the same three skips. Its snapshot is
+`output/erp-vision-20261028/hosted-checks-43d8d051.json`, SHA-256
+`a838658783908f28e9dbf2b64df17b6371160db76c86658666c4582a911719e6`.
+It predates the subsequently committed exception/result collision fixes and
+the uncommitted source-guard work. It does not establish the skipped exact-image
+gate or a release artifact.
+
+The three migration cases that failed locally because the PostgreSQL admin DSN
+was unset were rerun on a task-owned synthetic PostgreSQL 16.15 server at HEAD
+`32e6cffb2911987c1b788ce73fe5057f32e8c116`: 3 passed, 0 skipped, exit 0,
+pytest duration 125.625 s. The test application role was non-superuser and
+without BYPASSRLS, but the fixtures granted it broad table privileges in the
+disposable test databases. The tracked-content fingerprint for 4,721 files
+was unchanged before and after:
+`67e7648d777def22818005fbd13de6a8dfdd952be778bf2cbb86a298dc552a73`.
+Evidence is `output/erp-vision-20261028/migration-three-frozen-20261028.json`
+and the associated log with SHA-256
+`0a09ea940803b906ef2f516461c1c9aaa34950a43d1a3f8cae5db7c11a946380`.
+This targeted rerun neither replaces the negative full local suite nor proves
+production grants or the complete migration/restore release gate.

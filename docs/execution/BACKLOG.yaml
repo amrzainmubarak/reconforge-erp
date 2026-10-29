@@ -21,6 +21,62 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-RECONCILIATION-RESULT-VALUES-20261029
+    depends_on: [AMR-MATCHER-RESULT-COLLISION-20261028]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_RESULT_VALUES_2026-10-29.md
+    note: "Explicit missing or non-exact result values and unsafe numeric wrappers are rejected with restricted PostgreSQL tests. The historical omitted amount default remains zero; long Decimal resource bounds and final hosted CI remain open."
+  - id: AMR-WORKER-POSTCLAIM-AUTHORITY-20261028
+    depends_on: [AMR-WORKER-ORGANIZATION-20261028]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_POSTCLAIM_AUTHORIZATION_2026-10-28.md
+    note: "Synthetic probe shows revocation after claim does not stop later effects; cursor streaming can require additional pool connections. PostgreSQL proof, policy transaction boundaries, failure/recovery semantics and bounded pool tests remain open."
+  - id: AMR-MATCHER-RESULT-COLLISION-20261028
+    depends_on: [AMR-MATCHER-EXCEPTION-COLLISION-20261028]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_RESULT_COLLISION_2026-10-29.md
+    note: "Restricted PostgreSQL reproduced checkpoint/result divergence; new content-conflict checks have native tests. Final hosted CI, engine reachability, lineage across partitions and historical checkpoints remain open."
+  - id: AMR-MATCHER-CANONICAL-SOURCE-20261028
+    depends_on: []
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_CANONICAL_SOURCE_GUARD_2026-10-28.md
+    note: "Restricted PostgreSQL reproduced persisted false matches from conflicting attributes; a fail-closed guard has focused native tests. Final hosted CI, old checkpoints, data-quality evidence and versioned partition semantics remain open."
+  - id: AMR-MATCHER-EXCEPTION-COLLISION-20261028
+    depends_on: [AMR-WORKER-ORGANIZATION-20261028]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_MATCHER_EXCEPTION_CONTRACT_2026-10-28.md
+    note: "Real matcher exception_id is rejected by worker persistence; distinct engine exceptions can share repository identity. Preserve IDs and reject differing stored content atomically before checkpoint; historical checkpoints and live rollback remain open."
+  - id: AMR-RECONCILIATION-ZERO-RETRY-20261028
+    depends_on: []
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_ZERO_RETRY_2026-10-28.md
+    note: "PostgreSQL NUMERIC zero and small values were rejected on identical input retry; bounded stored-value repair and synthetic native checks are in progress. Final source, hosted CI and broader replay remain open."
+  - id: AMR-RECONCILIATION-API-AUTH-PRECISION-20261028
+    depends_on: [AMR-RECONCILIATION-EXPOSURE-20261028]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_API_AUTH_PRECISION_2026-10-28.md
+    note: "Submission authorization uses bounded exact arithmetic for known single-currency inputs and unknown for mixed/unknown currency; current API does not bind a live currency-aware ceiling. Stored legacy exposure and worker authority remain unresolved."
+  - id: AMR-WORKER-ORGANIZATION-20261028
+    depends_on: []
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_WORKER_ORGANIZATION_2026-10-28.md
+    note: "Organization authorization is checked before claim and rechecked in its transaction; synthetic restricted-role PostgreSQL and mandatory local gate pass. Hosted CI, post-claim revocation and tenant-wide discovery remain open."
   - id: AMR-MUTATION-ISOLATION-20261028
     depends_on: []
     status: in_progress

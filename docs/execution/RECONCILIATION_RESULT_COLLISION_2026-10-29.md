@@ -45,6 +45,14 @@ verification policy is needed before qualifying historical replay. Identical
 results in distinct partitions may still share a row; no unique cross-partition
 cardinality or result-to-partition lineage is claimed.
 
+An independent source review identified two pre-existing input-validation
+gaps outside this change: the result path converts an explicitly missing
+`amount_difference` to `"0"`, and `int(date_difference_days)` may truncate
+a fractional value. Neither issue is repaired by comparing persisted content;
+their reachability through the public API and production impact have not been
+established. They require separate failure-first tests and a compatible
+ingress policy before any broader correctness claim.
+
 For nonempty result and exception batches, `chunk_size` must now be an integer
 from 1 to 5,000; zero, negative, booleans, nonintegers and larger values fail
 before any SQL. This closes a previous silent loss in which a negative value

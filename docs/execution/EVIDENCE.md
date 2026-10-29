@@ -24628,3 +24628,18 @@ The keyset draft and its restricted synthetic PostgreSQL test are recorded in
 [worker fairness](WORKER_DENIAL_FAIRNESS_2026-10-28.md); they do not prove
 cross-page fairness. No resulting release, whole-cycle, or quality-isolation
 qualification is asserted.
+
+The three migration failures caused by a missing local test DSN were rerun on
+an owned PostgreSQL 16.15 test service at `32e6cffb`: 3 passed without skips,
+with a restricted but broadly granted fixture role and matching tracked-file
+fingerprints. The exact receipt and limits are in the baseline refresh; the
+original full-suite failure remains historical evidence.
+
+Development evidence for organization pre-claim authorization, NUMERIC input
+retry, and separate API authorization arithmetic is in the three linked
+reconciliation reports in [state](STATE.md). A restricted PostgreSQL test
+for the first two slices ran with mandatory no-skip gating. A separate native
+failure and engine-derived collision in the matcher exception contract are
+recorded in [the exception investigation](RECONCILIATION_MATCHER_EXCEPTION_CONTRACT_2026-10-28.md).
+The reported cases do not establish complete replay, post-claim revocation,
+historical checkpoints, final hosted CI, or release qualification.

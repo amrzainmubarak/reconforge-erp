@@ -14012,3 +14012,14 @@ ownership unknown. Do not activate the proposed restrictive quality migration
 until its effects on historical access and a tested, authorized recovery path
 are resolved. See [baseline refresh](BASELINE_REFRESH_2026-10-28.md) and
 [quality design](QUALITY_ENTITY_SCOPE_DESIGN_2026-10-28.md).
+
+### 2026-10-29 — Preserve source identity and fail closed on conflicts
+
+Reject conflicting reconciliation source attributes rather than silently
+replace canonical data or reinterpret prior outputs. The tested containment
+also narrows accepted identities, exact fields and partition keys; ADR0884 is
+proposed and documents the partition compatibility impact. Reject differing
+result or exception content under an existing identity inside a savepoint;
+do not change historical identities or claim existing checkpoints are safe.
+Unknown values still need an explicit versioned replacement for the historical
+omitted amount-difference default. See the linked records in [state](STATE.md).

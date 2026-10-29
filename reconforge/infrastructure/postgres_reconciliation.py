@@ -18,6 +18,8 @@ from decimal import Decimal, InvalidOperation
 from functools import wraps
 from typing import Any, Concatenate, ParamSpec, TypeVar, cast
 
+import numpy as np
+
 from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id, validate_tenant_id
 from reconforge.io.persisted import (
     PersistedJsonError,
@@ -35,12 +37,17 @@ from reconforge.io.persisted import (
 from reconforge.utils.money import (
     STRICT_FINANCIAL_INPUT_POLICY,
     InvalidAmountError,
+    _is_binary_floating_point,
     validate_financial_input_policy,
 )
 from reconforge.utils.time import utc_now_text
 
 _P = ParamSpec("_P")
 _T = TypeVar("_T")
+
+# Bound textual inputs before parsing; leading zeros and whitespace count too.
+_MAX_NUMERIC_TEXT_LENGTH = 256
+_NUMPY_INTEGER_TYPES = (np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64)
 
 
 def _atomic_exception_write(
@@ -266,6 +273,38 @@ class PostgresReconciliationRepository:
             raise PostgresReconciliationValidationError("chunk_size must be an integer between 1 and 5000.")
         return value
 
+    @staticmethod
+    def _result_date_difference(value: object) -> int | None:
+        """Validate optional whole-day differences without silently truncating."""
+        if value is None:
+            return None
+        if isinstance(value, (bool, float)):
+            raise PostgresReconciliationValidationError("date_difference_days must be an exact integer.")
+        if isinstance(value, Decimal):
+            value = Decimal(value)  # Do not dispatch subclass numeric methods.
+            if not value.is_finite() or value < 0 or value > 10_000_000:
+                raise PostgresReconciliationValidationError("date_difference_days is outside the supported range.")
+            if value != value.to_integral_value():
+                raise PostgresReconciliationValidationError("date_difference_days must be an exact integer.")
+            return int(value)
+        if type(value) is int:
+            days = value
+        elif isinstance(value, str):
+            if str.__len__(value) > _MAX_NUMERIC_TEXT_LENGTH:
+                raise PostgresReconciliationValidationError("date_difference_days exceeds the supported text length.")
+            text = str.strip(value)
+            if not re.fullmatch(r"[+-]?[0-9]+", text):
+                raise PostgresReconciliationValidationError("date_difference_days must be an exact integer.")
+            try:
+                days = int(text)
+            except ValueError as exc:
+                raise PostgresReconciliationValidationError("date_difference_days must be an exact integer.") from exc
+        else:
+            raise PostgresReconciliationValidationError("date_difference_days must be an exact integer.")
+        if not 0 <= days <= 10_000_000:
+            raise PostgresReconciliationValidationError("date_difference_days is outside the supported range.")
+        return days
+
     _RUN_COLUMNS = (
         "tenant_id",
         "id",
@@ -411,11 +450,32 @@ class PostgresReconciliationRepository:
         maximum_scale: int = 18,
         maximum_integer_digits: int = 20,
     ) -> str | None:
-        if value is None or (allow_blank and not str(value).strip()):
+        if value is None:
             return None
-        if isinstance(value, (bool, float)):
+        if isinstance(value, str):
+            if str.__len__(value) > _MAX_NUMERIC_TEXT_LENGTH:
+                raise PostgresReconciliationValidationError(f"{field_name} exceeds the supported text length.")
+            if allow_blank and not str.strip(value):
+                return None
+        if isinstance(value, bool) or _is_binary_floating_point(value):
             raise PostgresReconciliationValidationError(f"{field_name} must be an exact decimal, not a binary float.")
-        raw = str(value).strip()
+        if isinstance(value, int) or type(value) in _NUMPY_INTEGER_TYPES:
+            # int.__int__ extracts the actual Python int, not an overridden
+            # subclass conversion. Only exact built-in NumPy scalar types are
+            # accepted; subclasses can override their numeric conversions.
+            integer = int.__int__(value) if isinstance(value, int) else int(cast(int, value))
+            limit = 10 ** maximum_integer_digits
+            if not -limit < integer < limit:
+                raise PostgresReconciliationValidationError(f"{field_name} exceeds the supported decimal precision.")
+            raw = str(integer)
+        elif isinstance(value, Decimal):
+            # Copy to the built-in type so subclasses cannot supply an
+            # unrelated value through an overridden __str__ method.
+            raw = str(Decimal(value))
+        elif isinstance(value, str):
+            raw = str.strip(value)
+        else:
+            raise PostgresReconciliationValidationError(f"{field_name} must be exact decimal text or a number.")
         if not _DECIMAL_PATTERN.fullmatch(raw) or (not allow_negative and raw.startswith("-")):
             raise PostgresReconciliationValidationError(f"{field_name} must be an exact decimal.")
         try:
@@ -1281,7 +1341,6 @@ class PostgresReconciliationRepository:
             return existing
         return self._record(row, self._INPUT_COLUMNS)
 
-    @_atomic_exception_write
     def append_result(
         self,
         *,
@@ -1311,19 +1370,37 @@ class PostgresReconciliationRepository:
         if confidence_text is None or Decimal(confidence_text) > Decimal("1"):
             raise PostgresReconciliationValidationError("confidence must be between 0 and 1.")
         explanation_text = self._text(explanation, "explanation", maximum=4_000)
-        difference = self._decimal(amount_difference, "amount_difference") or "0"
-        if date_difference_days is None:
-            day_difference = None
-        else:
-            try:
-                day_difference = int(date_difference_days)
-            except (TypeError, ValueError) as exc:
-                raise PostgresReconciliationValidationError("date_difference_days must be an integer.") from exc
-            if not 0 <= day_difference <= 10_000_000:
-                raise PostgresReconciliationValidationError("date_difference_days is outside the supported range.")
+        difference = self._decimal(amount_difference, "amount_difference")
+        if difference is None:
+            raise PostgresReconciliationValidationError("amount_difference must be an exact decimal.")
+        day_difference = self._result_date_difference(date_difference_days)
         selected_status = self._choice(status, "status", _RESULT_STATUSES)
         reason = self._text(reason_code, "reason_code", maximum=64, allow_blank=True)
         lineage_json = self._json_text(lineage, "lineage")
+        return self._append_validated_result(
+            tenant=tenant, run=run, left=left, right=right, selected_type=selected_type,
+            confidence_text=confidence_text, explanation_text=explanation_text, difference=difference,
+            day_difference=day_difference, selected_status=selected_status, reason=reason, lineage_json=lineage_json,
+        )
+
+    @_atomic_exception_write
+    def _append_validated_result(
+        self,
+        *,
+        tenant: str,
+        run: str,
+        left: str,
+        right: str,
+        selected_type: str,
+        confidence_text: str,
+        explanation_text: str,
+        difference: str,
+        day_difference: int | None,
+        selected_status: str,
+        reason: str,
+        lineage_json: str,
+    ) -> dict[str, Any]:
+        """Persist one prevalidated result inside the caller's transaction."""
         self._run_row(tenant, run, lock=True)
         references = self.connection.execute(
             """
@@ -1482,17 +1559,12 @@ class PostgresReconciliationRepository:
             if confidence_text is None or Decimal(confidence_text) > Decimal("1"):
                 raise PostgresReconciliationValidationError("confidence must be between 0 and 1.")
             explanation_text = self._text(item.get("explanation") or "", "explanation", maximum=4_000)
-            difference = self._decimal(item.get("amount_difference"), "amount_difference") or "0"
-            date_diff = item.get("date_difference_days")
-            if date_diff is None:
-                day_difference = None
-            else:
-                try:
-                    day_difference = int(date_diff)
-                except (TypeError, ValueError) as exc:
-                    raise PostgresReconciliationValidationError("date_difference_days must be an integer.") from exc
-                if not 0 <= day_difference <= 10_000_000:
-                    raise PostgresReconciliationValidationError("date_difference_days is outside the supported range.")
+            # Retain the long-standing omitted-field default, but an explicit
+            # null is not an exact financial amount and must not become zero.
+            difference = self._decimal(item.get("amount_difference", "0"), "amount_difference")
+            if difference is None:
+                raise PostgresReconciliationValidationError("amount_difference must be an exact decimal.")
+            day_difference = self._result_date_difference(item.get("date_difference_days"))
             selected_status = self._choice(item.get("status") or "", "status", _RESULT_STATUSES)
             reason = self._text(item.get("reason_code") or "", "reason_code", maximum=64, allow_blank=True)
             lineage_json = self._json_text(item.get("lineage"), "lineage")

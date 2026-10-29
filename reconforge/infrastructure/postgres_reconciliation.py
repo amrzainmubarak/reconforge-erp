@@ -11,11 +11,14 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any, cast
+from functools import wraps
+from typing import Any, Concatenate, ParamSpec, TypeVar, cast
+
+import numpy as np
 
 from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id, validate_tenant_id
 from reconforge.io.persisted import (
@@ -34,9 +37,42 @@ from reconforge.io.persisted import (
 from reconforge.utils.money import (
     STRICT_FINANCIAL_INPUT_POLICY,
     InvalidAmountError,
+    _is_binary_floating_point,
     validate_financial_input_policy,
 )
 from reconforge.utils.time import utc_now_text
+
+_P = ParamSpec("_P")
+_T = TypeVar("_T")
+
+# Bound textual inputs before parsing; leading zeros and whitespace count too.
+_MAX_NUMERIC_TEXT_LENGTH = 256
+_NUMPY_INTEGER_TYPES = (np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64)
+
+
+def _atomic_exception_write(
+    method: Callable[Concatenate[PostgresReconciliationRepository, _P], _T],
+) -> Callable[Concatenate[PostgresReconciliationRepository, _P], _T]:
+    """Roll back this operation on failure without committing the caller's transaction.
+
+    PostgreSQL savepoints nest even when their names repeat. An autocommit
+    connection without a transaction fails on SAVEPOINT before any writes.
+    """
+
+    @wraps(method)
+    def wrapped(self: PostgresReconciliationRepository, *args: _P.args, **kwargs: _P.kwargs) -> _T:
+        self.connection.execute("SAVEPOINT reconforge_exception_write")
+        try:
+            result = method(self, *args, **kwargs)
+        except BaseException:
+            self.connection.execute("ROLLBACK TO SAVEPOINT reconforge_exception_write")
+            self.connection.execute("RELEASE SAVEPOINT reconforge_exception_write")
+            raise
+        self.connection.execute("RELEASE SAVEPOINT reconforge_exception_write")
+        return result
+
+    return wrapped
+
 
 _ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 _DECIMAL_PATTERN = re.compile(r"^-?(0|[0-9]+)(\.[0-9]+)?$")
@@ -227,6 +263,48 @@ class PostgresReconciliationRepository:
 
     connection: Any
 
+    @staticmethod
+    def _validate_batch_chunk_size(value: object) -> int:
+        """Bound bind parameters for nonempty inserts and reject silent empty ranges."""
+        # An insert uses 13 parameters per item, so 5,000 rows use 65,000,
+        # below PostgreSQL's 65,535 parameter ceiling. The content check uses
+        # 12 per item plus one tenant parameter.
+        if type(value) is not int or not 1 <= value <= 5_000:
+            raise PostgresReconciliationValidationError("chunk_size must be an integer between 1 and 5000.")
+        return value
+
+    @staticmethod
+    def _result_date_difference(value: object) -> int | None:
+        """Validate optional whole-day differences without silently truncating."""
+        if value is None:
+            return None
+        if isinstance(value, (bool, float)):
+            raise PostgresReconciliationValidationError("date_difference_days must be an exact integer.")
+        if isinstance(value, Decimal):
+            value = Decimal(value)  # Do not dispatch subclass numeric methods.
+            if not value.is_finite() or value < 0 or value > 10_000_000:
+                raise PostgresReconciliationValidationError("date_difference_days is outside the supported range.")
+            if value != value.to_integral_value():
+                raise PostgresReconciliationValidationError("date_difference_days must be an exact integer.")
+            return int(value)
+        if type(value) is int:
+            days = value
+        elif isinstance(value, str):
+            if str.__len__(value) > _MAX_NUMERIC_TEXT_LENGTH:
+                raise PostgresReconciliationValidationError("date_difference_days exceeds the supported text length.")
+            text = str.strip(value)
+            if not re.fullmatch(r"[+-]?[0-9]+", text):
+                raise PostgresReconciliationValidationError("date_difference_days must be an exact integer.")
+            try:
+                days = int(text)
+            except ValueError as exc:
+                raise PostgresReconciliationValidationError("date_difference_days must be an exact integer.") from exc
+        else:
+            raise PostgresReconciliationValidationError("date_difference_days must be an exact integer.")
+        if not 0 <= days <= 10_000_000:
+            raise PostgresReconciliationValidationError("date_difference_days is outside the supported range.")
+        return days
+
     _RUN_COLUMNS = (
         "tenant_id",
         "id",
@@ -372,11 +450,32 @@ class PostgresReconciliationRepository:
         maximum_scale: int = 18,
         maximum_integer_digits: int = 20,
     ) -> str | None:
-        if value is None or (allow_blank and not str(value).strip()):
+        if value is None:
             return None
-        if isinstance(value, (bool, float)):
+        if isinstance(value, str):
+            if str.__len__(value) > _MAX_NUMERIC_TEXT_LENGTH:
+                raise PostgresReconciliationValidationError(f"{field_name} exceeds the supported text length.")
+            if allow_blank and not str.strip(value):
+                return None
+        if isinstance(value, bool) or _is_binary_floating_point(value):
             raise PostgresReconciliationValidationError(f"{field_name} must be an exact decimal, not a binary float.")
-        raw = str(value).strip()
+        if isinstance(value, int) or type(value) in _NUMPY_INTEGER_TYPES:
+            # int.__int__ extracts the actual Python int, not an overridden
+            # subclass conversion. Only exact built-in NumPy scalar types are
+            # accepted; subclasses can override their numeric conversions.
+            integer = int.__int__(value) if isinstance(value, int) else int(cast(int, value))
+            limit = 10 ** maximum_integer_digits
+            if not -limit < integer < limit:
+                raise PostgresReconciliationValidationError(f"{field_name} exceeds the supported decimal precision.")
+            raw = str(integer)
+        elif isinstance(value, Decimal):
+            # Copy to the built-in type so subclasses cannot supply an
+            # unrelated value through an overridden __str__ method.
+            raw = str(Decimal(value))
+        elif isinstance(value, str):
+            raw = str.strip(value)
+        else:
+            raise PostgresReconciliationValidationError(f"{field_name} must be exact decimal text or a number.")
         if not _DECIMAL_PATTERN.fullmatch(raw) or (not allow_negative and raw.startswith("-")):
             raise PostgresReconciliationValidationError(f"{field_name} must be an exact decimal.")
         try:
@@ -397,6 +496,27 @@ class PostgresReconciliationRepository:
         if "." in canonical:
             canonical = canonical.rstrip("0").rstrip(".")
         return canonical or "0"
+
+    @classmethod
+    def _stored_input_amount(cls, value: object) -> str | None:
+        """Canonicalize a typed database NUMERIC without broadening input syntax."""
+
+        if isinstance(value, Decimal):
+            if not value.is_finite():
+                raise PostgresReconciliationValidationError("amount must be finite.")
+            parts = value.as_tuple()
+            exponent = parts.exponent
+            if not isinstance(exponent, int):
+                raise PostgresReconciliationValidationError("amount must be a finite decimal.")
+            scale = max(0, -exponent)
+            integer_digits = max(1, len(parts.digits) + exponent) if exponent >= 0 else max(1, len(parts.digits) - scale)
+            if scale > 18 or integer_digits > 20:
+                raise PostgresReconciliationValidationError("amount exceeds the supported decimal precision.")
+            # Bounds are checked before formatting, so a hostile exponent cannot
+            # allocate an unbounded fixed-point string. This is for the typed
+            # value read from PostgreSQL, never the external request.
+            value = format(value, "f")
+        return cls._decimal(value, "amount", allow_negative=True, allow_blank=True)
 
     @classmethod
     def _currency(cls, value: object) -> str:
@@ -1192,9 +1312,7 @@ class PostgresReconciliationRepository:
             # requests use canonical decimal text. Compare finite values exactly
             # and bind every source field; a caller-supplied hash alone cannot
             # authenticate changed currency, date, original text, or attributes.
-            stored_amount = self._decimal(
-                existing["amount_decimal"], "amount", allow_negative=True, allow_blank=True
-            )
+            stored_amount = self._stored_input_amount(existing["amount_decimal"])
             amount_equal = (
                 stored_amount is None and amount_decimal is None
             ) or (
@@ -1252,19 +1370,37 @@ class PostgresReconciliationRepository:
         if confidence_text is None or Decimal(confidence_text) > Decimal("1"):
             raise PostgresReconciliationValidationError("confidence must be between 0 and 1.")
         explanation_text = self._text(explanation, "explanation", maximum=4_000)
-        difference = self._decimal(amount_difference, "amount_difference") or "0"
-        if date_difference_days is None:
-            day_difference = None
-        else:
-            try:
-                day_difference = int(date_difference_days)
-            except (TypeError, ValueError) as exc:
-                raise PostgresReconciliationValidationError("date_difference_days must be an integer.") from exc
-            if not 0 <= day_difference <= 10_000_000:
-                raise PostgresReconciliationValidationError("date_difference_days is outside the supported range.")
+        difference = self._decimal(amount_difference, "amount_difference")
+        if difference is None:
+            raise PostgresReconciliationValidationError("amount_difference must be an exact decimal.")
+        day_difference = self._result_date_difference(date_difference_days)
         selected_status = self._choice(status, "status", _RESULT_STATUSES)
         reason = self._text(reason_code, "reason_code", maximum=64, allow_blank=True)
         lineage_json = self._json_text(lineage, "lineage")
+        return self._append_validated_result(
+            tenant=tenant, run=run, left=left, right=right, selected_type=selected_type,
+            confidence_text=confidence_text, explanation_text=explanation_text, difference=difference,
+            day_difference=day_difference, selected_status=selected_status, reason=reason, lineage_json=lineage_json,
+        )
+
+    @_atomic_exception_write
+    def _append_validated_result(
+        self,
+        *,
+        tenant: str,
+        run: str,
+        left: str,
+        right: str,
+        selected_type: str,
+        confidence_text: str,
+        explanation_text: str,
+        difference: str,
+        day_difference: int | None,
+        selected_status: str,
+        reason: str,
+        lineage_json: str,
+    ) -> dict[str, Any]:
+        """Persist one prevalidated result inside the caller's transaction."""
         self._run_row(tenant, run, lock=True)
         references = self.connection.execute(
             """
@@ -1321,6 +1457,13 @@ class PostgresReconciliationRepository:
         )
         row = cursor.fetchone()
         if row is None:
+            expected = {
+                "id": result_id, "left_id": left, "right_id": right, "match_type": selected_type,
+                "confidence": confidence_text, "explanation": explanation_text, "amount_difference": difference,
+                "date_difference_days": day_difference, "status": selected_status, "reason_code": reason,
+                "lineage_json": lineage_json,
+            }
+            self._verify_result_contents(tenant, run, [expected])
             row = self.connection.execute(
                 """
                 SELECT tenant_id, id, run_id, left_id, right_id, match_type, confidence, explanation,
@@ -1331,6 +1474,46 @@ class PostgresReconciliationRepository:
                 (tenant, result_id),
             ).fetchone()
         return self._record(row, self._RESULT_COLUMNS)
+
+    def _verify_result_contents(self, tenant: str, run: str, expected: Sequence[dict[str, Any]]) -> None:
+        """Refuse a missing or changed result with PostgreSQL NUMERIC/JSONB equality.
+
+        The caller owns the locked parent and surrounding transaction. Result
+        identity remains unchanged; timestamps are not part of requested content.
+        """
+        if not expected:
+            return
+        values = ", ".join(
+            ["(%s, %s, %s, %s, %s, CAST(%s AS NUMERIC), %s, CAST(%s AS NUMERIC), "
+             "CAST(%s AS INTEGER), %s, %s, CAST(%s AS JSONB))"] * len(expected)
+        )
+        params: list[object] = []
+        for item in expected:
+            params.extend((item["id"], run, item["left_id"], item["right_id"], item["match_type"],
+                           item["confidence"], item["explanation"], item["amount_difference"],
+                           item["date_difference_days"], item["status"], item["reason_code"], item["lineage_json"]))
+        params.append(tenant)
+        query = "".join(("""
+            WITH expected (id, run_id, left_id, right_id, match_type, confidence, explanation,
+                           amount_difference, date_difference_days, status, reason_code, lineage_json) AS (VALUES
+        """, values, """)
+            SELECT EXISTS (
+                SELECT 1 FROM expected AS wanted
+                LEFT JOIN reconforge.reconciliation_results AS stored
+                    ON stored.tenant_id = %s AND stored.id = wanted.id
+                WHERE stored.id IS NULL OR
+                    ROW(stored.run_id, stored.left_id, stored.right_id, stored.match_type, stored.confidence,
+                        stored.explanation, stored.amount_difference, stored.date_difference_days,
+                        stored.status, stored.reason_code, stored.lineage_json)
+                    IS DISTINCT FROM
+                    ROW(wanted.run_id, wanted.left_id, wanted.right_id, wanted.match_type, wanted.confidence,
+                        wanted.explanation, wanted.amount_difference, wanted.date_difference_days,
+                        wanted.status, wanted.reason_code, wanted.lineage_json)
+            ) AS different_content
+        """))
+        row = self.connection.execute(query, tuple(params)).fetchone()
+        if row is None or self._row_value(row, "different_content", 0) is not False:
+            raise PostgresReconciliationIntegrityError("Reconciliation result has different content or is missing.")
 
     def append_results_batch(
         self,
@@ -1343,6 +1526,21 @@ class PostgresReconciliationRepository:
         """Batch append results with set-based input existence verification and chunked inserts."""
         if not items:
             return []
+        self._validate_batch_chunk_size(chunk_size)
+        return self._append_nonempty_results_batch(
+            tenant_id=tenant_id, run_id=run_id, items=items, chunk_size=chunk_size,
+        )
+
+    @_atomic_exception_write
+    def _append_nonempty_results_batch(
+        self,
+        *,
+        tenant_id: str,
+        run_id: str,
+        items: Sequence[dict[str, Any]],
+        chunk_size: int,
+    ) -> list[dict[str, Any]]:
+        """Persist a non-empty result batch inside the caller's transaction."""
         tenant = self._tenant(tenant_id)
         run = self._id(run_id, "run_id")
         self._run_row(tenant, run, lock=True)
@@ -1361,17 +1559,12 @@ class PostgresReconciliationRepository:
             if confidence_text is None or Decimal(confidence_text) > Decimal("1"):
                 raise PostgresReconciliationValidationError("confidence must be between 0 and 1.")
             explanation_text = self._text(item.get("explanation") or "", "explanation", maximum=4_000)
-            difference = self._decimal(item.get("amount_difference"), "amount_difference") or "0"
-            date_diff = item.get("date_difference_days")
-            if date_diff is None:
-                day_difference = None
-            else:
-                try:
-                    day_difference = int(date_diff)
-                except (TypeError, ValueError) as exc:
-                    raise PostgresReconciliationValidationError("date_difference_days must be an integer.") from exc
-                if not 0 <= day_difference <= 10_000_000:
-                    raise PostgresReconciliationValidationError("date_difference_days is outside the supported range.")
+            # Retain the long-standing omitted-field default, but an explicit
+            # null is not an exact financial amount and must not become zero.
+            difference = self._decimal(item.get("amount_difference", "0"), "amount_difference")
+            if difference is None:
+                raise PostgresReconciliationValidationError("amount_difference must be an exact decimal.")
+            day_difference = self._result_date_difference(item.get("date_difference_days"))
             selected_status = self._choice(item.get("status") or "", "status", _RESULT_STATUSES)
             reason = self._text(item.get("reason_code") or "", "reason_code", maximum=64, allow_blank=True)
             lineage_json = self._json_text(item.get("lineage"), "lineage")
@@ -1408,6 +1601,10 @@ class PostgresReconciliationRepository:
                     "lineage_json": lineage_json,
                 }
             )
+
+        identities = [item["id"] for item in prepared]
+        if len(set(identities)) != len(identities):
+            raise PostgresReconciliationIntegrityError("Duplicate reconciliation result identity in one batch.")
 
         if left_ids:
             left_list = list(left_ids)
@@ -1470,6 +1667,8 @@ class PostgresReconciliationRepository:
             fetched = cursor.fetchall() if hasattr(cursor, "fetchall") else ()
             returned_by_id = {self._row_value(r, "id", 1): r for r in fetched}
 
+            self._verify_result_contents(tenant, run, chunk)
+
             missing_ids = [p["id"] for p in chunk if p["id"] not in returned_by_id]
             if missing_ids:
                 existing_rows = self.connection.execute(
@@ -1486,8 +1685,9 @@ class PostgresReconciliationRepository:
 
             for p in chunk:
                 r = returned_by_id.get(p["id"])
-                if r is not None:
-                    results.append(self._record(r, self._RESULT_COLUMNS))
+                if r is None:
+                    raise PostgresReconciliationIntegrityError("Reconciliation result is missing after persistence.")
+                results.append(self._record(r, self._RESULT_COLUMNS))
         return results
 
     def append_exception(
@@ -1563,7 +1763,65 @@ class PostgresReconciliationRepository:
                 evidence_json,
             ),
         )
-        return self._record(cursor.fetchone(), self._EXCEPTION_COLUMNS)
+        row = cursor.fetchone()
+        if row is None:
+            expected = {
+                "id": exception_id, "exception_type": selected_type, "source_side": side, "source_id": source,
+                "title": selected_title, "explanation": details, "severity": selected_severity,
+                "risk_score": score, "owner_id": owner, "reason_code": reason, "evidence_json": evidence_json,
+            }
+            self._verify_exception_contents(tenant, run, [expected])
+            row = self.connection.execute(
+                """
+                SELECT tenant_id, id, run_id, exception_type, source_side, source_id, title, explanation,
+                       severity, risk_score, workflow_status, owner_id, reason_code, evidence_json,
+                       created_at, updated_at
+                FROM reconforge.reconciliation_exceptions WHERE tenant_id = %s AND id = %s
+                """,
+                (tenant, exception_id),
+            ).fetchone()
+        return self._record(row, self._EXCEPTION_COLUMNS)
+
+    def _verify_exception_contents(self, tenant: str, run: str, expected: Sequence[dict[str, Any]]) -> None:
+        """Reject a missing or different row using PostgreSQL JSONB/NUMERIC equality.
+
+        The caller owns the locked parent run and the surrounding transaction.
+        Workflow status and timestamps are excluded because they may change;
+        owner remains part of the requested content and is compared conservatively.
+        """
+        if not expected:
+            return
+        values = ", ".join(
+            ["(%s, %s, %s, %s, %s, %s, %s, %s, CAST(%s AS NUMERIC), %s, %s, CAST(%s AS JSONB))"]
+            * len(expected)
+        )
+        params: list[object] = []
+        for item in expected:
+            params.extend((item["id"], run, item["exception_type"], item["source_side"], item["source_id"],
+                           item["title"], item["explanation"], item["severity"], item["risk_score"],
+                           item["owner_id"], item["reason_code"], item["evidence_json"]))
+        params.append(tenant)
+        query = "".join(("""
+            WITH expected (id, run_id, exception_type, source_side, source_id, title, explanation,
+                           severity, risk_score, owner_id, reason_code, evidence_json) AS (VALUES
+        """, values, """)
+            SELECT EXISTS (
+                SELECT 1 FROM expected AS wanted
+                LEFT JOIN reconforge.reconciliation_exceptions AS stored
+                    ON stored.tenant_id = %s AND stored.id = wanted.id
+                WHERE stored.id IS NULL OR
+                    ROW(stored.run_id, stored.exception_type, stored.source_side, stored.source_id,
+                        stored.title, stored.explanation, stored.severity, stored.risk_score,
+                        stored.owner_id, stored.reason_code, stored.evidence_json)
+                    IS DISTINCT FROM
+                    ROW(wanted.run_id, wanted.exception_type, wanted.source_side, wanted.source_id,
+                        wanted.title, wanted.explanation, wanted.severity, wanted.risk_score,
+                        wanted.owner_id, wanted.reason_code, wanted.evidence_json)
+            ) AS different_content
+        """))
+        row = self.connection.execute(query, tuple(params)).fetchone()
+        if row is None or self._row_value(row, "different_content", 0) is not False:
+            raise PostgresReconciliationIntegrityError("Reconciliation exception has different content or is missing.")
 
     def append_exceptions_batch(
         self,
@@ -1576,6 +1834,21 @@ class PostgresReconciliationRepository:
         """Batch append explainable exceptions with chunked multi-row inserts."""
         if not items:
             return []
+        self._validate_batch_chunk_size(chunk_size)
+        return self._append_nonempty_exceptions_batch(
+            tenant_id=tenant_id, run_id=run_id, items=items, chunk_size=chunk_size,
+        )
+
+    @_atomic_exception_write
+    def _append_nonempty_exceptions_batch(
+        self,
+        *,
+        tenant_id: str,
+        run_id: str,
+        items: Sequence[dict[str, Any]],
+        chunk_size: int,
+    ) -> list[dict[str, Any]]:
+        """Persist a non-empty exception batch inside the caller's transaction."""
         tenant = self._tenant(tenant_id)
         run = self._id(run_id, "run_id")
         self._run_row(tenant, run, lock=True)
@@ -1623,6 +1896,10 @@ class PostgresReconciliationRepository:
                 }
             )
 
+        identities = [item["id"] for item in prepared]
+        if len(set(identities)) != len(identities):
+            raise PostgresReconciliationIntegrityError("Duplicate reconciliation exception identity in one batch.")
+
         results: list[dict[str, Any]] = []
         for i in range(0, len(prepared), chunk_size):
             chunk = prepared[i : i + chunk_size]
@@ -1659,6 +1936,8 @@ class PostgresReconciliationRepository:
             fetched = cursor.fetchall() if hasattr(cursor, "fetchall") else ()
             returned_by_id = {self._row_value(r, "id", 1): r for r in fetched}
 
+            self._verify_exception_contents(tenant, run, chunk)
+
             missing_ids = [p["id"] for p in chunk if p["id"] not in returned_by_id]
             if missing_ids:
                 existing_rows = self.connection.execute(
@@ -1676,8 +1955,9 @@ class PostgresReconciliationRepository:
 
             for p in chunk:
                 r = returned_by_id.get(p["id"])
-                if r is not None:
-                    results.append(self._record(r, self._EXCEPTION_COLUMNS))
+                if r is None:
+                    raise PostgresReconciliationIntegrityError("Reconciliation exception is missing after persistence.")
+                results.append(self._record(r, self._EXCEPTION_COLUMNS))
         return results
 
     def list_checkpoints(self, *, tenant_id: str, run_id: str) -> list[dict[str, Any]]:
@@ -1772,6 +2052,28 @@ class PostgresReconciliationRepository:
             "exceptions": exception_values,
         }
         output_hash = self._hash_payload(output_payload)
+        return self._append_validated_partition(
+            tenant=tenant, run=run, partition=partition, worker=worker, input_count=input_count,
+            result_values=result_values, exception_values=exception_values, output_hash=output_hash,
+            request_id=request_id, reason=reason,
+        )
+
+    @_atomic_exception_write
+    def _append_validated_partition(
+        self,
+        *,
+        tenant: str,
+        run: str,
+        partition: str,
+        worker: str,
+        input_count: int,
+        result_values: list[dict[str, Any]],
+        exception_values: list[dict[str, Any]],
+        output_hash: str,
+        request_id: str,
+        reason: str,
+    ) -> dict[str, Any]:
+        """Persist already validated output inside the caller's transaction."""
         before = self._run_row(tenant, run, lock=True)
         if str(before.get("status")) != "Running" or str(before.get("execution_status") or "Queued") not in {
             "Queued",
@@ -1798,8 +2100,8 @@ class PostgresReconciliationRepository:
             if (
                 str(existing.get("output_hash")) != output_hash
                 or int(existing.get("input_count") or 0) != int(input_count)
-                or int(existing.get("result_count") or 0) != len(results)
-                or int(existing.get("exception_count") or 0) != len(exceptions)
+                or int(existing.get("result_count") or 0) != len(result_values)
+                or int(existing.get("exception_count") or 0) != len(exception_values)
             ):
                 raise PostgresReconciliationIntegrityError("Partition checkpoint already contains different output.")
             return existing
@@ -1824,7 +2126,7 @@ class PostgresReconciliationRepository:
                       result_count, exception_count, output_hash, worker_id,
                       created_at, completed_at
             """,
-            (tenant, run, partition, int(input_count), len(results), len(exceptions), output_hash, worker),
+            (tenant, run, partition, int(input_count), len(result_values), len(exception_values), output_hash, worker),
         )
         row = cursor.fetchone()
         if row is None:
@@ -1855,8 +2157,8 @@ class PostgresReconciliationRepository:
                 "run_id": run,
                 "partition_key": partition,
                 "input_count": int(input_count),
-                "result_count": len(results),
-                "exception_count": len(exceptions),
+                "result_count": len(result_values),
+                "exception_count": len(exception_values),
             },
             payload={"run_id": run, "partition_key": partition, "output_hash": output_hash},
         )

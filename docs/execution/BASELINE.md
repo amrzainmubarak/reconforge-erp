@@ -1,3 +1,7 @@
+## 2026-10-28 partial source refresh
+
+See [the source-bound baseline](BASELINE_REFRESH_2026-10-28.md) and [ERP gap and comparison scorecard](ERP_VISION_SCORECARD_2026-10-28.md). The release remains blocked; local and hosted results have distinct scopes and earlier evidence remains historical. Full suite, native recovery, current performance and artifact security are not established by this refresh.
+
 # ReconForge Baseline Audit
 
 ## Current assurance checkpoint — 2026-10-25

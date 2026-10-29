@@ -1,3 +1,23 @@
+## 2026-10-28 — denial fairness blocker
+
+**RELEASE BLOCKED.** On `0611dc16`, an unknown-amount policy denial terminated the reconciliation polling loop; [the synthetic reproduction and successor](WORKER_DENIAL_FAIRNESS_2026-10-28.md) isolate per-run denials within the current page. [Two mandatory native safety shards](NATIVE_SAFETY_SHARDS_2026-10-28.md) passed locally with bounded source hashes. Durable audit, fairness across pages/restarts and hosted qualification remain open; do not describe the partial guard as a complete job-isolation solution.
+
+## 2026-10-28 — worker and source-chain investigation
+
+**RELEASE BLOCKED.** [Unknown worker amount](WORKER_UNKNOWN_AMOUNT_2026-10-28.md) has focused synthetic policy and restricted PostgreSQL coverage; known caller-supplied amounts, historical exposure and `process_once` denial isolation remain open. [Claim authority](RECONCILIATION_CLAIM_AUTHORITY_GAPS_2026-10-28.md), [exposure replay](RECONCILIATION_EXPOSURE_REPLAY_2026-10-28.md), and [sales source gaps](SALES_CYCLE_SOURCE_GAPS_2026-10-28.md) retain observed limits. Hosted Python 3.12 on `c44a7111` failed on missing backlog `depends_on`; fields are corrected and five focused contract checks pass locally, with full hosted requalification required.
+
+## 2026-10-28 — bounded quality direct-update repair
+
+**RELEASE BLOCKED.** [ADR0881](../adr/0881-postgres-quality-direct-update-authority.md) and [the evidence](QUALITY_DIRECT_AUTHORITY_2026-10-28.md) describe a restricted PostgreSQL direct-update guard, replay and rollback tests. This does not bind repository callers to authenticated identities, isolate entities, or post inventory/GL effects. The full cycle and release gates remain open.
+
+## 2026-10-28 — locked dependency and native quality continuation
+
+**RELEASE BLOCKED.** On entry `dfc9ad97649b4d458de5d56d8cd514da03168e54`, a restricted-role PostgreSQL 16 probe reproduced cross-entity NCR disposition. Hosted Python audits rejected msgpack 1.2.1 for CVE-2026-114613; the lock-only upgrade to 1.2.3 passed a local Python 3.12 locked audit and 92 related tests. Hosted final-source and Python 3.11 checks remain required. The rejected cancellation draft and the quality probe remain documented in [the continuation record](SECURITY_CONTINUATION_2026-10-28.md). FX replay, quality ownership/migration and five full cycles are open.
+
+## 2026-10-28 — vision and financial safety investigation
+
+**RELEASE BLOCKED.** Entry `b1ae1b5e7aad0cc9893bfda65ff44b422aaa279b`; branch `amr/erp-vision-safety-baseline-20261028`. [Partial baseline](BASELINE_REFRESH_2026-10-28.md), [scorecard](ERP_VISION_SCORECARD_2026-10-28.md) and [proposed ADR0880](../adr/0880-integrated-erp-vision-proposal.md) do not change public positioning. A synthetic grouped FX adapter collision was reproduced; a fail-closed draft breaks an existing FX compatibility test and is retained under `output/erp-vision-20261028/`, not applied. It is not accepted or release-qualified. Entity binding, five full cycles, checkpoint/replay semantics, native PostgreSQL, recovery and final-source CI remain open. Hosted PR143 entry checks succeeded except skipped checks; they do not apply to modified source.
+
 ## Reconciliation and Studio continuation — 2026-10-27
 
 **RELEASE BLOCKED.** Hosted CI on entry `6a69280b122f764fcdadb6f1a47ed750716a6e4c` completed with 82 successes and four failures: both Python suites rejected a division AST in the experimental FX domain, and two monetary browser/restore jobs rejected the current 0157/384-table catalog as an old 0156/383 contract. Exact fraction reciprocal multiplication preserves the arithmetic; the restore contract now verifies the current revision and the named quality authority table without relaxing other financial checks. Independent review compared both actual failed CI restore reports against the old and corrected contract; the quality table was empty in those reports. Both complete monetary gates and hosted CI must be rerun on the integrated SHA.
@@ -13363,3 +13383,67 @@ RELEASE BLOCKED. Current program and exclusive ownership: [execution](ENTERPRISE
 RELEASE BLOCKED. Primary Studio53destinations/eightsections implemented. Exact-source native51/0skip, frontend1257, primarybrowser2, strictCI/history137 pass. Image source1054file binding/doctor and scannerpolicy pass with0Critical/High,9Medium,1Negligible; no exception. Python3.12.16 selected officialAlpine tag notfound; runtime remediation open. All five complete business cycles, quality-to-stock, globalworkspace/live-role dashboards and final hosted/signature/provenance qualification remain open. See ENTERPRISE_PROGRAM_2026-10-26.md. Only preserved untracked.serena metadata is intentionally excluded from Git.
 
 Publication checkpoint: ADR0874 repairs real source-archive omissions and stale migration defaults;20 focused/independent QA cases pass. Runtimecode remains f3cfbad9. Actual rebuilt archive dispositions are immutable publication-source-inspection*.json under output/enterprise-program-20261026; full release remains blocked.
+
+### 2026-10-28 — Mutation baseline follow-up and quality design
+
+RELEASE BLOCKED. The full local run at `24d8862e` remains negative as recorded
+in [baseline refresh](BASELINE_REFRESH_2026-10-28.md). The targeted mutation
+campaign now isolates its child pytest configuration and rejects unexpected
+failure modes; six focused cases passed on the changed source, and its three
+targeted mutants were killed with both pytest 9.1.1 and 8.2.2. This does not
+replace a full-suite run. [Quality entity scope](QUALITY_ENTITY_SCOPE_DESIGN_2026-10-28.md)
+is a proposed design only: entity isolation, authorized legacy access and the
+release gate remain open. The experimental keyset is retained as a draft, not
+wired into worker discovery; see [fairness](WORKER_DENIAL_FAIRNESS_2026-10-28.md).
+
+Follow-up slices enforce organization authorization before a worker claim,
+preserve exact PostgreSQL NUMERIC retries, and compute submission authorization
+amounts in an isolated Decimal context. See [organization](RECONCILIATION_WORKER_ORGANIZATION_2026-10-28.md),
+[numeric retry](RECONCILIATION_ZERO_RETRY_2026-10-28.md), and
+[API precision](RECONCILIATION_API_AUTH_PRECISION_2026-10-28.md) for synthetic
+native evidence and compatibility limits. The API policy still lacks a proven
+currency-aware ceiling and the worker still relies on historical exposure.
+[Matcher exception collision](RECONCILIATION_MATCHER_EXCEPTION_CONTRACT_2026-10-28.md)
+is an independently reproduced open defect; historical checkpoint safety,
+entity isolation, complete cycles and the release remain unqualified.
+
+P0: independent synthetic adapter probes on worker SHA-256
+`4eeec1a59c044b373bf5fdb5a2ca6592139017b8a0ce43a4b214cea284c18ce0`
+show that attributes can override stored source fields. For example, a left
+stored amount of 1 and right stored amount of 999 produced a match when the
+left attributes supplied amount 999; without the override both were unmatched.
+The source-verified probe and log are
+`output/erp-vision-20261028/adapter-attribute-override-probe.py` and `.log`.
+Separate synthetic cases indicate analogous ID, currency, date and reference
+overrides. A separate restricted-role PostgreSQL 16.14 synthetic test persisted
+`Matched left-b → right-r` with difference zero although the stored left-b
+amount was 77 and the right amount was 10; the actual matching data came from
+left-a with an overridden attributes ID. FORCE RLS was enabled and the worker
+and repository file hashes were stable before and after, but the checkout was
+not committed. The native test and log are in
+`output/result-collision-probe-20261028/`, with log SHA-256
+`5fb3ec7b9537656e2405b9d217875e84825a4c627c887cb15b12fd822eaf689f`.
+This is an observed persisted reconciliation match, not a GL posting or proof
+of all deployment modes. A subsequent guard rejects conflicting source fields
+before matching; its restricted PostgreSQL test passed 18 cases on a modified
+tree. Final hosted checks, legacy checkpoints and a durable data-quality
+exception for rejected records remain open; see
+[source guard](RECONCILIATION_CANONICAL_SOURCE_GUARD_2026-10-28.md).
+
+A separate restricted-role PostgreSQL 16.14 test used synthetic repository
+outputs with one result identity but differing amount difference and lineage:
+a second partition checkpoint described the new output while the stored result
+remained the first. The experiment directly called the repository; it did not
+establish that the engine generates that collision. See
+[source and result evidence](RECONCILIATION_SOURCE_AND_RESULT_EVIDENCE_2026-10-28.md).
+Result-content containment now has restricted PostgreSQL tests; see
+[result collision](RECONCILIATION_RESULT_COLLISION_2026-10-29.md). Exception
+and result content checks do not qualify historical checkpoints or prove
+unique partition lineage.
+
+An additional PostgreSQL 16.15 synthetic probe observed a completed result
+after an organization grant was withdrawn by the test matcher following
+claim, and a streaming worker failure with a one-connection pool. The grant
+provider was simulated, not an external identity system; the pool failure was
+a bounded timeout, not proof of an indefinite deadlock. See
+[post-claim authorization](RECONCILIATION_POSTCLAIM_AUTHORIZATION_2026-10-28.md).

@@ -13,6 +13,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 SHARDS = {
     "writeback", "native", "parity", "durable-scale", "matching-runtime",
+    "worker-amount-safety", "quality-direct-safety",
     "industry-close", "receivables", "finance-posting", "inventory-payables", "erp-expansion", "finance-reporting",
     "commercial-integrity", "customer-partial-cycle", "customer-partial-security", "customer-partial-rounding", "supply-integrity", "finance-integrity",
     "customer-partial-rounding-migration", "customer-partial-rounding-security",
@@ -80,6 +81,8 @@ INTEGRITY_FILES = {
         "tests/test_postgres_inventory_scope.py", "tests/test_postgres_inventory_quantity_contracts.py",
         "tests/test_postgres_manufacturing_execution_v2.py", "tests/test_postgres_enterprise_migrations.py",
     ),
+    "quality-direct-safety": ("tests/test_quality_direct_update_authority_20261028.py",),
+    "worker-amount-safety": ("tests/test_worker_policy_amount_postgres_20261028.py",),
     "intercompany-operations": ("tests/test_postgres_intercompany_operations.py", "tests/test_postgres_intercompany_operations_api.py",
                                "tests/test_postgres_intercompany_fx.py", "tests/test_postgres_intercompany_fx_api.py"),
     "intercompany-cashflow": ("tests/test_postgres_intercompany_cashflow.py", "tests/test_postgres_intercompany_cashflow_api.py",
@@ -138,6 +141,60 @@ def _partition(run: str) -> dict[str, list[str]]:
     return result
 
 
+def test_recent_safety_regressions_run_in_mandatory_native_shards() -> None:
+    workflow = _workflow()
+    live = next(step for step in workflow["jobs"]["server-boundaries"]["steps"]
+                if step["name"] == "Run live server-boundary tests")
+    assert live["env"]["PYTEST_ADDOPTS"] == "-p tests.mandatory_native_gate"
+    grant = next(step for step in workflow["jobs"]["server-boundaries"]["steps"]
+                 if step["name"] == "Grant synthetic safety fixture table access")
+    assert grant["if"] == "matrix.shard == 'worker-amount-safety' || matrix.shard == 'quality-direct-safety'"
+    assert "ALL TABLES" not in grant["run"] and "DELETE" not in grant["run"]
+    assert "--set ON_ERROR_STOP=1" in grant["run"]
+    steps = workflow["jobs"]["server-boundaries"]["steps"]
+    migration = next(step for step in steps if step["name"] == "Run Alembic PostgreSQL migration")
+    assert steps.index(migration) < steps.index(grant) < steps.index(live)
+    groups = _partition(live["run"])
+    required = {
+        "tests/test_quality_direct_update_authority_20261028.py": "quality-direct-safety",
+        "tests/test_worker_policy_amount_postgres_20261028.py": "worker-amount-safety",
+    }
+    for path, owner in required.items():
+        selected = [shard for shard, commands in groups.items()
+                    for command in commands if path in shlex.split(command)]
+        assert selected == [owner], f"{path} must run in its mandatory native shard"
+        command = next(command for command in groups[owner] if path in shlex.split(command))
+        assert "-k" not in shlex.split(command)
+    generic = next(step for step in workflow["jobs"]["test"]["steps"] if step["name"] == "Pytest")
+    assert all(f"--ignore={path}" in shlex.split(generic["run"]) for path in required)
+    organization_test = "tests/test_reconciliation_worker_organization_native.py"
+    zero_retry_test = "tests/test_reconciliation_zero_retry.py"
+    exception_collision_test = "tests/test_reconciliation_exception_collision.py"
+    canonical_source_test = "tests/test_reconciliation_canonical_source_native.py"
+    result_collision_test = "tests/test_reconciliation_result_collision.py"
+    result_values_test = "tests/test_reconciliation_result_values.py"
+    assert f"--ignore={organization_test}" in shlex.split(generic["run"])
+    assert f"--ignore={zero_retry_test}" in shlex.split(generic["run"])
+    assert f"--ignore={exception_collision_test}" in shlex.split(generic["run"])
+    assert f"--ignore={canonical_source_test}" in shlex.split(generic["run"])
+    assert f"--ignore={result_collision_test}" in shlex.split(generic["run"])
+    assert f"--ignore={result_values_test}" in shlex.split(generic["run"])
+    organization = next(step for step in steps
+                        if step["name"] == "Verify reconciliation worker safety on dedicated databases")
+    assert organization["if"] == "matrix.shard == 'worker-amount-safety'"
+    assert "continue-on-error" not in organization
+    assert organization["env"]["PYTEST_ADDOPTS"] == "-p tests.mandatory_native_gate"
+    assert organization["env"]["RECONFORGE_OWNED_TEST_POSTGRES_ADMIN_DSN"] == "postgresql://postgres:postgres@localhost:5432/postgres"
+    assert organization["env"]["RECONFORGE_OWNED_TEST_POSTGRES_DSN"] == "postgresql://reconforge_app:reconforge_app@localhost:5432/postgres"
+    assert shlex.split(organization["run"]) == [
+        "uv", "run", "--no-sync", "pytest", organization_test, zero_retry_test,
+        exception_collision_test, canonical_source_test, result_collision_test, result_values_test, "-q"
+    ]
+    assert steps.index(live) < steps.index(organization)
+    assert all(not any(key.startswith("RECONFORGE_OWNED_TEST_POSTGRES_") for key in step.get("env", {}))
+               for step in steps if step is not organization)
+
+
 def test_live_shards_remain_bounded_independent_and_observable() -> None:
     job = _workflow()["jobs"]["server-boundaries"]
     assert job["name"] == "server-boundaries (${{ matrix.shard }})"
@@ -176,7 +233,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 80  # The grouped-worker native guard has its own mandatory command.
+    assert len(commands) == 82  # Both new safety owners execute unfiltered native files.
     assert all(count == 1 for count in Counter(commands).values())
     assert "uv run --no-sync pytest tests/test_postgres_grouped_matching_guard_20261027.py -q" in groups["matching-runtime"]
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
@@ -200,6 +257,8 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     for filename, owner in (
         ("tests/test_postgres_sales_owner_closure.py", "inventory-payables"),
         ("tests/test_postgres_grouped_matching_guard_20261027.py", "matching-runtime"),
+        ("tests/test_worker_policy_amount_postgres_20261028.py", "worker-amount-safety"),
+        ("tests/test_quality_direct_update_authority_20261028.py", "quality-direct-safety"),
         ("tests/test_postgres_operational_finance_api.py", "finance-posting"),
         ("tests/test_postgres_financial_installments.py", "finance-reporting"),
         ("tests/test_postgres_financial_reporting.py", "finance-reporting"),
@@ -257,7 +316,15 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
         "tests/test_release_authorization_postgres.py",
     }
     ignored = {
+        "tests/test_reconciliation_worker_organization_native.py",
+        "tests/test_reconciliation_zero_retry.py",
+        "tests/test_reconciliation_exception_collision.py",
+        "tests/test_reconciliation_canonical_source_native.py",
+        "tests/test_reconciliation_result_collision.py",
+        "tests/test_reconciliation_result_values.py",
         "tests/test_postgres_grouped_matching_guard_20261027.py",
+        "tests/test_worker_policy_amount_postgres_20261028.py",
+        "tests/test_quality_direct_update_authority_20261028.py",
         "tests/test_postgres_financial_source_roles.py",
         "tests/test_postgres_stock_sales.py", "tests/test_postgres_stock_sales_api.py",
         "tests/test_postgres_stock_sales_read_authority.py",
@@ -281,7 +348,16 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
     groups = _partition(native["run"])
     owners = {path: owner for owner, paths in INTEGRITY_FILES.items() for path in paths}
     owners["tests/test_postgres_grouped_matching_guard_20261027.py"] = "matching-runtime"
-    for path in ignored:
+    owners["tests/test_worker_policy_amount_postgres_20261028.py"] = "worker-amount-safety"
+    owners["tests/test_quality_direct_update_authority_20261028.py"] = "quality-direct-safety"
+    # These regressions share a separate conditional step with its own
+    # process-scoped DSNs and are checked above; all others use the case map.
+    separately_owned = {
+        "tests/test_reconciliation_worker_organization_native.py", "tests/test_reconciliation_zero_retry.py",
+        "tests/test_reconciliation_exception_collision.py", "tests/test_reconciliation_canonical_source_native.py",
+        "tests/test_reconciliation_result_collision.py", "tests/test_reconciliation_result_values.py",
+    }
+    for path in ignored - separately_owned:
         assert [owner for owner, commands in groups.items()
                 for command in commands if path in shlex.split(command)] == [
                     owners.get(path, "finance-posting" if path == "tests/test_postgres_financial_source_roles.py"

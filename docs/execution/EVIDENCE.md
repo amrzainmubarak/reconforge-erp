@@ -1,3 +1,11 @@
+## 2026-10-28 — dependency and quality continuation
+
+[Record](SECURITY_CONTINUATION_2026-10-28.md) distinguishes the failing hosted entry jobs, local 3.12 lock audit and the live restricted-role quality probe. Neither is a release acceptance result.
+
+## 2026-10-28 — partial baseline and FX investigation
+
+[Source, environment, commands and limitations](BASELINE_REFRESH_2026-10-28.md); [scenario and reference scorecard](ERP_VISION_SCORECARD_2026-10-28.md). Entry hosted checks and local results are separately scoped. Grouped FX reproduction uses synthetic inputs and an adapter, not a live PostgreSQL or posting test; selected draft containment tests passed but the existing FX scale compatibility test fails. No source-frozen release result is claimed.
+
 ## 2026-10-26 — Independent prerequisite defect repairs
 
 See [bounded results, raw command receipts and retained failures](ASSURANCE_2026-10-26.md).
@@ -24609,3 +24617,29 @@ Entry GitHub 6a69280b: Python 3.11/3.12 each reported 1 failed, 10315 passed, 66
 Worker guard review and unresolved precision examples: `qa-worker-precision-guard-20261027.json` and `qa-worker-default-precision-20261027.json`. The latter tests NUMERIC storage limits with eight fractional digits and is not a valid USD currency-policy example. `output/assurance-20261026/worker-rounding-native-20261027.json` records 12 tests without skips on the then-current tree, one native PostgreSQL test plus eleven adapter tests; it was run before the worker commit.
 
 Studio locale-search proof: `output/enterprise-program-20261026/navigation-locale-evidence-20261027.json` and `navigation-locale-browser-all-20261027.log` (19 browser cases, including 16 pre-existing). Command palette checks cover 5 component cases and 2 preview browser cases. These are development evidence; execute full release gates and authenticated journeys on the integrated SHA.
+
+## Mutation and quality continuation — 2026-10-28
+
+The negative full local Python run, focused mutation repair results, file hashes,
+versions, and remaining limitations are in [baseline refresh](BASELINE_REFRESH_2026-10-28.md).
+The quality isolation investigation and its unimplemented legacy-access
+prerequisite are in [quality design](QUALITY_ENTITY_SCOPE_DESIGN_2026-10-28.md).
+The keyset draft and its restricted synthetic PostgreSQL test are recorded in
+[worker fairness](WORKER_DENIAL_FAIRNESS_2026-10-28.md); they do not prove
+cross-page fairness. No resulting release, whole-cycle, or quality-isolation
+qualification is asserted.
+
+The three migration failures caused by a missing local test DSN were rerun on
+an owned PostgreSQL 16.15 test service at `32e6cffb`: 3 passed without skips,
+with a restricted but broadly granted fixture role and matching tracked-file
+fingerprints. The exact receipt and limits are in the baseline refresh; the
+original full-suite failure remains historical evidence.
+
+Development evidence for organization pre-claim authorization, NUMERIC input
+retry, and separate API authorization arithmetic is in the three linked
+reconciliation reports in [state](STATE.md). A restricted PostgreSQL test
+for the first two slices ran with mandatory no-skip gating. A separate native
+failure and engine-derived collision in the matcher exception contract are
+recorded in [the exception investigation](RECONCILIATION_MATCHER_EXCEPTION_CONTRACT_2026-10-28.md).
+The reported cases do not establish complete replay, post-claim revocation,
+historical checkpoints, final hosted CI, or release qualification.

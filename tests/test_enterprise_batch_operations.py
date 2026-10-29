@@ -136,6 +136,9 @@ def test_reconciliation_append_results_batch_set_validation_and_chunking() -> No
             )
             cursor.fetchall.return_value = [returned_row]
             return cursor
+        if "WITH expected" in sql:
+            cursor.fetchone.return_value = (False,)
+            return cursor
         return cursor
 
     conn.execute = MagicMock(side_effect=mock_execute)  # type: ignore[method-assign]
@@ -173,6 +176,8 @@ def test_reconciliation_append_exceptions_batch_execution() -> None:
                 "2026-10-19T20:00:00Z", "2026-10-19T20:00:00Z"
             )
             cursor.fetchall.return_value = [returned_row]
+        elif "WITH expected" in sql:
+            cursor.fetchone.return_value = (False,)
         return cursor
 
     conn.execute = MagicMock(side_effect=mock_execute)  # type: ignore[method-assign]

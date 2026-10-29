@@ -1,3 +1,11 @@
+## 2026-10-28 — msgpack lock correction
+
+Hosted audits found CVE-2026-114613 in the dev-extra transitive `msgpack` 1.2.1. The lock now selects 1.2.3, with local 3.12 locked-audit evidence and scope in [the continuation record](SECURITY_CONTINUATION_2026-10-28.md). Hosted successor and 3.11 qualification remain open.
+
+## 2026-10-28 partial source refresh
+
+See [the source-bound baseline](BASELINE_REFRESH_2026-10-28.md) and [ERP gap and comparison scorecard](ERP_VISION_SCORECARD_2026-10-28.md). The release remains blocked; local and hosted results have distinct scopes and earlier evidence remains historical. Full suite, native recovery, current performance and artifact security are not established by this refresh.
+
 # Dependency Risk
 
 ## Current assurance checkpoint — 2026-10-25

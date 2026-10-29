@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import replace
 from decimal import Decimal
+from enum import Enum
 
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext, audit_policy_decision
 
@@ -18,6 +19,12 @@ WorkerPolicyContextSupplier = Callable[[str, str | None, str | None], PolicyEval
 WorkerPolicyHierarchyContextSupplier = Callable[
     [str, str | None, str | None, str | None], PolicyEvaluationContext
 ]
+
+
+class UnknownWorkerPolicyAmount(Enum):
+    """Operation amount is unknown and must not inherit a supplier's amount."""
+
+    UNKNOWN = "unknown"
 
 
 def require_service_worker_policy(
@@ -34,15 +41,18 @@ def require_service_worker_policy(
     policy_permission: str,
     surface: str,
     error_factory: Callable[[str], Exception],
+    denial_error_factory: Callable[[str], Exception] | None = None,
     policy: CentralPolicyEngine | None = None,
     request_id: str = "",
-    amount: Decimal | None = None,
+    amount: Decimal | None | UnknownWorkerPolicyAmount = None,
 ) -> None:
     """Require a non-human central-policy decision for an exact worker scope.
 
     The one-argument supplier remains supported for legacy tenant-only workers.
     A workspace/entity scope requires the explicit three-argument supplier so a
     tenant-wide identity cannot accidentally process a narrower lane.
+    Omitted and None amounts preserve the existing supplier contract; use the
+    explicit unknown sentinel when a specific operation has no known amount.
     """
 
     if policy_context_supplier is None and policy_context_scope_supplier is None and policy_context_hierarchy_supplier is None:
@@ -73,7 +83,7 @@ def require_service_worker_policy(
         raise error_factory("Unable to resolve worker policy context safely.") from exc
     if amount is not None:
         try:
-            context = replace(context, amount=amount)
+            context = replace(context, amount=None if isinstance(amount, UnknownWorkerPolicyAmount) else amount)
         except (TypeError, ValueError) as exc:
             raise error_factory("Worker policy amount is invalid.") from exc
     if context.principal_type != "service_account":
@@ -94,27 +104,38 @@ def require_service_worker_policy(
     permission = policy_permission.strip()
     if not permission:
         raise error_factory("Worker policy permission must be non-empty.")
-    decision = (policy or CentralPolicyEngine()).evaluate(
-        context,
-        required_permission=permission,
-        enforce_sod=False,
-        enforce_ownership=False,
-    )
-    audit_policy_decision(
-        decision,
-        actor_id=normalized_actor,
-        required_permissions=frozenset({permission}),
-        surface=surface,
-        request_id=request_id,
-        principal_type=context.principal_type,
-        context=context,
-    )
+    try:
+        decision = (policy or CentralPolicyEngine()).evaluate(
+            context,
+            required_permission=permission,
+            enforce_sod=False,
+            enforce_ownership=False,
+        )
+    except Exception as exc:  # noqa: BLE001 - evaluator failures are not authorization denials.
+        if denial_error_factory is None:
+            raise
+        raise error_factory("Unable to evaluate worker policy safely.") from exc
+    try:
+        audit_policy_decision(
+            decision,
+            actor_id=normalized_actor,
+            required_permissions=frozenset({permission}),
+            surface=surface,
+            request_id=request_id,
+            principal_type=context.principal_type,
+            context=context,
+        )
+    except Exception as exc:  # noqa: BLE001 - evidence failures must never masquerade as a policy denial.
+        if denial_error_factory is None:
+            raise
+        raise error_factory("Unable to record worker policy decision safely.") from exc
     if not decision.allowed:
-        raise error_factory(f"Worker policy denied: {decision.reason_code}")
+        raise (denial_error_factory or error_factory)(f"Worker policy denied: {decision.reason_code}")
 
 
 __all__ = [
     "WorkerPolicyContextSupplier",
     "WorkerPolicyHierarchyContextSupplier",
+    "UnknownWorkerPolicyAmount",
     "require_service_worker_policy",
 ]

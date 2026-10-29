@@ -1,3 +1,7 @@
+## 2026-10-28 — ERP vision proposed, positioning unchanged
+
+[ADR0880](../adr/0880-integrated-erp-vision-proposal.md) documents a long-term integrated ERP direction, dependency order and compatibility obligations. It is proposed, not an approved public positioning change. Worker FX containment is a draft investigation, not an accepted compatibility decision.
+
 ## 2026-10-26 — CRM provenance and request result validity
 
 [ADR0871](../adr/0871-crm-quotation-provenance-and-workspace-lines.md) adds SQLite59
@@ -13996,3 +14000,26 @@ Pass a fresh synthetic browser credential through the test process environment i
 ### 2026-10-27 — Test fixture in memory and native runner version
 
 Synthetic browser fixture identifiers are now retrieved from a disposable TLS test server endpoint protected by a test-process key, instead of retaining a JSON fixture file. The endpoint exists only in test runtime. Browser trace content is not generally redacted. The PostgreSQL 16 server-boundary job pins Ubuntu 24.04 because the Ubuntu 26.04 runner apt sources did not provide its required matching client; the fail-closed client-version validator stays enabled. Neither change is accepted until the new hosted run completes.
+
+### 2026-10-28 — Mutation failure classification and quality history
+
+Isolate the synthetic mutation child from ancestor pytest configuration and
+fail the campaign when its baseline, source origin, report, failure type or
+expected test assertion is invalid. Report only the three specifically
+exercised mutations; traceback-format incompatibility is a conservative
+failure, not a successful mutation kill. Keep unknown quality-record entity
+ownership unknown. Do not activate the proposed restrictive quality migration
+until its effects on historical access and a tested, authorized recovery path
+are resolved. See [baseline refresh](BASELINE_REFRESH_2026-10-28.md) and
+[quality design](QUALITY_ENTITY_SCOPE_DESIGN_2026-10-28.md).
+
+### 2026-10-29 — Preserve source identity and fail closed on conflicts
+
+Reject conflicting reconciliation source attributes rather than silently
+replace canonical data or reinterpret prior outputs. The tested containment
+also narrows accepted identities, exact fields and partition keys; ADR0884 is
+proposed and documents the partition compatibility impact. Reject differing
+result or exception content under an existing identity inside a savepoint;
+do not change historical identities or claim existing checkpoints are safe.
+Unknown values still need an explicit versioned replacement for the historical
+omitted amount-difference default. See the linked records in [state](STATE.md).

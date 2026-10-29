@@ -4,10 +4,22 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from decimal import Decimal
+from datetime import date
+from decimal import (
+    Clamped,
+    Context,
+    Decimal,
+    DecimalException,
+    Inexact,
+    InvalidOperation,
+    Overflow,
+    Rounded,
+    localcontext,
+)
 from threading import Event, Lock
 from typing import Any, Protocol, cast
 
@@ -38,8 +50,16 @@ from reconforge.utils.money import (
     FinancialInputPolicy,
     InvalidAmountError,
     parse_exact_amount,
+    parse_guarded_amount_v3,
 )
-from reconforge.workers.policy import WorkerPolicyContextSupplier, require_service_worker_policy
+from reconforge.workers.policy import (
+    UnknownWorkerPolicyAmount,
+    WorkerPolicyContextSupplier,
+    WorkerPolicyHierarchyContextSupplier,
+    require_service_worker_policy,
+)
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _stable_partition_key(values: Sequence[object]) -> str:
@@ -80,7 +100,11 @@ def _validated_partition_limit(rule: Mapping[str, Any]) -> int:
 
 
 class PostgresReconciliationPolicyDenied(PostgresReconciliationWorkerError):
-    """Raised when a last-point policy recheck denies a run before claiming it."""
+    """Raised when a policy decision denies a run before claiming it."""
+
+
+class PostgresReconciliationAuthorizationError(PostgresReconciliationWorkerError):
+    """Raised when an authorization check cannot be completed safely."""
 
 
 class ReconciliationCancellationRequested(PostgresReconciliationWorkerError):
@@ -191,10 +215,133 @@ class LocalDeterministicMatcherAdapter:
 
     @classmethod
     def _canonical_record(
-        cls, record: Mapping[str, Any], *, id_field: str, amount_field: str, date_field: str, reference_field: str
+        cls, record: Mapping[str, Any], *, id_field: str, amount_field: str, date_field: str, reference_field: str,
+        required_aliases: frozenset[str] = frozenset(),
+        partition_fields: tuple[str, ...] = (),
+        exact_fields: tuple[str, ...] = (),
     ) -> dict[str, Any]:
         attributes = cls._json_object(record.get("attributes_json", {}), "attributes_json")
-        source_id = str(record.get("source_id", "")).strip()
+        source_id = record.get("source_id")
+        if (
+            type(source_id) is not str or not source_id or source_id != source_id.strip()
+            or any(ord(character) < 32 or ord(character) == 127 for character in source_id)
+            or len(source_id) > 160
+        ):
+            raise PostgresReconciliationWorkerError("canonical source identity must be exact nonempty text.")
+        if type(record.get("valid")) is not bool:
+            raise PostgresReconciliationWorkerError("canonical source valid flag must be an explicit boolean.")
+        source_currency = record.get("currency_code")
+        if (
+            type(source_currency) is not str or source_currency != source_currency.strip()
+            or source_currency != source_currency.upper() or not CurrencyRegistry.contains(source_currency)
+        ):
+            raise PostgresReconciliationWorkerError("canonical source currency must be known and valid.")
+
+        # A configured field must not be asked to represent two distinct source
+        # values.  In particular, a financial mapping must not shadow identity
+        # or a currency alias used by the deterministic engine.
+        mapped = (amount_field, date_field, reference_field)
+        reserved = {"id", "source_id", id_field, "currency", "currency_code", "ccy", "valid"}
+        ownership = (
+            {"amount", "amount_decimal", "amount_original"},
+            {"date", "date_value", "date_original"},
+            {"reference", "reference_normalized", "reference_original"},
+        )
+        if (
+            any(not field or field in reserved for field in mapped)
+            or len(set(mapped)) != len(mapped)
+            or any(field in names for position, field in enumerate(mapped)
+                   for other, names in enumerate(ownership) if position != other)
+        ):
+            raise PostgresReconciliationWorkerError("Reconciliation canonical field mappings overlap.")
+
+        def text(value: object) -> str:
+            return "" if value is None else str(value).strip()
+
+        if any(name not in attributes or not text(attributes[name]) for name in required_aliases):
+            raise PostgresReconciliationWorkerError("Required canonical source alias is missing.")
+
+        def amount(value: object) -> Decimal | None:
+            if value is None or (type(value) is str and not value.strip()):
+                return None
+            if isinstance(value, bool):
+                raise PostgresReconciliationWorkerError("Invalid canonical amount comparison.")
+            if type(value) is Decimal:
+                if not value.is_finite():
+                    raise PostgresReconciliationWorkerError("Invalid canonical amount comparison.")
+                try:
+                    # Bound coefficient and exponent before materializing a
+                    # tuple or a fixed-point string, including direct callers.
+                    with localcontext(Context(
+                        prec=128, Emin=-128, Emax=128,
+                        traps=[Clamped, Inexact, InvalidOperation, Overflow, Rounded],
+                    )):
+                        bounded = +value
+                    parts = bounded.as_tuple()
+                except DecimalException as exc:
+                    raise PostgresReconciliationWorkerError("Invalid canonical amount comparison.") from exc
+                exponent = parts.exponent
+                if not isinstance(exponent, int) or abs(exponent) > 128 or len(parts.digits) > 128:
+                    raise PostgresReconciliationWorkerError("Invalid canonical amount comparison.")
+                raw = format(value, "f")
+            elif type(value) in (str, int):
+                raw = str(value)
+            else:
+                # Includes binary floats, NumPy floating scalars and 0-D arrays.
+                raise PostgresReconciliationWorkerError("Invalid canonical amount comparison.")
+            if len(raw) > 128:
+                raise PostgresReconciliationWorkerError("Invalid canonical amount comparison.")
+            try:
+                with localcontext(Context(prec=256, traps=[Inexact])):
+                    # Reject malformed grouping without modifying the source
+                    # value or relabeling the historical input policy.
+                    return parse_guarded_amount_v3(raw)
+            except (InvalidAmountError, DecimalException) as exc:
+                raise PostgresReconciliationWorkerError("Invalid canonical amount comparison.") from exc
+
+        def equal(actual: object, expected: object, *, numeric: bool = False) -> bool:
+            return amount(actual) == amount(expected) if numeric else text(actual) == text(expected)
+
+        def check(names: Sequence[str], expected: object, *, numeric: bool = False) -> None:
+            for name in dict.fromkeys(names):
+                if name in attributes and not equal(attributes[name], expected, numeric=numeric):
+                    raise PostgresReconciliationWorkerError("Stored attributes conflict with canonical source fields.")
+
+        check(("id", "source_id", id_field), source_id)
+        check(("currency", "currency_code", "ccy"), record.get("currency_code"))
+        source_amount = record.get("amount_decimal")
+        if source_amount is None:
+            source_amount = record.get("amount_original", "")
+        amount(source_amount)
+        check((amount_field, "amount"), source_amount, numeric=True)
+        if amount_field in {"amount_decimal", "amount_original"} and not equal(
+            record.get(amount_field), source_amount, numeric=True
+        ):
+            raise PostgresReconciliationWorkerError("Mapped canonical amount is missing or inconsistent.")
+        if amount_field != "amount_decimal":
+            check(("amount_decimal",), record.get("amount_decimal"), numeric=True)
+        source_date = record.get("date_value")
+        if source_date is None:
+            source_date = record.get("date_original", "")
+        check((date_field, "date"), source_date)
+        if date_field in {"date_value", "date_original"} and not equal(record.get(date_field), source_date):
+            raise PostgresReconciliationWorkerError("Mapped canonical date is missing or inconsistent.")
+        if date_field != "date_value":
+            check(("date_value",), record.get("date_value"))
+        if date_field != "date_original":
+            check(("date_original",), record.get("date_original"))
+        source_reference = record.get("reference_normalized") or record.get("reference_original", "")
+        check((reference_field, "reference"), source_reference)
+        if reference_field in {"reference_normalized", "reference_original"} and not equal(
+            record.get(reference_field), source_reference
+        ):
+            raise PostgresReconciliationWorkerError("Mapped canonical reference is missing or inconsistent.")
+        if reference_field != "reference_normalized":
+            check(("reference_normalized",), record.get("reference_normalized"))
+        if reference_field != "reference_original":
+            check(("reference_original",), record.get("reference_original"))
+        check(("amount_original",), record.get("amount_original"))
+
         attributes.setdefault("id", source_id)
         attributes.setdefault(id_field, source_id)
         attributes.setdefault("source_id", source_id)
@@ -213,7 +360,14 @@ class LocalDeterministicMatcherAdapter:
             reference_field, record.get("reference_normalized") or record.get("reference_original", "")
         )
         attributes.setdefault("amount_original", record.get("amount_original", ""))
-        attributes["valid"] = bool(record.get("valid", True))
+        attributes["valid"] = record["valid"]
+        for field in exact_fields:
+            value = attributes.get(field)
+            if (
+                value is None or not str(value).strip()
+                or isinstance(value, (float, Mapping, list, tuple, set, frozenset))
+            ):
+                raise PostgresReconciliationWorkerError("exact_fields values must be present, nonempty, and scalar.")
         return attributes
 
     @staticmethod
@@ -231,15 +385,63 @@ class LocalDeterministicMatcherAdapter:
             raise PostgresReconciliationWorkerError(
                 "partition_fields must contain unique names of at most 128 characters."
             )
+        amount_names = {"amount", "amount_decimal", "amount_original", str(rule.get("amount_field", "amount"))}
+        if any(field in amount_names for field in fields):
+            raise PostgresReconciliationWorkerError("Financial amount partition fields require a versioned policy.")
         return tuple(fields)
+
+    @classmethod
+    def _required_source_aliases(cls, rule: Mapping[str, Any]) -> frozenset[str]:
+        """Refuse absent canonical aliases referenced by exact or partition rules.
+
+        The adapter historically populates only each selected mapping; filling
+        another missing alias now would silently change prior rule semantics.
+        """
+        exact_names = {name.strip() for name in cls._exact_fields_text(rule).split(",") if name.strip()}
+        partition_names = set(cls._partition_fields(rule))
+        used = exact_names | partition_names
+        domains = (
+            (str(rule.get("amount_field", "amount")), {"amount", "amount_decimal", "amount_original"}),
+            (str(rule.get("date_field", "date")), {"date", "date_value", "date_original"}),
+            (str(rule.get("reference_field", "reference")), {"reference", "reference_normalized", "reference_original"}),
+        )
+        required = {name for selected, names in domains for name in names if name in used and name != selected}
+        required.update(name for name in ("currency", "ccy") if name in partition_names)
+        return frozenset(required)
+
+    @staticmethod
+    def _exact_fields_text(rule: Mapping[str, Any]) -> str:
+        """Give the guard and engine the same supported exact-field contract."""
+
+        value = rule.get("exact_fields", [])
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+        if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)) and all(
+            isinstance(item, str) for item in value
+        ):
+            return ",".join(value)
+        raise PostgresReconciliationWorkerError("exact_fields must be text or a list of text values.")
 
     @staticmethod
     def _partition_limit(rule: Mapping[str, Any]) -> int:
         return _validated_partition_limit(rule)
 
     @staticmethod
-    def _partition_key(record: Mapping[str, Any], fields: Sequence[str]) -> str:
-        values = [record.get(field) for field in fields]
+    def _partition_key(record: Mapping[str, Any], fields: Sequence[str], *, date_field: str = "date") -> str:
+        values: list[str | None] = []
+        for field in fields:
+            value = record.get(field)
+            if type(value) is date and field == date_field:
+                value = value.isoformat()
+            if value is not None and not isinstance(value, str):
+                raise PostgresReconciliationWorkerError("Partition values must be text or null.")
+            if isinstance(value, str) and (value != value.strip() or "\n" in value or len(value) > 160):
+                raise PostgresReconciliationWorkerError("Partition text must use its exact canonical representation.")
+            if field in {"id", "source_id", "currency", "currency_code", "ccy", date_field} and not value:
+                raise PostgresReconciliationWorkerError("Partition source identity, currency and date must be known.")
+            values.append(value)
         return _stable_partition_key(values)
 
     @staticmethod
@@ -335,12 +537,10 @@ class LocalDeterministicMatcherAdapter:
         amount_field = str(rule.get("amount_field", "amount"))
         date_field = str(rule.get("date_field", "date"))
         reference_field = str(rule.get("reference_field", "reference"))
-        exact_fields_value = rule.get("exact_fields", [])
-        exact_fields = (
-            ",".join(str(value) for value in exact_fields_value)
-            if isinstance(exact_fields_value, Sequence) and not isinstance(exact_fields_value, (str, bytes))
-            else str(exact_fields_value or "")
-        )
+        required_aliases = self._required_source_aliases(rule)
+        partition_fields = self._partition_fields(rule)
+        exact_fields = self._exact_fields_text(rule)
+        exact_names = tuple(name.strip() for name in exact_fields.split(",") if name.strip())
         left_records = [
             self._canonical_record(
                 record,
@@ -348,6 +548,9 @@ class LocalDeterministicMatcherAdapter:
                 amount_field=amount_field,
                 date_field=date_field,
                 reference_field=reference_field,
+                required_aliases=required_aliases,
+                partition_fields=partition_fields,
+                exact_fields=exact_names,
             )
             for record in context.left_inputs
         ]
@@ -358,6 +561,9 @@ class LocalDeterministicMatcherAdapter:
                 amount_field=amount_field,
                 date_field=date_field,
                 reference_field=reference_field,
+                required_aliases=required_aliases,
+                partition_fields=partition_fields,
+                exact_fields=exact_names,
             )
             for record in context.right_inputs
         ]
@@ -385,6 +591,8 @@ class LocalDeterministicMatcherAdapter:
         amount_field = str(fields_config["amount_field"])
         date_field = str(date_config["date_field"])
         reference_field = str(date_config["reference_field"])
+        required_aliases = self._required_source_aliases(rule)
+        exact_names = tuple(name.strip() for name in exact_fields.split(",") if name.strip())
         if context.partition_supplier is not None:
             maximum = self._partition_limit(rule)
             for streamed_partition in context.partition_supplier():
@@ -403,6 +611,9 @@ class LocalDeterministicMatcherAdapter:
                         amount_field=amount_field,
                         date_field=date_field,
                         reference_field=reference_field,
+                        required_aliases=required_aliases,
+                        partition_fields=partition_fields,
+                        exact_fields=exact_names,
                     )
                     for record in streamed_partition.left_inputs
                 ]
@@ -413,9 +624,15 @@ class LocalDeterministicMatcherAdapter:
                         amount_field=amount_field,
                         date_field=date_field,
                         reference_field=reference_field,
+                        required_aliases=required_aliases,
+                        partition_fields=partition_fields,
+                        exact_fields=exact_names,
                     )
                     for record in streamed_partition.right_inputs
                 ]
+                for record in (*left_records, *right_records):
+                    if self._partition_key(record, partition_fields, date_field=date_field) != streamed_partition.partition_key:
+                        raise PostgresReconciliationWorkerError("Streamed partition key conflicts with canonical input.")
                 context.heartbeat(10)
                 output = self._match_records(
                     context=context,
@@ -445,7 +662,7 @@ class LocalDeterministicMatcherAdapter:
         partitions: dict[str, dict[str, list[dict[str, Any]]]] = {}
         for side, records in (("left", left_records), ("right", right_records)):
             for record in records:
-                key = self._partition_key(record, partition_fields)
+                key = self._partition_key(record, partition_fields, date_field=date_field)
                 partitions.setdefault(key, {"left": [], "right": []})[side].append(record)
         maximum = self._partition_limit(rule)
         ordered_keys = sorted(partitions)
@@ -532,6 +749,7 @@ class PostgresReconciliationWorkerSettings:
     discovery_policy_permission: str | None = None
     permission_manifest: WorkerPermissionManifest | None = None
     allow_unbound_hosted_policy: bool = False
+    policy_context_hierarchy_supplier: WorkerPolicyHierarchyContextSupplier | None = None
 
     def __post_init__(self) -> None:
         if not self.worker_id.strip() or len(self.worker_id.strip()) > 160:
@@ -598,13 +816,14 @@ class ReconciliationWorkerRunSummary:
     failed: int
     cancelled: int
     skipped: int
+    denied: int = 0
 
     @classmethod
     def empty(cls) -> ReconciliationWorkerRunSummary:
         return cls(cycles=0, discovered=0, completed=0, failed=0, cancelled=0, skipped=0)
 
     def add(
-        self, *, discovered: int, results: Sequence[ReconciliationProcessResult], skipped: int
+        self, *, discovered: int, results: Sequence[ReconciliationProcessResult], skipped: int, denied: int = 0
     ) -> ReconciliationWorkerRunSummary:
         return ReconciliationWorkerRunSummary(
             cycles=self.cycles + 1,
@@ -613,6 +832,7 @@ class ReconciliationWorkerRunSummary:
             failed=self.failed + sum(result.status == "Failed" for result in results),
             cancelled=self.cancelled + sum(result.status == "Cancelled" for result in results),
             skipped=self.skipped + skipped,
+            denied=self.denied + denied,
         )
 
 
@@ -719,6 +939,7 @@ class PostgresReconciliationScheduler:
             failed=sum(item.failed for item in cycles),
             cancelled=sum(item.cancelled for item in cycles),
             skipped=sum(item.skipped for item in cycles),
+            denied=sum(item.denied for item in cycles),
         )
 
     def _run_worker(self, worker_id: str) -> ReconciliationWorkerRunSummary:
@@ -734,7 +955,11 @@ class PostgresReconciliationScheduler:
             except Exception:
                 self.observability.record_job({**attributes, "job.status": "failed", "reconforge.result": "error"})
                 raise
-        self.observability.record_job({**attributes, "job.status": "completed", "reconforge.result": "success"})
+        self.observability.record_job({
+            **attributes,
+            "job.status": "completed",
+            "reconforge.result": "policy_denied" if summary.denied else "success",
+        })
         return summary
 
     def run(self, *, stop_event: Event | None = None, max_cycles: int | None = None) -> ReconciliationWorkerRunSummary:
@@ -753,6 +978,7 @@ class PostgresReconciliationScheduler:
                 failed=summary.failed + cycle.failed,
                 cancelled=summary.cancelled + cycle.cancelled,
                 skipped=summary.skipped + cycle.skipped,
+                denied=summary.denied + cycle.denied,
             )
             if max_cycles is not None and summary.cycles >= max_cycles * len(self.worker_ids):
                 break
@@ -826,17 +1052,20 @@ class PostgresReconciliationWorker:
         tenant_id: str,
         *,
         workspace_id: str | None = None,
+        organization_id: str | None = None,
         entity_id: str | None = None,
         request_id: str = "",
-        amount: Decimal | None = None,
+        amount: Decimal | None | UnknownWorkerPolicyAmount = None,
         policy_permission: str | None = None,
         error_factory: Callable[[str], Exception] = PostgresReconciliationWorkerError,
+        denial_error_factory: Callable[[str], Exception] | None = None,
     ) -> None:
         """Require a central service-account decision for one exact lane."""
 
         if (
             self.settings.policy_context_supplier is None
             and self.settings.policy_context_scope_supplier is None
+            and self.settings.policy_context_hierarchy_supplier is None
             and not self.settings.allow_unbound_hosted_policy
         ):
             raise error_factory(
@@ -845,6 +1074,7 @@ class PostgresReconciliationWorker:
         if (
             self.settings.policy_context_supplier is not None
             or self.settings.policy_context_scope_supplier is not None
+            or self.settings.policy_context_hierarchy_supplier is not None
         ) and self.settings.permission_manifest is None:
             raise error_factory(
                 "PostgreSQL reconciliation worker requires a verified worker permission manifest."
@@ -857,11 +1087,14 @@ class PostgresReconciliationWorker:
             actor_id=self.settings.audit_actor_id,
             policy_context_supplier=self.settings.policy_context_supplier,
             policy_context_scope_supplier=self.settings.policy_context_scope_supplier,
+            policy_context_hierarchy_supplier=self.settings.policy_context_hierarchy_supplier,
             workspace_id=workspace_id,
+            organization_id=organization_id,
             entity_id=entity_id,
             policy_permission=requested_permission,
             surface="postgres-reconciliation.worker.claim",
             error_factory=error_factory,
+            denial_error_factory=denial_error_factory,
             request_id=request_id,
             amount=amount,
         )
@@ -891,8 +1124,9 @@ class PostgresReconciliationWorker:
         tenant_id: str,
         *,
         request_id: str = "",
-        amount: Decimal | None = None,
+        amount: Decimal | None | UnknownWorkerPolicyAmount = None,
         policy_permission: str | None = None,
+        denial_error_factory: Callable[[str], Exception] | None = None,
     ) -> None:
         """Backward-compatible tenant-lane policy entry point."""
 
@@ -901,6 +1135,7 @@ class PostgresReconciliationWorker:
             request_id=request_id,
             amount=amount,
             policy_permission=policy_permission,
+            denial_error_factory=denial_error_factory,
         )
 
     @staticmethod
@@ -1155,7 +1390,11 @@ class PostgresReconciliationWorker:
     ) -> ReconciliationProcessResult:
         """Claim and execute one run using fresh connections for each phase."""
 
-        self._authorize_tenant(tenant_id, request_id=request_id, amount=policy_amount)
+        operation_amount = UnknownWorkerPolicyAmount.UNKNOWN if policy_amount is None else policy_amount
+        self._authorize_tenant(
+            tenant_id, request_id=request_id, amount=operation_amount,
+            denial_error_factory=PostgresReconciliationPolicyDenied,
+        )
         requested_workspace = str(workspace_id).strip() if workspace_id is not None else None
         requested_workspace = requested_workspace or None
         requested_entity = str(entity_id).strip() if entity_id is not None else None
@@ -1172,12 +1411,15 @@ class PostgresReconciliationWorker:
             self._authorize_scope(
                 tenant_id,
                 workspace_id=requested_workspace,
+                organization_id=requested_organization,
                 entity_id=requested_entity,
                 request_id=request_id,
+                denial_error_factory=PostgresReconciliationPolicyDenied,
             )
         workspace_scope = requested_workspace
         entity_scope = requested_entity
         organization_scope = requested_organization
+        claim_committed = False
         try:
             with self._transaction().transaction(
                 tenant_id,
@@ -1188,10 +1430,12 @@ class PostgresReconciliationWorker:
                 self._authorize_scope(
                     tenant_id,
                     workspace_id=workspace_scope,
+                    organization_id=organization_scope,
                     entity_id=entity_scope,
                     request_id=request_id,
-                    amount=policy_amount,
-                    error_factory=PostgresReconciliationPolicyDenied,
+                    amount=operation_amount,
+                    error_factory=PostgresReconciliationAuthorizationError,
+                    denial_error_factory=PostgresReconciliationPolicyDenied,
                 )
                 repository = PostgresReconciliationRepository(connection)
                 claimed = repository.claim_run(
@@ -1212,6 +1456,7 @@ class PostgresReconciliationWorker:
                     inputs = repository.list_inputs(tenant_id=tenant_id, run_id=run_id)
                     left_inputs = tuple(record for record in inputs if str(record.get("side", "")) == "Left")
                     right_inputs = tuple(record for record in inputs if str(record.get("side", "")) == "Right")
+            claim_committed = True
             partition_supplier = (
                 self._stream_input_supplier(
                     tenant_id=tenant_id,
@@ -1313,13 +1558,18 @@ class PostgresReconciliationWorker:
                     reason="Matcher observed cooperative cancellation.",
                 )
             return ReconciliationProcessResult(tenant_id, run_id, str(cancelled.get("execution_status", "Cancelled")))
-        except PostgresReconciliationBusyError:
-            raise
-        except PostgresReconciliationPolicyDenied:
-            # A revocation before claim is a no-effect authorization denial,
-            # not a matcher failure that should mark the queued run Failed.
-            raise
         except Exception as exc:  # noqa: BLE001 - failure is persisted and surfaced as a retryable run state.
+            if not claim_committed and isinstance(
+                exc, (
+                    PostgresReconciliationBusyError,
+                    PostgresReconciliationPolicyDenied,
+                    PostgresReconciliationAuthorizationError,
+                ),
+            ):
+                # Only claim conflicts and authority failures before the claim
+                # transaction commits are skip/denial/infrastructure outcomes.
+                # Identically typed failures after claim use the retryable path.
+                raise
             try:
                 return self._fail(
                     tenant_id,
@@ -1344,6 +1594,7 @@ class PostgresReconciliationWorker:
             raise PostgresReconciliationWorkerError("Unable to enumerate reconciliation tenants.") from exc
         outcomes: list[ReconciliationProcessResult] = []
         skipped = 0
+        denied = 0
         discovered = 0
         for tenant_id in tenants:
             self._authorize_tenant(
@@ -1389,10 +1640,18 @@ class PostgresReconciliationWorker:
                     )
                 except PostgresReconciliationBusyError:
                     skipped += 1
+                except PostgresReconciliationPolicyDenied:
+                    denied += 1
+        if denied:
+            # Deliberately avoid tenant, run IDs and financial values here.
+            # Without a durable keyset cursor, denied rows can still hide later
+            # pages. The warning must remain visible until that gap is closed.
+            _LOGGER.warning("reconciliation_policy_denials: %s; later pages may be delayed", denied)
         return ReconciliationWorkerRunSummary.empty().add(
             discovered=discovered,
             results=outcomes,
             skipped=skipped,
+            denied=denied,
         )
 
     def run(self, *, stop_event: Event | None = None, max_cycles: int | None = None) -> ReconciliationWorkerRunSummary:
@@ -1411,6 +1670,7 @@ class PostgresReconciliationWorker:
                 failed=summary.failed + cycle.failed,
                 cancelled=summary.cancelled + cycle.cancelled,
                 skipped=summary.skipped + cycle.skipped,
+                denied=summary.denied + cycle.denied,
             )
             if max_cycles is not None and summary.cycles >= max_cycles:
                 break

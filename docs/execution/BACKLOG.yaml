@@ -21,13 +21,118 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-RECONCILIATION-RESULT-VALUES-20261029
+    depends_on: [AMR-MATCHER-RESULT-COLLISION-20261028]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_RESULT_VALUES_2026-10-29.md
+    note: "Explicit missing or non-exact result values and unsafe numeric wrappers are rejected with restricted PostgreSQL tests. The historical omitted amount default remains zero; long Decimal resource bounds and final hosted CI remain open."
+  - id: AMR-WORKER-POSTCLAIM-AUTHORITY-20261028
+    depends_on: [AMR-WORKER-ORGANIZATION-20261028]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_POSTCLAIM_AUTHORIZATION_2026-10-28.md
+    note: "Synthetic probe shows revocation after claim does not stop later effects; cursor streaming can require additional pool connections. PostgreSQL proof, policy transaction boundaries, failure/recovery semantics and bounded pool tests remain open."
+  - id: AMR-MATCHER-RESULT-COLLISION-20261028
+    depends_on: [AMR-MATCHER-EXCEPTION-COLLISION-20261028]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_RESULT_COLLISION_2026-10-29.md
+    note: "Restricted PostgreSQL reproduced checkpoint/result divergence; new content-conflict checks have native tests. Final hosted CI, engine reachability, lineage across partitions and historical checkpoints remain open."
+  - id: AMR-MATCHER-CANONICAL-SOURCE-20261028
+    depends_on: []
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_CANONICAL_SOURCE_GUARD_2026-10-28.md
+    note: "Restricted PostgreSQL reproduced persisted false matches from conflicting attributes; a fail-closed guard has focused native tests. Final hosted CI, old checkpoints, data-quality evidence and versioned partition semantics remain open."
+  - id: AMR-MATCHER-EXCEPTION-COLLISION-20261028
+    depends_on: [AMR-WORKER-ORGANIZATION-20261028]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_MATCHER_EXCEPTION_CONTRACT_2026-10-28.md
+    note: "Real matcher exception_id is rejected by worker persistence; distinct engine exceptions can share repository identity. Preserve IDs and reject differing stored content atomically before checkpoint; historical checkpoints and live rollback remain open."
+  - id: AMR-RECONCILIATION-ZERO-RETRY-20261028
+    depends_on: []
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_ZERO_RETRY_2026-10-28.md
+    note: "PostgreSQL NUMERIC zero and small values were rejected on identical input retry; bounded stored-value repair and synthetic native checks are in progress. Final source, hosted CI and broader replay remain open."
+  - id: AMR-RECONCILIATION-API-AUTH-PRECISION-20261028
+    depends_on: [AMR-RECONCILIATION-EXPOSURE-20261028]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_API_AUTH_PRECISION_2026-10-28.md
+    note: "Submission authorization uses bounded exact arithmetic for known single-currency inputs and unknown for mixed/unknown currency; current API does not bind a live currency-aware ceiling. Stored legacy exposure and worker authority remain unresolved."
+  - id: AMR-WORKER-ORGANIZATION-20261028
+    depends_on: []
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_WORKER_ORGANIZATION_2026-10-28.md
+    note: "Organization authorization is checked before claim and rechecked in its transaction; synthetic restricted-role PostgreSQL and mandatory local gate pass. Hosted CI, post-claim revocation and tenant-wide discovery remain open."
+  - id: AMR-MUTATION-ISOLATION-20261028
+    depends_on: []
+    status: in_progress
+    priority: P1
+    release_requirement: required
+    report: docs/execution/BASELINE_REFRESH_2026-10-28.md
+    note: "Targeted mutation campaign isolates pytest and checks expected failures; focused tests and pytest 8.2.2/9.1.1 campaign pass. Commit-bound hosted verification and the full baseline remain open."
+  - id: AMR-WORKER-DENIAL-FAIRNESS-20261028
+    depends_on: [AMR-WORKER-UNKNOWN-AMOUNT-20261028]
+    status: blocked
+    priority: P1
+    release_requirement: required
+    report: docs/execution/WORKER_DENIAL_FAIRNESS_2026-10-28.md
+    note: "Bounded policy denial may stop the polling loop and starve other work. Require explicit denied outcome, durable fair discovery, audit, concurrency/restart and native restore proof."
+  - id: AMR-WORKER-UNKNOWN-AMOUNT-20261028
+    depends_on: [AMR-RECONCILIATION-EXPOSURE-20261028]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/WORKER_UNKNOWN_AMOUNT_2026-10-28.md
+    note: "Explicit unknown guard has bounded local and native tests; bind known caller amounts to authoritative claim snapshot, isolate denied jobs, prove production grants and final-source CI."
+  - id: AMR-RECONCILIATION-EXPOSURE-20261028
+    depends_on: [AMR-EXACT-GROUPED-MATCHING-20261027]
+    status: blocked
+    priority: P0
+    release_requirement: required
+    report: docs/execution/RECONCILIATION_EXPOSURE_REPLAY_2026-10-28.md
+    note: "Exact exposure under Decimal context reproduced. Preserve legacy idempotency through full canonical input comparison and versioned currency policy; worker currently trusts stored legacy exposure. Native concurrent and restore proofs remain open."
+  - id: AMR-MSGPACK-AUDIT-20261028
+    depends_on: []
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/SECURITY_CONTINUATION_2026-10-28.md
+    note: "Upgrade locked msgpack 1.2.1 to 1.2.3 after CVE-2026-114613; 3.12 local audit passed; verify 3.11 and hosted successor without advisory exceptions."
+  - id: AMR-ERP-VISION-BASELINE-20261028
+    depends_on: []
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/BASELINE_REFRESH_2026-10-28.md
+    note: "Proposed ADR0880 and initial scorecard; full snapshot baseline, supported local environments, native restore, independent cycles and final-source CI remain open."
+  - id: AMR-GROUPED-FX-CONTAINMENT-20261028
+    depends_on: [AMR-EXACT-GROUPED-MATCHING-20261027]
+    status: in_progress
+    priority: P0
+    release_requirement: required
+    report: docs/execution/STATE.md
+    note: "Synthetic nested-context rounding collision reproduced; draft worker fail-closed guard breaks existing v1 FX test. Versioned migration, historical checkpoint handling, direct paths and native validation remain unresolved."
   - id: AMR-QUALITY-ENTITY-SOURCE-20261027
     depends_on: [AMR-ENTERPRISE-INTEGRATION-STUDIO-20261026]
     status: blocked
     priority: P0
     release_requirement: required
-    report: docs/execution/STATE.md
-    note: "Observed PostgreSQL/API cross-entity disposition in workspace-scoped NCR; bind new source ownership without inferring legacy owners, cover plans/rework/RLS and migration/restore, and establish genuine inventory/GL linkage before acceptance."
+    report: docs/execution/QUALITY_ENTITY_SCOPE_DESIGN_2026-10-28.md
+    note: "Observed cross-entity quality access. Proposed record-scope design is not implemented and does not prove source ownership. Design authorized legacy access before any restrictive migration; plans, rework, RLS, restore, and genuine inventory/GL linkage remain open."
   - id: AMR-HOSTED-FAILURES-20261027
     depends_on: [AMR-ENTERPRISE-INTEGRATION-STUDIO-20261026]
     status: in_progress

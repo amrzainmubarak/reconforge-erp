@@ -8,7 +8,18 @@ import logging
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from decimal import Decimal
+from datetime import date
+from decimal import (
+    Clamped,
+    Context,
+    Decimal,
+    DecimalException,
+    Inexact,
+    InvalidOperation,
+    Overflow,
+    Rounded,
+    localcontext,
+)
 from threading import Event, Lock
 from typing import Any, Protocol, cast
 
@@ -39,6 +50,7 @@ from reconforge.utils.money import (
     FinancialInputPolicy,
     InvalidAmountError,
     parse_exact_amount,
+    parse_guarded_amount_v3,
 )
 from reconforge.workers.policy import (
     UnknownWorkerPolicyAmount,
@@ -203,10 +215,133 @@ class LocalDeterministicMatcherAdapter:
 
     @classmethod
     def _canonical_record(
-        cls, record: Mapping[str, Any], *, id_field: str, amount_field: str, date_field: str, reference_field: str
+        cls, record: Mapping[str, Any], *, id_field: str, amount_field: str, date_field: str, reference_field: str,
+        required_aliases: frozenset[str] = frozenset(),
+        partition_fields: tuple[str, ...] = (),
+        exact_fields: tuple[str, ...] = (),
     ) -> dict[str, Any]:
         attributes = cls._json_object(record.get("attributes_json", {}), "attributes_json")
-        source_id = str(record.get("source_id", "")).strip()
+        source_id = record.get("source_id")
+        if (
+            type(source_id) is not str or not source_id or source_id != source_id.strip()
+            or any(ord(character) < 32 or ord(character) == 127 for character in source_id)
+            or len(source_id) > 160
+        ):
+            raise PostgresReconciliationWorkerError("canonical source identity must be exact nonempty text.")
+        if type(record.get("valid")) is not bool:
+            raise PostgresReconciliationWorkerError("canonical source valid flag must be an explicit boolean.")
+        source_currency = record.get("currency_code")
+        if (
+            type(source_currency) is not str or source_currency != source_currency.strip()
+            or source_currency != source_currency.upper() or not CurrencyRegistry.contains(source_currency)
+        ):
+            raise PostgresReconciliationWorkerError("canonical source currency must be known and valid.")
+
+        # A configured field must not be asked to represent two distinct source
+        # values.  In particular, a financial mapping must not shadow identity
+        # or a currency alias used by the deterministic engine.
+        mapped = (amount_field, date_field, reference_field)
+        reserved = {"id", "source_id", id_field, "currency", "currency_code", "ccy", "valid"}
+        ownership = (
+            {"amount", "amount_decimal", "amount_original"},
+            {"date", "date_value", "date_original"},
+            {"reference", "reference_normalized", "reference_original"},
+        )
+        if (
+            any(not field or field in reserved for field in mapped)
+            or len(set(mapped)) != len(mapped)
+            or any(field in names for position, field in enumerate(mapped)
+                   for other, names in enumerate(ownership) if position != other)
+        ):
+            raise PostgresReconciliationWorkerError("Reconciliation canonical field mappings overlap.")
+
+        def text(value: object) -> str:
+            return "" if value is None else str(value).strip()
+
+        if any(name not in attributes or not text(attributes[name]) for name in required_aliases):
+            raise PostgresReconciliationWorkerError("Required canonical source alias is missing.")
+
+        def amount(value: object) -> Decimal | None:
+            if value is None or (type(value) is str and not value.strip()):
+                return None
+            if isinstance(value, bool):
+                raise PostgresReconciliationWorkerError("Invalid canonical amount comparison.")
+            if type(value) is Decimal:
+                if not value.is_finite():
+                    raise PostgresReconciliationWorkerError("Invalid canonical amount comparison.")
+                try:
+                    # Bound coefficient and exponent before materializing a
+                    # tuple or a fixed-point string, including direct callers.
+                    with localcontext(Context(
+                        prec=128, Emin=-128, Emax=128,
+                        traps=[Clamped, Inexact, InvalidOperation, Overflow, Rounded],
+                    )):
+                        bounded = +value
+                    parts = bounded.as_tuple()
+                except DecimalException as exc:
+                    raise PostgresReconciliationWorkerError("Invalid canonical amount comparison.") from exc
+                exponent = parts.exponent
+                if not isinstance(exponent, int) or abs(exponent) > 128 or len(parts.digits) > 128:
+                    raise PostgresReconciliationWorkerError("Invalid canonical amount comparison.")
+                raw = format(value, "f")
+            elif type(value) in (str, int):
+                raw = str(value)
+            else:
+                # Includes binary floats, NumPy floating scalars and 0-D arrays.
+                raise PostgresReconciliationWorkerError("Invalid canonical amount comparison.")
+            if len(raw) > 128:
+                raise PostgresReconciliationWorkerError("Invalid canonical amount comparison.")
+            try:
+                with localcontext(Context(prec=256, traps=[Inexact])):
+                    # Reject malformed grouping without modifying the source
+                    # value or relabeling the historical input policy.
+                    return parse_guarded_amount_v3(raw)
+            except (InvalidAmountError, DecimalException) as exc:
+                raise PostgresReconciliationWorkerError("Invalid canonical amount comparison.") from exc
+
+        def equal(actual: object, expected: object, *, numeric: bool = False) -> bool:
+            return amount(actual) == amount(expected) if numeric else text(actual) == text(expected)
+
+        def check(names: Sequence[str], expected: object, *, numeric: bool = False) -> None:
+            for name in dict.fromkeys(names):
+                if name in attributes and not equal(attributes[name], expected, numeric=numeric):
+                    raise PostgresReconciliationWorkerError("Stored attributes conflict with canonical source fields.")
+
+        check(("id", "source_id", id_field), source_id)
+        check(("currency", "currency_code", "ccy"), record.get("currency_code"))
+        source_amount = record.get("amount_decimal")
+        if source_amount is None:
+            source_amount = record.get("amount_original", "")
+        amount(source_amount)
+        check((amount_field, "amount"), source_amount, numeric=True)
+        if amount_field in {"amount_decimal", "amount_original"} and not equal(
+            record.get(amount_field), source_amount, numeric=True
+        ):
+            raise PostgresReconciliationWorkerError("Mapped canonical amount is missing or inconsistent.")
+        if amount_field != "amount_decimal":
+            check(("amount_decimal",), record.get("amount_decimal"), numeric=True)
+        source_date = record.get("date_value")
+        if source_date is None:
+            source_date = record.get("date_original", "")
+        check((date_field, "date"), source_date)
+        if date_field in {"date_value", "date_original"} and not equal(record.get(date_field), source_date):
+            raise PostgresReconciliationWorkerError("Mapped canonical date is missing or inconsistent.")
+        if date_field != "date_value":
+            check(("date_value",), record.get("date_value"))
+        if date_field != "date_original":
+            check(("date_original",), record.get("date_original"))
+        source_reference = record.get("reference_normalized") or record.get("reference_original", "")
+        check((reference_field, "reference"), source_reference)
+        if reference_field in {"reference_normalized", "reference_original"} and not equal(
+            record.get(reference_field), source_reference
+        ):
+            raise PostgresReconciliationWorkerError("Mapped canonical reference is missing or inconsistent.")
+        if reference_field != "reference_normalized":
+            check(("reference_normalized",), record.get("reference_normalized"))
+        if reference_field != "reference_original":
+            check(("reference_original",), record.get("reference_original"))
+        check(("amount_original",), record.get("amount_original"))
+
         attributes.setdefault("id", source_id)
         attributes.setdefault(id_field, source_id)
         attributes.setdefault("source_id", source_id)
@@ -225,7 +360,14 @@ class LocalDeterministicMatcherAdapter:
             reference_field, record.get("reference_normalized") or record.get("reference_original", "")
         )
         attributes.setdefault("amount_original", record.get("amount_original", ""))
-        attributes["valid"] = bool(record.get("valid", True))
+        attributes["valid"] = record["valid"]
+        for field in exact_fields:
+            value = attributes.get(field)
+            if (
+                value is None or not str(value).strip()
+                or isinstance(value, (float, Mapping, list, tuple, set, frozenset))
+            ):
+                raise PostgresReconciliationWorkerError("exact_fields values must be present, nonempty, and scalar.")
         return attributes
 
     @staticmethod
@@ -243,15 +385,63 @@ class LocalDeterministicMatcherAdapter:
             raise PostgresReconciliationWorkerError(
                 "partition_fields must contain unique names of at most 128 characters."
             )
+        amount_names = {"amount", "amount_decimal", "amount_original", str(rule.get("amount_field", "amount"))}
+        if any(field in amount_names for field in fields):
+            raise PostgresReconciliationWorkerError("Financial amount partition fields require a versioned policy.")
         return tuple(fields)
+
+    @classmethod
+    def _required_source_aliases(cls, rule: Mapping[str, Any]) -> frozenset[str]:
+        """Refuse absent canonical aliases referenced by exact or partition rules.
+
+        The adapter historically populates only each selected mapping; filling
+        another missing alias now would silently change prior rule semantics.
+        """
+        exact_names = {name.strip() for name in cls._exact_fields_text(rule).split(",") if name.strip()}
+        partition_names = set(cls._partition_fields(rule))
+        used = exact_names | partition_names
+        domains = (
+            (str(rule.get("amount_field", "amount")), {"amount", "amount_decimal", "amount_original"}),
+            (str(rule.get("date_field", "date")), {"date", "date_value", "date_original"}),
+            (str(rule.get("reference_field", "reference")), {"reference", "reference_normalized", "reference_original"}),
+        )
+        required = {name for selected, names in domains for name in names if name in used and name != selected}
+        required.update(name for name in ("currency", "ccy") if name in partition_names)
+        return frozenset(required)
+
+    @staticmethod
+    def _exact_fields_text(rule: Mapping[str, Any]) -> str:
+        """Give the guard and engine the same supported exact-field contract."""
+
+        value = rule.get("exact_fields", [])
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+        if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)) and all(
+            isinstance(item, str) for item in value
+        ):
+            return ",".join(value)
+        raise PostgresReconciliationWorkerError("exact_fields must be text or a list of text values.")
 
     @staticmethod
     def _partition_limit(rule: Mapping[str, Any]) -> int:
         return _validated_partition_limit(rule)
 
     @staticmethod
-    def _partition_key(record: Mapping[str, Any], fields: Sequence[str]) -> str:
-        values = [record.get(field) for field in fields]
+    def _partition_key(record: Mapping[str, Any], fields: Sequence[str], *, date_field: str = "date") -> str:
+        values: list[str | None] = []
+        for field in fields:
+            value = record.get(field)
+            if type(value) is date and field == date_field:
+                value = value.isoformat()
+            if value is not None and not isinstance(value, str):
+                raise PostgresReconciliationWorkerError("Partition values must be text or null.")
+            if isinstance(value, str) and (value != value.strip() or "\n" in value or len(value) > 160):
+                raise PostgresReconciliationWorkerError("Partition text must use its exact canonical representation.")
+            if field in {"id", "source_id", "currency", "currency_code", "ccy", date_field} and not value:
+                raise PostgresReconciliationWorkerError("Partition source identity, currency and date must be known.")
+            values.append(value)
         return _stable_partition_key(values)
 
     @staticmethod
@@ -347,12 +537,10 @@ class LocalDeterministicMatcherAdapter:
         amount_field = str(rule.get("amount_field", "amount"))
         date_field = str(rule.get("date_field", "date"))
         reference_field = str(rule.get("reference_field", "reference"))
-        exact_fields_value = rule.get("exact_fields", [])
-        exact_fields = (
-            ",".join(str(value) for value in exact_fields_value)
-            if isinstance(exact_fields_value, Sequence) and not isinstance(exact_fields_value, (str, bytes))
-            else str(exact_fields_value or "")
-        )
+        required_aliases = self._required_source_aliases(rule)
+        partition_fields = self._partition_fields(rule)
+        exact_fields = self._exact_fields_text(rule)
+        exact_names = tuple(name.strip() for name in exact_fields.split(",") if name.strip())
         left_records = [
             self._canonical_record(
                 record,
@@ -360,6 +548,9 @@ class LocalDeterministicMatcherAdapter:
                 amount_field=amount_field,
                 date_field=date_field,
                 reference_field=reference_field,
+                required_aliases=required_aliases,
+                partition_fields=partition_fields,
+                exact_fields=exact_names,
             )
             for record in context.left_inputs
         ]
@@ -370,6 +561,9 @@ class LocalDeterministicMatcherAdapter:
                 amount_field=amount_field,
                 date_field=date_field,
                 reference_field=reference_field,
+                required_aliases=required_aliases,
+                partition_fields=partition_fields,
+                exact_fields=exact_names,
             )
             for record in context.right_inputs
         ]
@@ -397,6 +591,8 @@ class LocalDeterministicMatcherAdapter:
         amount_field = str(fields_config["amount_field"])
         date_field = str(date_config["date_field"])
         reference_field = str(date_config["reference_field"])
+        required_aliases = self._required_source_aliases(rule)
+        exact_names = tuple(name.strip() for name in exact_fields.split(",") if name.strip())
         if context.partition_supplier is not None:
             maximum = self._partition_limit(rule)
             for streamed_partition in context.partition_supplier():
@@ -415,6 +611,9 @@ class LocalDeterministicMatcherAdapter:
                         amount_field=amount_field,
                         date_field=date_field,
                         reference_field=reference_field,
+                        required_aliases=required_aliases,
+                        partition_fields=partition_fields,
+                        exact_fields=exact_names,
                     )
                     for record in streamed_partition.left_inputs
                 ]
@@ -425,9 +624,15 @@ class LocalDeterministicMatcherAdapter:
                         amount_field=amount_field,
                         date_field=date_field,
                         reference_field=reference_field,
+                        required_aliases=required_aliases,
+                        partition_fields=partition_fields,
+                        exact_fields=exact_names,
                     )
                     for record in streamed_partition.right_inputs
                 ]
+                for record in (*left_records, *right_records):
+                    if self._partition_key(record, partition_fields, date_field=date_field) != streamed_partition.partition_key:
+                        raise PostgresReconciliationWorkerError("Streamed partition key conflicts with canonical input.")
                 context.heartbeat(10)
                 output = self._match_records(
                     context=context,
@@ -457,7 +662,7 @@ class LocalDeterministicMatcherAdapter:
         partitions: dict[str, dict[str, list[dict[str, Any]]]] = {}
         for side, records in (("left", left_records), ("right", right_records)):
             for record in records:
-                key = self._partition_key(record, partition_fields)
+                key = self._partition_key(record, partition_fields, date_field=date_field)
                 partitions.setdefault(key, {"left": [], "right": []})[side].append(record)
         maximum = self._partition_limit(rule)
         ordered_keys = sorted(partitions)

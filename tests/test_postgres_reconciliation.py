@@ -519,6 +519,8 @@ def test_postgres_reconciliation_execution_worker_claims_persists_and_completes(
         record_hash="hash-left-1",
         amount="100.00",
         currency_code="USD",
+        date_value="2026-07-23",
+        reference_normalized="INV-001",
         attributes={"id": "left-1", "amount": "100.00", "date": "2026-07-23", "reference": "INV-001"},
     )
     repository.register_input(
@@ -529,6 +531,8 @@ def test_postgres_reconciliation_execution_worker_claims_persists_and_completes(
         record_hash="hash-right-1",
         amount="100.00",
         currency_code="USD",
+        date_value="2026-07-23",
+        reference_normalized="INV-001",
         attributes={"id": "right-1", "amount": "100.00", "date": "2026-07-23", "reference": "INV-001"},
     )
 
@@ -960,12 +964,20 @@ def test_local_matcher_partitioning_is_deterministic_and_reports_progress() -> N
             "side": "Left",
             "source_id": "left-b",
             "amount_decimal": "20.00",
+            "currency_code": "USD",
+            "valid": True,
+            "date_value": "2026-07-23",
+            "reference_normalized": "INV-B",
             "attributes_json": {"id": "left-b", "amount": "20.00", "date": "2026-07-23", "reference": "INV-B", "entity_id": "B"},
         },
         {
             "side": "Left",
             "source_id": "left-a",
             "amount_decimal": "10.00",
+            "currency_code": "USD",
+            "valid": True,
+            "date_value": "2026-07-23",
+            "reference_normalized": "INV-A",
             "attributes_json": {"id": "left-a", "amount": "10.00", "date": "2026-07-23", "reference": "INV-A", "entity_id": "A"},
         },
     ]
@@ -974,12 +986,20 @@ def test_local_matcher_partitioning_is_deterministic_and_reports_progress() -> N
             "side": "Right",
             "source_id": "right-a",
             "amount_decimal": "10.00",
+            "currency_code": "USD",
+            "valid": True,
+            "date_value": "2026-07-23",
+            "reference_normalized": "INV-A",
             "attributes_json": {"id": "right-a", "amount": "10.00", "date": "2026-07-23", "reference": "INV-A", "entity_id": "A"},
         },
         {
             "side": "Right",
             "source_id": "right-b",
             "amount_decimal": "20.00",
+            "currency_code": "USD",
+            "valid": True,
+            "date_value": "2026-07-23",
+            "reference_normalized": "INV-B",
             "attributes_json": {"id": "right-b", "amount": "20.00", "date": "2026-07-23", "reference": "INV-B", "entity_id": "B"},
         },
     ]
@@ -1010,6 +1030,10 @@ def test_local_matcher_uses_persisted_financial_input_policy() -> None:
             "side": "Left",
             "source_id": "left-1",
             "amount_decimal": "10.50",
+            "currency_code": "USD",
+            "valid": True,
+            "date_value": "2026-07-25",
+            "reference_normalized": "INV-1",
             "attributes_json": {
                 "id": "left-1",
                 "amount": 10.5,
@@ -1024,6 +1048,10 @@ def test_local_matcher_uses_persisted_financial_input_policy() -> None:
             "side": "Right",
             "source_id": "right-1",
             "amount_decimal": "10.50",
+            "currency_code": "USD",
+            "valid": True,
+            "date_value": "2026-07-25",
+            "reference_normalized": "INV-1",
             "attributes_json": {
                 "id": "right-1",
                 "amount": 10.5,
@@ -1051,6 +1079,14 @@ def test_local_matcher_uses_persisted_financial_input_policy() -> None:
         )
 
     try:
+        # Hosted matching no longer accepts a binary-float source attribute,
+        # including under the explicitly selected historical policy.
+        with pytest.raises(PostgresReconciliationWorkerError, match="canonical"):
+            execute(None)
+        with pytest.raises(PostgresReconciliationWorkerError, match="canonical"):
+            execute("strict-financial-input-v2", "canonical-multiset-occurrence-v1")
+        left[0]["attributes_json"]["amount"] = "10.50"
+        right[0]["attributes_json"]["amount"] = "10.50"
         historical = execute(None)
         strict = execute(
             "strict-financial-input-v2",
@@ -1060,8 +1096,8 @@ def test_local_matcher_uses_persisted_financial_input_policy() -> None:
         adapter.close()
 
     assert sum(item["status"] == "Matched" for item in historical.results) == 1
-    assert not any(item["status"] == "Matched" for item in strict.results)
-    assert {item["reason_code"] for item in strict.exceptions} == {"INVALID_AMOUNT"}
+    assert sum(item["status"] == "Matched" for item in strict.results) == 1
+    assert strict.exceptions == ()
     historical_lineage = historical.results[0]["lineage"]["left_record"]
     strict_lineage = strict.results[0]["lineage"]["left_record"]
     assert historical_lineage["record_identity_policy"] == "row-order-occurrence-legacy-v0"
@@ -1073,10 +1109,10 @@ def test_local_matcher_partition_limit_fails_closed() -> None:
     context = ReconciliationExecutionContext(
         run={"rule_json": {"partition_fields": ["entity_id"], "partition_max_records": 1}},
         left_inputs=(
-            {"source_id": "left-1", "amount_decimal": "10.00", "attributes_json": {"id": "left-1", "amount": "10.00", "entity_id": "A"}},
+            {"source_id": "left-1", "amount_decimal": "10.00", "currency_code": "USD", "valid": True, "attributes_json": {"id": "left-1", "amount": "10.00", "entity_id": "A"}},
         ),
         right_inputs=(
-            {"source_id": "right-1", "amount_decimal": "10.00", "attributes_json": {"id": "right-1", "amount": "10.00", "entity_id": "A"}},
+            {"source_id": "right-1", "amount_decimal": "10.00", "currency_code": "USD", "valid": True, "attributes_json": {"id": "right-1", "amount": "10.00", "entity_id": "A"}},
         ),
         heartbeat=lambda _: {},
         cancellation_requested=lambda: False,
@@ -1172,6 +1208,8 @@ def _create_partitioned_reconciliation(
             record_hash=f"hash-{source_id}",
             amount="10.00",
             currency_code="USD",
+            date_value="2026-07-23",
+            reference_normalized=f"INV-{entity}",
             attributes={
                 "id": source_id,
                 "amount": "10.00",

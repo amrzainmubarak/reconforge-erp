@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM python:3.12.15-alpine3.24@sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 AS builder
+FROM python:3.15.2-alpine3.24@sha256:0f9552bb28711333da16915ec146f5e6bb44a7fdac9ced15dc17c2e0206346dd AS builder
 
 # The pinned Python index is intentionally retained, but Alpine security
 # packages must be refreshed independently of the slower Python image cadence.
@@ -43,7 +43,7 @@ COPY alembic ./alembic
 RUN uv sync --locked --no-dev --no-editable --python 3.12 --link-mode copy \
     && rm -rf /root/.cache/uv
 
-FROM python:3.12.15-alpine3.24@sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 AS runtime
+FROM python:3.15.2-alpine3.24@sha256:0f9552bb28711333da16915ec146f5e6bb44a7fdac9ced15dc17c2e0206346dd AS runtime
 
 # The official index can lag an Alpine security fix. Install only the
 # checksum-bound, reviewed OpenSSL and zlib runtime APKs so the final image
